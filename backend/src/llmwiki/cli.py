@@ -89,6 +89,10 @@ def cmd_ask(s: Settings, args) -> int:
                    json={"query": args.query, "deep": args.deep,
                          "local_only": args.local})
     data = r.json()
+    if data.get("abstained"):
+        print("🤷 sem cobertura na base — abstenção "
+              f"({'; '.join(data.get('gaps', []))})", file=sys.stderr)
+        return 1
     if data.get("blocked"):
         print("⛔ resposta bloqueada pelo Harness (citações)", file=sys.stderr)
     print(data["answer"])

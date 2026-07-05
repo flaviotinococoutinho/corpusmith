@@ -23,8 +23,11 @@ class Scheduler(threading.Thread):
         while not self._stop.is_set():
             now = time.localtime()
             if now.tm_wday == 0:                       # segunda-feira
+                week = time.strftime("%Y-W%W")
+                self.queue.enqueue("reflect", {}, priority=6,
+                                   dedupe_key=f"reflect:{week}")
                 self.queue.enqueue("review_weekly", {}, priority=6,
-                                   dedupe_key=f"review:{time.strftime('%Y-W%W')}")
+                                   dedupe_key=f"review:{week}")
             self.queue.enqueue("embed", {}, priority=3,
                                dedupe_key=f"embed:{time.strftime('%Y-%m-%d')}")
             self._stop.wait(self.interval)

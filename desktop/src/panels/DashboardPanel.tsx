@@ -3,7 +3,13 @@ import { client } from "../lib/client";   // singleton: export const client = ne
 
 export function DashboardPanel() {
   const [d, setD] = useState<any>(null);
-  useEffect(() => { client.connect().then(() => client.dashboard().then(setD)); }, []);
+  const [cand, setCand] = useState<any>(null);
+  useEffect(() => {
+    client.connect().then(() => {
+      client.dashboard().then(setD);
+      client.reflectCand().then(setCand).catch(() => setCand(null));
+    });
+  }, []);
   if (!d) return <div className="p-6">Carregando estado da memória…</div>;
   return (
     <div className="p-6 space-y-6 max-w-3xl">
@@ -31,6 +37,21 @@ export function DashboardPanel() {
           <ul className="text-sm space-y-1">
             {d.stale.map((p: string) => <li key={p} className="font-mono">{p}</li>)}
           </ul>
+        </section>)}
+      {cand && (cand.promote.length > 0 || cand.archive.length > 0
+                || cand.contested.length > 0) && (
+        <section className="grid grid-cols-3 gap-3 text-sm">
+          {[["🔥 Candidatos a promoção",
+             cand.promote.map((c: any) => c.path)],
+            ["🧊 Candidatos a arquivamento",
+             cand.archive.map((c: any) => c.path)],
+            ["⚔️ Contestadas", cand.contested]].map(([title, items]: any) => (
+            <div key={title} className="border rounded p-3">
+              <h3 className="font-medium mb-1">{title}</h3>
+              {items.length ? items.map((p: string) => (
+                <div key={p} className="font-mono text-xs">{p}</div>))
+                : <div className="text-neutral-400 text-xs">(nenhuma)</div>}
+            </div>))}
         </section>)}
     </div>
   );

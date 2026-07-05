@@ -49,9 +49,11 @@ def compute(s: Settings) -> dict:
     idx.close()
     orphans = [p for p in all_pages if p not in linked]
 
+    from .reflect import candidates                      # §8.4: ações sugeridas
+    cand = candidates(s)
     return {"week": week, "new_pages": new_pages, "orphans": orphans,
             "stale": stale, "decisions": decisions, "questions": questions,
-            "top_tags": tags.most_common(12)}
+            "top_tags": tags.most_common(12), **cand}
 
 
 def run(s: Settings, payload: dict, emit) -> dict:
@@ -70,8 +72,16 @@ def run(s: Settings, payload: dict, emit) -> dict:
         f"## Perguntas abertas\n{_list(data['questions'])}\n\n"
         f"## Tags mais usadas\n"
         + ("\n".join(f"- `{t}` × {n}" for t, n in data["top_tags"])
-           or "- (nenhuma)") + "\n")
+           or "- (nenhuma)") + "\n\n"
+        f"## Ações sugeridas (reflect)\n"
+        f"- Promover: {', '.join(p['path'] for p in data['promote']) or '(nenhuma)'}\n"
+        f"- Arquivar: {', '.join(p['path'] for p in data['archive']) or '(nenhuma)'}\n"
+        f"- Contestadas: {', '.join(data['contested']) or '(nenhuma)'}\n")
 
+    kb = s.path("knowledge")
+    writer = BundleWriter(kb)
+    from ..okf.authorities import load_gazetteer, normalize_machine_body
+    body, _ = normalize_machine_body(body, load_gazetteer(writer.reader))
     doc = OKFDocument(
         rel_path=f"reviews/{week}.md",
         body=body,
@@ -81,8 +91,7 @@ def run(s: Settings, payload: dict, emit) -> dict:
             **{"privacy": "local_only",
                "generated_via": "local:review",
                "source_sha256": hashlib.sha256(body.encode()).hexdigest()}))
-    kb = s.path("knowledge")
-    result = BundleWriter(kb).write(
+    result = writer.write(
         [doc], log_kind="Review",
         log_message=f"revisão semanal {week}",
         commit_message=f"review: {week}")

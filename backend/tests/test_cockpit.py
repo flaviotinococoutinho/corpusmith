@@ -112,3 +112,37 @@ def test_review_compute_is_side_effect_free(client, kb):
                              "decisions", "questions", "top_tags"}
     after = sorted(p.name for p in (kb / "bundle").rglob("*.md"))
     assert before == after
+
+
+# ------------------------------------------------------------- v0.8 (§11.1)
+def test_outcome_endpoint_and_correction_to_inbox(client, kb, settings):
+    r = client.post("/cockpit/outcome", json={
+        "ask_id": "abc123", "verdict": "corrected",
+        "note": "a porta correta é 8377", "pages": ["runbooks/daemon.md"]})
+    assert r.status_code == 200
+    from llmwiki.runtime.db import connect
+    rt = connect(settings.app_support / "runtime.db")
+    row = rt.execute("SELECT verdict, pages FROM ask_outcomes "
+                     "ORDER BY id DESC LIMIT 1").fetchone()
+    rt.close()
+    assert row["verdict"] == "corrected"
+    # correção vira memória: arquivo novo em raw/correcoes/ (inbox)
+    assert list((kb / "raw" / "correcoes").glob("*.md"))
+    assert client.post("/cockpit/outcome",
+                       json={"verdict": "talvez"}).status_code == 400
+
+
+def test_eval_authorities_reflect_endpoints(client):
+    assert client.get("/cockpit/eval").json() == {"categories": []}
+    assert "entities" in client.get("/cockpit/authorities").json()
+    cand = client.get("/cockpit/reflect").json()
+    assert set(cand) == {"promote", "archive", "contested"}
+
+
+def test_quality_includes_eval_and_ask_returns_v08_fields(client, kb, settings):
+    q = client.get("/cockpit/quality").json()
+    assert "eval" in q
+    from llmwiki.retrieval.fts import rebuild_index
+    rebuild_index(settings)
+    r = client.post("/ask", json={"query": "teste sem cobertura xyzzy"}).json()
+    assert r["abstained"] is True and "ask_id" in r and "trajectory" in r

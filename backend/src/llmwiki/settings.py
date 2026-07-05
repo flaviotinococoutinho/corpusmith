@@ -48,6 +48,9 @@ class Settings(BaseModel):
     }
     worker: dict[str, Any] = {"heavy_slots": 1, "light_slots": 2,
                               "poll_seconds": 1.0}
+    flags: dict[str, bool] = {"retrieval.descend": True,
+                              "reconcile.llm_arbiter": False}
+    ask: dict[str, Any] = {"abstain_threshold": 0.0}
 
     # ------------------------------------------------------------------ paths
     @property
@@ -69,6 +72,19 @@ class Settings(BaseModel):
             if fnmatch.fnmatch(rel_path, rule.get("pattern", "")):
                 return rule.get("privacy", self.privacy.get("default", "local_only"))
         return self.privacy.get("default", "local_only")
+
+    # ------------------------------------------------------------ flags/get
+    def flag(self, name: str, default: bool = False) -> bool:
+        return bool(self.flags.get(name, default))
+
+    def get(self, dotted: str, default: Any = None) -> Any:
+        """Lookup 'secao.chave' sobre o modelo (ex.: 'ask.abstain_threshold')."""
+        cur: Any = self.model_dump(mode="python")
+        for part in dotted.split("."):
+            if not isinstance(cur, dict) or part not in cur:
+                return default
+            cur = cur[part]
+        return cur
 
     # -------------------------------------------------------------- overrides
     def with_overrides(self, **overrides: Any) -> "Settings":

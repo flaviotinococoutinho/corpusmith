@@ -24,6 +24,13 @@ class OKFFrontMatter(BaseModel):
     resource: str | None = None            # URI canônica OPCIONAL
     tags: list[str] = []
     timestamp: datetime | None = None      # datetime real; pydantic coage ISO-8601
+    # bi-temporalidade (v0.8 §6.3): TEMPO DE MUNDO do fato compilado
+    # (stale_as_of continua sendo tempo de CÓDIGO, ancorado em commit)
+    valid_at: datetime | None = None       # quando o fato passou a valer no mundo
+    invalid_at: datetime | None = None     # quando deixou de valer (nunca deletar)
+    superseded_by: str | None = None       # rel_path da página substituta
+    sensitive_data: bool | None = None     # setado pelo detector de PII (§4.3)
+    entities: list[str] | None = None      # lista curta legível (anexo: index.db)
 
     @field_validator("type")
     @classmethod

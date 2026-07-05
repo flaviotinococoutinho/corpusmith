@@ -25,6 +25,14 @@ budget:
 policy:
   citation_required: true   # política LOCAL — SPEC trata # Citations como SHOULD
 
+# feature flags (v0.8)
+flags:
+  retrieval.descend: true       # descida hierárquica L0/L1 no /ask
+  reconcile.llm_arbiter: false  # LLM local decide a zona cinzenta do reconcile
+
+ask:
+  abstain_threshold: 0.0        # score RRF mínimo; 0 = abstém só sem evidência
+
 models:
   local:
     provider: ollama

@@ -6,18 +6,34 @@ import { client } from "../lib/client";
 export function ExplorerPanel() {
   const [pages, setPages] = useState<any[]>([]);
   const [sel, setSel] = useState<any>(null);
-  useEffect(() => { client.pages().then(r => setPages(r.pages)); }, []);
+  const [authOnly, setAuthOnly] = useState(false);          // v0.8 §11.2
+  const [uses, setUses] = useState<Record<string, number>>({});
+  useEffect(() => {
+    client.pages().then(r => setPages(r.pages));
+    client.authorities().then(r => {
+      const m: Record<string, number> = {};
+      for (const e of r.entities) m[e.canonical] = e.uses;
+      setUses(m);
+    }).catch(() => setUses({}));
+  }, []);
   const tree = useMemo(() => {
     const g: Record<string, any[]> = {};
-    for (const p of pages)
+    for (const p of pages) {
+      if (authOnly && p.type !== "authority_record") continue;
       (g[p.path.split("/").slice(0, -1).join("/") || "(raiz)"] ??= []).push(p);
+    }
     return g;
-  }, [pages]);
+  }, [pages, authOnly]);
   const open = (path: string) => client.page(path).then(setSel);
 
   return (
     <div className="flex h-full text-sm">
       <aside className="w-72 border-r overflow-auto p-2">
+        <label className="text-xs block mb-2">
+          <input type="checkbox" checked={authOnly}
+                 onChange={e => setAuthOnly(e.target.checked)} />{" "}
+          só authority records
+        </label>
         {Object.entries(tree).map(([dir, list]) => (
           <div key={dir} className="mb-2">
             <div className="text-xs font-semibold text-neutral-500">{dir}</div>
@@ -26,6 +42,8 @@ export function ExplorerPanel() {
                 className="block w-full text-left px-2 py-1 rounded hover:bg-neutral-100"
                 onClick={() => open(p.path)}>
                 {p.stale && "🟡 "}{p.privacy === "local_only" && "🔒 "}{p.title}
+                {p.type === "authority_record" && uses[p.title] != null &&
+                  <span className="text-neutral-400"> · {uses[p.title]} usos</span>}
               </button>))}
           </div>))}
       </aside>

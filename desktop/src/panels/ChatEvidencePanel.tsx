@@ -8,11 +8,24 @@ export function ChatEvidencePanel() {
   const [local, setLocal] = useState(false);
   const [r, setR] = useState<any>(null);
   const [busy, setBusy] = useState(false);
-  const [promote, setPromote] = useState<string | null>(null);
+  const [promote, setPromote] = useState<{ content: string; kind?: string } | null>(null);
+  const [voted, setVoted] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
+  const [note, setNote] = useState("");
 
   const run = async () => {
     setBusy(true);
+    setVoted(false); setCorrecting(false); setNote("");
     try { setR(await client.ask(q, deep, local)); } finally { setBusy(false); }
+  };
+
+  // v0.8 §11.2: desfecho de consulta alimenta heat/overlay (reflect)
+  const vote = async (verdict: string, n?: string) => {
+    await client.outcome({
+      ask_id: r?.ask_id, verdict, note: n,
+      pages: (r?.evidence ?? []).map((e: any) => e.page),
+    });
+    setVoted(true); setCorrecting(false);
   };
 
   return (
@@ -34,17 +47,53 @@ export function ChatEvidencePanel() {
           <input type="checkbox" checked={local}
                  onChange={e => setLocal(e.target.checked)} /> somente local
         </label>
-        {r && (
+        {r?.abstained && (
+          <div className="border border-amber-300 bg-amber-50 rounded p-3 text-sm">
+            <p className="font-medium">🤷 Sem cobertura na base</p>
+            <ul className="text-xs list-disc ml-5 my-1">
+              {r.gaps?.map((g: string) => <li key={g}>{g}</li>)}
+            </ul>
+            <button className="border rounded px-2 py-1 text-xs"
+                    onClick={() => setPromote({ content: q, kind: "question" })}>
+              ➕ Capturar como pergunta aberta</button>
+          </div>)}
+        {r && !r.abstained && (
           <article className="prose prose-sm max-w-none">
             {r.blocked && <p className="text-red-600 text-xs">
               ⛔ bloqueada pelo Harness (citações)</p>}
             <p className="text-xs text-neutral-500">
-              via {r.via}{r.blocked ? "" : " · citada"}</p>
+              via {r.via}{r.blocked ? "" : " · citada"}
+              {r.as_of && <span className="ml-2 border rounded px-1">
+                📅 como em {r.as_of}</span>}</p>
+            {r.trajectory?.length > 0 && (
+              <p className="text-xs text-neutral-500 font-mono">
+                {r.trajectory.map((t: any) =>
+                  `${t.dir} → ${t.picked.map((p: string) =>
+                    p.split("/").pop()).join(", ")}`).join(" · ")}</p>)}
             <pre className="whitespace-pre-wrap text-sm">{r.answer}</pre>
             {!r.blocked && (
-              <button className="border rounded px-2 py-1 text-xs"
-                      onClick={() => setPromote(r.answer)}>
+              <button className="border rounded px-2 py-1 text-xs mr-2"
+                      onClick={() => setPromote({ content: r.answer })}>
                 ⭐ Promover para memória</button>)}
+            {!voted ? (
+              <span className="text-xs">
+                <button className="border rounded px-2 py-1 mr-1"
+                        onClick={() => vote("useful")}>✅ útil</button>
+                <button className="border rounded px-2 py-1 mr-1"
+                        onClick={() => vote("dead_end")}>🚫 beco</button>
+                <button className="border rounded px-2 py-1"
+                        onClick={() => setCorrecting(true)}>✏️ corrigi</button>
+              </span>
+            ) : <span className="text-xs text-neutral-500">desfecho registrado ✓</span>}
+            {correcting && (
+              <div className="mt-2">
+                <textarea className="border rounded w-full p-2 text-xs h-20"
+                          placeholder="O que estava errado? (vira memória no inbox)"
+                          value={note} onChange={e => setNote(e.target.value)} />
+                <button className="border rounded px-2 py-1 text-xs"
+                        disabled={!note}
+                        onClick={() => vote("corrected", note)}>enviar correção</button>
+              </div>)}
             {r.gaps?.length > 0 && (
               <p className="text-xs">Lacunas: {r.gaps.join("; ")}</p>)}
           </article>)}
@@ -59,13 +108,15 @@ export function ChatEvidencePanel() {
             <div className="text-xs text-neutral-500 truncate">← {e.resource}</div>
             <p className="text-xs line-clamp-4">{e.body}</p>
             <button className="text-xs underline"
-                    onClick={() => setPromote(e.body)}>promover trecho</button>
+                    onClick={() => setPromote({ content: e.body })}>promover trecho</button>
           </div>))}
         {!r && <p className="text-neutral-400 text-xs">
           As páginas OKF e fontes usadas na resposta aparecem aqui, numeradas.</p>}
       </aside>
-      {promote && <PromoteDialog content={promote} source={`chat:${new Date()
-        .toISOString().slice(0, 10)}`} onClose={() => setPromote(null)} />}
+      {promote && <PromoteDialog content={promote.content}
+        initialKind={promote.kind}
+        source={`chat:${new Date().toISOString().slice(0, 10)}`}
+        onClose={() => setPromote(null)} />}
     </div>
   );
 }

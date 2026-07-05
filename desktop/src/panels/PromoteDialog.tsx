@@ -5,9 +5,10 @@ const KINDS = [["semantic", "Memória semântica"], ["decision", "Decisão"],
   ["runbook", "Runbook"], ["skill", "Skill procedural"],
   ["question", "Pergunta aberta"], ["alert", "Alerta arquitetural"]] as const;
 
-export function PromoteDialog({ content, source, onClose }:
-  { content: string; source: string; onClose: () => void }) {
-  const [kind, setKind] = useState("semantic");
+export function PromoteDialog({ content, source, onClose, initialKind }:
+  { content: string; source: string; onClose: () => void;
+    initialKind?: string }) {
+  const [kind, setKind] = useState(initialKind ?? "semantic");
   const [title, setTitle] = useState("");
   const [privacy, setPrivacy] = useState("local_only");
   const [done, setDone] = useState<string | null>(null);

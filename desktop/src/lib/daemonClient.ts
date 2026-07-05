@@ -85,6 +85,13 @@ export class DaemonClient {
   ledgerToday = () => this.get<any>("/cockpit/ledger/today");
   ask = (query: string, deep = false, local = false) =>
     this.post<any>("/ask", { query, deep, local_only: local });
+  // ------------------------------------------------ v0.8 (§11.2)
+  outcome = (body: { ask_id?: string; verdict: string; note?: string;
+                     pages: string[] }) =>
+    this.post("/cockpit/outcome", body);
+  evalRes = () => this.get<any>("/cockpit/eval");
+  authorities = () => this.get<any>("/cockpit/authorities");
+  reflectCand = () => this.get<any>("/cockpit/reflect");
   private async post<T = any>(p: string, body: unknown): Promise<T> {
     await this.connect();
     return fetch(this.base() + p, {

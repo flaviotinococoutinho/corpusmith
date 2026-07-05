@@ -207,7 +207,8 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
         w = writer()
         findings = w.harness.lint_bundle(w.bundle, mode=mode)
         pages = _pages()
-        return {"findings": [f.__dict__ for f in findings],
+        return {"eval": eval_results()["categories"],
+                "findings": [f.__dict__ for f in findings],
                 "errors": sum(f.severity == "error" for f in findings),
                 "warnings": sum(f.severity == "warn" for f in findings),
                 "orphan_count": len(_orphans(pages)),
@@ -215,6 +216,63 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
                 "privacy_coverage": round(100 * sum(
                     1 for p in pages if p["privacy"]) / max(1, len(pages))),
                 "pages": len(pages)}
+
+    # ---------- Desfechos de consulta (v0.8 §8/§11) ----------
+    @app.post("/cockpit/outcome", dependencies=[Depends(auth)])
+    def outcome(body: dict):
+        import json
+        verdict = body.get("verdict")
+        if verdict not in ("useful", "dead_end", "corrected"):
+            raise HTTPException(400, f"verdict inválido: {verdict}")
+        rt = connect(s.app_support / "runtime.db")
+        rt.execute("INSERT INTO ask_outcomes(ask_id, verdict, note, pages) "
+                   "VALUES (?,?,?,?)",
+                   (body.get("ask_id"), verdict, body.get("note"),
+                    json.dumps(body.get("pages", []))))
+        rt.commit()
+        rt.close()
+        if verdict == "corrected" and body.get("note"):
+            # correção vira memória: entra no inbox (raw/) para compilação
+            ts = time.strftime("%Y%m%d-%H%M%S")
+            target = kb / "raw" / "correcoes" / f"{ts}.md"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            pages = body.get("pages", [])[:1]
+            target.write_text(
+                f"# Correção sobre {pages[0] if pages else 'consulta'}\n\n"
+                + body["note"] + "\n")
+        return {"ok": True}
+
+    # ---------- Eval de memória (v0.8 §10) ----------
+    @app.get("/cockpit/eval", dependencies=[Depends(auth)])
+    def eval_results():
+        rt = connect(s.app_support / "runtime.db")
+        rows = rt.execute(
+            "SELECT category, total, passed FROM eval_runs e "
+            "WHERE ts = (SELECT MAX(ts) FROM eval_runs "
+            "            WHERE category = e.category) "
+            "GROUP BY category").fetchall()
+        rt.close()
+        return {"categories": [{"category": r["category"], "total": r["total"],
+                                "passed": r["passed"]} for r in rows]}
+
+    # ---------- Controle de autoridade (v0.8 §4) ----------
+    @app.get("/cockpit/authorities", dependencies=[Depends(auth)])
+    def authorities():
+        idx = connect(s.app_support / "index.db")
+        rows = idx.execute(
+            "SELECT e.canonical, e.kind, e.qid, COUNT(DISTINCT pe.page) uses "
+            "FROM entities e LEFT JOIN page_entities pe ON pe.entity_id = e.id "
+            "GROUP BY e.id ORDER BY uses DESC LIMIT 500").fetchall()
+        idx.close()
+        return {"entities": [{"canonical": r["canonical"], "kind": r["kind"],
+                              "qid": r["qid"], "uses": r["uses"]}
+                             for r in rows]}
+
+    # ---------- Candidatos do reflect (Dashboard, v0.8 §8) ----------
+    @app.get("/cockpit/reflect", dependencies=[Depends(auth)])
+    def reflect_candidates():
+        from ..jobs.reflect import candidates
+        return candidates(s)
 
     # ---------- Revisão semanal assistida ----------
     @app.get("/cockpit/review", dependencies=[Depends(auth)])

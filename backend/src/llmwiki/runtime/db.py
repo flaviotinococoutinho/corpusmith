@@ -27,5 +27,23 @@ def connect(path: Path | str) -> sqlite3.Connection:
     schema = _SCHEMAS.get(path.name)
     if schema:
         conn.executescript((_SQL_DIR / schema).read_text())
+        _migrate(conn, path.name)
         conn.commit()
     return conn
+
+
+def _columns(conn: sqlite3.Connection, table: str) -> set[str]:
+    return {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def _migrate(conn: sqlite3.Connection, name: str) -> None:
+    """ALTERs para bancos criados por versões anteriores (CREATE IF NOT
+    EXISTS não acrescenta colunas). Idempotente."""
+    if name == "index.db":
+        if "confidence" not in _columns(conn, "graph_edges"):
+            conn.execute("ALTER TABLE graph_edges ADD COLUMN "
+                         "confidence TEXT DEFAULT 'extracted'")
+        chunk_cols = _columns(conn, "chunks")
+        for col in ("valid_at", "invalid_at"):
+            if col not in chunk_cols:
+                conn.execute(f"ALTER TABLE chunks ADD COLUMN {col} TEXT")

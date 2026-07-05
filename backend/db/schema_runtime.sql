@@ -40,3 +40,19 @@ CREATE TABLE IF NOT EXISTS compile_cache (
     sha    TEXT NOT NULL,
     at     REAL NOT NULL
 );
+
+-- ============================ v0.8 (§2.1) ============================
+CREATE TABLE IF NOT EXISTS ask_outcomes(
+  id INTEGER PRIMARY KEY, ask_id TEXT, verdict TEXT NOT NULL
+    CHECK(verdict IN ('useful','dead_end','corrected')),
+  note TEXT, pages TEXT, ts REAL DEFAULT (unixepoch('subsec')));
+CREATE TABLE IF NOT EXISTS page_heat(
+  path TEXT PRIMARY KEY, reads INTEGER DEFAULT 0, cites INTEGER DEFAULT 0,
+  last_seen REAL, score REAL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS reconcile_log(        -- trilha de auditoria
+  id INTEGER PRIMARY KEY, ts REAL DEFAULT (unixepoch('subsec')),
+  candidate TEXT, op TEXT CHECK(op IN ('ADD','UPDATE','SUPERSEDE','NOOP')),
+  target TEXT, reason TEXT, signals TEXT);
+CREATE TABLE IF NOT EXISTS eval_runs(
+  id INTEGER PRIMARY KEY, ts REAL DEFAULT (unixepoch('subsec')),
+  category TEXT, total INTEGER, passed INTEGER, detail TEXT);
