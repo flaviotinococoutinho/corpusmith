@@ -28,6 +28,9 @@ class Scheduler(threading.Thread):
                                    dedupe_key=f"reflect:{week}")
                 self.queue.enqueue("review_weekly", {}, priority=6,
                                    dedupe_key=f"review:{week}")
+            today = time.strftime("%Y-%m-%d")
             self.queue.enqueue("embed", {}, priority=3,
-                               dedupe_key=f"embed:{time.strftime('%Y-%m-%d')}")
+                               dedupe_key=f"embed:{today}")
+            self.queue.enqueue("consolidate_inbox", {}, priority=4,
+                               dedupe_key=f"consolidate:{today}")
             self._stop.wait(self.interval)

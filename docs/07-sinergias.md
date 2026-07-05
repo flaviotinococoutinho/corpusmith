@@ -103,6 +103,21 @@ escala (só usa posições); o Hedge passa a treinar o crédito do sinal
 novo automaticamente (aparece em `ask_provenance`/`stream_weights` sem
 código extra).
 
+### R8b — "Meu inbox acumula notas soltas do mesmo assunto"
+Deixe o `consolidate_inbox` (diário) agir: notas que compartilham
+identificador forte ou ≥2 entidades canônicas viram UMA página
+consolidada com `sources` rastreados — uma chamada de LLM por cluster.
+Notas sem recorrência ficam pendentes (compile individual continua
+disponível). A curadoria de authority_records (R1) melhora diretamente o
+clustering: mais aliases mapeados ⇒ mais recorrência detectada.
+
+### R8c — "Depreciei uma página; o que mais fica suspeito?"
+O retorno do `mark_stale` lista os `dependents` (quem cita a página).
+Revise-os na ordem; se a informação deles se apoiava só na depreciada,
+marque-os também ou atualize os links para a sucessora. O
+`policy.contradiction_candidate` no lint pega o caso complementar: duas
+versões da mesma verdade convivendo sem sucessão declarada.
+
 ### R8 — "Quero medir se uma mudança melhorou a memória"
 1. Congelar um golden set representativo (≥3 casos por categoria).
 2. Rodar `eval_memory` antes e depois; comparar `eval_runs` por ts.

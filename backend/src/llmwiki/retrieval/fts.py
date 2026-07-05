@@ -98,10 +98,12 @@ def rebuild_index(s: Settings) -> dict:
 
     # cites → page_heat (alimenta o reflect, §8)
     rt = connect(s.app_support / "runtime.db")
+    now = time.time()
     for page, n in in_links.items():
-        rt.execute("INSERT INTO page_heat(path, cites, last_seen) VALUES (?,?,?) "
-                   "ON CONFLICT(path) DO UPDATE SET cites=?",
-                   (page, n, time.time(), n))
+        rt.execute("INSERT INTO page_heat(path, cites, last_seen, first_seen) "
+                   "VALUES (?,?,?,?) ON CONFLICT(path) DO UPDATE SET cites=?, "
+                   "first_seen = COALESCE(first_seen, ?)",
+                   (page, n, now, now, n, now))
     rt.commit()
     rt.close()
     return {"pages": pages, "chunks": chunks}

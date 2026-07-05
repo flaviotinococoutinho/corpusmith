@@ -18,9 +18,11 @@ daemon.main()
  └─ uvicorn 127.0.0.1:8377
 ```
 
-Jobs registrados: `compile_source · ask · embed · rerank · leiden · ocr ·
-lora_train · review_weekly · reflect · eval_memory · index_rebuild`.
-Dedupe por chave (ex.: `review:2026-W27`) impede duplicatas na fila.
+Jobs registrados: `compile_source · consolidate_inbox · ask · embed ·
+rerank · leiden · ocr · lora_train · review_weekly · reflect ·
+eval_memory · index_rebuild`. Scheduler: segunda ⇒ reflect +
+review_weekly; diário ⇒ embed + consolidate_inbox. Dedupe por chave
+(ex.: `review:2026-W27`) impede duplicatas na fila.
 
 ## 1. Compilar uma fonte (o fluxo mais denso)
 
@@ -50,6 +52,25 @@ CompilerFacade.compile → CompileSource.execute()  [Template Method]
 
 Idempotência ponta a ponta: recompilar a mesma fonte produz o mesmo corpo
 (rewrite idempotente) e cache por sha marca o status no Inbox.
+
+## 1b. Consolidar por recorrência (CLS, v0.10)
+
+Job diário (ou sob demanda): a alternativa barata ao compile 1-a-1
+quando o inbox acumula notas do mesmo tema.
+
+```
+CompilerFacade.consolidate_inbox → ConsolidateInbox.execute()
+ 1. pendentes: raw/* fora do compile_cache (sha) → extract + analyze
+    ⇒ assinatura determinística {ids fortes, entidades canônicas}
+ 2. cluster (union-find): convergem se compartilham id forte
+    OU ≥ min_shared(2) entidades — SEM embeddings, SEM LLM
+ 3. cada cluster ≥ min_cluster(2) → _ConsolidatedPage [Template Method]:
+    UMA chamada de LLM por cluster (fallback: concatenação por fonte);
+    meta: sources=[...], source_sha256 = sha dos shas, privacy = a MAIS
+    restritiva das fontes
+ 4. _after_write: compile_cache para CADA fonte · rebuild_index
+ → {pending, clusters, pages, left}   (sem recorrência ⇒ fica pendente)
+```
 
 ## 2. Perguntar (`/ask`)
 
@@ -108,10 +129,13 @@ aberta" (kind=question) — lacuna vira memória endereçável.
 ## 5. Depreciar / suceder
 
 - **`mark_stale`** (Explorer): grava `stale_as_of=<head do kb>` — tempo
-  de código; página segue respondível, marcada 🟡.
+  de código; página segue respondível, marcada 🟡. **TMS (v0.10)**: o
+  resultado lista os `dependents` (páginas que citam a depreciada) para
+  revisão — propagação de suspeita, nunca cascata automática.
 - **SUPERSEDE** (reconciliador): antiga ganha `superseded_by` +
   `invalid_at` — tempo de mundo; some das respostas com `as_of`
-  posterior, permanece para consultas históricas e no Git.
+  posterior, permanece para consultas históricas e no Git. Emite
+  `{supersede.dependents}` quando a antiga tem citadores.
 
 ## 6. Revisão semanal
 
@@ -171,6 +195,7 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | POST /cockpit/outcome | Memory.record_outcome | RecordOutcome |
 | GET /cockpit/eval · job eval_memory | Memory.evaluate | EvaluateMemory |
 | job compile_source | Compiler.compile | CompileSource (+ReconcileCandidate) |
+| job consolidate_inbox | Compiler.consolidate_inbox | ConsolidateInbox (+_ConsolidatedPage) |
 | job index_rebuild · CLI okf index | Compiler.rebuild_index | RebuildIndex |
 | job leiden | Compiler.detect_communities | DetectCommunities |
 | POST /cockpit/promote | Curation.promote | PromoteToMemory |

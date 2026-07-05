@@ -3,7 +3,7 @@ import re
 from .findings import Finding
 from ..normalize import analyze, findings as norm_findings
 from ..normalize.detectors.identifiers import RE_GIT_SHA_CTX as COMMIT_REF
-from ..okf.authorities import load_gazetteer
+from ..okf.authorities import load_gazetteer, load_type_schemas
 from ..okf.document import OKFDocument
 from ..okf.links import parse_links, is_internal, resolve
 
@@ -22,6 +22,7 @@ RECOMMENDED_TYPES = {
 def check(docs, reader, git, mode: str = "write") -> list[Finding]:
     out: list[Finding] = []
     gaz = load_gazetteer(reader) if docs else None
+    schemas = load_type_schemas(reader) if docs else {}
     for d in docs:
         x = d.meta.model_dump()
         via = str(x.get("generated_via", ""))
@@ -90,6 +91,19 @@ def check(docs, reader, git, mode: str = "write") -> list[Finding]:
             out.append(Finding("info", "policy.unknown_type", d.rel_path,
                                f"type fora da taxonomia recomendada: {d.meta.type}"))
 
+        # schemas por tipo (DTT lite, v0.10): collection_specification com
+        # `applies_to` declara campos obrigatórios — contrato opt-in curado
+        # no próprio bundle
+        schema = schemas.get(d.meta.type)
+        if schema:
+            present = set(d.meta.model_dump(exclude_none=True))
+            missing = [f for f in schema["required_fields"] if f not in present]
+            if missing:
+                out.append(Finding("error", "policy.schema_required_field",
+                                   d.rel_path,
+                                   f"type '{d.meta.type}' exige campos "
+                                   f"{missing} (schema: {schema['page']})"))
+
         if mode == "release":
             for link in parse_links(d.body):
                 if is_internal(link.target) and \
@@ -98,6 +112,49 @@ def check(docs, reader, git, mode: str = "write") -> list[Finding]:
                                        d.rel_path,
                                        f"release com link quebrado: {link.target}"))
     return out
+
+CONTRADICTION_IDS = ("doi", "isbn", "issn", "arxiv")
+
+
+def check_corpus(docs, reader) -> list[Finding]:
+    """Detecção AGM-inspirada de CONTRADIÇÃO candidata (v0.10, só no lint):
+    o mesmo identificador forte em 2+ páginas sem relação de sucessão
+    (superseded_by/supersedes dentro do grupo, ou invalid_at resolvendo o
+    conflito no tempo) sugere duas versões da mesma verdade convivendo.
+    A resolução NUNCA é automática — o finding nomeia a página mais
+    ENTRINCHEIRADA (humana > máquina; mais desfechos úteis viriam depois)
+    e o humano/SUPERSEDE decide. Warn, nunca error."""
+    by_id: dict[str, list] = {}
+    gaz = load_gazetteer(reader)
+    for d in docs:
+        x = d.meta.model_dump(exclude_none=True)
+        for m in analyze(d.body, gaz=gaz).matches:
+            if m.kind == "identifier" and m.subkind in CONTRADICTION_IDS \
+                    and m.valid is not False:
+                by_id.setdefault(m.canonical, []).append((d, x))
+    out: list[Finding] = []
+    for ident, group in by_id.items():
+        pages = {d.rel_path for d, _ in group}
+        if len(pages) < 2:
+            continue
+        resolved = any(x.get("superseded_by") in pages
+                       or x.get("supersedes") in pages
+                       or x.get("invalid_at")
+                       for _, x in group)
+        if resolved:
+            continue
+        entrenched = sorted(
+            group, key=lambda item: (
+                not str(item[1].get("generated_via", "")).startswith("human:"),
+                item[0].rel_path))[0][0]
+        out.append(Finding(
+            "warn", "policy.contradiction_candidate", entrenched.rel_path,
+            f"identificador {ident} em {len(pages)} páginas sem sucessão: "
+            f"{sorted(pages)} — mais entrincheirada: {entrenched.rel_path}; "
+            "resolva com supersede/invalid_at ou funda as páginas",
+            meta={"identifier": ident, "pages": sorted(pages)}))
+    return out
+
 
 def _section(body: str, name: str) -> str:
     m = re.search(rf"^#{{1,3}}\s*{name}\s*$(.*?)(?=^#{{1,3}}\s|\Z)",

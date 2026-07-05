@@ -107,7 +107,8 @@ class MachinePageUseCase(UseCase):
                                    if v is not None}))
 
     def _supersede(self, old_path: str, new_path: str) -> None:
-        """Invalidar, nunca apagar (zep): a antiga aponta para a nova."""
+        """Invalidar, nunca apagar (zep): a antiga aponta para a nova.
+        TMS (v0.10): notifica os dependentes da antiga para revisão."""
         old = self._writer.reader.load(old_path)
         meta = old.meta.model_dump(exclude_none=True)
         meta.update(superseded_by=new_path,
@@ -118,3 +119,8 @@ class MachinePageUseCase(UseCase):
             log_kind="Deprecation",
             log_message=f"supersedida por {new_path}",
             commit_message=f"supersede: {old_path}")
+        from .mark_stale import dependents_of
+        dependents = dependents_of(self._settings, old_path)
+        if dependents:
+            self._notify("supersede.dependents",
+                         {"page": old_path, "dependents": dependents})

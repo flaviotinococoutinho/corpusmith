@@ -1,20 +1,20 @@
-"""ReflectOnUsage (v0.8 §8 como use case) + usage_candidates (consulta pura)."""
+"""ReflectOnUsage (v0.8 §8 como use case; heat por BLA na v0.10)
++ usage_candidates (consulta pura).
+
+O termo de recência×frequência é a Base-Level Activation do ACT-R
+(kernel/activation.py) — lei de potência sobre a vida da memória, que
+captura o efeito de espaçamento que o decaimento exponencial do último
+acesso (v0.8) ignorava. Score final ∈ [0,1]:
+
+    score = 0.6·σ(BLA) + 0.2·min(1, cites/5) + 0.2·outcome
+"""
 from __future__ import annotations
 import json
-import math
 import time
 from .base import UseCase
+from ..kernel.activation import base_level_activation, logistic
 from ..runtime.db import connect
 from ..settings import Settings
-
-HALF_LIFE_DAYS = 30.0
-
-
-def _decay(last_seen: float | None) -> float:
-    if not last_seen:
-        return 0.0
-    dt_days = max(0.0, (time.time() - last_seen) / 86_400)
-    return math.exp(-math.log(2) * dt_days / HALF_LIFE_DAYS)
 
 
 def outcome_ratios(rt) -> dict[str, tuple[int, int]]:
@@ -35,7 +35,7 @@ def usage_candidates(settings: Settings) -> dict:
         "SELECT path, score FROM page_heat WHERE path LIKE 'inbox/%' "
         "AND score > 0.6 ORDER BY score DESC LIMIT 10")]
     archive = [dict(r) for r in rt.execute(
-        "SELECT path, score FROM page_heat WHERE score < 0.05 "
+        "SELECT path, score FROM page_heat WHERE score < 0.15 "
         "AND last_seen < unixepoch() - 90*86400 ORDER BY score LIMIT 10")]
     contested = [r["page"] for r in idx.execute(
         "SELECT page FROM page_overlay WHERE status='contested'")]
@@ -68,13 +68,17 @@ class ReflectOnUsage(UseCase):
         return candidates
 
     def _recalculate_heat(self, rt, ratios) -> None:
-        for path, reads, cites, last in rt.execute(
-                "SELECT path, reads, cites, last_seen FROM page_heat"
-                ).fetchall():
+        now = time.time()
+        for path, reads, cites, last, first in rt.execute(
+                "SELECT path, reads, cites, last_seen, first_seen "
+                "FROM page_heat").fetchall():
             useful, dead = ratios.get(path, (0, 0))
             outcome = (useful / (useful + dead)) if (useful + dead) else 0.5
-            score = (0.5 * _decay(last) * math.log1p(reads)
-                     + 0.3 * math.log1p(cites) + 0.2 * outcome)
+            age_days = (now - (first or last or now)) / 86_400
+            activation = base_level_activation(reads or 0, age_days)
+            score = (0.6 * logistic(activation)
+                     + 0.2 * min(1.0, (cites or 0) / 5.0)
+                     + 0.2 * outcome)
             rt.execute("UPDATE page_heat SET score=? WHERE path=?",
                        (score, path))
         rt.commit()

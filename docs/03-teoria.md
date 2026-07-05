@@ -106,20 +106,60 @@ LOCAL apenas na zona cinzenta [LO, HI) e atrás de flag — `ambiguous`;
 (4) empate sem árbitro ⇒ ADD (precisão > recall: duplicar é reversível,
 fundir errado destrói). Toda decisão é logada (`reconcile_log`).
 
-### 3.3 Heat com decaimento exponencial
-**Anderson & Schooler, "Reflections of the Environment in Memory",
-Psychological Science 1991** (a curva de esquecimento racional: a
-probabilidade de precisar de uma memória decai como lei de potência do
-tempo desde o último uso — base do modelo ACT-R). Aproximação prática:
+### 3.3 Heat por Base-Level Activation (ACT-R)
+**Anderson & Schooler, "Reflections of the Environment in Memory"
+(Psychological Science, 1991)**: a probabilidade de precisar de uma
+memória segue lei de potência do histórico de uso. **Anderson et al.,
+"An Integrated Theory of the Mind" (Psychological Review, 2004)**
+formalizam como Base-Level Activation: `B = ln(Σ tⱼ^−d)`. Guardar todos
+os timestamps é caro; usamos a aproximação padrão de aprendizado
+otimizado (`kernel/activation.py`):
 
 ```
-heat = 0.5·decay(last_seen)·log(1+reads) + 0.3·log(1+cites) + 0.2·outcome
-decay = 2^(−dias/30)          # meia-vida de 30 dias
+B ≈ ln( n / (1 − d) ) − d·ln(L)        n = usos · L = vida (dias) · d = 0.5
+heat = 0.6·σ(B) + 0.2·min(1, cites/5) + 0.2·outcome        ∈ [0, 1]
 ```
 
-Logaritmos evitam que páginas viciadas em leitura dominem; o termo de
-desfecho injeta qualidade (não só frequência). Saída: candidatos a
-promover/arquivar — decisão sempre humana.
+Diferente do decaimento exponencial sobre o ÚLTIMO acesso (v0.8), o BLA
+captura o **efeito de espaçamento**: 10 usos ao longo de 3 meses valem
+mais que 10 usos num único dia antigo. `first_seen` em `page_heat` dá o
+L; σ (logística) mapeia a escala log para score comparável. Saída:
+candidatos a promover/arquivar — decisão sempre humana.
+
+### 3.7 Consolidação por recorrência (CLS)
+**McClelland, McNaughton & O'Reilly, "Why there are complementary
+learning systems in the hippocampus and neocortex" (Psychological
+Review, 1995)**: codificação episódica rápida e barata + consolidação
+neocortical lenta que extrai estrutura compartilhada. Transposição
+(`usecases/consolidate_inbox.py`): `raw/` é o hipocampo (captura sem
+custo de modelo); a consolidação SÓ dispara quando há recorrência — e a
+recorrência é detectada **deterministicamente** (identificador forte
+compartilhado OU ≥2 entidades canônicas em comum, via o anexo do
+normalize — sem embeddings). Uma chamada de LLM por CLUSTER, não por
+nota; nada é descartado (raw/ e Git são o backstop — rejeitamos o
+"esquecimento como default" da proposta original por conflitar com
+"invalidar, nunca apagar").
+
+### 3.8 Propagação de staleness (TMS)
+**Doyle, "A Truth Maintenance System" (Artificial Intelligence, 1979)**:
+crenças carregam justificativas; invalidar uma premissa marca os
+dependentes para reexame. Transposição mínima: os in-links do grafo SÃO
+as justificativas registradas — `mark_stale`/SUPERSEDE devolvem/notificam
+os `dependents` (páginas que citam a depreciada) para revisão humana.
+Propagação de suspeita, nunca invalidação em cascata automática.
+
+### 3.9 Contradição e entrincheiramento (AGM)
+**Alchourrón, Gärdenfors & Makinson, "On the Logic of Theory Change"
+(Journal of Symbolic Logic, 1985)**: revisão racional de crenças exige
+um ordenamento de entrincheiramento epistêmico. Sem provador de teoremas
+sobre prosa, adotamos AGM como ESPECIFICAÇÃO: expansão=ADD,
+contração=`stale`/`invalid_at`, revisão=SUPERSEDE — e a detecção de
+contradição é determinística (`policy.contradiction_candidate`): mesmo
+identificador forte em 2+ páginas sem relação de sucessão. O finding
+nomeia a página mais entrincheirada (humana > máquina); a resolução é
+sempre do humano ou do reconciliador. O postulado de Recovery é
+substituído pelo versionamento Git (estado anterior auditável sem
+comprometer a consistência atual).
 
 ### 3.4 Descida hierárquica L0→L1→L2
 Directory Recursive Retrieval (OpenViking) reduzido ao essencial: L0 =

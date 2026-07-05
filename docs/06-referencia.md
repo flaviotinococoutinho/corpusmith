@@ -34,6 +34,8 @@ Ausência de `# Citations` e de reservados **nunca** gera finding
 | `policy.term_noncanonical` | error (máquina, residual) / info (humano, sugestão) | grafia fora do canônico curado |
 | `policy.pii_requires_local` | error | PII com DV válido + `privacy: api_allowed` |
 | `policy.temporal_order` | error | `invalid_at ≤ valid_at` |
+| `policy.schema_required_field` | error | campo obrigatório declarado por `collection_specification` (`applies_to`) ausente na página do tipo |
+| `policy.contradiction_candidate` | warn (só lint, corpus) | mesmo identificador forte (doi/isbn/issn/arxiv) em 2+ páginas sem sucessão (`superseded_by`/`supersedes` no grupo ou `invalid_at`); o finding nomeia a página mais entrincheirada (humana > máquina) |
 
 ## 2. Endpoints (API local, auth header `x-llmwiki-auth` OU `?auth=`)
 
@@ -60,9 +62,9 @@ trajectory[{dir,picked}]}`.
 
 **runtime.db**: `jobs` · `events` · `ledger` · `compile_cache` ·
 `ask_outcomes(verdict∈useful|dead_end|corrected)` ·
-`page_heat(reads,cites,last_seen,score)` · `reconcile_log(op∈ADD|UPDATE|
-SUPERSEDE|NOOP)` · `eval_runs` · `ask_provenance(ask_id,page,stream)` ·
-`stream_weights(stream,weight)`
+`page_heat(reads,cites,last_seen,first_seen,score)` ·
+`reconcile_log(op∈ADD|UPDATE|SUPERSEDE|NOOP)` · `eval_runs` ·
+`ask_provenance(ask_id,page,stream)` · `stream_weights(stream,weight)`
 
 **index.db** (derivado): `chunks(+valid_at,invalid_at)` · `chunks_fts` ·
 `graph_edges(+confidence)` · `communities` · `embeddings` · `entities` ·
@@ -71,14 +73,16 @@ SUPERSEDE|NOOP)` · `eval_runs` · `ask_provenance(ask_id,page,stream)` ·
 `graph_bridges(src,dst,weight,small_side,large_side)`
 
 Migrações em `runtime/db.py:_migrate`: `graph_edges.confidence`,
-`chunks.valid_at/invalid_at`.
+`chunks.valid_at/invalid_at`, `page_heat.first_seen` (backfill =
+`last_seen`).
 
 ## 4. Jobs (REGISTRY em `jobs/__init__.py`)
 
-`compile_source · ask · embed · rerank · leiden · ocr · lora_train ·
-review_weekly · reflect · eval_memory · index_rebuild` —
-contrato `run(settings, payload, emit) -> dict`. Slots heavy:
-compile_source, lora_train, leiden, ocr.
+`compile_source · consolidate_inbox · ask · embed · rerank · leiden ·
+ocr · lora_train · review_weekly · reflect · eval_memory ·
+index_rebuild` — contrato `run(settings, payload, emit) -> dict`.
+Slots heavy: compile_source, lora_train, leiden, ocr. Scheduler:
+segunda ⇒ reflect + review_weekly; diário ⇒ embed + consolidate_inbox.
 
 ## 5. Configuração (`config/default.yaml` + Settings)
 
@@ -114,8 +118,10 @@ alert→architectural_alert/alerts.
 `resource` · `tags` · `timestamp` · `valid_at` · `invalid_at` ·
 `superseded_by` · `sensitive_data` · `entities`.
 **Extensões toleradas** (extra="allow"): `privacy` · `generated_via` ·
-`source` · `source_sha256` · `confidence` · `supersedes` · `stale_as_of` ·
-`canonical` · `aliases` · `authority` · `qid` · `okf_version` (raiz).
+`source` · `sources` (lista, páginas consolidadas) · `source_sha256` ·
+`confidence` · `supersedes` · `stale_as_of` · `canonical` · `aliases` ·
+`authority` · `qid` · `applies_to` + `required_fields`
+(collection_specification) · `okf_version` (raiz).
 
 ## 8. Detectores do normalize/
 
@@ -147,11 +153,15 @@ MachinePageUseCase      subclasses não sobrescrevem execute
 ## 10. Use cases e facades
 
 **Memory**: AskMemory · RecordOutcome · EvaluateMemory.
-**Compiler**: CompileSource · ReconcileCandidate · RebuildIndex ·
-DetectCommunities.
-**Curation**: PromoteToMemory · MarkPageStale · LintBundle ·
-ComputeWeeklyReview · PublishWeeklyReview · ReflectOnUsage
+**Compiler**: CompileSource · ConsolidateInbox (+`_ConsolidatedPage`) ·
+ReconcileCandidate · RebuildIndex · DetectCommunities.
+**Curation**: PromoteToMemory · MarkPageStale (+`dependents_of` puro) ·
+LintBundle · ComputeWeeklyReview · PublishWeeklyReview · ReflectOnUsage
 (+ `usage_candidates` puro).
+
+Derivados do bundle (gazetteer + schemas de tipo) são cacheados por
+`(kb, HEAD)` em `okf/authorities.py` — toda escrita commita, então o
+HEAD é chave de invalidação perfeita (~92× mais rápido no hit).
 
 ## 11. Constantes calibráveis
 
@@ -162,7 +172,9 @@ ComputeWeeklyReview · PublishWeeklyReview · ReflectOnUsage
 | Pesos reconcile | 0.4 rank · 0.3 jaccard · 0.3 (1−NCD) | idem |
 | Hedge η / clamp | 0.25 / [0.5, 2.0] | kernel/information.py |
 | Overlay boost | preferred ×1.15 · contested ×0.8 | retrieval/streams.py |
-| Heat | 0.5 rec·log(reads) + 0.3 log(cites) + 0.2 outcome; meia-vida 30d | usecases/reflect_usage.py |
+| Heat (BLA) | 0.6·σ(BLA) + 0.2·min(1, cites/5) + 0.2·outcome; BLA ≈ ln(n/(1−d)) − d·ln(L), d=0.5 | usecases/reflect_usage.py + kernel/activation.py |
+| Candidatos reflect | promote > 0.6 · archive < 0.15 (e 90d sem uso) | usecases/reflect_usage.py |
+| Consolidação (CLS) | min_shared=2 entidades OU id forte; min_cluster=2 | usecases/consolidate_inbox.py |
 | Pesos de aresta | extracted 1.0 · inferred 0.5 · ambiguous 0.15 | usecases/detect_communities.py |
 | Co-menção | 2..30 páginas, peso 0.25 | idem |
 | Hub p99, mínimo | max(p99, 8) | idem |

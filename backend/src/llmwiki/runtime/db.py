@@ -47,3 +47,8 @@ def _migrate(conn: sqlite3.Connection, name: str) -> None:
         for col in ("valid_at", "invalid_at"):
             if col not in chunk_cols:
                 conn.execute(f"ALTER TABLE chunks ADD COLUMN {col} TEXT")
+    if name == "runtime.db":
+        if "first_seen" not in _columns(conn, "page_heat"):
+            conn.execute("ALTER TABLE page_heat ADD COLUMN first_seen REAL")
+            conn.execute("UPDATE page_heat SET first_seen = last_seen "
+                         "WHERE first_seen IS NULL")

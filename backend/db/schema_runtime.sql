@@ -48,7 +48,8 @@ CREATE TABLE IF NOT EXISTS ask_outcomes(
   note TEXT, pages TEXT, ts REAL DEFAULT (unixepoch('subsec')));
 CREATE TABLE IF NOT EXISTS page_heat(
   path TEXT PRIMARY KEY, reads INTEGER DEFAULT 0, cites INTEGER DEFAULT 0,
-  last_seen REAL, score REAL DEFAULT 0);
+  last_seen REAL, first_seen REAL,     -- first_seen: vida L do BLA (v0.10)
+  score REAL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS reconcile_log(        -- trilha de auditoria
   id INTEGER PRIMARY KEY, ts REAL DEFAULT (unixepoch('subsec')),
   candidate TEXT, op TEXT CHECK(op IN ('ADD','UPDATE','SUPERSEDE','NOOP')),

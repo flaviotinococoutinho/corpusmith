@@ -27,6 +27,7 @@ pergunte ao usuário antes).
 | Fluxo fim-a-fim alterado (ordem de etapas, laço novo) | `docs/05-fluxos-operacionais.md` + diagrama de laços em `docs/07` §1 |
 | Teste de arquitetura alterado | `docs/02-metodologias.md` §8 + `docs/06-referencia.md` §9 |
 | Painel/cliente desktop | `docs/04-tecnologias.md` §4 (só se mudar contrato, não estética) |
+| Conceito avaliado e adotado/rejeitado | `docs/08-decisoes.md` (ADR novo com contexto→decisão→consequência e porta de reentrada) |
 
 ## Procedimento de auditoria
 
@@ -61,7 +62,7 @@ sed -n '/RECOMMENDED_TYPES = {/,/}/p' src/llmwiki/harness/local_policy.py
 sed -n '1,60p' config/default.yaml
 
 # 10. Constantes calibráveis (compare com 06-referencia §11)
-grep -rnE '(RRF_K|HI, LO|eta: float|floor: float|ceiling|HALF_LIFE|CHUNK_CHARS|1\.15|0\.8\}|BETWEEN 2 AND 30|max\(p99, 8\))' src/llmwiki | grep -v tests
+grep -rnE '(RRF_K|HI, LO|eta: float|floor: float|ceiling|DECAY|CHUNK_CHARS|1\.15|0\.8\}|BETWEEN 2 AND 30|max\(p99, 8\)|min_shared|score > 0\.6|score < 0\.15)' src/llmwiki | grep -v tests
 
 # 11. A suíte é o juiz final — doc que contradiz teste verde está errada
 .venv/bin/pytest -q

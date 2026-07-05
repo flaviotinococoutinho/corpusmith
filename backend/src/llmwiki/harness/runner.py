@@ -39,6 +39,7 @@ class HarnessRunner:
         findings.extend(okf_conformance.check(docs, self.reader))
         findings.extend(okf_conformance.check_reserved_files(bundle_root))
         findings.extend(local_policy.check(docs, self.reader, self.git, mode=mode))
+        findings.extend(local_policy.check_corpus(docs, self.reader))
         return findings
 
     @staticmethod

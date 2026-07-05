@@ -178,8 +178,30 @@ política (Harness) + roteamento (router).
 ## 10. Heat, uso e esquecimento reversível
 
 `page_heat` acumula sinais de uso (leituras em evidência, citações
-in-link, desfechos) num score com decaimento exponencial (meia-vida 30
-dias). O job `reflect` deriva candidatos a **promoção** e
+in-link, desfechos) num score baseado na **Base-Level Activation do
+ACT-R** (lei de potência sobre a vida da memória — doc 03 §3.3), que
+captura o efeito de espaçamento: uso distribuído no tempo vale mais que
+rajada antiga. O job `reflect` deriva candidatos a **promoção** e
 **arquivamento** — sempre sugestão para o humano, nunca ação automática.
 Esquecer é reversível por construção: arquivar é mover página (commit),
 e o Git guarda tudo.
+
+## 11. Recorrência, dependência e contradição (v0.10)
+
+Três conceitos fecham o governo epistêmico do bundle:
+
+- **Consolidação por recorrência (CLS)**: o inbox é o hipocampo —
+  captura barata, sem modelo; a síntese neocortical só dispara quando
+  notas pendentes CONVERGEM (id forte compartilhado ou entidades em
+  comum, detecção 100% determinística). Uma chamada de LLM por cluster.
+- **Dependência (TMS)**: os in-links são justificativas registradas.
+  Depreciar uma página lista seus `dependents` para revisão — a suspeita
+  propaga; a invalidação, nunca.
+- **Contradição candidata (AGM)**: o mesmo identificador forte em duas
+  páginas sem relação de sucessão é sinal de duas versões da mesma
+  verdade convivendo. O lint aponta (warn) e nomeia a mais entrincheirada
+  (humana > máquina); resolver — supersede, fusão ou invalid_at — é
+  decisão humana. **Schemas por tipo** completam o contrato: uma página
+  `collection_specification` com `applies_to` declara campos obrigatórios
+  para aquele `type`, e o Harness passa a exigi-los — validação curada no
+  próprio bundle, como tudo mais.

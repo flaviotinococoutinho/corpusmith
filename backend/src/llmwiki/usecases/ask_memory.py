@@ -143,9 +143,11 @@ class AskMemory(UseCase):
         rt = connect(self._settings.app_support / "runtime.db")
         now = time.time()
         for page, sources in fused.provenance.items():
-            rt.execute("INSERT INTO page_heat(path, reads, last_seen) "
-                       "VALUES (?,1,?) ON CONFLICT(path) DO UPDATE SET "
-                       "reads = reads + 1, last_seen = ?", (page, now, now))
+            rt.execute("INSERT INTO page_heat(path, reads, last_seen, first_seen) "
+                       "VALUES (?,1,?,?) ON CONFLICT(path) DO UPDATE SET "
+                       "reads = reads + 1, last_seen = ?, "
+                       "first_seen = COALESCE(first_seen, ?)",
+                       (page, now, now, now, now))
             for stream in sources:
                 rt.execute("INSERT OR IGNORE INTO ask_provenance"
                            "(ask_id, page, stream) VALUES (?,?,?)",

@@ -14,6 +14,7 @@ compõem entre si.
 | [05-fluxos-operacionais.md](05-fluxos-operacionais.md) | QUANDO/ONDE | Todos os fluxos fim-a-fim: compilar, perguntar, promover, desfecho→reflect, revisão, comunidades, eval, implantação |
 | [06-referencia.md](06-referencia.md) | Tabela da verdade | Referência dura: todas as regras do Harness, endpoints, tabelas, jobs, flags, tipos OKF, frontmatter — o que a skill de sincronização audita |
 | [07-sinergias.md](07-sinergias.md) | COMBINAR | Matriz de interação entre conceitos + receitas de composição e extensão |
+| [08-decisoes.md](08-decisoes.md) | DECIDIR | ADRs: conceitos adotados, adaptados e rejeitados com razão registrada (CLS, ACT-R, AGM, DTT, CRDTs, WFST…) e portas de reentrada |
 
 ## Como manter esta documentação
 
