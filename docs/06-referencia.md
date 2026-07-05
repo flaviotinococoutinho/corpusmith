@@ -44,6 +44,8 @@ GET  /health                     (sem auth)
 GET  /status                     · GET/POST /jobs · GET /events (SSE)
 POST /ask                        {query, deep?, local_only?, as_of?}
 GET  /cockpit/dashboard          · GET /cockpit/inbox
+POST /cockpit/ingest             {filename, content|content_base64, subdir?, compile?}
+GET  /cockpit/stats              (by_type · heat_buckets · outcomes · outcomes_per_day)
 GET  /cockpit/pages              · GET /cockpit/page?path=
 POST /cockpit/page/stale         {path}
 POST /cockpit/promote            {kind, title, content, source?, privacy?, description?, tags?}
@@ -74,7 +76,12 @@ trajectory[{dir,picked}]}`.
 
 Migrações em `runtime/db.py:_migrate`: `graph_edges.confidence`,
 `chunks.valid_at/invalid_at`, `page_heat.first_seen` (backfill =
-`last_seen`).
+`last_seen`), `compile_cache.page` (destino da compilação, Inbox).
+
+Eventos da pipeline (SSE): todo `MachinePageUseCase` emite `page.stage`
+(`produce → normalize → reconcile → write → done`, com `id` do job) —
+o Inbox e o painel Processos renderizam o stepper ao vivo; ingestão
+emite `source.ingested`.
 
 ## 4. Jobs (REGISTRY em `jobs/__init__.py`)
 
@@ -153,8 +160,9 @@ MachinePageUseCase      subclasses não sobrescrevem execute
 ## 10. Use cases e facades
 
 **Memory**: AskMemory · RecordOutcome · EvaluateMemory.
-**Compiler**: CompileSource · ConsolidateInbox (+`_ConsolidatedPage`) ·
-ReconcileCandidate · RebuildIndex · DetectCommunities.
+**Compiler**: IngestSource (entrada pelo app → raw/) · CompileSource ·
+ConsolidateInbox (+`_ConsolidatedPage`) · ReconcileCandidate ·
+RebuildIndex · DetectCommunities.
 **Curation**: PromoteToMemory · MarkPageStale (+`dependents_of` puro) ·
 LintBundle · ComputeWeeklyReview · PublishWeeklyReview · ReflectOnUsage
 (+ `usage_candidates` puro).

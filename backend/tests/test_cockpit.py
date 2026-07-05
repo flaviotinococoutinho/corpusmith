@@ -146,3 +146,56 @@ def test_quality_includes_eval_and_ask_returns_v08_fields(client, kb, settings):
     rebuild_index(settings)
     r = client.post("/ask", json={"query": "teste sem cobertura xyzzy"}).json()
     assert r["abstained"] is True and "ask_id" in r and "trajectory" in r
+
+
+# ------------------------------------------------------------- v0.11
+def test_ingest_creates_source_and_optionally_compiles(client, kb, settings):
+    r = client.post("/cockpit/ingest", json={
+        "filename": "Reunião de Arquitetura.md",
+        "content": "# Reunião\n\nDecidimos migrar para postgres.",
+        "compile": True})
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data["path"] == "raw/reuniao-de-arquitetura.md"
+    assert data["privacy"] == "local_only"
+    assert data["job_id"]                        # compile enfileirado
+    assert (kb / data["path"]).is_file()
+    # colisão nunca sobrescreve: sufixo -2
+    r2 = client.post("/cockpit/ingest", json={
+        "filename": "reuniao de arquitetura.md", "content": "outra"})
+    assert r2.json()["path"] == "raw/reuniao-de-arquitetura-2.md"
+    # sufixo não suportado → 400
+    assert client.post("/cockpit/ingest", json={
+        "filename": "x.exe", "content": "y"}).status_code == 400
+    # o inbox reflete imediatamente, com metadados densos
+    items = client.get("/cockpit/inbox").json()["items"]
+    by_path = {i["path"]: i for i in items}
+    assert by_path["raw/reuniao-de-arquitetura.md"]["status"] == "novo"
+    assert by_path["raw/reuniao-de-arquitetura.md"]["bytes"] > 0
+    assert "modified" in by_path["raw/reuniao-de-arquitetura.md"]
+
+
+def test_inbox_links_compiled_source_to_page(client, kb, settings):
+    (kb / "raw" / "nota.md").write_text("# Nota\n\nconteúdo da nota.\n")
+    from llmwiki.facades import CompilerFacade
+    result = CompilerFacade(settings).compile("raw/nota.md")
+    items = client.get("/cockpit/inbox").json()["items"]
+    nota = next(i for i in items if i["path"] == "raw/nota.md")
+    assert nota["status"] == "compilado"
+    assert nota["page"] == result["page"]        # destino rastreado
+
+
+def test_stats_endpoint_shape(client, settings):
+    from llmwiki.runtime.db import connect
+    rt = connect(settings.app_support / "runtime.db")
+    rt.execute("INSERT INTO ask_outcomes(ask_id, verdict, pages) "
+               "VALUES ('t', 'useful', '[]')")
+    rt.execute("INSERT INTO page_heat(path, score) VALUES ('p', 0.9)")
+    rt.commit()
+    rt.close()
+    stats = client.get("/cockpit/stats").json()
+    assert set(stats) == {"by_type", "heat_buckets", "outcomes",
+                          "outcomes_per_day"}
+    assert stats["outcomes"]["useful"] == 1
+    assert sum(stats["heat_buckets"]) == 1
+    assert stats["heat_buckets"][4] == 1         # score 0.9 → último bucket

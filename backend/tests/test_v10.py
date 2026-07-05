@@ -218,3 +218,44 @@ def test_outcome_json_payload_shape(settings, kb):
     rt.close()
     assert "first_seen" in cols
     assert json.dumps({"ok": True})              # sanity
+
+
+# --------------------------------------------------- v0.11: pipeline viva
+def test_machine_page_emits_stage_events(settings, kb):
+    (kb / "raw" / "fonte.md").write_text("# Fonte\n\nusamos sqlite aqui.\n")
+    events: list[tuple[str, dict]] = []
+    CompilerFacade(settings).compile(
+        "raw/fonte.md", notify=lambda t, d=None: events.append((t, d or {})))
+    stages = [d["stage"] for t, d in events if t == "page.stage"]
+    assert stages == ["produce", "normalize", "reconcile", "write", "done"]
+    done = next(d for t, d in events if t == "page.stage"
+                and d["stage"] == "done")
+    assert done["page"] and done["op"] == "ADD"
+
+
+def test_ingest_source_sanitizes_and_dedupes(settings, kb):
+    from llmwiki.usecases.ingest_source import IngestSource
+    import pytest as _pytest
+    first = IngestSource(settings, filename="Água & Fogo.md",
+                         content="# a").execute()
+    assert first["path"] == "raw/agua-fogo.md"
+    second = IngestSource(settings, filename="água   fogo.md",
+                          content="# b", subdir="Reuniões").execute()
+    assert second["path"] == "raw/reunioes/agua-fogo.md"
+    with _pytest.raises(ValueError):
+        IngestSource(settings, filename="x.md").execute()   # sem conteúdo
+
+
+def test_migrate_adds_page_to_old_compile_cache(tmp_path):
+    import sqlite3
+    old = tmp_path / "runtime.db"
+    conn = sqlite3.connect(old)
+    conn.execute("CREATE TABLE compile_cache(source TEXT PRIMARY KEY, "
+                 "sha TEXT, at REAL)")
+    conn.commit()
+    conn.close()
+    migrated = connect(old)
+    cols = {r["name"] for r in migrated.execute(
+        "PRAGMA table_info(compile_cache)")}
+    migrated.close()
+    assert "page" in cols

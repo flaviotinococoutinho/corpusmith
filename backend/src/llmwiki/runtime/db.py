@@ -52,3 +52,5 @@ def _migrate(conn: sqlite3.Connection, name: str) -> None:
             conn.execute("ALTER TABLE page_heat ADD COLUMN first_seen REAL")
             conn.execute("UPDATE page_heat SET first_seen = last_seen "
                          "WHERE first_seen IS NULL")
+        if "page" not in _columns(conn, "compile_cache"):
+            conn.execute("ALTER TABLE compile_cache ADD COLUMN page TEXT")

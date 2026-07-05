@@ -54,11 +54,18 @@ class MachinePageUseCase(UseCase):
 
     # ------------------------------------------------- esqueleto IMUTÁVEL
     def execute(self) -> dict:
+        """Cada etapa emite `page.stage` — o Cockpit renderiza a pipeline
+        ao vivo (produce → normalize → reconcile → write → done)."""
+        self._notify("page.stage", {"stage": "produce"})
         draft = self._produce()
         if draft is None:
             return {"op": "SKIP", "page": None, **self._extra_result()}
+        self._notify("page.stage", {"stage": "normalize",
+                                    "page": draft.rel_path})
         body, report = normalize_machine_body(draft.body, self._gazetteer)
         document = self._document(draft, body, report)
+        self._notify("page.stage", {"stage": "reconcile",
+                                    "page": document.rel_path})
         decision = self._reconcile(document, report)
         if decision["op"] == "NOOP":
             self._notify("page.noop", {"page": document.rel_path})
@@ -67,12 +74,18 @@ class MachinePageUseCase(UseCase):
             document.rel_path = decision["target"]
         if decision["op"] == "SUPERSEDE":
             self._supersede(decision["target"], document.rel_path)
+        self._notify("page.stage", {"stage": "write",
+                                    "page": document.rel_path,
+                                    "op": decision["op"]})
         result = self._writer.write(
             [document],
             log_kind=self.LOG_KIND if decision["op"] == "ADD" else "Update",
             log_message=draft.log_message or draft.title,
             commit_message=draft.commit_message or document.rel_path)
         self._after_write(document, report)
+        self._notify("page.stage", {"stage": "done",
+                                    "page": document.rel_path,
+                                    "op": decision["op"]})
         return {"op": decision["op"], "page": document.rel_path,
                 "commit": result["commit"], **self._extra_result()}
 

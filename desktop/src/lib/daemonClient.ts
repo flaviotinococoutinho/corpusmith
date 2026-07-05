@@ -92,6 +92,12 @@ export class DaemonClient {
   evalRes = () => this.get<any>("/cockpit/eval");
   authorities = () => this.get<any>("/cockpit/authorities");
   reflectCand = () => this.get<any>("/cockpit/reflect");
+  // ------------------------------------------------ v0.11 (ingestão densa)
+  ingest = (body: { filename: string; content?: string;
+                    content_base64?: string; subdir?: string;
+                    compile?: boolean }) =>
+    this.post<any>("/cockpit/ingest", body);
+  stats = () => this.get<any>("/cockpit/stats");
   private async post<T = any>(p: string, body: unknown): Promise<T> {
     await this.connect();
     return fetch(this.base() + p, {

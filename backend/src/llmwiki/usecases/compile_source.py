@@ -88,9 +88,10 @@ class CompileSource(MachinePageUseCase):
 
     def _after_write(self, document, report) -> None:
         rt = connect(self._settings.app_support / "runtime.db")
-        rt.execute("INSERT OR REPLACE INTO compile_cache(source,sha,at) "
-                   "VALUES (?,?,?)",
-                   (self._relative_source, self._sha, time.time()))
+        rt.execute("INSERT OR REPLACE INTO compile_cache(source,sha,at,page) "
+                   "VALUES (?,?,?,?)",
+                   (self._relative_source, self._sha, time.time(),
+                    document.rel_path))
         rt.commit()
         rt.close()
         rebuild_index(self._settings)

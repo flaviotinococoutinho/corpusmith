@@ -26,8 +26,19 @@ review_weekly; diário ⇒ embed + consolidate_inbox. Dedupe por chave
 
 ## 1. Compilar uma fonte (o fluxo mais denso)
 
-Entrada: arquivo em `raw/` (Inbox mostra novo/stale/compilado por sha).
-`InboxPanel → POST /jobs {compile_source, path}` ou CLI `enqueue`.
+Entrada: arquivo em `raw/` — pelo filesystem OU pelo app (v0.11):
+
+```
+InboxPanel (dropzone / nota rápida) → POST /cockpit/ingest
+  {filename, content|content_base64, subdir?, compile?}
+  → IngestSource: slug do nome · sufixo validado (.md/.txt/.pdf/.epub)
+    · colisão nunca sobrescreve (-2, -3…) · binário via base64
+  → {source.ingested} · compile=true enfileira compile_source na hora
+```
+
+O Template Method emite `page.stage` em cada etapa (produce → normalize
+→ reconcile → write → done, com o id do job) — o Inbox mostra o stepper
+da pipeline ao vivo e, ao final, a coluna "→ Página" (compile_cache.page).
 
 ```
 CompilerFacade.compile → CompileSource.execute()  [Template Method]
@@ -194,6 +205,7 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | POST /ask | Memory.ask | AskMemory |
 | POST /cockpit/outcome | Memory.record_outcome | RecordOutcome |
 | GET /cockpit/eval · job eval_memory | Memory.evaluate | EvaluateMemory |
+| POST /cockpit/ingest | Compiler.ingest | IngestSource |
 | job compile_source | Compiler.compile | CompileSource (+ReconcileCandidate) |
 | job consolidate_inbox | Compiler.consolidate_inbox | ConsolidateInbox (+_ConsolidatedPage) |
 | job index_rebuild · CLI okf index | Compiler.rebuild_index | RebuildIndex |

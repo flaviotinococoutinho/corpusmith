@@ -2,7 +2,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
-from ..facades import CurationFacade, MemoryFacade
+from ..facades import CompilerFacade, CurationFacade, MemoryFacade
 from ..settings import Settings
 from ..runtime.db import connect
 from ..okf.writer import BundleWriter
@@ -15,6 +15,7 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     kb = s.path("knowledge")
     curation = CurationFacade(s)
     memory_facade = MemoryFacade(s)
+    compiler = CompilerFacade(s)
 
     def writer() -> BundleWriter:
         return BundleWriter(kb)
@@ -75,10 +76,8 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     @app.get("/cockpit/inbox", dependencies=[Depends(auth)])
     def inbox():
         rt = connect(s.app_support / "runtime.db")
-        rt.execute("CREATE TABLE IF NOT EXISTS compile_cache("
-                   "source TEXT PRIMARY KEY, sha TEXT, at REAL)")
-        cache = {r["source"]: r["sha"] for r in
-                 rt.execute("SELECT source, sha FROM compile_cache")}
+        cache = {r["source"]: (r["sha"], r["page"]) for r in
+                 rt.execute("SELECT source, sha, page FROM compile_cache")}
         rt.close()
         import hashlib
         items = []
@@ -88,11 +87,58 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
                 continue
             rel = str(p.relative_to(kb))
             sha = hashlib.sha256(p.read_bytes()).hexdigest()
-            cached = cache.get(rel)
+            cached_sha, page = cache.get(rel, (None, None))
+            stat = p.stat()
             items.append({"path": rel, "privacy": s.resolve_privacy(rel),
-                          "status": ("novo" if not cached else
-                                     "compilado" if cached == sha else "stale")})
+                          "bytes": stat.st_size,
+                          "modified": time.strftime(
+                              "%Y-%m-%d %H:%M", time.localtime(stat.st_mtime)),
+                          "page": page,
+                          "status": ("novo" if not cached_sha else
+                                     "compilado" if cached_sha == sha
+                                     else "stale")})
         return {"items": items}
+
+    # ---------- Ingestão pelo app (v0.11): conteúdo → raw/ → pipeline ----
+    @app.post("/cockpit/ingest", dependencies=[Depends(auth)])
+    def ingest(body: dict):
+        try:
+            result = compiler.ingest(
+                filename=body["filename"], content=body.get("content"),
+                content_base64=body.get("content_base64"),
+                subdir=body.get("subdir"))
+        except (KeyError, ValueError) as e:
+            raise HTTPException(400, str(e))
+        if body.get("compile"):
+            result["job_id"] = queue.enqueue(
+                "compile_source", {"path": result["path"]}, priority=6)
+        bus.emit("system", "source.ingested",
+                 {"path": result["path"],
+                  "job_id": result.get("job_id")})
+        return result
+
+    # ---------- Estatísticas para os gráficos do Dashboard (v0.11) ------
+    @app.get("/cockpit/stats", dependencies=[Depends(auth)])
+    def stats():
+        pages = _pages()
+        by_type: dict[str, int] = {}
+        for p in pages:
+            by_type[p["type"]] = by_type.get(p["type"], 0) + 1
+        rt = connect(s.app_support / "runtime.db")
+        heat = [0, 0, 0, 0, 0]                      # buckets de 0.2 em [0,1]
+        for (score,) in rt.execute("SELECT score FROM page_heat"):
+            heat[min(4, int((score or 0) / 0.2))] += 1
+        outcomes = {r["verdict"]: r["c"] for r in rt.execute(
+            "SELECT verdict, COUNT(*) c FROM ask_outcomes GROUP BY verdict")}
+        per_day = [{"day": r["day"], "n": r["n"]} for r in rt.execute(
+            "SELECT date(ts, 'unixepoch') day, COUNT(*) n FROM ask_outcomes "
+            "WHERE ts > unixepoch() - 14*86400 GROUP BY day ORDER BY day")]
+        rt.close()
+        return {"by_type": sorted(by_type.items(), key=lambda kv: -kv[1]),
+                "heat_buckets": heat,
+                "outcomes": {v: outcomes.get(v, 0)
+                             for v in ("useful", "dead_end", "corrected")},
+                "outcomes_per_day": per_day}
 
     # ---------- Explorador OKF ----------
     @app.get("/cockpit/pages", dependencies=[Depends(auth)])

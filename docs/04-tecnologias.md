@@ -85,6 +85,10 @@ de API grava tokens/USD no `ledger`.
   preload/contextBridge (`window.llmwiki.handshake()`).
 - **daemonClient.ts**: singleton com `connect()` (poll de /health),
   header de auth, e um método por endpoint. EventSource usa `?auth=`.
+- **live.ts** (v0.11): UMA assinatura SSE compartilhada por todos os
+  painéis + snapshot de /status em polling — alimenta a StatusBar global
+  (daemon · fila · orçamento · ticker de eventos) e os steppers de
+  pipeline do Inbox/Processos via os eventos `page.stage`.
 - **Vite**: config em `vite.config.mts` (ESM-only por causa do plugin
   Tailwind v4) com `vite-plugin-electron` buildando main+preload CJS.
 - **Painéis**: Dashboard, ChatEvidence (+PromoteDialog), Inbox, Explorer,

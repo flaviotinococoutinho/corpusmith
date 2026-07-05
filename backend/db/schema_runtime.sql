@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS ledger (
 CREATE TABLE IF NOT EXISTS compile_cache (
     source TEXT PRIMARY KEY,
     sha    TEXT NOT NULL,
-    at     REAL NOT NULL
+    at     REAL NOT NULL,
+    page   TEXT                -- destino da compilação (rastreio no Inbox, v0.11)
 );
 
 -- ============================ v0.8 (§2.1) ============================

@@ -125,11 +125,11 @@ class _ConsolidatedPage(MachinePageUseCase):
         rt = connect(self._settings.app_support / "runtime.db")
         now = time.time()
         for signature in self._cluster:
-            rt.execute("INSERT OR REPLACE INTO compile_cache(source,sha,at) "
-                       "VALUES (?,?,?)",
+            rt.execute("INSERT OR REPLACE INTO compile_cache(source,sha,at,page) "
+                       "VALUES (?,?,?,?)",
                        (signature.relative,
                         hashlib.sha256(signature.text.encode()).hexdigest(),
-                        now))
+                        now, document.rel_path))
         rt.commit()
         rt.close()
         rebuild_index(self._settings)
