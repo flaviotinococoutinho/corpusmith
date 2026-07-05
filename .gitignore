@@ -1,0 +1,20 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+backend/dist/
+backend/build/
+.pytest_cache/
+
+# Node / Electron
+desktop/node_modules/
+desktop/dist/
+desktop/dist-electron/
+desktop/release/
+
+# Dados locais do usuário (nunca versionados aqui — o kb tem git próprio)
+*.db
+*.db-wal
+*.db-shm
+.write.lock
+*.egg-info/

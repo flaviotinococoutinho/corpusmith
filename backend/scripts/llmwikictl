@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Controle do daemon: status/jobs direto, sem lembrar subcomandos
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CMD="${1:-status}"
+shift || true
+exec "$HERE/../.venv/bin/python" -m llmwiki.cli "$CMD" "$@"

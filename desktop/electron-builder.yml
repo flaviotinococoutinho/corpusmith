@@ -1,0 +1,12 @@
+appId: dev.flavio.llmwiki
+productName: LLM Wiki
+files:
+  - dist/**
+  - dist-electron/**
+mac:
+  category: public.app-category.productivity
+  hardenedRuntime: true            # exigido p/ notarização junto do sidecar
+  target: [dmg]
+extraResources:
+  - from: ../backend/dist/llmwiki-server/
+    to: backend/

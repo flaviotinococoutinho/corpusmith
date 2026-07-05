@@ -1,0 +1,35 @@
+[project]
+name = "llmwiki"
+version = "0.7.0"
+description = "LLM Wiki — knowledge base OKF local-first com cockpit de memória agêntica"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn>=0.30",
+    "sse-starlette>=2.1",
+    "pydantic>=2.7",
+    "python-frontmatter>=1.1",
+    "PyYAML>=6.0",
+    "GitPython>=3.1",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+# parsers AGPL ficam FORA do binário PyInstaller (§8.1): instalados no venv
+# e chamados em subprocesso por ingestion/extract.py
+parsers = ["pymupdf4llm>=0.0.17", "ebooklib>=0.18"]
+ml = ["sqlite-vec>=0.1", "igraph>=0.11", "leidenalg>=0.10"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+llmwiki = "llmwiki.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

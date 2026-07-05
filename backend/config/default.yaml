@@ -1,0 +1,41 @@
+# llmwiki — configuração default (Parte V §4.2 + Manual Ap. D + v0.6 §5.5)
+home: ~/llmwiki
+
+paths:
+  knowledge: knowledge
+  adapters: adapters
+  models: models
+  logs: logs
+
+server:
+  host: 127.0.0.1
+  port: 8377
+
+# Privacidade: NADA sai da máquina sem regra explícita liberando (v0.6 §5.5)
+privacy:
+  default: local_only
+  rules: []
+  # exemplo:
+  # - pattern: "raw/public/**"
+  #   privacy: api_allowed
+
+budget:
+  daily_usd: 2.0
+
+policy:
+  citation_required: true   # política LOCAL — SPEC trata # Citations como SHOULD
+
+models:
+  local:
+    provider: ollama
+    base_url: http://127.0.0.1:11434
+    chat: qwen2.5:7b-instruct
+    embed: nomic-embed-text
+  api:
+    provider: anthropic
+    chat: claude-haiku-4-5-20251001
+
+worker:
+  heavy_slots: 1
+  light_slots: 2
+  poll_seconds: 1.0
