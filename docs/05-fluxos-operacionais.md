@@ -148,6 +148,24 @@ aberta" (kind=question) — lacuna vira memória endereçável.
   posterior, permanece para consultas históricas e no Git. Emite
   `{supersede.dependents}` quando a antiga tem citadores.
 
+## 5b. Congelar e reciclar (base fria, v0.12)
+
+```
+FREEZE (T2→T3): Dashboard 🧊 / POST /cockpit/freeze → FreezeMemory
+ gates: tipo protegido? dependentes (TMS)? overlay preferred?
+        P(recall) ACT-R > corte? ócio < mínimo?     qualquer um ⇒ 409
+ passa ⇒ [cold_memories] digest+strong_ids+corpo zlib9
+        → writer.remove (log Freeze + commit) → rebuild_index
+RECYCLE (T3→T2): três portas
+ a) /ask abstém → cold_search(digest) → cold_matches na resposta
+    (memory.auto_recycle ⇒ reidrata a melhor e re-consulta UMA vez)
+ b) reconciliador: id forte de fonte nova casa memória fria ⇒ op RECYCLE
+    (template reidrata e ATUALIZA sobre ela — nunca duplica)
+ c) humano: ♻️ no Dashboard/Chat → POST /cockpit/recycle
+ reidratação = writer.write normal (Harness + log Recall + commit),
+ frontmatter ganha `recycled: n`, heat reacende, cold entry sai
+```
+
 ## 6. Revisão semanal
 
 ```
@@ -217,3 +235,6 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | job review_weekly | Curation.publish_review | PublishWeeklyReview |
 | job reflect | Curation.reflect | ReflectOnUsage |
 | GET /cockpit/reflect | Curation.reflect_candidates | usage_candidates (puro) |
+| POST /cockpit/freeze | Curation.freeze | FreezeMemory |
+| POST /cockpit/recycle | Curation.recycle | RecycleMemory |
+| GET /cockpit/cold | Curation.cold | cold_stats (puro) |

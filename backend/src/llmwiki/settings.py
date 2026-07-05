@@ -51,6 +51,12 @@ class Settings(BaseModel):
     flags: dict[str, bool] = {"retrieval.descend": True,
                               "reconcile.llm_arbiter": False}
     ask: dict[str, Any] = {"abstain_threshold": 0.0}
+    # política da base fria (v0.12): critério ACT-R de esquecimento
+    memory: dict[str, Any] = {"freeze_tau": 0.0,          # limiar τ
+                              "activation_noise": 0.4,    # ruído s
+                              "max_recall_probability": 0.05,
+                              "min_idle_days": 90,
+                              "auto_recycle": False}
 
     # ------------------------------------------------------------------ paths
     @property

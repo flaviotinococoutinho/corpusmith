@@ -23,13 +23,24 @@ export function DashboardPanel() {
   const [d, setD] = useState<any>(null);
   const [cand, setCand] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
+  const [cold, setCold] = useState<any>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const loadCold = () => client.cold().then(setCold).catch(() => setCold(null));
   useEffect(() => {
     client.connect().then(() => {
       client.dashboard().then(setD);
       client.reflectCand().then(setCand).catch(() => setCand(null));
       client.stats().then(setStats).catch(() => setStats(null));
+      loadCold();
     });
   }, []);
+  const freeze = (path: string) =>
+    client.freeze(path)
+      .then(r => { setNotice(`🧊 congelada: ${r.page}`); loadCold(); })
+      .catch(e => setNotice(`⛔ veto: ${e.message}`));
+  const recycle = (path: string) =>
+    client.recycle(path)
+      .then(r => { setNotice(`♻️ reciclada: ${r.page}`); loadCold(); });
   if (!d) return <div className="p-6">Carregando estado da memória…</div>;
   return (
     <div className="p-6 space-y-6 max-w-3xl">
@@ -87,19 +98,49 @@ export function DashboardPanel() {
             {d.stale.map((p: string) => <li key={p} className="font-mono">{p}</li>)}
           </ul>
         </section>)}
+      {notice && <p className="text-sm border rounded p-2 bg-neutral-50">
+        {notice}</p>}
       {cand && (cand.promote.length > 0 || cand.archive.length > 0
                 || cand.contested.length > 0) && (
         <section className="grid grid-cols-3 gap-3 text-sm">
-          {[["🔥 Candidatos a promoção",
-             cand.promote.map((c: any) => c.path)],
-            ["🧊 Candidatos a arquivamento",
-             cand.archive.map((c: any) => c.path)],
-            ["⚔️ Contestadas", cand.contested]].map(([title, items]: any) => (
-            <div key={title} className="border rounded p-3">
-              <h3 className="font-medium mb-1">{title}</h3>
-              {items.length ? items.map((p: string) => (
-                <div key={p} className="font-mono text-xs">{p}</div>))
-                : <div className="text-neutral-400 text-xs">(nenhuma)</div>}
+          <div className="border rounded p-3">
+            <h3 className="font-medium mb-1">🔥 Candidatos a promoção</h3>
+            {cand.promote.length ? cand.promote.map((c: any) => (
+              <div key={c.path} className="font-mono text-xs">{c.path}</div>))
+              : <div className="text-neutral-400 text-xs">(nenhuma)</div>}
+          </div>
+          <div className="border rounded p-3">
+            <h3 className="font-medium mb-1">🧊 Candidatos a congelar</h3>
+            {cand.archive.length ? cand.archive.map((c: any) => (
+              <div key={c.path} className="flex items-center gap-1 text-xs">
+                <span className="font-mono flex-1 truncate">{c.path}</span>
+                <button className="border rounded px-1"
+                        title="mover para a base fria (gates validam)"
+                        onClick={() => freeze(c.path)}>🧊</button>
+              </div>))
+              : <div className="text-neutral-400 text-xs">(nenhuma)</div>}
+          </div>
+          <div className="border rounded p-3">
+            <h3 className="font-medium mb-1">⚔️ Contestadas</h3>
+            {cand.contested.length ? cand.contested.map((p: string) => (
+              <div key={p} className="font-mono text-xs">{p}</div>))
+              : <div className="text-neutral-400 text-xs">(nenhuma)</div>}
+          </div>
+        </section>)}
+      {cold && cold.count > 0 && (
+        <section className="border rounded p-3 text-sm">
+          <h3 className="font-medium mb-1">
+            ❄️ Base fria · {cold.count} memória(s) ·{" "}
+            {cold.compression_saved}% compactado ·{" "}
+            {cold.recycles} reciclagem(ns)</h3>
+          {cold.entries.slice(0, 8).map((e: any) => (
+            <div key={e.page} className="flex items-center gap-2 text-xs">
+              <span className="font-mono flex-1 truncate">{e.page}</span>
+              <span className="text-neutral-400">
+                P(recall) {e.recall_p?.toFixed(3) ?? "—"} ·{" "}
+                {(e.packed / 1024).toFixed(1)}/{(e.body_bytes / 1024).toFixed(1)} kB</span>
+              <button className="border rounded px-1"
+                      onClick={() => recycle(e.page)}>♻️ reciclar</button>
             </div>))}
         </section>)}
     </div>

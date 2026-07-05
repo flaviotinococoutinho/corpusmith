@@ -72,6 +72,15 @@ class ReconcileCandidate(UseCase):
                     "UPDATE", page, 1.0,
                     f"identificador forte compartilhado: {sorted(ids)[:3]}",
                     "extracted")
+        # base fria (v0.12): memória congelada com o mesmo objeto do mundo
+        # é RECICLADA em vez de duplicada — o esquecimento se desfaz sozinho
+        from .cold_memory import cold_by_strong_id
+        frozen = cold_by_strong_id(self._settings, ids)
+        if frozen and frozen != self._candidate.rel_path:
+            return self._decision(
+                "RECYCLE", frozen, 1.0,
+                f"memória fria com o mesmo identificador: {sorted(ids)[:3]}",
+                "extracted")
         return None
 
     def _by_similarity(self, idx) -> list[tuple[float, str]]:

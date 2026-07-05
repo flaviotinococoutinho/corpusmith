@@ -38,13 +38,38 @@ _GLOBAL_MARKERS = re.compile(
 
 class AskMemory(UseCase):
     def __init__(self, settings: Settings, query: str, *, deep: bool = False,
-                 local_only: bool = False, gov=None, as_of: str | None = None):
+                 local_only: bool = False, gov=None, as_of: str | None = None,
+                 _recycled: bool = False):
         self._settings = settings
         self._query = query
         self._deep = deep
         self._local_only = local_only
         self._as_of = as_of
+        self._gov = gov
+        self._already_recycled = _recycled
         self._router = ModelRouter(settings, gov)
+
+    def _cold_fallback(self, ask_id, fused, as_of, trajectory) -> dict:
+        """Abstenção consulta a BASE FRIA (v0.12): memórias congeladas que
+        casam com a pergunta viram cold_matches — e, com memory.auto_recycle,
+        a melhor é reidratada e a consulta roda de novo (uma única vez)."""
+        from .cold_memory import RecycleMemory, cold_search
+        matches = cold_search(self._settings, self._query)
+        if matches and not self._already_recycled \
+                and self._settings.get("memory.auto_recycle", False):
+            RecycleMemory(self._settings, matches[0]["page"]).execute()
+            return AskMemory(self._settings, self._query, deep=self._deep,
+                             local_only=self._local_only, gov=self._gov,
+                             as_of=self._as_of, _recycled=True).execute()
+        gaps = [f"sem cobertura para: {self._query}"]
+        if matches:
+            gaps.append("há memória FRIA compatível — recicle para responder: "
+                        + ", ".join(m["page"] for m in matches[:3]))
+        return {"answer": None, "abstained": True, "blocked": False,
+                "via": "none", "ask_id": ask_id,
+                "uncertainty": fused.uncertainty, "gaps": gaps,
+                "cold_matches": matches,
+                "evidence": [], "as_of": as_of, "trajectory": trajectory}
 
     def execute(self) -> dict:
         ask_id = uuid.uuid4().hex[:12]
@@ -84,11 +109,7 @@ class AskMemory(UseCase):
 
         threshold = float(self._settings.get("ask.abstain_threshold", 0.0))
         if fused.is_empty() or fused.top_score < threshold:
-            return {"answer": None, "abstained": True, "blocked": False,
-                    "via": "none", "ask_id": ask_id,
-                    "uncertainty": fused.uncertainty,
-                    "gaps": [f"sem cobertura para: {self._query}"],
-                    "evidence": [], "as_of": as_of, "trajectory": trajectory}
+            return self._cold_fallback(ask_id, fused, as_of, trajectory)
 
         self._record_usage(ask_id, fused)
         evidence = [{"page": h["page"], "resource": h.get("resource"),

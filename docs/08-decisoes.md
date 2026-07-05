@@ -87,6 +87,18 @@ algoritmo oficial, já implementado com vetores-golden.
 Pelo padrão do projeto (doc 03 §4), claims sem reprodutibilidade não
 dirigem arquitetura. **Reentrada**: papers citáveis com metodologia.
 
+### ADR-12 — Base fria: esquecer = compactar com critério ACT-R (v0.12)
+**Contexto**: candidatos a arquivamento acumulavam sem destino; apagar
+viola "invalidar, nunca apagar"; manter tudo quente dilui o retrieval.
+**Decisão**: camada T3 (`cold.db`) entre o bundle e o Git — digest
+indexável (MDL) + corpo zlib; demoção validada pela equação de
+recuperação do ACT-R (P(recall) < 0.05) mais gates estruturais (TMS,
+overlay, tipos protegidos, ócio mínimo); promoção de volta por três
+portas (fallback do ask, RECYCLE no reconciliador, gesto humano).
+**Rejeitado no pacote**: expiração automática por TTL (tempo sozinho não
+valida esquecimento — uso previsto valida) e apagamento definitivo (Git
+continua sendo o backstop de tudo).
+
 ### ADR-11 — Formalismo categórico (coprefeixes/Kan)
 **Rejeitado o formalismo, extraída a métrica**: a "medida de resíduo na
 mudança de regime representacional" é útil e virou, na prática, o

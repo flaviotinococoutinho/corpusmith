@@ -13,6 +13,7 @@ _SQL_DIR = Path(__file__).resolve().parent.parent.parent.parent / "db"
 _SCHEMAS = {
     "runtime.db": "schema_runtime.sql",
     "index.db": "schema_index.sql",
+    "cold.db": "schema_cold.sql",
 }
 
 
@@ -54,3 +55,18 @@ def _migrate(conn: sqlite3.Connection, name: str) -> None:
                          "WHERE first_seen IS NULL")
         if "page" not in _columns(conn, "compile_cache"):
             conn.execute("ALTER TABLE compile_cache ADD COLUMN page TEXT")
+        # v0.12: o CHECK de reconcile_log ganha a operação RECYCLE
+        row = conn.execute("SELECT sql FROM sqlite_master WHERE type='table' "
+                           "AND name='reconcile_log'").fetchone()
+        if row and "RECYCLE" not in row["sql"]:
+            conn.executescript(
+                "ALTER TABLE reconcile_log RENAME TO reconcile_log_old;"
+                "CREATE TABLE reconcile_log("
+                "  id INTEGER PRIMARY KEY, ts REAL DEFAULT (unixepoch('subsec')),"
+                "  candidate TEXT,"
+                "  op TEXT CHECK(op IN ('ADD','UPDATE','SUPERSEDE','NOOP',"
+                "                       'RECYCLE')),"
+                "  target TEXT, reason TEXT, signals TEXT);"
+                "INSERT INTO reconcile_log "
+                "  SELECT * FROM reconcile_log_old;"
+                "DROP TABLE reconcile_log_old;")

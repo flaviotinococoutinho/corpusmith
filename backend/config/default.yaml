@@ -33,6 +33,14 @@ flags:
 ask:
   abstain_threshold: 0.0        # score RRF mínimo; 0 = abstém só sem evidência
 
+# base fria (v0.12): esquecer = compactar, nunca destruir
+memory:
+  freeze_tau: 0.0               # limiar de recuperação ACT-R (τ)
+  activation_noise: 0.4         # ruído da ativação (s)
+  max_recall_probability: 0.05  # P(recall) acima disso ⇒ VETO ao freeze
+  min_idle_days: 90             # janela mínima de ociosidade
+  auto_recycle: false           # fallback do /ask reidrata sozinho?
+
 models:
   local:
     provider: ollama

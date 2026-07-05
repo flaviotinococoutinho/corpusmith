@@ -54,6 +54,9 @@ GET  /cockpit/ledger/today
 POST /cockpit/outcome            {verdict, ask_id?, note?, pages?}
 GET  /cockpit/eval               · GET /cockpit/authorities
 GET  /cockpit/reflect            · GET /cockpit/review · POST /cockpit/review/commit
+POST /cockpit/freeze             {path, force?, reason?} — 409 quando um gate veta
+POST /cockpit/recycle            {path} — 404 se não está na base fria
+GET  /cockpit/cold               (count · compression_saved · recycles · entries)
 ```
 
 Resposta do `/ask`: `{answer, via, blocked, abstained, ask_id,
@@ -67,6 +70,11 @@ trajectory[{dir,picked}]}`.
 `page_heat(reads,cites,last_seen,first_seen,score)` ·
 `reconcile_log(op∈ADD|UPDATE|SUPERSEDE|NOOP)` · `eval_runs` ·
 `ask_provenance(ask_id,page,stream)` · `stream_weights(stream,weight)`
+
+**cold.db** (base fria, v0.12 — NÃO derivado; conteúdo compactado):
+`cold_memories(page, digest, strong_ids, body_z zlib9, meta_json,
+frozen_at, frozen_commit, activation, recall_p, recycles)` · `cold_fts`
+(FTS sobre digest, para o recall de fallback).
 
 **index.db** (derivado): `chunks(+valid_at,invalid_at)` · `chunks_fts` ·
 `graph_edges(+confidence)` · `communities` · `embeddings` · `entities` ·
@@ -164,8 +172,14 @@ MachinePageUseCase      subclasses não sobrescrevem execute
 ConsolidateInbox (+`_ConsolidatedPage`) · ReconcileCandidate ·
 RebuildIndex · DetectCommunities.
 **Curation**: PromoteToMemory · MarkPageStale (+`dependents_of` puro) ·
-LintBundle · ComputeWeeklyReview · PublishWeeklyReview · ReflectOnUsage
-(+ `usage_candidates` puro).
+FreezeMemory · RecycleMemory (+`cold_search`/`cold_by_strong_id`/
+`cold_stats` puros) · LintBundle · ComputeWeeklyReview ·
+PublishWeeklyReview · ReflectOnUsage (+ `usage_candidates` puro).
+
+Reconciliador ganha a operação `RECYCLE` (memória fria com o mesmo id
+forte é reidratada e ATUALIZADA em vez de duplicada); o Template Method
+executa a reidratação antes do write. Migração: `reconcile_log` é
+recriada quando o CHECK antigo não aceita `RECYCLE` (dados preservados).
 
 Derivados do bundle (gazetteer + schemas de tipo) são cacheados por
 `(kb, HEAD)` em `okf/authorities.py` — toda escrita commita, então o
@@ -183,6 +197,8 @@ HEAD é chave de invalidação perfeita (~92× mais rápido no hit).
 | Heat (BLA) | 0.6·σ(BLA) + 0.2·min(1, cites/5) + 0.2·outcome; BLA ≈ ln(n/(1−d)) − d·ln(L), d=0.5 | usecases/reflect_usage.py + kernel/activation.py |
 | Candidatos reflect | promote > 0.6 · archive < 0.15 (e 90d sem uso) | usecases/reflect_usage.py |
 | Consolidação (CLS) | min_shared=2 entidades OU id forte; min_cluster=2 | usecases/consolidate_inbox.py |
+| Esquecimento (ACT-R) | P(recall)=σ((B−τ)/s); τ=0 · s=0.4 · corte 0.05 · ócio mínimo 90d | config `memory.*` + kernel/activation.py |
+| Tipos protegidos do freeze | authority_record · collection_specification (+ dependentes TMS vetam sempre) | usecases/cold_memory.py |
 | Pesos de aresta | extracted 1.0 · inferred 0.5 · ambiguous 0.15 | usecases/detect_communities.py |
 | Co-menção | 2..30 páginas, peso 0.25 | idem |
 | Hub p99, mínimo | max(p99, 8) | idem |

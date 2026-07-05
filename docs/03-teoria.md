@@ -148,6 +148,19 @@ as justificativas registradas — `mark_stale`/SUPERSEDE devolvem/notificam
 os `dependents` (páginas que citam a depreciada) para revisão humana.
 Propagação de suspeita, nunca invalidação em cascata automática.
 
+### 3.9b Limiar de recuperação e esquecimento validado (ACT-R + MDL)
+A equação de recuperação do ACT-R (**Anderson et al. 2004**) fecha o
+ciclo do BLA (§3.3): `P(recall) = 1/(1+e^((τ−B)/s))`. Em vez de um corte
+arbitrário de score, o critério de DEMOÇÃO para a base fria é o próprio
+modelo cognitivo prever que a memória não seria recuperada
+(`kernel/activation.py:retrieval_probability`; τ=0, s=0.4, corte 0.05).
+A compactação segue o **Minimum Description Length (Rissanen, "Modeling
+by Shortest Data Description", Automatica 1978)**: o digest indexável é
+o modelo; o corpo zlib é o resíduo dado o modelo — a informação
+recuperável ao custo mínimo de descrição. O desenho da hierarquia ecoa
+os níveis de um LSM-tree e a hipótese geracional de GC: o que esfria
+desce de camada barato; o que é referenciado sobe de volta.
+
 ### 3.9 Contradição e entrincheiramento (AGM)
 **Alchourrón, Gärdenfors & Makinson, "On the Logic of Theory Change"
 (Journal of Symbolic Logic, 1985)**: revisão racional de crenças exige

@@ -69,6 +69,10 @@ def rebuild_index(s: Settings) -> dict:
     idx = connect(s.app_support / "index.db")
     idx.execute("DELETE FROM chunks")
     idx.execute("DELETE FROM graph_edges")
+    # derivados por página também zeram: páginas removidas do bundle
+    # (freeze v0.12) não podem deixar entradas-fantasma no índice
+    idx.execute("DELETE FROM page_entities")
+    idx.execute("DELETE FROM page_levels")
     pages = 0
     in_links: dict[str, int] = {}
     for d in reader.iter_concepts():

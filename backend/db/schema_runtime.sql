@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS page_heat(
   score REAL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS reconcile_log(        -- trilha de auditoria
   id INTEGER PRIMARY KEY, ts REAL DEFAULT (unixepoch('subsec')),
-  candidate TEXT, op TEXT CHECK(op IN ('ADD','UPDATE','SUPERSEDE','NOOP')),
+  candidate TEXT,
+  op TEXT CHECK(op IN ('ADD','UPDATE','SUPERSEDE','NOOP','RECYCLE')),
   target TEXT, reason TEXT, signals TEXT);
 CREATE TABLE IF NOT EXISTS eval_runs(
   id INTEGER PRIMARY KEY, ts REAL DEFAULT (unixepoch('subsec')),

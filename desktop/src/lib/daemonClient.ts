@@ -98,6 +98,11 @@ export class DaemonClient {
                     compile?: boolean }) =>
     this.post<any>("/cockpit/ingest", body);
   stats = () => this.get<any>("/cockpit/stats");
+  // ------------------------------------------------ v0.12 (base fria)
+  freeze = (path: string, force = false) =>
+    this.post<any>("/cockpit/freeze", { path, force });
+  recycle = (path: string) => this.post<any>("/cockpit/recycle", { path });
+  cold = () => this.get<any>("/cockpit/cold");
   private async post<T = any>(p: string, body: unknown): Promise<T> {
     await this.connect();
     return fetch(this.base() + p, {

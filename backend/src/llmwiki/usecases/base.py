@@ -70,6 +70,13 @@ class MachinePageUseCase(UseCase):
         if decision["op"] == "NOOP":
             self._notify("page.noop", {"page": document.rel_path})
             return {"op": "NOOP", "page": None, **self._extra_result()}
+        if decision["op"] == "RECYCLE":
+            # base fria (v0.12): reidrata a memória congelada e ATUALIZA
+            # sobre ela — conhecimento novo desfaz o esquecimento
+            from .cold_memory import RecycleMemory
+            RecycleMemory(self._settings, decision["target"]).execute()
+            self._notify("page.recycled", {"page": decision["target"]})
+            document.rel_path = decision["target"]
         if decision["op"] == "UPDATE":
             document.rel_path = decision["target"]
         if decision["op"] == "SUPERSEDE":

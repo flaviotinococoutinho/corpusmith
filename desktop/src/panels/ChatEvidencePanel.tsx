@@ -53,6 +53,18 @@ export function ChatEvidencePanel() {
             <ul className="text-xs list-disc ml-5 my-1">
               {r.gaps?.map((g: string) => <li key={g}>{g}</li>)}
             </ul>
+            {r.cold_matches?.length > 0 && (
+              <div className="my-2 border-t pt-2">
+                <p className="text-xs font-medium">❄️ Memória fria compatível
+                  — recicle e pergunte de novo:</p>
+                {r.cold_matches.map((m: any) => (
+                  <div key={m.page} className="flex items-center gap-2 text-xs">
+                    <span className="font-mono flex-1 truncate">{m.page}</span>
+                    <button className="border rounded px-1"
+                            onClick={() => client.recycle(m.page).then(run)}>
+                      ♻️ reciclar</button>
+                  </div>))}
+              </div>)}
             <button className="border rounded px-2 py-1 text-xs"
                     onClick={() => setPromote({ content: q, kind: "question" })}>
               ➕ Capturar como pergunta aberta</button>

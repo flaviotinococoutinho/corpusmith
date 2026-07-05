@@ -273,6 +273,33 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
                               "qid": r["qid"], "uses": r["uses"]}
                              for r in rows]}
 
+    # ---------- Base fria (v0.12): congelar · reciclar · inspecionar ----
+    @app.post("/cockpit/freeze", dependencies=[Depends(auth)])
+    def freeze(body: dict):
+        try:
+            result = curation.freeze(body["path"],
+                                     force=bool(body.get("force")),
+                                     reason=body.get("reason", ""))
+        except FileNotFoundError:
+            raise HTTPException(404)
+        except ValueError as e:              # FreezeVeto: gate reprovou
+            raise HTTPException(409, str(e))
+        bus.emit("system", "memory.frozen", {"page": result["page"]})
+        return result
+
+    @app.post("/cockpit/recycle", dependencies=[Depends(auth)])
+    def recycle(body: dict):
+        try:
+            result = curation.recycle(body["path"])
+        except KeyError as e:
+            raise HTTPException(404, str(e))
+        bus.emit("system", "memory.recycled", {"page": result["page"]})
+        return result
+
+    @app.get("/cockpit/cold", dependencies=[Depends(auth)])
+    def cold():
+        return curation.cold()
+
     # ---------- Candidatos do reflect (Dashboard, v0.8 §8) ----------
     @app.get("/cockpit/reflect", dependencies=[Depends(auth)])
     def reflect_candidates():

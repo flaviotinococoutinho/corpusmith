@@ -42,3 +42,18 @@ def logistic(x: float) -> float:
         return 0.0
     x = max(-60.0, min(60.0, x))
     return 1.0 / (1.0 + math.exp(-x))
+
+
+def retrieval_probability(activation: float, *, tau: float = 0.0,
+                          noise: float = 0.4) -> float:
+    """Equação de recuperação do ACT-R (Anderson et al. 2004):
+
+        P(recall) = 1 / (1 + e^((τ − B)/s))
+
+    τ é o limiar de recuperação e s o ruído da ativação. É o critério
+    VALIDADO de esquecimento (v0.12): uma memória é candidata à base fria
+    quando P(recall) cai abaixo do corte — ou seja, quando o próprio
+    modelo cognitivo prevê que ela não seria recuperada. B = −inf ⇒ P = 0."""
+    if activation == float("-inf"):
+        return 0.0
+    return logistic((activation - tau) / max(noise, 1e-6))

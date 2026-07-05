@@ -3,6 +3,7 @@ auditar, revisar, refletir."""
 from __future__ import annotations
 from ..harness.findings import Findings
 from ..settings import Settings
+from ..usecases.cold_memory import (FreezeMemory, RecycleMemory, cold_stats)
 from ..usecases.lint_bundle import LintBundle
 from ..usecases.mark_stale import MarkPageStale
 from ..usecases.promote_memory import PromoteToMemory
@@ -41,3 +42,17 @@ class CurationFacade:
 
     def reflect_candidates(self) -> dict:
         return usage_candidates(self._settings)
+
+    # ---------------------------------------------- base fria (v0.12)
+    def freeze(self, page_path: str, *, force: bool = False,
+               reason: str = "") -> dict:
+        """T2→T3: congela na base fria (gates ACT-R/TMS validam)."""
+        return FreezeMemory(self._settings, page_path, force=force,
+                            reason=reason).execute()
+
+    def recycle(self, page_path: str) -> dict:
+        """T3→T2: reidrata uma memória fria de volta ao bundle."""
+        return RecycleMemory(self._settings, page_path).execute()
+
+    def cold(self) -> dict:
+        return cold_stats(self._settings)

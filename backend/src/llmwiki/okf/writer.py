@@ -56,3 +56,17 @@ class BundleWriter:
             commit = self.git.commit(commit_message)
         return {"pages": pages, "commit": commit,
                 "findings": [f.__dict__ for f in findings]}
+
+    def remove(self, rel_path: str, *, log_kind: str, log_message: str,
+               commit_message: str) -> dict:
+        """Remove uma página do bundle (freeze → base fria, v0.12).
+        Mesmo rito da escrita: lock → arquivo → index.md → log → commit.
+        A página permanece no histórico Git — remoção é compactação."""
+        with self.locked():
+            target = self.bundle / rel_path
+            if target.is_file():
+                target.unlink()
+            regenerate_for(self.bundle, {posixpath.dirname(rel_path)})
+            self.log.append(log_kind, log_message)
+            commit = self.git.commit(commit_message)
+        return {"removed": rel_path, "commit": commit}

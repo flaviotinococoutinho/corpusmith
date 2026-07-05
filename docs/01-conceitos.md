@@ -186,6 +186,38 @@ rajada antiga. O job `reflect` deriva candidatos a **promoção** e
 Esquecer é reversível por construção: arquivar é mover página (commit),
 e o Git guarda tudo.
 
+## 10b. A pilha de camadas por tempo de memória (v0.12)
+
+O esquecimento agora tem uma CAMADA própria, entre o bundle quente e o
+histórico Git:
+
+```
+T0 working (events)   efêmera
+T1 episódica (log.md) append-only, barata para sempre
+T2 QUENTE  (bundle)   P(recall) ACT-R acima do limiar — respondível
+T3 FRIA    (cold.db)  digest indexável + corpo zlib (MDL) — recuperável
+T4 Git                imutável — o backstop de tudo
+```
+
+**Demoção T2→T3** (`FreezeMemory`): só passa pela cadeia de gates —
+tipo não-protegido, sem dependentes (TMS), overlay ≠ preferred,
+`P(recall) = σ((B−τ)/s)` abaixo do corte (o próprio modelo cognitivo
+prevê que a memória não seria recuperada) e ociosidade mínima. `force`
+humano dispensa os gates comportamentais, nunca os estruturais.
+
+**Compactação MDL**: a entrada fria guarda o *digest* (título, headings,
+entidades, ids fortes — o "modelo") descomprimido e indexável, e o corpo
+integral comprimido (o "resíduo"). Esquecer reduz custo, não conteúdo.
+
+**Promoção T3→T2 (reciclagem)** acontece por três portas: (1) fallback
+do `/ask` — abstenção consulta a base fria e devolve `cold_matches`
+(com `memory.auto_recycle`, reidrata e responde na mesma consulta);
+(2) o reconciliador — fonte nova com o mesmo identificador forte de uma
+memória congelada dispara `RECYCLE` (reidrata e atualiza, nunca
+duplica); (3) gesto humano no Cockpit. Memória reciclada carrega o
+contador `recycled:` no frontmatter — a própria história de idas e
+vindas é dado.
+
 ## 11. Recorrência, dependência e contradição (v0.10)
 
 Três conceitos fecham o governo epistêmico do bundle:
