@@ -3,6 +3,12 @@
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
 
+> **Documentação conceitual completa em [`docs/`](docs/README.md)** —
+> conceitos, metodologias, fundamentos teóricos (com papers), tecnologias,
+> fluxos operacionais, referência dura e a matriz de sinergias. Mantida
+> sincronizada com o código pela skill local `/docs-sync`
+> (`.claude/skills/docs-sync/SKILL.md`).
+
 ## Arquitetura v0.9 — imutável no centro, mutável na borda
 
 ```
