@@ -69,6 +69,12 @@ CREATE TRIGGER IF NOT EXISTS page_levels_ad AFTER DELETE ON page_levels BEGIN
     INSERT INTO fts_levels(fts_levels, rowid, text) VALUES ('delete', old.rowid, old.text);
 END;
 
+-- pontes frágeis do grafo (persistência 0-dim, v0.9) — recomputável no leiden
+CREATE TABLE IF NOT EXISTS graph_bridges(
+  src TEXT NOT NULL, dst TEXT NOT NULL, weight REAL NOT NULL,
+  small_side INTEGER NOT NULL, large_side INTEGER NOT NULL,
+  PRIMARY KEY(src, dst));
+
 -- overlay derivado do reflect (§8), recomputável
 CREATE TABLE IF NOT EXISTS page_overlay(
   page TEXT PRIMARY KEY,

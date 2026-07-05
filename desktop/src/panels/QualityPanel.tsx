@@ -42,6 +42,18 @@ export function QualityPanel() {
           })}
         </div>
       </section>
+      {q.bridges?.length > 0 && (
+        <section>
+          <h3 className="font-medium mb-1">🌉 Pontes frágeis do grafo
+            <span className="text-neutral-400 text-xs ml-2">
+              (blocos ligados por um fio fraco — linke mais)</span></h3>
+          {q.bridges.map((b: any) => (
+            <div key={b.src + b.dst} className="text-xs font-mono">
+              {b.src} ↔ {b.dst}
+              <span className="text-neutral-400"> · peso {b.weight}
+                {" "}· lados {b.small_side}/{b.large_side}</span>
+            </div>))}
+        </section>)}
       <table className="w-full text-xs">
         <thead><tr className="text-left text-neutral-500">
           <th>Sev</th><th>Camada</th><th>Regra</th><th>Página</th><th>Detalhe</th></tr></thead>

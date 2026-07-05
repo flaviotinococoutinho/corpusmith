@@ -1,7 +1,57 @@
-# LLM Wiki — v0.8 (Qualidade Epistêmica da Memória Não-Episódica)
+# LLM Wiki — v0.9 (Arquitetura em Camadas + Coordenação Informacional)
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
+
+## Arquitetura v0.9 — imutável no centro, mutável na borda
+
+```
+kernel/      ← IMUTÁVEL: stdlib pura, zero I/O (matemática e invariantes)
+normalize/   ← puro: detectores, gazetteer, máscaras (dado, não infra)
+okf/ harness/← domínio: modelo OKF, writer, regras (muda devagar)
+usecases/    ← aplicação: 1 classe = 1 operação = 1 método público execute()
+facades/     ← orquestração: Memory · Compiler · Curation
+jobs/ api/ cli · desktop/   ← adapters: a camada MAIS mutável (fila, HTTP, UI)
+```
+
+As regras não são convenção — são **asserções** (`tests/test_architecture.py`):
+
+- *functional core, imperative shell*: qualquer `import sqlite3/httpx/
+  subprocess/fastapi/git` em `kernel/` ou `normalize/` quebra a suíte;
+- **Object Calisthenics**: todo `UseCase` tem exatamente UM método público
+  (`execute`) — verificado por introspecção; coleções de primeira classe
+  (`Findings`, `EvidenceStreams`) no lugar de listas nuas;
+- **Template Method (GoF)**: `MachinePageUseCase.execute()` é o esqueleto
+  IMUTÁVEL de toda página de máquina (sanduíche → reconcile → gate →
+  writer); o teste garante que nenhuma subclasse (compile, review,
+  community) consegue sobrescrevê-lo — só preencher hooks (OCP/LSP);
+- **camadas**: `api/` só importa `facades/`; `usecases/` nunca importam
+  `facades/`, `api/`, `jobs/` nem framework HTTP (Dependency Rule).
+
+## Coordenação dos dados — fundamentos (kernel/)
+
+- **NCD — Cilibrasi & Vitányi, *Clustering by Compression* (IEEE Trans.
+  Inf. Theory, 2005)**: distância de compressão normalizada como terceiro
+  sinal do reconciliador (`0.4·rank + 0.3·Jaccard + 0.3·(1−NCD)`) —
+  paráfrase do mesmo objeto comprime junto; determinístico, sem modelo.
+- **Entropia de Shannon (1948)** sobre a distribuição RRF fundida =
+  `uncertainty` [0,1] em toda resposta do `/ask` (parente do *semantic
+  entropy*, Kuhn et al. 2023): massa espalhada ⇒ "não sei onde está a
+  resposta" — o Cockpit exibe o chip "~ incerta".
+- **Surprisal (−log p)**: o stream de entidades pondera cada entidade pelo
+  seu conteúdo de informação — entidade rara vale mais que a onipresente
+  (é o IDF na formulação original).
+- **Hedge — Freund & Schapire (JCSS, 1997)**: cada stream de retrieval
+  (fts, dense, entity, descend, global) é um *expert*; os desfechos
+  `useful/dead_end` do usuário são as perdas; `stream_weights` converge por
+  *multiplicative weights* (com clamp [0.5, 2.0] para nunca silenciar um
+  stream) e realimenta a fusão RRF — a proveniência página→stream fica em
+  `ask_provenance`.
+- **Persistência 0-dimensional — Edelsbrunner, Letscher & Zomorodian
+  (Discrete & Comput. Geometry, 2002)**: filtração descendente de pesos
+  sobre o grafo de conhecimento; arestas que unem blocos GRANDES a pesos
+  BAIXOS são as **pontes frágeis** (`graph_bridges`) — o painel Qualidade
+  mostra "estes dois temas se falam por um fio: linke mais".
 
 ## Novidades da v0.8
 

@@ -64,7 +64,10 @@ export function ChatEvidencePanel() {
             <p className="text-xs text-neutral-500">
               via {r.via}{r.blocked ? "" : " · citada"}
               {r.as_of && <span className="ml-2 border rounded px-1">
-                📅 como em {r.as_of}</span>}</p>
+                📅 como em {r.as_of}</span>}
+              {r.uncertainty > 0.85 && <span
+                className="ml-2 border border-amber-400 rounded px-1 text-amber-600">
+                ~ incerta ({Math.round(r.uncertainty * 100)}%)</span>}</p>
             {r.trajectory?.length > 0 && (
               <p className="text-xs text-neutral-500 font-mono">
                 {r.trajectory.map((t: any) =>

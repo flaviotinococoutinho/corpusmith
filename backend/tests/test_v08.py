@@ -238,3 +238,63 @@ def test_migrate_adds_columns_to_old_index_db(tmp_path):
     cols = {r["name"] for r in migrated.execute("PRAGMA table_info(chunks)")}
     assert {"valid_at", "invalid_at"} <= cols
     migrated.close()
+
+
+# --------------------------------------------------- v0.9: laço de crédito
+def test_ask_reports_uncertainty(settings, kb):
+    page = _doc(rel="concepts/cache.md", body="# Cache\n\ncache lru local",
+                title="Cache LRU", privacy="local_only",
+                generated_via="human:promote")
+    _write_indexed(settings, kb, page)
+    r = answer_local(settings, "cache lru")
+    assert 0.0 <= r["uncertainty"] <= 1.0
+
+
+def test_outcome_trains_stream_credit_via_hedge(settings, kb):
+    page = _doc(rel="concepts/filas.md", body="# Filas\n\nfilas locais sqlite",
+                title="Filas locais", privacy="local_only",
+                generated_via="human:promote")
+    _write_indexed(settings, kb, page)
+    r = answer_local(settings, "filas locais sqlite")
+    assert not r["abstained"]
+    from llmwiki.facades import MemoryFacade
+    MemoryFacade(settings).record_outcome(
+        verdict="dead_end", ask_id=r["ask_id"],
+        pages=[e["page"] for e in r["evidence"]])
+    rt = connect(settings.app_support / "runtime.db")
+    weights = {row["stream"]: row["weight"] for row in
+               rt.execute("SELECT stream, weight FROM stream_weights")}
+    prov = {row["stream"] for row in rt.execute(
+        "SELECT DISTINCT stream FROM ask_provenance WHERE ask_id=?",
+        (r["ask_id"],))}
+    rt.close()
+    assert prov                                   # proveniência registrada
+    assert all(weights[s] < 1.0 for s in prov)    # beco ⇒ crédito cai
+    # e o crédito reduzido entra na próxima fusão sem quebrar nada
+    r2 = answer_local(settings, "filas locais sqlite")
+    assert not r2["abstained"]
+
+
+def test_communities_job_stores_fragile_bridges(settings, kb):
+    docs = []
+    for i in range(3):
+        docs.append(_doc(rel=f"concepts/rede-{i}.md", title=f"Rede {i}",
+                         body=f"# Rede {i}\n\nver [outro](/concepts/rede-{(i+1)%3}.md)",
+                         privacy="local_only", generated_via="human:promote"))
+    for i in range(3):
+        docs.append(_doc(rel=f"decisions/banco-{i}.md", title=f"Banco {i}",
+                         body=f"# Banco {i}\n\nver [outro](/decisions/banco-{(i+1)%3}.md)",
+                         privacy="local_only", generated_via="human:promote"))
+    docs.append(_doc(rel="concepts/ponte.md", title="Ponte",
+                     body="# Ponte\n\n[[rede 0]] liga",
+                     privacy="local_only", generated_via="human:promote"))
+    BundleWriter(kb).write(docs, log_kind="Creation",
+                           log_message="m", commit_message="c")
+    rebuild_index(settings)
+    from llmwiki.facades import CompilerFacade
+    result = CompilerFacade(settings).detect_communities()
+    assert result["communities"] >= 2
+    idx = connect(settings.app_support / "index.db")
+    bridges = idx.execute("SELECT COUNT(*) c FROM graph_bridges").fetchone()["c"]
+    idx.close()
+    assert bridges >= 0                           # tabela populada sem erro

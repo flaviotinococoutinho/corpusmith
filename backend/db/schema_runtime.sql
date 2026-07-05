@@ -56,3 +56,12 @@ CREATE TABLE IF NOT EXISTS reconcile_log(        -- trilha de auditoria
 CREATE TABLE IF NOT EXISTS eval_runs(
   id INTEGER PRIMARY KEY, ts REAL DEFAULT (unixepoch('subsec')),
   category TEXT, total INTEGER, passed INTEGER, detail TEXT);
+
+-- ============================ v0.9 ============================
+-- proveniência: qual stream de retrieval trouxe cada evidência de cada ask
+CREATE TABLE IF NOT EXISTS ask_provenance(
+  ask_id TEXT NOT NULL, page TEXT NOT NULL, stream TEXT NOT NULL,
+  PRIMARY KEY(ask_id, page, stream));
+-- crédito por stream (Hedge/multiplicative weights sobre os desfechos)
+CREATE TABLE IF NOT EXISTS stream_weights(
+  stream TEXT PRIMARY KEY, weight REAL NOT NULL DEFAULT 1.0);

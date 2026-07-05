@@ -11,10 +11,8 @@ import json
 import sys
 from pathlib import Path
 import httpx
+from .facades import CompilerFacade, CurationFacade
 from .okf.bootstrap import ensure_bundle
-from .okf.bundle import BundleReader
-from .okf.git_store import GitStore
-from .harness.runner import HarnessRunner
 from .settings import Settings
 
 
@@ -33,22 +31,17 @@ def _client(s: Settings) -> tuple[str, dict]:
 
 
 def cmd_lint(s: Settings, args) -> int:
-    kb = s.path("knowledge")
-    bundle = kb / "bundle"
-    reader = BundleReader(bundle)
-    runner = HarnessRunner(reader, GitStore(kb))
-    findings = runner.lint_bundle(bundle, mode=args.mode)
+    findings = CurationFacade(s).lint(args.mode)   # mesma fonte do painel
     for f in findings:
         layer = "OKF" if f.okf_conformance else "política"
         print(f"{f.severity:5s} [{layer}] {f.rule:32s} {f.path}: {f.message}")
-    errors = sum(f.severity == "error" for f in findings)
+    errors = findings.count("error")
     print(f"\n{len(findings)} finding(s), {errors} erro(s)")
     return 1 if errors else 0
 
 
 def cmd_index(s: Settings, args) -> int:
-    from .retrieval.fts import rebuild_index
-    print(json.dumps(rebuild_index(s)))
+    print(json.dumps(CompilerFacade(s).rebuild_index()))
     return 0
 
 

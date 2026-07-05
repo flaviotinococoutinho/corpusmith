@@ -1,27 +1,20 @@
 from __future__ import annotations
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
+from ..facades import CurationFacade, MemoryFacade
 from ..settings import Settings
 from ..runtime.db import connect
-from ..okf.document import OKFDocument, OKFFrontMatter
 from ..okf.writer import BundleWriter
 
-KIND_MAP = {   # botão "Promover para memória" → destino OKF
-    "semantic": ("concept",             "concepts"),
-    "decision": ("decision",            "decisions"),
-    "runbook":  ("runbook",             "runbooks"),
-    "skill":    ("skill",               "career/skills"),
-    "question": ("question",            "questions"),
-    "alert":    ("architectural_alert", "alerts"),
-}
 SEMANTIC_TYPES = {"concept", "academic_paper", "decision",
                   "schema_specification", "field_profile", "learning_note"}
 PROCEDURAL_TYPES = {"runbook", "skill"}
 
 def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     kb = s.path("knowledge")
+    curation = CurationFacade(s)
+    memory_facade = MemoryFacade(s)
 
     def writer() -> BundleWriter:
         return BundleWriter(kb)
@@ -123,16 +116,9 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
 
     @app.post("/cockpit/page/stale", dependencies=[Depends(auth)])
     def mark_stale(body: dict):
-        w = writer()
-        d = w.reader.load(body["path"])
-        head = w.git.repo.head.commit.hexsha[:12]
-        meta = d.meta.model_dump(exclude_none=True)
-        meta["stale_as_of"] = head
-        doc = OKFDocument(rel_path=d.rel_path, body=d.body,
-                          meta=OKFFrontMatter(**meta))
-        return w.write([doc], log_kind="Deprecation",
-                       log_message=f"marcada stale: {d.rel_path}",
-                       commit_message=f"stale: {d.rel_path}")
+        if not writer().reader.exists(body["path"]):
+            raise HTTPException(404)
+        return curation.mark_stale(body["path"])
 
     # ---------- Chat/ask já existe (/ask) — aqui só o custo da sessão ----
     @app.get("/cockpit/ledger/today", dependencies=[Depends(auth)])
@@ -147,34 +133,17 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     # ---------- Promover para memória (o botão diferenciado) ----------
     @app.post("/cockpit/promote", dependencies=[Depends(auth)])
     def promote(body: dict):
-        kind = body.get("kind", "semantic")
-        if kind not in KIND_MAP:
-            raise HTTPException(400, f"kind inválido: {kind}")
-        okf_type, folder = KIND_MAP[kind]
-        import re, unicodedata
-        t = unicodedata.normalize("NFKD", body["title"]).encode(
-            "ascii", "ignore").decode()
-        slug = re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")[:60]
-        content = body["content"].strip()
-        source = body.get("source", "chat")
-        doc = OKFDocument(
-            rel_path=f"{folder}/{slug}.md",
-            body=f"# {body['title']}\n\n{content}\n",
-            meta=OKFFrontMatter(
-                type=okf_type, title=body["title"],
+        try:
+            result = curation.promote(
+                kind=body.get("kind", "semantic"), title=body["title"],
+                content=body["content"], source=body.get("source", "chat"),
+                privacy=body.get("privacy", "local_only"),
                 description=body.get("description"),
-                tags=body.get("tags", []),
-                timestamp=datetime.now(timezone.utc),
-                **{"privacy": body.get("privacy", "local_only"),
-                   "generated_via": "human:promote",
-                   "confidence": "human_approved",
-                   "source": source}))
-        result = writer().write(
-            [doc], log_kind="Creation",
-            log_message=f"promovido de {source}: {body['title']}",
-            commit_message=f"promote({kind}): {slug}")
+                tags=body.get("tags", []))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
         bus.emit("system", "memory.promoted",
-                 {"kind": kind, "page": doc.rel_path})
+                 {"kind": result["kind"], "page": result["pages"][0]})
         return result
 
     # ---------- Memória em 4 camadas ----------
@@ -204,13 +173,18 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     # ---------- Qualidade epistêmica ----------
     @app.get("/cockpit/quality", dependencies=[Depends(auth)])
     def quality(mode: str = "write"):
-        w = writer()
-        findings = w.harness.lint_bundle(w.bundle, mode=mode)
+        findings = curation.lint(mode)          # mesma fonte do CLI okf lint
         pages = _pages()
+        idx = connect(s.app_support / "index.db")
+        bridges = [dict(r) for r in idx.execute(
+            "SELECT src, dst, weight, small_side, large_side "
+            "FROM graph_bridges ORDER BY weight LIMIT 10")]
+        idx.close()
         return {"eval": eval_results()["categories"],
-                "findings": [f.__dict__ for f in findings],
-                "errors": sum(f.severity == "error" for f in findings),
-                "warnings": sum(f.severity == "warn" for f in findings),
+                "findings": findings.to_dicts(),
+                "errors": findings.count("error"),
+                "warnings": findings.count("warn"),
+                "bridges": bridges,             # pontes frágeis (topologia)
                 "orphan_count": len(_orphans(pages)),
                 "stale_count": sum(p["stale"] for p in pages),
                 "privacy_coverage": round(100 * sum(
@@ -220,27 +194,12 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     # ---------- Desfechos de consulta (v0.8 §8/§11) ----------
     @app.post("/cockpit/outcome", dependencies=[Depends(auth)])
     def outcome(body: dict):
-        import json
-        verdict = body.get("verdict")
-        if verdict not in ("useful", "dead_end", "corrected"):
-            raise HTTPException(400, f"verdict inválido: {verdict}")
-        rt = connect(s.app_support / "runtime.db")
-        rt.execute("INSERT INTO ask_outcomes(ask_id, verdict, note, pages) "
-                   "VALUES (?,?,?,?)",
-                   (body.get("ask_id"), verdict, body.get("note"),
-                    json.dumps(body.get("pages", []))))
-        rt.commit()
-        rt.close()
-        if verdict == "corrected" and body.get("note"):
-            # correção vira memória: entra no inbox (raw/) para compilação
-            ts = time.strftime("%Y%m%d-%H%M%S")
-            target = kb / "raw" / "correcoes" / f"{ts}.md"
-            target.parent.mkdir(parents=True, exist_ok=True)
-            pages = body.get("pages", [])[:1]
-            target.write_text(
-                f"# Correção sobre {pages[0] if pages else 'consulta'}\n\n"
-                + body["note"] + "\n")
-        return {"ok": True}
+        try:
+            return memory_facade.record_outcome(
+                verdict=body.get("verdict"), ask_id=body.get("ask_id"),
+                note=body.get("note"), pages=body.get("pages", []))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
 
     # ---------- Eval de memória (v0.8 §10) ----------
     @app.get("/cockpit/eval", dependencies=[Depends(auth)])
@@ -271,14 +230,12 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     # ---------- Candidatos do reflect (Dashboard, v0.8 §8) ----------
     @app.get("/cockpit/reflect", dependencies=[Depends(auth)])
     def reflect_candidates():
-        from ..jobs.reflect import candidates
-        return candidates(s)
+        return curation.reflect_candidates()
 
     # ---------- Revisão semanal assistida ----------
     @app.get("/cockpit/review", dependencies=[Depends(auth)])
     def review_current():
-        from ..jobs.review import compute
-        return compute(s)
+        return curation.weekly_review()
 
     @app.post("/cockpit/review/commit", dependencies=[Depends(auth)])
     def review_commit():

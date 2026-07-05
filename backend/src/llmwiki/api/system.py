@@ -11,7 +11,7 @@ import secrets
 import time
 from fastapi import FastAPI, HTTPException, Request
 from sse_starlette.sse import EventSourceResponse
-from ..jobs.ask import answer
+from ..facades import MemoryFacade
 from ..runtime.events import EventBus
 from ..runtime.governor import Governor
 from ..runtime.queue import JobQueue
@@ -68,8 +68,10 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
 
     @app.post("/ask", dependencies=[Depends(auth)])
     def ask(body: dict):
-        return answer(s, body["query"], deep=body.get("deep", False),
-                      local_only=body.get("local_only", False), gov=gov)
+        return MemoryFacade(s, gov).ask(
+            body["query"], deep=body.get("deep", False),
+            local_only=body.get("local_only", False),
+            as_of=body.get("as_of"))
 
     @app.get("/events", dependencies=[Depends(auth)])
     async def events(request: Request):
