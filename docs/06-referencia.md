@@ -80,7 +80,10 @@ frozen_at, frozen_commit, activation, recall_p, recycles)` · `cold_fts`
 `graph_edges(+confidence)` · `communities` · `embeddings` · `entities` ·
 `page_entities(confidence,data)` · `page_levels(level∈0,1)` ·
 `fts_levels` · `page_overlay(status∈preferred|tentative|contested)` ·
-`graph_bridges(src,dst,weight,small_side,large_side)`
+`graph_bridges(src,dst,weight,small_side,large_side)` ·
+`page_index_state(page,sha)` + `index_meta` (índice INCREMENTAL v0.13:
+só páginas com sha alterado reindexam; fingerprint do gazetteer força
+full automático; `rebuild_index(s, full=True)` disponível)
 
 Migrações em `runtime/db.py:_migrate`: `graph_edges.confidence`,
 `chunks.valid_at/invalid_at`, `page_heat.first_seen` (backfill =
@@ -199,6 +202,9 @@ HEAD é chave de invalidação perfeita (~92× mais rápido no hit).
 | Consolidação (CLS) | min_shared=2 entidades OU id forte; min_cluster=2 | usecases/consolidate_inbox.py |
 | Esquecimento (ACT-R) | P(recall)=σ((B−τ)/s); τ=0 · s=0.4 · corte 0.05 · ócio mínimo 90d | config `memory.*` + kernel/activation.py |
 | Tipos protegidos do freeze | authority_record · collection_specification (+ dependentes TMS vetam sempre) | usecases/cold_memory.py |
+| PPR (HippoRAG) | damping 0.5 · 20 iterações · top-12 · seeds com add-one | kernel/graphwalk.py + ask |
+| SimHash near-dup | 64 bits · shingle 3 palavras · hamming ≤ 8 converge | kernel/sketch.py + consolidate |
+| Relacionadas (A-mem) | top-5 por Σ n·surprisal, excluindo já-linkadas | retrieval/related.py (`GET /cockpit/page`.related) |
 | Pesos de aresta | extracted 1.0 · inferred 0.5 · ambiguous 0.15 | usecases/detect_communities.py |
 | Co-menção | 2..30 páginas, peso 0.25 | idem |
 | Hub p99, mínimo | max(p99, 8) | idem |

@@ -182,6 +182,34 @@ devolvida e exibida (transparência do caminho de memória). Determinístico
 e barato — e a razão de existir do filtro de stopwords: OR sobre
 "do/com/qual" em L0 casava tudo e matava a abstenção.
 
+### 3.4b Personalized PageRank multi-hop (HippoRAG)
+**Gutiérrez et al., "HippoRAG: Neurobiologically Inspired Long-Term
+Memory for Large Language Models" (NeurIPS 2024, arXiv:2405.14831)**:
+retrieval associativo via PPR semeado pelas entidades da pergunta sobre
+o grafo de conhecimento — o análogo da separação de padrões hipocampal.
+Transposição (`kernel/graphwalk.py` + stream `graph` no ask): seeds =
+páginas casadas por entidade (pesos surprisal com suavização add-one);
+arestas ponderadas pela escala de confiança; damping 0.5 (massa presa
+aos seeds — associação, não deriva). Alcança fatos a um ou mais saltos
+de link que NENHUM termo da pergunta tocaria; o Hedge treina o crédito
+do stream como o de qualquer outro.
+
+### 3.4c SimHash como assinatura de recorrência (Charikar)
+**Charikar, "Similarity Estimation Techniques from Rounding Algorithms"
+(STOC 2002)**: a distância de Hamming entre sketches de 64 bits aproxima
+a dissimilaridade dos conjuntos de shingles. `kernel/sketch.py` (blake2b,
+determinístico entre processos) dá à consolidação um sinal de
+NEAR-DUPLICATA em O(1) por par: quase-cópias convergem mesmo sem nenhuma
+entidade curada em comum (hamming ≤ 8).
+
+### 3.4d Sugestão de links (A-mem, determinístico)
+**Xu et al., "A-mem: Agentic Memory for LLM Agents" (arXiv:2502.12110)**:
+memória nova gera links Zettelkasten para vizinhas e evolui o contexto
+delas. Versão sem LLM (`retrieval/related.py`): vizinhas por
+sobreposição de entidades ponderada por surprisal, EXCLUINDO as já
+linkadas — o que sobra é o link que falta; o Explorer exibe
+"Relacionadas (linke?)" com as entidades compartilhadas.
+
 ### 3.5 Roteamento global × local (GraphRAG)
 **Edge et al., "From Local to Global: A Graph RAG Approach to
 Query-Focused Summarization", arXiv:2404.16130 (Microsoft).** Perguntas

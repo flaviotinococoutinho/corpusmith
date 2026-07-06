@@ -4,6 +4,7 @@
 entidades (page_entities), níveis L0/L1 (descida hierárquica) e cites do
 page_heat — pode rodar a qualquer momento."""
 from __future__ import annotations
+import hashlib
 import json
 import re
 import time
@@ -62,42 +63,90 @@ def index_levels(idx, page: str, body: str, meta) -> None:
                 (page, heads or (meta.description or meta.title or page)))
 
 
-def rebuild_index(s: Settings) -> dict:
+def _index_page(idx, d, gaz) -> None:
+    """Indexa UMA página (chunks, arestas, anexo, níveis)."""
+    x = d.meta.model_dump(exclude_none=True, mode="json")
+    for i, text in enumerate(_chunk(d.body)):
+        idx.execute(
+            "INSERT INTO chunks(page,ord,text,resource,privacy,stale,"
+            "valid_at,invalid_at) VALUES (?,?,?,?,?,?,?,?)",
+            (d.rel_path, i, text, d.meta.resource,
+             x.get("privacy"), int(bool(x.get("stale_as_of"))),
+             x.get("valid_at"), x.get("invalid_at")))
+    for link in parse_links(d.body):
+        if is_internal(link.target):
+            dst = resolve(link.target, d.rel_path)
+            conf = "extracted" if link.kind == "markdown" else "ambiguous"
+            idx.execute(
+                "INSERT OR IGNORE INTO graph_edges(src,dst,kind,confidence)"
+                " VALUES (?,?,?,?)", (d.rel_path, dst, link.kind, conf))
+    index_entities(idx, d.rel_path, analyze(d.body, gaz=gaz))
+    index_levels(idx, d.rel_path, d.body, d.meta)
+
+
+def _purge_page(idx, page: str) -> None:
+    for table, column in (("chunks", "page"), ("graph_edges", "src"),
+                          ("page_entities", "page"), ("page_levels", "page"),
+                          ("page_index_state", "page")):
+        idx.execute(f"DELETE FROM {table} WHERE {column}=?", (page,))
+
+
+def _gazetteer_fingerprint(gaz) -> str:
+    payload = json.dumps(sorted((alias, entry[0])
+                                for alias, entry in gaz.map.items()))
+    return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def rebuild_index(s: Settings, *, full: bool = False) -> dict:
+    """Reconstrução INCREMENTAL por default (v0.13, espírito LSM):
+    só páginas com sha alterado são reindexadas; removidas são purgadas
+    (nada de entradas-fantasma). Mudança no gazetteer/authority_records
+    muda a DETECÇÃO de entidades de todas as páginas ⇒ fingerprint força
+    reconstrução completa automaticamente."""
     kb = s.path("knowledge")
-    reader = BundleReader(kb / "bundle")
+    bundle = kb / "bundle"
+    reader = BundleReader(bundle)
     gaz = load_gazetteer(reader)
     idx = connect(s.app_support / "index.db")
-    idx.execute("DELETE FROM chunks")
-    idx.execute("DELETE FROM graph_edges")
-    # derivados por página também zeram: páginas removidas do bundle
-    # (freeze v0.12) não podem deixar entradas-fantasma no índice
-    idx.execute("DELETE FROM page_entities")
-    idx.execute("DELETE FROM page_levels")
-    pages = 0
-    in_links: dict[str, int] = {}
-    for d in reader.iter_concepts():
-        pages += 1
-        x = d.meta.model_dump(exclude_none=True, mode="json")
-        for i, text in enumerate(_chunk(d.body)):
-            idx.execute(
-                "INSERT INTO chunks(page,ord,text,resource,privacy,stale,"
-                "valid_at,invalid_at) VALUES (?,?,?,?,?,?,?,?)",
-                (d.rel_path, i, text, d.meta.resource,
-                 x.get("privacy"), int(bool(x.get("stale_as_of"))),
-                 x.get("valid_at"), x.get("invalid_at")))
-        for link in parse_links(d.body):
-            if is_internal(link.target):
-                dst = resolve(link.target, d.rel_path)
-                conf = "extracted" if link.kind == "markdown" else "ambiguous"
-                idx.execute(
-                    "INSERT OR IGNORE INTO graph_edges(src,dst,kind,confidence)"
-                    " VALUES (?,?,?,?)", (d.rel_path, dst, link.kind, conf))
-                in_links[dst] = in_links.get(dst, 0) + 1
-        rep = analyze(d.body, gaz=gaz)
-        index_entities(idx, d.rel_path, rep)
-        index_levels(idx, d.rel_path, d.body, d.meta)
+
+    fingerprint = _gazetteer_fingerprint(gaz)
+    stored = idx.execute("SELECT value FROM index_meta "
+                         "WHERE key='gazetteer_fp'").fetchone()
+    if stored is None or stored["value"] != fingerprint:
+        full = True
+
+    current = {rel: hashlib.sha256((bundle / rel).read_bytes()).hexdigest()
+               for rel in reader.raw_md_files()}
+    if full:
+        for table in ("chunks", "graph_edges", "page_entities",
+                      "page_levels", "page_index_state"):
+            idx.execute(f"DELETE FROM {table}")
+        changed, removed = set(current), set()
+    else:
+        state = {r["page"]: r["sha"] for r in
+                 idx.execute("SELECT page, sha FROM page_index_state")}
+        changed = {rel for rel, sha in current.items()
+                   if state.get(rel) != sha}
+        removed = set(state) - set(current)
+        for page in changed | removed:
+            _purge_page(idx, page)
+
+    for rel in sorted(changed):
+        try:
+            document = reader.load(rel)
+        except Exception:
+            continue                      # malformada: lint acusa, índice pula
+        _index_page(idx, document, gaz)
+        idx.execute("INSERT OR REPLACE INTO page_index_state(page, sha) "
+                    "VALUES (?,?)", (rel, current[rel]))
+    idx.execute("INSERT OR REPLACE INTO index_meta(key, value) "
+                "VALUES ('gazetteer_fp', ?)", (fingerprint,))
     idx.commit()
+    pages = idx.execute("SELECT COUNT(*) c FROM page_index_state"
+                        ).fetchone()["c"]
     chunks = idx.execute("SELECT COUNT(*) c FROM chunks").fetchone()["c"]
+    in_links = {r["dst"]: r["n"] for r in idx.execute(
+        "SELECT dst, COUNT(*) n FROM graph_edges GROUP BY dst")}
     idx.close()
 
     # cites → page_heat (alimenta o reflect, §8)
@@ -110,7 +159,9 @@ def rebuild_index(s: Settings) -> dict:
                    (page, n, now, now, n, now))
     rt.commit()
     rt.close()
-    return {"pages": pages, "chunks": chunks}
+    return {"pages": pages, "chunks": chunks,
+            "mode": "full" if full else "incremental",
+            "reindexed": len(changed), "removed": len(removed)}
 
 
 # stopwords pt/en: OR sobre elas casa qualquer página e mata a ABSTENÇÃO

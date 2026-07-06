@@ -1,0 +1,150 @@
+"""v0.13 (garimpo de repositórios/papers): PPR multi-hop (HippoRAG),
+índice incremental (espírito LSM/Arrow), SimHash (Charikar) e páginas
+relacionadas (A-mem)."""
+from __future__ import annotations
+from llmwiki.kernel.graphwalk import personalized_pagerank
+from llmwiki.kernel.sketch import hamming, simhash
+from llmwiki.facades import CompilerFacade
+from llmwiki.okf.document import OKFDocument, OKFFrontMatter
+from llmwiki.okf.writer import BundleWriter
+from llmwiki.retrieval.fts import rebuild_index
+from llmwiki.retrieval.related import related_pages
+from llmwiki.runtime.db import connect
+from llmwiki.usecases.ask_memory import AskMemory
+
+
+def _doc(rel, title, body, **meta):
+    meta.setdefault("type", "concept")
+    meta.setdefault("privacy", "local_only")
+    meta.setdefault("generated_via", "human:promote")
+    return OKFDocument(rel_path=rel, body=body,
+                       meta=OKFFrontMatter(title=title, **meta))
+
+
+def _write(settings, kb, *docs):
+    BundleWriter(kb).write(list(docs), log_kind="Creation",
+                           log_message="m", commit_message="c")
+    rebuild_index(settings)
+
+
+# ------------------------------------------------------- kernel: PPR
+def test_ppr_sums_to_one_and_biases_seeds():
+    adjacency = {"a": {"b": 1.0}, "b": {"a": 1.0, "c": 1.0}, "c": {"b": 1.0}}
+    rank = personalized_pagerank(adjacency, {"a": 1.0})
+    assert abs(sum(rank.values()) - 1.0) < 1e-6
+    assert rank["a"] > rank["b"] > rank["c"]       # massa decai com a distância
+    # multi-hop: c só é alcançável via b, mas recebe massa
+    assert rank["c"] > 0.0
+    # seed fora do grafo não explode
+    assert personalized_pagerank(adjacency, {"zz": 1.0})["zz"] > 0
+
+
+def test_ppr_damping_controls_locality():
+    chain = {f"n{i}": {f"n{i+1}": 1.0} for i in range(5)}
+    tight = personalized_pagerank(chain, {"n0": 1.0}, damping=0.2)
+    loose = personalized_pagerank(chain, {"n0": 1.0}, damping=0.85)
+    assert tight["n0"] > loose["n0"]               # damping baixo prende ao seed
+    assert loose["n4"] > tight["n4"]               # damping alto caminha longe
+
+
+# ---------------------------------------------------- kernel: SimHash
+def test_simhash_near_duplicates_and_distinct():
+    a = "migramos o banco para postgres rodando em kubernetes ontem à noite"
+    b = "migramos o banco para postgres rodando em kubernetes hoje à noite"
+    c = "receita de bolo de cenoura com cobertura de chocolate quente"
+    assert hamming(simhash(a), simhash(a)) == 0
+    assert hamming(simhash(a), simhash(b)) < hamming(simhash(a), simhash(c))
+    assert hamming(simhash(a), simhash(c)) > 12
+    assert simhash("") == 0
+
+
+def test_consolidate_clusters_near_duplicates_without_entities(settings, kb):
+    raw = kb / "raw"
+    base = ("# Plantio\n\nAnotações sobre o plantio de tomates na horta do "
+            "quintal durante a primavera, com adubação orgânica semanal.\n")
+    (raw / "plantio-1.md").write_text(base)
+    (raw / "plantio-2.md").write_text(base.replace("semanal", "quinzenal"))
+    result = CompilerFacade(settings).consolidate_inbox()
+    assert result["clusters"] == 1                 # via sketch, sem gazetteer
+
+
+# ------------------------------------------------ índice incremental
+def test_incremental_reindexes_only_changed_pages(settings, kb):
+    _write(settings, kb,
+           _doc("concepts/a.md", "A", "# A\n\nprimeiro conteúdo"),
+           _doc("concepts/b.md", "B", "# B\n\nsegundo conteúdo"))
+    idx = connect(settings.app_support / "index.db")
+    ids_a_before = [r["id"] for r in idx.execute(
+        "SELECT id FROM chunks WHERE page='concepts/a.md'")]
+    idx.close()
+    # muda só B direto no disco
+    (kb / "bundle/concepts/b.md").write_text(
+        (kb / "bundle/concepts/b.md").read_text().replace(
+            "segundo", "segundo conteúdo REVISADO"))
+    report = rebuild_index(settings)
+    assert report["mode"] == "incremental"
+    assert report["reindexed"] == 1 and report["removed"] == 0
+    idx = connect(settings.app_support / "index.db")
+    ids_a_after = [r["id"] for r in idx.execute(
+        "SELECT id FROM chunks WHERE page='concepts/a.md'")]
+    body_b = idx.execute("SELECT text FROM chunks WHERE page='concepts/b.md'"
+                         ).fetchone()["text"]
+    idx.close()
+    assert ids_a_after == ids_a_before             # A intocada (rowids iguais)
+    assert "REVISADO" in body_b
+
+
+def test_incremental_purges_removed_and_full_on_gazetteer_change(settings, kb):
+    _write(settings, kb, _doc("concepts/sai.md", "Sai", "# Sai\n\nvai embora"))
+    (kb / "bundle/concepts/sai.md").unlink()
+    report = rebuild_index(settings)
+    assert report["removed"] == 1
+    idx = connect(settings.app_support / "index.db")
+    assert idx.execute("SELECT COUNT(*) c FROM chunks WHERE "
+                       "page='concepts/sai.md'").fetchone()["c"] == 0
+    idx.close()
+    # authority record novo muda a detecção de TODAS as páginas ⇒ o
+    # PRÓXIMO rebuild (sem rebuild intermediário) é full automaticamente
+    BundleWriter(kb).write(
+        [_doc("authorities/stack/duckdb.md", "DuckDB", "# DuckDB",
+              type="authority_record", canonical="DuckDB",
+              aliases=["duckdb"], authority="stack")],
+        log_kind="Creation", log_message="m", commit_message="c")
+    report = rebuild_index(settings)
+    assert report["mode"] == "full"
+    # e a rodada seguinte volta a ser incremental
+    assert rebuild_index(settings)["mode"] == "incremental"
+
+
+# --------------------------------------------- HippoRAG: stream de grafo
+def test_graph_stream_reaches_linked_page_multi_hop(settings, kb):
+    a = _doc("concepts/uso-postgres.md", "Uso de PostgreSQL",
+             "# Uso\n\nUsamos PostgreSQL; detalhes em "
+             "[tuning](/concepts/tuning-avancado.md).")
+    b = _doc("concepts/tuning-avancado.md", "Tuning avançado",
+             "# Tuning avançado\n\nAjustes de work_mem e checkpoints "
+             "para cargas pesadas.")
+    _write(settings, kb, a, b)
+    r = AskMemory(settings, "PostgreSQL", local_only=True).execute()
+    pages = [e["page"] for e in r["evidence"]]
+    # B não menciona PostgreSQL nem casa com a pergunta no FTS —
+    # só o passeio no grafo (PPR) o alcança, via o link de A
+    assert "concepts/uso-postgres.md" in pages
+    assert "concepts/tuning-avancado.md" in pages
+
+
+# ------------------------------------------------- A-mem: relacionadas
+def test_related_pages_suggest_missing_links(settings, kb):
+    a = _doc("concepts/api-grpc.md", "API gRPC",
+             "# API\n\nUsamos gRPC e RabbitMQ no backbone.")
+    b = _doc("concepts/mensageria.md", "Mensageria",
+             "# Mensageria\n\nRabbitMQ e gRPC conectam os serviços.")
+    linked = _doc("concepts/ja-linkada.md", "Já linkada",
+                  "# Já linkada\n\ngRPC também aqui; ver "
+                  "[api](/concepts/api-grpc.md).")
+    _write(settings, kb, a, b, linked)
+    related = related_pages(settings, "concepts/api-grpc.md")
+    pages = [r["page"] for r in related]
+    assert "concepts/mensageria.md" in pages       # compartilha, não linka
+    assert "concepts/ja-linkada.md" not in pages   # já linkada: excluída
+    assert set(related[0]["shared"]) >= {"gRPC"}

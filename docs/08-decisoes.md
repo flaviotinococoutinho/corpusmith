@@ -99,6 +99,25 @@ portas (fallback do ask, RECYCLE no reconciliador, gesto humano).
 valida esquecimento — uso previsto valida) e apagamento definitivo (Git
 continua sendo o backstop de tudo).
 
+### ADR-13 — Garimpo de repositórios de memória (v0.13)
+**Contexto**: triagem de ~60 repositórios + a paper list Agent-Memory
+para reaproveitar mecanismos. Muitos já haviam sido minerados
+(mem0→reconcile, MemoryOS/MemoryBear→heat, OpenViking→descend,
+TencentDB→pipeline local, Zep→bi-temporal, LongMemEval→eval).
+**Adotados**: HippoRAG/PPR (stream `graph` multi-hop), A-mem
+(relacionadas determinísticas), índice incremental por sha+fingerprint
+(o conceito de layout de Arrow/FlatBuffers/LSM reduzido ao nosso
+invariante "índice derivado" — medido 29× em 150 páginas), SimHash
+(Charikar) como sinal de near-duplicata na consolidação.
+**Rejeitados**: trocar SQLite por LanceDB/memgraph/Milvus (viola
+local-first + índice-derivado); Arrow/FlatBuffers/zerocopy como
+DEPENDÊNCIAS (escala não justifica; o conceito foi absorvido);
+compressão de KV-cache (H2O/SnapKV — internals de inferência sem
+acesso); honcho/theory-of-mind (multiusuário fora do escopo); MemOS/
+Letta scheduling (sobrepõe camadas existentes); ChromeKatz e openfold
+(fora de escopo do projeto). **Reentrada**: vetores de verdade quando o
+extra [ml] com sqlite-vec for ativado — o stream `dense` já existe.
+
 ### ADR-11 — Formalismo categórico (coprefeixes/Kan)
 **Rejeitado o formalismo, extraída a métrica**: a "medida de resíduo na
 mudança de regime representacional" é útil e virou, na prática, o

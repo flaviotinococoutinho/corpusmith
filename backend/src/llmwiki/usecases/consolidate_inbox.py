@@ -24,6 +24,7 @@ from .base import DraftPage, MachinePageUseCase, UseCase
 from .compile_source import _slug
 from .reconcile_candidate import ReconcileCandidate, log_decision
 from ..ingestion.extract import ExtractError, extract
+from ..kernel.sketch import hamming, simhash
 from ..models.router import ModelRouter, ModelUnavailable
 from ..normalize import analyze
 from ..okf.authorities import load_gazetteer
@@ -44,12 +45,16 @@ _PROMPT = (
 
 
 class _Signature:
-    """Assinatura determinística de recorrência de uma fonte pendente."""
+    """Assinatura determinística de recorrência de uma fonte pendente:
+    ids fortes + entidades canônicas + sketch SimHash (near-duplicata)."""
+
+    NEAR_DUPLICATE_HAMMING = 8
 
     def __init__(self, relative: str, text: str, gazetteer):
         report = analyze(text[:100_000], gaz=gazetteer)
         self.relative = relative
         self.text = text
+        self.sketch = simhash(text[:100_000])
         self.strong_ids = {m.canonical for m in report.matches
                            if m.kind == "identifier"
                            and m.subkind in STRONG_IDS
@@ -61,6 +66,8 @@ class _Signature:
     def converges_with(self, other: "_Signature", min_shared: int) -> bool:
         if self.strong_ids & other.strong_ids:
             return True
+        if hamming(self.sketch, other.sketch) <= self.NEAR_DUPLICATE_HAMMING:
+            return True                      # quase-cópias sempre convergem
         return len(self.entities & other.entities) >= min_shared
 
 

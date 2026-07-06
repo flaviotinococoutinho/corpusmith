@@ -61,6 +61,18 @@ export function ExplorerPanel() {
                 <td className="break-all">{JSON.stringify(v)}</td>
               </tr>))}</tbody>
           </table>
+          {sel.related?.length > 0 && (
+            <>
+              <h3 className="font-medium mt-4 mb-1">
+                🔗 Relacionadas (linke?)</h3>
+              {sel.related.map((r: any) => (
+                <div key={r.page} className="text-xs mb-1">
+                  <button className="font-mono underline text-left"
+                          onClick={() => open(r.page)}>{r.page}</button>
+                  <span className="text-neutral-400">
+                    {" "}· {r.shared.join(", ")}</span>
+                </div>))}
+            </>)}
           <h3 className="font-medium mt-4 mb-1">Git</h3>
           {sel.git.map((l: string) => (
             <div key={l} className="text-xs font-mono">{l}</div>))}

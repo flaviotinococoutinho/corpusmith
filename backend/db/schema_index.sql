@@ -69,6 +69,12 @@ CREATE TRIGGER IF NOT EXISTS page_levels_ad AFTER DELETE ON page_levels BEGIN
     INSERT INTO fts_levels(fts_levels, rowid, text) VALUES ('delete', old.rowid, old.text);
 END;
 
+-- indexação INCREMENTAL (v0.13): sha por página + fingerprint do gazetteer
+CREATE TABLE IF NOT EXISTS page_index_state(
+  page TEXT PRIMARY KEY, sha TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS index_meta(
+  key TEXT PRIMARY KEY, value TEXT NOT NULL);
+
 -- pontes frágeis do grafo (persistência 0-dim, v0.9) — recomputável no leiden
 CREATE TABLE IF NOT EXISTS graph_bridges(
   src TEXT NOT NULL, dst TEXT NOT NULL, weight REAL NOT NULL,

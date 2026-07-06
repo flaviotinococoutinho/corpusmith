@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
 from ..facades import CompilerFacade, CurationFacade, MemoryFacade
+from ..retrieval.related import related_pages
 from ..settings import Settings
 from ..runtime.db import connect
 from ..okf.writer import BundleWriter
@@ -158,7 +159,8 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
             capture_output=True, text=True).stdout.splitlines()
         return {"path": path, "body": d.body,
                 "meta": d.meta.model_dump(exclude_none=True, mode="json"),
-                "git": gitlog}
+                "git": gitlog,
+                "related": related_pages(s, path)}   # A-mem: o link que falta
 
     @app.post("/cockpit/page/stale", dependencies=[Depends(auth)])
     def mark_stale(body: dict):

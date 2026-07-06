@@ -14,7 +14,9 @@ from __future__ import annotations
 import re
 import time
 import uuid
+from collections import defaultdict
 from .base import UseCase
+from ..kernel.graphwalk import personalized_pagerank
 from ..kernel.information import surprisal
 from ..models.router import ModelRouter, ModelUnavailable
 from ..normalize import analyze
@@ -95,8 +97,12 @@ class AskMemory(UseCase):
             streams.add("dense", dense.search(self._settings, self._query,
                                               router=self._router))
         if question_entities:
-            streams.add("entity",
-                        self._entity_stream(idx, question_entities))
+            seed_weights = self._entity_page_weights(idx, question_entities)
+            ranked = sorted(seed_weights, key=lambda p: -seed_weights[p])[:20]
+            streams.add("entity", self._first_chunks(idx, ranked))
+            # HippoRAG (v0.13): PPR semeado pelas páginas-entidade — alcança
+            # fatos a UM OU MAIS saltos de link da pergunta (associatividade)
+            streams.add("graph", self._graph_stream(idx, seed_weights))
         trajectory: list[dict] = []
         if self._settings.flag("retrieval.descend"):
             pages, trajectory = descend.run(idx, self._query)
@@ -130,7 +136,11 @@ class AskMemory(UseCase):
         rt.close()
         return credit
 
-    def _entity_stream(self, idx, entities: set[str]) -> list[dict]:
+    def _entity_page_weights(self, idx,
+                             entities: set[str]) -> dict[str, float]:
+        """Peso por página = Σ n·surprisal das entidades da pergunta.
+        Suavização add-one no corpus: entidade presente em TODAS as páginas
+        nunca zera (senão não semearia o PPR em bases pequenas)."""
         corpus = idx.execute(
             "SELECT COUNT(DISTINCT page) c FROM page_entities").fetchone()["c"]
         weights: dict[str, float] = {}
@@ -140,12 +150,29 @@ class AskMemory(UseCase):
                 "JOIN entities e ON e.id = pe.entity_id "
                 "WHERE e.canonical = ?", (entity,)).fetchall()
             information = surprisal(len({r["page"] for r in rows}),
-                                    max(corpus, 1))
+                                    max(corpus, 1) + 1)
             for row in rows:
                 weights[row["page"]] = weights.get(row["page"], 0.0) \
                     + row["n"] * information
-        ranked = sorted(weights, key=lambda p: -weights[p])[:20]
-        return self._first_chunks(idx, ranked)
+        return weights
+
+    _EDGE_WEIGHT = {"extracted": 1.0, "inferred": 0.5, "ambiguous": 0.15}
+
+    def _graph_stream(self, idx, seeds: dict[str, float]) -> list[dict]:
+        if not seeds:
+            return []
+        adjacency: dict[str, dict[str, float]] = defaultdict(dict)
+        for src, dst, conf in idx.execute(
+                "SELECT src, dst, COALESCE(confidence,'extracted') "
+                "FROM graph_edges"):
+            weight = self._EDGE_WEIGHT.get(conf, 0.5)
+            adjacency[src][dst] = adjacency[src].get(dst, 0.0) + weight
+            adjacency[dst][src] = adjacency[dst].get(src, 0.0) + weight
+        if not adjacency:
+            return []
+        rank = personalized_pagerank(adjacency, seeds)
+        top = sorted(rank, key=lambda p: -rank[p])[:12]
+        return self._first_chunks(idx, top)
 
     @staticmethod
     def _first_chunks(idx, pages: list[str]) -> list[dict]:
