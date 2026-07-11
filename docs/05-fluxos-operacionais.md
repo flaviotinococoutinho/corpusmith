@@ -216,6 +216,32 @@ POST /cockpit/config/rollback → RollbackConfig
    configuração" (Curadoria); StatusBar mostra 🩺 /health/full
 ```
 
+## 5d. Convívio cognitivo (v0.18)
+
+```
+POST /cockpit/state {load 1..5, focus?, energy?, time_available_min?, note?}
+ → DeclareCognitiveState → [cognitive_state] (últimas 200; TTL 8h →
+   neutro; SEMPRE declarado, nunca inferido)
+/ask (toda consulta):
+ → current_state + delivery_budget (CLT: carga alta ⇒ 5 evidências,
+   512 tokens, concisão) → estratégia: profile.preferred_strategy OU
+   roleta ∝ strategy_weights (Hedge) → dica de estilo no prompt
+ → [ask_context] grava (ask_id, estratégia, carga, confiança)
+Desfecho (✅/🚫/✏️) → RecordOutcome:
+ → Hedge nos streams (v0.9) E na ESTRATÉGIA usada (v0.18)
+Segunda-feira (scheduler) ou 🔍 no painel → job metacog:
+ → ObserveMetacognition: minera estratégia campeã · correlação
+   carga×erro · excesso de confiança (Brier) — suporte mínimo, dedupe
+ → [metacog_observations] status=proposed
+Gate humano (painel 🧭): aceitar/rejeitar/suspender
+ → aceite com suggestion ⇒ TuneConfig source=metacog (linhagem:
+   guard + ring + rollback) — observado vira declarado SÓ aqui
+GET /cockpit/attention?minutes=N
+ → PlanAttention: revisões (ganho 4p(1−p) sobre P(recall) ACT-R) +
+   lacunas do Harness + inbox → mochila gulosa por valor/custo com
+   `reason` por item; carga alta ⇒ só blocos pequenos
+```
+
 ## 6. Revisão semanal
 
 ```
@@ -300,4 +326,9 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | DELETE /cockpit/pipelines | Compiler.delete_pipeline | DeletePipeline |
 | job pipeline | Compiler.run_pipeline (REGISTRY injetado) | RunPipeline |
 | GET /cockpit/pipelines/runs | Compiler.pipeline_runs | pipeline_runs (puro) |
+| POST /cockpit/state | Cognition.declare_state | DeclareCognitiveState |
+| GET /cockpit/cognition | Cognition.overview | current_state + calibration_report (puros) |
+| POST /cockpit/cognition/observe · job metacog | Cognition.observe | ObserveMetacognition |
+| POST /cockpit/cognition/observations/review | Cognition.review_observation | ReviewObservation (+TuneConfig no aceite) |
+| GET /cockpit/attention | Cognition.attention_plan | PlanAttention |
 | GET / · /health · /health/full | — (sistema, api/system.py) | — |

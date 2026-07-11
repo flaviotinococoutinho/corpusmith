@@ -11,10 +11,12 @@ Melhorias de coordenação sobre o fluxo anterior:
   laço de aprendizado do RecordOutcome.
 """
 from __future__ import annotations
+import random
 import re
 import time
 from collections import defaultdict
 from .base import UseCase
+from .cognitive_state import STRATEGIES, current_state, delivery_budget
 from ..kernel.graphwalk import personalized_pagerank
 from ..kernel.identity import factory as id_factory, parse as parse_id
 from ..kernel.information import surprisal
@@ -36,6 +38,21 @@ _PROMPT = (
 
 _GLOBAL_MARKERS = re.compile(
     r"vis[aã]o geral|principais|temas|panorama|overview|resumo geral", re.I)
+
+# Resposta adaptativa (v0.18): estratégias de explicação são os EXPERTS
+# de um segundo Hedge (o primeiro pesa streams; este pesa COMO explicar).
+# Perfil declarado (profile.preferred_strategy) vence o observado.
+_STRATEGY_HINT = {
+    "direta": "Responda direto ao ponto, sem preâmbulo.",
+    "analogia-primeiro": "Abra com UMA analogia fiel (declarando o limite "
+                         "dela) e só então a explicação técnica.",
+    "exemplo-primeiro": "Abra com um exemplo concreto tirado das "
+                        "evidências e generalize a partir dele.",
+    "teoria-primeiro": "Apresente primeiro o princípio geral e depois "
+                       "desça ao caso concreto.",
+    "decomposicao": "Decomponha a resposta em partes pequenas e "
+                    "explícitas, uma por vez.",
+}
 
 
 class AskMemory(UseCase):
@@ -77,6 +94,10 @@ class AskMemory(UseCase):
         # ask_id É o trace id (v0.16): snowflake com módulo=ask e
         # algoritmo=rrf — quem tiver só o id recupera quando/quem/como
         ask_id = id_factory("ask", "rrf").next_rendered()
+        # camada cognitiva (v0.18): estado declarado + estratégia
+        self._state = current_state(self._settings)
+        self._budget = delivery_budget(self._settings, self._state["load"])
+        self._strategy = self._choose_strategy()
         kb = self._settings.path("knowledge")
         gazetteer = load_gazetteer(BundleReader(kb / "bundle"))
         idx = connect(self._settings.app_support / "index.db")
@@ -112,7 +133,8 @@ class AskMemory(UseCase):
 
         overlay = {r["page"]: r["status"] for r in idx.execute(
             "SELECT page, status FROM page_overlay")}
-        fused = streams.fuse(overlay=overlay, as_of=as_of, limit=8)
+        fused = streams.fuse(overlay=overlay, as_of=as_of,
+                             limit=self._budget["evidence_limit"])
         idx.close()
 
         threshold = float(self._settings.get("ask.abstain_threshold", 0.0))
@@ -128,8 +150,31 @@ class AskMemory(UseCase):
                 "abstained": False, "ask_id": ask_id,
                 "identity": parse_id(ask_id),
                 "uncertainty": fused.uncertainty,
+                "strategy": self._strategy,
+                "cognitive": {"load": self._state["load"],
+                              "declared": self._state["declared"]},
                 "evidence": evidence, "gaps": [],
                 "as_of": as_of, "trajectory": trajectory}
+
+    # -------------------------------------------------- camada cognitiva
+    def _choose_strategy(self) -> str:
+        """Declarado vence observado (FR-14.3): perfil fixa a estratégia;
+        em 'auto', roleta ∝ peso Hedge (exploração à EXP3 — estratégia
+        boa aparece mais, nenhuma é silenciada)."""
+        preferred = self._settings.get("profile.preferred_strategy", "auto")
+        if preferred in STRATEGIES:
+            return preferred
+        rt = connect(self._settings.app_support / "runtime.db")
+        stored = {r["strategy"]: r["weight"] for r in rt.execute(
+            "SELECT strategy, weight FROM strategy_weights")}
+        rt.close()
+        weights = [stored.get(s, 1.0) for s in STRATEGIES]
+        pick = random.uniform(0, sum(weights))
+        for strategy, weight in zip(STRATEGIES, weights):
+            pick -= weight
+            if pick <= 0:
+                return strategy
+        return STRATEGIES[0]
 
     # ------------------------------------------------------------ streams
     def _stream_credit(self) -> dict[str, float]:
@@ -193,6 +238,13 @@ class AskMemory(UseCase):
     def _record_usage(self, ask_id: str, fused) -> None:
         rt = connect(self._settings.app_support / "runtime.db")
         now = time.time()
+        # contexto cognitivo da consulta (v0.18): estratégia usada, carga
+        # vigente e confiança — a matéria-prima da calibração/metacognição
+        rt.execute("INSERT OR REPLACE INTO ask_context"
+                   "(ask_id, strategy, load, confidence) VALUES (?,?,?,?)",
+                   (ask_id, self._strategy,
+                    self._state["load"] if self._state["declared"] else None,
+                    round(1.0 - fused.uncertainty, 4)))
         for page, sources in fused.provenance.items():
             rt.execute("INSERT INTO page_heat(path, reads, last_seen, first_seen) "
                        "VALUES (?,1,?,?) ON CONFLICT(path) DO UPDATE SET "
@@ -210,11 +262,19 @@ class AskMemory(UseCase):
         numbered = "\n\n".join(
             f"[{i + 1}] ({e['page']}) {e['body'][:800]}"
             for i, e in enumerate(evidence))
+        style = [_STRATEGY_HINT[self._strategy]]
+        if self._budget["concise"]:            # CLT: carga alta ⇒ conciso
+            style.append("A pessoa está com pouca capacidade disponível "
+                         "agora: seja breve e evite abrir frentes novas.")
+        if not self._settings.get("profile.analogies", True):
+            style.append("Não use analogias.")
+        prompt = (_PROMPT.format(query=self._query, evidence=numbered)
+                  + "\nEstilo: " + " ".join(style))
         try:
             privacy = "local_only" if self._local_only else "api_allowed"
             r = self._router.complete(
-                _PROMPT.format(query=self._query, evidence=numbered),
-                privacy=privacy, deep=self._deep, max_tokens=1024)
+                prompt, privacy=privacy, deep=self._deep,
+                max_tokens=self._budget["max_tokens"])
             text, via = r["text"], r["via"]
             blocked = (via.startswith("api:")
                        and self._settings.policy.get("citation_required", True)

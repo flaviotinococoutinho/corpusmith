@@ -79,7 +79,12 @@ export function ChatEvidencePanel() {
                 📅 como em {r.as_of}</span>}
               {r.uncertainty > 0.85 && <span
                 className="ml-2 border border-amber-400 rounded px-1 text-amber-600">
-                ~ incerta ({Math.round(r.uncertainty * 100)}%)</span>}</p>
+                ~ incerta ({Math.round(r.uncertainty * 100)}%)</span>}
+              {r.strategy && <span className="ml-2 border rounded px-1"
+                title={r.cognitive?.declared
+                  ? `adaptada à carga declarada ${r.cognitive.load}/5`
+                  : "estratégia escolhida pelo crédito Hedge"}>
+                🧭 {r.strategy}</span>}</p>
             {r.trajectory?.length > 0 && (
               <p className="text-xs text-neutral-500 font-mono">
                 {r.trajectory.map((t: any) =>

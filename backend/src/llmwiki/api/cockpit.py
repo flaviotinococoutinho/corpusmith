@@ -3,7 +3,8 @@ import time
 from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import Response
-from ..facades import CompilerFacade, CurationFacade, MemoryFacade
+from ..facades import (CognitionFacade, CompilerFacade, CurationFacade,
+                       MemoryFacade)
 from ..retrieval import observatory
 from ..retrieval.related import related_pages
 from ..settings import Settings
@@ -20,6 +21,7 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     memory_facade = MemoryFacade(s)
     compiler = CompilerFacade(s)
     compiler.seed_pipelines()          # builtin idempotentes (v0.17)
+    cognition = CognitionFacade(s)
 
     def writer() -> BundleWriter:
         return BundleWriter(kb)
@@ -435,6 +437,57 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     @app.get("/cockpit/cold", dependencies=[Depends(auth)])
     def cold():
         return curation.cold()
+
+    # ---------- Camada cognitiva (v0.18) ----------
+    @app.post("/cockpit/state", dependencies=[Depends(auth)])
+    def declare_state(body: dict):
+        """Estado contextual DECLARADO (CLT) — carga 1..5 obrigatória."""
+        try:
+            return cognition.declare_state(
+                load=body["load"], focus=body.get("focus"),
+                energy=body.get("energy"),
+                time_available_min=body.get("time_available_min"),
+                note=body.get("note"),
+                notify=lambda t, d: bus.emit("system", t, d))
+        except (KeyError, ValueError, TypeError) as e:
+            raise HTTPException(400, str(e))
+
+    @app.get("/cockpit/cognition", dependencies=[Depends(auth)])
+    def cognition_overview():
+        from .system import links
+        return {**cognition.overview(),
+                "_links": links(self="/cockpit/cognition",
+                                state="/cockpit/state",
+                                observations="/cockpit/cognition/observations",
+                                observe="/cockpit/cognition/observe",
+                                attention="/cockpit/attention")}
+
+    @app.post("/cockpit/cognition/observe", dependencies=[Depends(auth)])
+    def cognition_observe():
+        return cognition.observe(notify=lambda t, d: bus.emit("system", t, d))
+
+    @app.get("/cockpit/cognition/observations", dependencies=[Depends(auth)])
+    def cognition_observations(status: str = ""):
+        return {"observations": cognition.observations(status or None)}
+
+    @app.post("/cockpit/cognition/observations/review",
+              dependencies=[Depends(auth)])
+    def cognition_review(body: dict):
+        """Gate humano: aceitar (aplica suggestion pela linhagem de
+        config), rejeitar ou suspender uma observação."""
+        try:
+            return cognition.review_observation(
+                body["id"], body["action"],
+                notify=lambda t, d: bus.emit("system", t, d))
+        except (KeyError, ValueError) as e:
+            code = 404 if isinstance(e, KeyError) else 400
+            raise HTTPException(code, str(e))
+
+    @app.get("/cockpit/attention", dependencies=[Depends(auth)])
+    def attention(minutes: int = 0):
+        """Economia de atenção: o melhor investimento dos próximos N
+        minutos, com o porquê de cada item."""
+        return cognition.attention_plan(minutes or None)
 
     # ---------- Pipelines configuráveis (v0.17) ----------
     @app.get("/cockpit/pipelines", dependencies=[Depends(auth)])

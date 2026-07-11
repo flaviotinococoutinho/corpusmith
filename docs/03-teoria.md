@@ -255,3 +255,50 @@ Como um paper vira mecanismo aqui (o critério que filtrou o que entrou):
 5. **Fechar o laço**: teoria sem feedback é decoração — Hedge, heat e
    overlay existem porque conectam o julgamento humano de volta ao
    ranking.
+
+## 6. Camada cognitiva (v0.18) — o convívio formalizado
+
+**Carga cognitiva — Sweller, "Cognitive load during problem solving"
+(Cognitive Science, 1988)**: capacidade de processamento é limitada e
+varia. Transposição (`usecases/cognitive_state.py`): estado DECLARADO
+(carga/foco/energia 1..5 + minutos, TTL 8h → neutro) e
+`delivery_budget` determinístico — carga alta encolhe evidências,
+tokens e impõe concisão. Nada é inferido de comportamento: sinal
+humano é de primeira classe e dado sensível fica sob consentimento.
+
+**Calibração — Brier (Monthly Weather Review, 1950); Lichtenstein,
+Fischhoff & Phillips (1982)**: o previsor é a própria memória —
+p = 1−uncertainty da fusão, o = desfecho `useful`. `kernel/calibration.py`
+dá Brier, overconfidence (confiança média − acerto) e a curva de
+confiabilidade por bins; o padrão humano de excesso de confiança vira
+observação metacognitiva com números na frase, nunca rótulo.
+
+**Resposta adaptativa — Hedge (Freund & Schapire 1997) + exploração à
+EXP3 (Auer et al. 2002)**: estratégias de explicação (direta, analogia-
+primeiro, exemplo-primeiro, teoria-primeiro, decomposição) são experts;
+o desfecho treina `strategy_weights` (terceiro laço do mesmo kernel);
+a seleção é roleta ∝ peso — estratégia boa aparece mais, nenhuma é
+silenciada. `profile.preferred_strategy` ≠ "auto" desliga a roleta:
+declarado vence observado (FR-14.3).
+
+**Dificuldade desejável — Bjork (1994); Roediger & Karpicke, "The power
+of testing memory" (2006)**: revisar rende mais no esforço-com-sucesso.
+`kernel/attention.py::review_gain` = 4p(1−p) sobre o P(recall) ACT-R —
+a variância de Bernoulli: máxima incerteza, máxima informação por
+minuto, pico em p=0.5; trivial (p≈1) e perdido (p≈0) rendem pouco.
+
+**Economia de atenção — mochila gulosa por densidade (Dantzig 1957)**:
+`fill_budget` ordena candidatos (revisões, perguntas abertas,
+contestadas, stale, inbox) por valor/custo e enche o orçamento
+declarado; sob carga alta só blocos pequenos (CLT × knapsack). Cada
+item carrega `reason` — recomendação sem porquê não sobe à interface.
+
+**Metacognição — Flavell (1979); Nelson & Narens (1990)**: o par
+monitoramento→controle vira `ObserveMetacognition` (mineração SQL
+determinística com suporte mínimo e dedupe; correlação fraseada como
+correlação) → gate humano `ReviewObservation` — aceitar aplica a
+sugestão PELA LINHAGEM de configuração (TuneConfig source=metacog):
+o observado só vira declarado com consentimento, auditável e
+reversível. Rejeitado de propósito: "learning styles" (VARK) — sem
+suporte empírico (Pashler et al., "Learning styles: concepts and
+evidence", 2008); aqui preferência é peso treinado por desfecho.

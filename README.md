@@ -1,4 +1,4 @@
-# LLM Wiki — v0.17 (Pipelines Configuráveis)
+# LLM Wiki — v0.18 (Convívio Cognitivo)
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -62,6 +62,30 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   registry injetado por DIP; trace por run + span por estágio; builtin
   `absorver-inbox`/`manutencao-semanal`/`qualidade-total`; card 🔗 no
   painel Processos. O sanduíche epistêmico segue DENTRO de cada job.
+
+## Novidades da v0.18 — convívio cognitivo (ADR-19)
+
+- **Estado declarado (CLT, Sweller)**: carga/foco/energia 1..5 + minutos,
+  TTL 8h → neutro; carga alta encolhe a entrega do `/ask` (5 evidências,
+  512 tokens, concisão). Nada é inferido de comportamento.
+- **Resposta adaptativa**: estratégias de explicação são experts de um
+  terceiro laço Hedge (roleta ∝ peso à EXP3); perfil DECLARADO
+  (`profile.preferred_strategy`) vence o observado; chip 🧭 no chat.
+- **Calibração (Brier 1950)**: confiança×desfecho ⇒ Brier,
+  overconfidence e curva de confiabilidade (`kernel/calibration.py`).
+- **Metacognição com gate humano (Flavell)**: mineração determinística
+  (estratégia campeã, correlação carga×erro, excesso de confiança) com
+  suporte mínimo e dedupe; aceitar aplica a sugestão PELA LINHAGEM de
+  config (source=metacog, guard+rollback) — observado só vira declarado
+  com consentimento. Job semanal `metacog`.
+- **Economia de atenção**: "melhor investimento dos próximos N minutos"
+  — revisões no ponto de esforço produtivo (ganho 4p(1−p) sobre o
+  P(recall) ACT-R, Bjork), lacunas do Harness e inbox, na mochila
+  gulosa por densidade valor/custo com `reason` por item.
+- **Painel 🧭 Cognição**: declarar estado, planejar atenção, calibração,
+  estratégias e observações — o cockpit da metacognição.
+- Rejeitados com razão: learning styles/VARK (Pashler 2008), inferência
+  emocional, incorporação automática de perfil.
 
 ## Coordenação dos dados — fundamentos (kernel/)
 
@@ -142,7 +166,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 164 testes de contrato/arquitetura/golden bundles
+just test             # 178 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

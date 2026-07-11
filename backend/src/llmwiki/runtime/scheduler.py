@@ -28,6 +28,8 @@ class Scheduler(threading.Thread):
                                    dedupe_key=f"reflect:{week}")
                 self.queue.enqueue("review_weekly", {}, priority=6,
                                    dedupe_key=f"review:{week}")
+                self.queue.enqueue("metacog", {}, priority=5,
+                                   dedupe_key=f"metacog:{week}")
             today = time.strftime("%Y-%m-%d")
             self.queue.enqueue("embed", {}, priority=3,
                                dedupe_key=f"embed:{today}")

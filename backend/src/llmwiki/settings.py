@@ -62,10 +62,21 @@ class Settings(BaseModel):
     # índice invertido + bandas LSH (seleção adaptativa, v0.16)
     consolidate: dict[str, Any] = {"min_shared": 2, "min_cluster": 2,
                                    "pairwise_max": 32}
+    # camada cognitiva (v0.18): perfil DECLARADO (vence o observado —
+    # preferred_strategy != "auto" desliga a seleção Hedge) e parâmetros
+    # do convívio (TTL do estado, suporte mínimo p/ observação, corte de
+    # carga alta que reduz a entrega)
+    profile: dict[str, Any] = {"preferred_strategy": "auto",
+                               "formalism": "medio",
+                               "analogies": True}
+    cognitive: dict[str, Any] = {"state_ttl_hours": 8,
+                                 "high_load": 4,
+                                 "min_support": 5}
 
     # seções que o Cockpit pode editar a quente (POST /cockpit/config)
     TUNABLE_SECTIONS: ClassVar[tuple[str, ...]] = (
-        "flags", "ask", "memory", "policy", "consolidate")
+        "flags", "ask", "memory", "policy", "consolidate",
+        "profile", "cognitive")
 
     # ------------------------------------------------------------------ paths
     @property

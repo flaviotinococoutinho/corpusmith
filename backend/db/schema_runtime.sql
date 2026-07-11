@@ -74,6 +74,33 @@ CREATE TABLE IF NOT EXISTS stream_weights(
 -- entradas (a vigente é a mais recente; TuneConfig poda as excedentes).
 -- Cada linha guarda o delta pedido E o snapshot completo pós-aplicação —
 -- rollback é reaplicar o snapshot anterior, sem reconstruir deltas.
+-- ============================ v0.18 (camada cognitiva) ============================
+-- Estado contextual DECLARADO (CLT): nunca inferido — princípio 5.3 da
+-- espec (sinal humano é de primeira classe) + restrição de privacidade.
+CREATE TABLE IF NOT EXISTS cognitive_state(
+  id INTEGER PRIMARY KEY, ts REAL DEFAULT (unixepoch('subsec')),
+  load INTEGER NOT NULL CHECK(load BETWEEN 1 AND 5),
+  focus INTEGER CHECK(focus BETWEEN 1 AND 5),
+  energy INTEGER CHECK(energy BETWEEN 1 AND 5),
+  time_available_min INTEGER, note TEXT);
+-- Contexto de cada consulta: estratégia usada + carga vigente + confiança
+-- (1 − uncertainty) — a matéria-prima da calibração e da metacognição.
+CREATE TABLE IF NOT EXISTS ask_context(
+  ask_id TEXT PRIMARY KEY, strategy TEXT NOT NULL,
+  load INTEGER, confidence REAL);
+-- Crédito Hedge por ESTRATÉGIA de explicação (mesmo laço dos streams).
+CREATE TABLE IF NOT EXISTS strategy_weights(
+  strategy TEXT PRIMARY KEY, weight REAL NOT NULL DEFAULT 1.0);
+-- Observações metacognitivas: HIPÓTESES mineradas com gate humano —
+-- aceitar pode aplicar `suggestion` (tune) pela linhagem de config.
+CREATE TABLE IF NOT EXISTS metacog_observations(
+  id INTEGER PRIMARY KEY, ts REAL DEFAULT (unixepoch('subsec')),
+  kind TEXT NOT NULL,          -- strategy|load|calibration
+  statement TEXT NOT NULL, support INTEGER, confidence REAL,
+  evidence TEXT, suggestion TEXT,
+  status TEXT NOT NULL DEFAULT 'proposed'
+    CHECK(status IN ('proposed','accepted','rejected','suspended')));
+
 -- Pipelines CONFIGURÁVEIS (v0.17): a orquestração é DADO, não código.
 -- O spec (json) compõe jobs já registrados; o sanduíche epistêmico segue
 -- DENTRO de cada job (o pipeline orquestra ACIMA do template, nunca o

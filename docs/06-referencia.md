@@ -72,6 +72,16 @@ GET/POST /cockpit/config         (seções TUNABLE: flags·ask·memory·policy·
                                   e devolve history_id+trace_id; 400 = guard recusou)
 GET  /cockpit/config/history     (linhagem: até 30 gerações, mais recente = vigente)
 POST /cockpit/config/rollback    (retorna à geração ANTERIOR; 409 sem anterior)
+POST /cockpit/state              (v0.18: {load 1..5*, focus?, energy?,
+                                  time_available_min?, note?} — declarado, TTL 8h)
+GET  /cockpit/cognition          (estado · perfil · strategy_weights · calibração
+                                  Brier/bins · observações pendentes)
+POST /cockpit/cognition/observe  (varredura metacognitiva; também job semanal)
+GET  /cockpit/cognition/observations ?status=proposed|accepted|rejected|suspended
+POST /cockpit/cognition/observations/review {id, action} — aceite aplica
+                                  suggestion via linhagem (404 id, 400 action)
+GET  /cockpit/attention          ?minutes= (default: do estado ou 60) → plano
+                                  com reason por item; carga alta ⇒ blocos ≤15min
 GET  /cockpit/pipelines          (v0.17: specs + last_run; seed builtin no mount)
 POST /cockpit/pipelines          {name, description?, stages:[{job,payload?,on_error?}]}
                                  (400 = validação estrutural recusou)
@@ -105,7 +115,14 @@ source∈cockpit|cli|baseline|rollback, note)` — ring de 30: o
 `TuneConfig` poda além do limite; a vigente é a linha mais recente ·
 `pipelines(name, spec json, builtin)` ·
 `pipeline_runs(pipeline, trace_id, state∈running|done|partial|failed,
-stages json, started_at, finished_at)` — últimos 200 (v0.17)
+stages json, started_at, finished_at)` — últimos 200 (v0.17) ·
+`cognitive_state(load 1..5, focus, energy, time_available_min, note)`
+— últimas 200 declarações (v0.18) ·
+`ask_context(ask_id PK, strategy, load, confidence)` ·
+`strategy_weights(strategy, weight)` ·
+`metacog_observations(kind∈strategy|load|calibration, statement,
+support, confidence, evidence json, suggestion json,
+status∈proposed|accepted|rejected|suspended)`
 
 **cold.db** (base fria, v0.12 — NÃO derivado; conteúdo compactado):
 `cold_memories(page, digest, strong_ids, body_z zlib9, meta_json,
@@ -138,10 +155,11 @@ emitem `config.tuned`/`config.rolled_back` com trace.
 
 `compile_source · consolidate_inbox · ask · embed · rerank · leiden ·
 ocr · lora_train · review_weekly · reflect · eval_memory ·
-index_rebuild · pipeline` — contrato `run(settings, payload, emit) -> dict`.
+index_rebuild · pipeline · metacog` — contrato
+`run(settings, payload, emit) -> dict`.
 Slots heavy: compile_source, lora_train, leiden, ocr, pipeline.
-Scheduler: segunda ⇒ reflect + review_weekly; diário ⇒ embed +
-consolidate_inbox. O job `pipeline` injeta o REGISTRY no
+Scheduler: segunda ⇒ reflect + review_weekly + metacog; diário ⇒
+embed + consolidate_inbox. O job `pipeline` injeta o REGISTRY no
 `RunPipeline` (DIP) e roda os estágios inline no MESMO slot.
 
 ## 5. Configuração (`config/default.yaml` + Settings)
@@ -171,6 +189,15 @@ aplica → probe → linha no ring `config_history`); `RollbackConfig`
 reaplica o snapshot da geração anterior. `Settings.tune()` continua
 sendo o mecanismo baixo (mutação + overrides.yaml) — não chame direto
 fora de testes.
+
+Camada cognitiva (v0.18): seções TUNABLE novas `profile`
+({preferred_strategy: auto|<estratégia>, formalism, analogies}) e
+`cognitive` ({state_ttl_hours: 8, high_load: 4, min_support: 5});
+estratégias = direta · analogia-primeiro · exemplo-primeiro ·
+teoria-primeiro · decomposicao (`usecases/cognitive_state.STRATEGIES`);
+kernel novo: `calibration.py` (brier_score, overconfidence,
+calibration_bins) e `attention.py` (review_gain = 4p(1−p),
+fill_budget guloso por densidade).
 
 Identidade (v0.16, `kernel/identity.py`): snowflake 63 bits =
 41b ms desde 2026-01-01 · 6b módulo (MODULES) · 6b algoritmo

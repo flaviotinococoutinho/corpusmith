@@ -119,6 +119,18 @@ export class DaemonClient {
   configHistory = () => this.get<any>("/cockpit/config/history");
   configRollback = () => this.post<any>("/cockpit/config/rollback", {});
   healthFull = () => this.get<any>("/health/full");
+  // ------------------------------------------------ v0.18 (cognição)
+  declareState = (body: { load: number; focus?: number; energy?: number;
+                          time_available_min?: number; note?: string }) =>
+    this.post<any>("/cockpit/state", body);
+  cognition = () => this.get<any>("/cockpit/cognition");
+  observe = () => this.post<any>("/cockpit/cognition/observe", {});
+  observations = (status = "proposed") =>
+    this.get<any>(`/cockpit/cognition/observations?status=${status}`);
+  reviewObservation = (id: number, action: string) =>
+    this.post<any>("/cockpit/cognition/observations/review", { id, action });
+  attention = (minutes?: number) =>
+    this.get<any>(`/cockpit/attention${minutes ? `?minutes=${minutes}` : ""}`);
   // ------------------------------------------------ v0.17 (pipelines)
   pipelines = () => this.get<any>("/cockpit/pipelines");
   runPipeline = (name: string) =>

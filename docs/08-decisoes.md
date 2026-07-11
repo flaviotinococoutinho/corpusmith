@@ -205,3 +205,34 @@ DAG arbitrário com paralelismo (sequência cobre os casos reais; a
 fila já paraleliza ENTRE jobs), e pipeline-dentro-de-pipeline
 (recusado na validação — sem recursão). **Reentrada**: DAG quando
 existir um caso real de fan-out dentro de um mesmo run.
+
+### ADR-19 — Camada cognitiva: convívio com gate humano (v0.18)
+**Contexto**: perfil cognitivo, estado contextual/carga, metacognição
+assistida, resposta adaptativa e economia de atenção (EPICs 14/15/21/
+22/23 da espec AI Memory), antes adiados por falta de formalismo.
+**Adotados (cada um com forma fechada e teste):**
+- *Cognitive Load Theory* (Sweller 1988): estado SEMPRE declarado
+  (1..5, TTL 8h → neutro), nunca inferido; `delivery_budget` encolhe a
+  entrega sob carga alta (evidências 8→5, tokens 1024→512, concisão).
+- *Calibração* (Brier 1950; Lichtenstein 1982): confiança = 1−incerteza
+  da fusão × desfecho `useful` ⇒ Brier + overconfidence + curva de
+  confiabilidade (kernel/calibration.py, puro).
+- *Resposta adaptativa* = Hedge sobre ESTRATÉGIAS de explicação
+  (mesmo kernel dos streams; roleta ∝ peso à EXP3 para exploração);
+  perfil DECLARADO vence o observado (`profile.preferred_strategy`).
+- *Dificuldade desejável* (Bjork 1994; Roediger & Karpicke 2006):
+  ganho de revisão = 4p(1−p) sobre o P(recall) ACT-R já existente —
+  pico no esforço produtivo, trivial e perdido rendem pouco.
+- *Economia de atenção* = mochila gulosa por densidade valor/custo
+  (Dantzig 1957) sobre revisões + lacunas do Harness + inbox, com o
+  porquê em cada item; carga alta poda blocos grandes.
+- *Metacognição* (Flavell 1979; Nelson & Narens 1990): monitoramento =
+  mineração DETERMINÍSTICA (SQL, suporte mínimo, dedupe, correlação
+  jamais causalidade); controle = gate humano — aceitar aplica a
+  suggestion PELA LINHAGEM de config (source=metacog, guard+rollback).
+**Rejeitados**: "learning styles" VARK (Pashler et al. 2008 — sem
+evidência; preferência aqui é peso Hedge treinado por desfecho, não
+rótulo); inferência de emoção/saúde (restrição da própria espec);
+incorporação automática de perfil (FR-14.3 — só com aceite); estado
+inferido de comportamento (declarado ou nada). **Reentrada**: espaçamento
+ótimo por item (FSRS) quando houver histórico de revisão por página.

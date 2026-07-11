@@ -38,6 +38,7 @@ class RecordOutcome(UseCase):
                    (self._ask_id, self._verdict, self._note,
                     json.dumps(self._pages)))
         self._update_stream_credit(rt)
+        self._update_strategy_credit(rt)
         rt.commit()
         rt.close()
         if self._verdict == "corrected" and self._note:
@@ -64,6 +65,26 @@ class RecordOutcome(UseCase):
             rt.execute("INSERT INTO stream_weights(stream, weight) "
                        "VALUES (?,?) ON CONFLICT(stream) "
                        "DO UPDATE SET weight=?", (stream, weight, weight))
+
+    def _update_strategy_credit(self, rt) -> None:
+        """Terceiro laço (v0.18): o MESMO Hedge, agora sobre a estratégia
+        de explicação usada na consulta (ask_context) — a resposta
+        adaptativa aprende COMO explicar, não só o que recuperar."""
+        if not self._ask_id:
+            return
+        row = rt.execute("SELECT strategy FROM ask_context WHERE ask_id = ?",
+                         (self._ask_id,)).fetchone()
+        if not row:
+            return
+        current = {r["strategy"]: r["weight"] for r in
+                   rt.execute("SELECT strategy, weight FROM strategy_weights")}
+        current.setdefault(row["strategy"], 1.0)
+        loss = -1.0 if self._verdict == "useful" else 1.0
+        updated = hedge(current, {row["strategy"]: loss})
+        for strategy, weight in updated.items():
+            rt.execute("INSERT INTO strategy_weights(strategy, weight) "
+                       "VALUES (?,?) ON CONFLICT(strategy) "
+                       "DO UPDATE SET weight=?", (strategy, weight, weight))
 
     def _capture_correction(self) -> None:
         kb = self._settings.path("knowledge")

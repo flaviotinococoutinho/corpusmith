@@ -79,7 +79,10 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
                     cold="/cockpit/cold", graph="/cockpit/graph",
                     insights="/cockpit/insights", export="/cockpit/export",
                     pipelines="/cockpit/pipelines",
-                    pipeline_runs="/cockpit/pipelines/runs")}
+                    pipeline_runs="/cockpit/pipelines/runs",
+                    cognition="/cockpit/cognition",
+                    state="/cockpit/state",
+                    attention="/cockpit/attention")}
 
     @app.get("/health")
     def health():
