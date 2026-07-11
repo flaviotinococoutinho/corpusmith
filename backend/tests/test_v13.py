@@ -148,3 +148,59 @@ def test_related_pages_suggest_missing_links(settings, kb):
     assert "concepts/mensageria.md" in pages       # compartilha, não linka
     assert "concepts/ja-linkada.md" not in pages   # já linkada: excluída
     assert set(related[0]["shared"]) >= {"gRPC"}
+
+
+# ----------------------------------------------- v0.14: lacunas fechadas
+def test_promoted_page_is_immediately_askable(settings, kb):
+    from llmwiki.facades import CurationFacade
+    CurationFacade(settings).promote(
+        kind="semantic", title="Baleias jubarte",
+        content="As baleias jubarte migram para águas quentes no inverno.")
+    r = AskMemory(settings, "baleias jubarte", local_only=True).execute()
+    assert not r["abstained"]                       # sem rebuild manual
+    assert r["evidence"][0]["page"] == "concepts/baleias-jubarte.md"
+
+
+def test_stale_flag_reaches_index_immediately(settings, kb):
+    from llmwiki.facades import CurationFacade
+    CurationFacade(settings).promote(
+        kind="semantic", title="Antiga técnica",
+        content="técnica antiga de cache")
+    CurationFacade(settings).mark_stale("concepts/antiga-tecnica.md")
+    r = AskMemory(settings, "técnica antiga de cache",
+                  local_only=True).execute()
+    assert r["evidence"][0]["stale"] is True        # sem rebuild manual
+
+
+def test_recycle_refuses_when_page_is_live_again(settings, kb):
+    import pytest as _pytest
+    import time as _time
+    from llmwiki.facades import CurationFacade
+    from llmwiki.usecases.cold_memory import RecycleMemory
+    CurationFacade(settings).promote(
+        kind="semantic", title="Repromovida", content="versão um")
+    rt = connect(settings.app_support / "runtime.db")
+    old = _time.time() - 200 * 86_400
+    rt.execute("INSERT OR REPLACE INTO page_heat"
+               "(path, reads, last_seen, first_seen) VALUES (?,1,?,?)",
+               ("concepts/repromovida.md", old, old - 86_400))
+    rt.commit(); rt.close()
+    CurationFacade(settings).freeze("concepts/repromovida.md")
+    # repromove no MESMO slug (conteúdo novo, mais atual que o congelado)
+    CurationFacade(settings).promote(
+        kind="semantic", title="Repromovida", content="versão dois, atual")
+    with _pytest.raises(KeyError, match="quente"):
+        RecycleMemory(settings, "concepts/repromovida.md").execute()
+    # a entrada fria obsoleta foi purgada e o conteúdo novo está intacto
+    assert CurationFacade(settings).cold()["count"] == 0
+    assert "versão dois" in (kb / "bundle/concepts/repromovida.md").read_text()
+
+
+def test_jobs_list_includes_payload_for_retry(settings, kb):
+    from llmwiki.runtime.queue import JobQueue
+    rt = connect(settings.app_support / "runtime.db")
+    queue = JobQueue(rt)
+    queue.enqueue("compile_source", {"path": "raw/x.md"})
+    job = queue.list()[0]
+    rt.close()
+    assert job["payload"] == {"path": "raw/x.md"}   # habilita reexecutar

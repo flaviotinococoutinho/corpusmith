@@ -74,10 +74,15 @@ class JobQueue:
 
     def list(self, limit: int = 50) -> list[dict]:
         rows = self.db.execute(
-            "SELECT id,type,priority,state,attempts,error,created_at,"
+            "SELECT id,type,payload,priority,state,attempts,error,created_at,"
             "started_at,finished_at FROM jobs "
             "ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
-        return [dict(r) for r in rows]
+        out = []
+        for r in rows:
+            job = dict(r)
+            job["payload"] = json.loads(job["payload"] or "{}")
+            out.append(job)
+        return out
 
     def pending_count(self) -> int:
         return self.db.execute(

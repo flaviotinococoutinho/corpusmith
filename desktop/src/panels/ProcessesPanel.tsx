@@ -55,7 +55,13 @@ export function ProcessesPanel() {
                   </span>)}
               </td>
               <td>{j.attempts}</td>
-              <td className="text-red-600">{j.error?.slice(0, 80)}</td>
+              <td className="text-red-600">{j.error?.slice(0, 80)}
+                {j.state === "failed" && (
+                  <button className="border rounded px-1 ml-1 text-neutral-700"
+                          title="reexecutar com o mesmo payload"
+                          onClick={() => client.enqueue(j.type, j.payload)
+                            .then(load)}>↻</button>)}
+              </td>
             </tr>))}</tbody>
         </table>
         {!jobs.length && <p className="text-neutral-400 mt-4">Fila vazia.</p>}

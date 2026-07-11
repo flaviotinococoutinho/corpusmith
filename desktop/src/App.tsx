@@ -5,6 +5,7 @@ import { ExplorerPanel } from "./panels/ExplorerPanel";
 import { ChatEvidencePanel } from "./panels/ChatEvidencePanel";
 import { QualityPanel } from "./panels/QualityPanel";
 import { ProcessesPanel } from "./panels/ProcessesPanel";
+import { MemoryPanel } from "./panels/MemoryPanel";
 import { StatusBar } from "./panels/StatusBar";
 
 const TABS = {
@@ -12,6 +13,7 @@ const TABS = {
   ask:       ["💬 Consulta", ChatEvidencePanel],
   inbox:     ["📥 Inbox", InboxPanel],
   wiki:      ["📚 Wiki", ExplorerPanel],
+  memory:    ["🧠 Memória", MemoryPanel],
   quality:   ["✅ Qualidade", QualityPanel],
   processes: ["⚙️ Processos", ProcessesPanel],
 } as const;

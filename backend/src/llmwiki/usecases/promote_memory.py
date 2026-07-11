@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from .base import UseCase
 from ..okf.document import OKFDocument, OKFFrontMatter
 from ..okf.writer import BundleWriter
+from ..retrieval.fts import rebuild_index
 from ..settings import Settings
 
 KIND_MAP = {   # botão "Promover para memória" → destino OKF
@@ -61,6 +62,9 @@ class PromoteToMemory(UseCase):
             [document], log_kind="Creation",
             log_message=f"promovido de {self._source}: {self._title}",
             commit_message=f"promote({self._kind}): {slug}")
+        # incremental (v0.14): a memória promovida fica respondível JÁ —
+        # antes ela só entrava no índice no próximo compile/okf index
+        rebuild_index(self._settings)
         return {**result, "kind": self._kind}
 
     @staticmethod

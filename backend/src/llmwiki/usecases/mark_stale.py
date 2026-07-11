@@ -8,6 +8,7 @@ from __future__ import annotations
 from .base import UseCase
 from ..okf.document import OKFDocument, OKFFrontMatter
 from ..okf.writer import BundleWriter
+from ..retrieval.fts import rebuild_index
 from ..runtime.db import connect
 from ..settings import Settings
 
@@ -39,5 +40,8 @@ class MarkPageStale(UseCase):
             [stale], log_kind="Deprecation",
             log_message=f"marcada stale: {document.rel_path}",
             commit_message=f"stale: {document.rel_path}")
+        # incremental (v0.14): a flag stale vive em chunks — sem reindex o
+        # /ask continuaria mostrando a página como fresca
+        rebuild_index(self._settings)
         return {**result,
                 "dependents": dependents_of(self._settings, document.rel_path)}

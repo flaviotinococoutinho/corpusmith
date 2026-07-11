@@ -85,11 +85,41 @@ def cmd_ask(s: Settings, args) -> int:
     if data.get("abstained"):
         print("🤷 sem cobertura na base — abstenção "
               f"({'; '.join(data.get('gaps', []))})", file=sys.stderr)
+        for m in data.get("cold_matches", []):
+            print(f"  ❄️ fria compatível: {m['page']} "
+                  f"(llmwiki recycle {m['page']})", file=sys.stderr)
         return 1
     if data.get("blocked"):
         print("⛔ resposta bloqueada pelo Harness (citações)", file=sys.stderr)
     print(data["answer"])
-    print(f"\n[via {data['via']}]", file=sys.stderr)
+    uncertainty = data.get("uncertainty", 0)
+    tail = f"[via {data['via']}]"
+    if uncertainty > 0.85:
+        tail += f" ~ incerta ({uncertainty:.0%})"
+    print(f"\n{tail}", file=sys.stderr)
+    return 0
+
+
+def cmd_cold(s: Settings, args) -> int:
+    stats = CurationFacade(s).cold()
+    print(f"❄️ {stats['count']} memória(s) · {stats['compression_saved']}% "
+          f"compactado · {stats['recycles']} reciclagem(ns)")
+    for e in stats["entries"]:
+        print(f"  {e['page']}  P(recall)={e['recall_p'] or 0:.3f}  "
+              f"{e['packed']/1024:.1f}/{e['body_bytes']/1024:.1f} kB")
+    return 0
+
+
+def cmd_freeze(s: Settings, args) -> int:
+    result = CurationFacade(s).freeze(args.page, force=args.force)
+    print(f"🧊 congelada: {result['page']} "
+          f"(P(recall)={result['recall_p']:.3f})")
+    return 0
+
+
+def cmd_recycle(s: Settings, args) -> int:
+    result = CurationFacade(s).recycle(args.page)
+    print(f"♻️ reciclada: {result['page']} ({result['times']}ª vez)")
     return 0
 
 
@@ -115,6 +145,14 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("status").set_defaults(fn=cmd_status)
     sub.add_parser("jobs").set_defaults(fn=cmd_jobs)
     sub.add_parser("daemon").set_defaults(fn=cmd_daemon)
+    sub.add_parser("cold").set_defaults(fn=cmd_cold)
+    freeze = sub.add_parser("freeze")
+    freeze.add_argument("page")
+    freeze.add_argument("--force", action="store_true")
+    freeze.set_defaults(fn=cmd_freeze)
+    recycle = sub.add_parser("recycle")
+    recycle.add_argument("page")
+    recycle.set_defaults(fn=cmd_recycle)
 
     enq = sub.add_parser("enqueue")
     enq.add_argument("type")

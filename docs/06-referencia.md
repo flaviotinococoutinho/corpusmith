@@ -170,6 +170,12 @@ MachinePageUseCase      subclasses não sobrescrevem execute
 
 ## 10. Use cases e facades
 
+CLI ganha (v0.14): `llmwiki cold` · `llmwiki freeze <page> [--force]` ·
+`llmwiki recycle <page>`; `ask` exibe incerteza alta e memórias frias
+compatíveis na abstenção. Painel novo: 🧠 Memória (4 camadas + base
+fria). Processos: jobs falhos têm ↻ reexecutar (payload na listagem).
+Removido: retrieval/fusion.py (substituído por streams desde a v0.9).
+
 **Memory**: AskMemory · RecordOutcome · EvaluateMemory.
 **Compiler**: IngestSource (entrada pelo app → raw/) · CompileSource ·
 ConsolidateInbox (+`_ConsolidatedPage`) · ReconcileCandidate ·

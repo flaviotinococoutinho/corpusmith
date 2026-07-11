@@ -226,6 +226,17 @@ class RecycleMemory(UseCase):
         if row is None:
             cold.close()
             raise KeyError(f"não está na base fria: {self._page_path}")
+        # guarda quente×frio (v0.14): se a página voltou ao bundle por outra
+        # via (re-promoção no mesmo slug), reidratar SOBRESCREVERIA conteúdo
+        # mais novo com o antigo — purga a entrada obsoleta e recusa
+        live = self._settings.path("knowledge") / "bundle" / self._page_path
+        if live.is_file():
+            cold.execute("DELETE FROM cold_memories WHERE page=?",
+                         (self._page_path,))
+            cold.commit()
+            cold.close()
+            raise KeyError(f"{self._page_path} já está quente no bundle — "
+                           "entrada fria obsoleta foi removida")
         raw = zlib.decompress(row["body_z"]).decode()
         document = OKFDocument.loads(self._page_path, raw)
         meta = document.meta.model_dump(exclude_none=True)

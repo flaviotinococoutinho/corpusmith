@@ -131,8 +131,14 @@ PromoteDialog → POST /cockpit/promote → CurationFacade.promote
    página humana: generated_via human:promote, SEM source_sha256,
    privacy escolhido, SEM reescrita de corpo
  → BundleWriter (gate: privacy obrigatório, PII força local)
+ → rebuild_index incremental (v0.14: respondível JÁ, sem esperar compile)
  → {memory.promoted} · resposta {pages, commit}
 ```
+
+`mark_stale` também reindexa na hora (a flag stale vive em chunks) e a
+reidratação recusa quando a página voltou ao bundle por outra via
+(guarda quente×frio: purga a entrada fria obsoleta, nunca sobrescreve
+conteúdo mais novo).
 
 Variante: cartão de abstenção no chat oferece "capturar como pergunta
 aberta" (kind=question) — lacuna vira memória endereçável.

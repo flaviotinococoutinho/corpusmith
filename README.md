@@ -1,4 +1,4 @@
-# LLM Wiki — v0.9 (Arquitetura em Camadas + Coordenação Informacional)
+# LLM Wiki — v0.14 (Consolidação Funcional)
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -139,8 +139,8 @@ backend/
     jobs/       compile (sanduíche §6.1), ask (temporal/abstenção §6.2),
                 reconcile (§5), reflect (§8), review, leiden (§7), embed,
                 rerank, ocr, lora
-    retrieval/  fts (rebuild_index + entidades + níveis), descend (§9),
-                dense, fusion (RRF)
+    retrieval/  fts (rebuild_index incremental + entidades + níveis),
+                descend, dense, related, streams (fusão RRF+Hedge)
     models/     router (local Ollama × API Anthropic, privacidade + orçamento)
     api/        system (auth header OU ?auth=), cockpit (+outcome/eval/
                 authorities/reflect, v0.8 §11)
