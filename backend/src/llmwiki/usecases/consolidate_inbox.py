@@ -147,11 +147,14 @@ class _ConsolidatedPage(MachinePageUseCase):
 
 class ConsolidateInbox(UseCase):
     def __init__(self, settings: Settings, notify=None, *,
-                 min_shared: int = 2, min_cluster: int = 2):
+                 min_shared: int | None = None,
+                 min_cluster: int | None = None):
         self._settings = settings
         self._notify = notify or (lambda *a, **k: None)
-        self._min_shared = min_shared
-        self._min_cluster = min_cluster
+        self._min_shared = min_shared if min_shared is not None \
+            else int(settings.get("consolidate.min_shared", 2))
+        self._min_cluster = min_cluster if min_cluster is not None \
+            else int(settings.get("consolidate.min_cluster", 2))
 
     def execute(self) -> dict:
         pending = self._pending_signatures()

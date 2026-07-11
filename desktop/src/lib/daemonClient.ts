@@ -103,6 +103,25 @@ export class DaemonClient {
     this.post<any>("/cockpit/freeze", { path, force });
   recycle = (path: string) => this.post<any>("/cockpit/recycle", { path });
   cold = () => this.get<any>("/cockpit/cold");
+  // ------------------------------------------------ Fase 5 (v0.15)
+  graph = () => this.get<any>("/cockpit/graph");
+  insights = () => this.get<any>("/cockpit/insights");
+  dictionary = () => this.get<any>("/cockpit/dictionary");
+  traces = () => this.get<any>("/cockpit/traces");
+  trace = (askId: string) =>
+    this.get<any>(`/cockpit/trace?ask_id=${encodeURIComponent(askId)}`);
+  tags = () => this.get<any>("/cockpit/tags");
+  tagOp = (from: string, to?: string) =>
+    this.post<any>("/cockpit/tags", { from, to });
+  configGet = () => this.get<any>("/cockpit/config");
+  configSet = (body: any) => this.post<any>("/cockpit/config", body);
+  behavior = () => this.get<any>("/cockpit/behavior");
+  resetStreams = () => this.post<any>("/cockpit/behavior/reset-streams", {});
+  exportUrl = (params: Record<string, string>) => {
+    const q = new URLSearchParams({ ...params,
+      auth: (this as any).info?.token ?? "" });
+    return `${this.base()}/cockpit/export?${q}`;
+  };
   private async post<T = any>(p: string, body: unknown): Promise<T> {
     await this.connect();
     return fetch(this.base() + p, {

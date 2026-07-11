@@ -10,7 +10,7 @@ import copy
 import fnmatch
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 import yaml
 from pydantic import BaseModel, ConfigDict
 
@@ -57,6 +57,12 @@ class Settings(BaseModel):
                               "max_recall_probability": 0.05,
                               "min_idle_days": 90,
                               "auto_recycle": False}
+    # variações do método de captura/organização (Fase 5, editável no app)
+    consolidate: dict[str, Any] = {"min_shared": 2, "min_cluster": 2}
+
+    # seções que o Cockpit pode editar a quente (POST /cockpit/config)
+    TUNABLE_SECTIONS: ClassVar[tuple[str, ...]] = (
+        "flags", "ask", "memory", "policy", "consolidate")
 
     # ------------------------------------------------------------------ paths
     @property
@@ -97,6 +103,30 @@ class Settings(BaseModel):
         merged = _deep_merge(self.model_dump(mode="python"), overrides)
         return Settings(**merged)
 
+    # ------------------------------------------------- overrides persistidos
+    def tune(self, changes: dict[str, dict]) -> dict:
+        """Aplica ajustes A QUENTE (mutação das seções compartilhadas —
+        todos os use cases leem via get()/flag() no momento do execute)
+        e PERSISTE em overrides.yaml para sobreviver ao restart.
+        Só seções em TUNABLE_SECTIONS; chaves desconhecidas rejeitam."""
+        for section, values in changes.items():
+            if section not in self.TUNABLE_SECTIONS:
+                raise ValueError(f"seção não ajustável: {section}")
+            if not isinstance(values, dict):
+                raise ValueError(f"{section}: esperado objeto")
+            getattr(self, section).update(values)
+        overrides_path = self.app_support / "overrides.yaml"
+        stored = {}
+        if overrides_path.is_file():
+            stored = yaml.safe_load(overrides_path.read_text()) or {}
+        merged = _deep_merge(stored, changes)
+        overrides_path.write_text(yaml.safe_dump(merged, sort_keys=True))
+        return self.snapshot()
+
+    def snapshot(self) -> dict:
+        return {section: dict(getattr(self, section))
+                for section in self.TUNABLE_SECTIONS}
+
     # ------------------------------------------------------------------- load
     @classmethod
     def load(cls, config_path: str | Path | None = None) -> "Settings":
@@ -107,4 +137,11 @@ class Settings(BaseModel):
             data = yaml.safe_load(candidate.read_text()) or {}
         if home := os.environ.get("LLMWIKI_HOME"):
             data["home"] = home
-        return cls(**data)
+        settings = cls(**data)
+        overrides = settings.app_support / "overrides.yaml"
+        if overrides.is_file():                # ajustes feitos pelo Cockpit
+            stored = yaml.safe_load(overrides.read_text()) or {}
+            settings = settings.with_overrides(**{
+                k: v for k, v in stored.items()
+                if k in cls.TUNABLE_SECTIONS})
+        return settings

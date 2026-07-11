@@ -2,7 +2,9 @@ from __future__ import annotations
 import time
 from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import Response
 from ..facades import CompilerFacade, CurationFacade, MemoryFacade
+from ..retrieval import observatory
 from ..retrieval.related import related_pages
 from ..settings import Settings
 from ..runtime.db import connect
@@ -274,6 +276,93 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
         return {"entities": [{"canonical": r["canonical"], "kind": r["kind"],
                               "qid": r["qid"], "uses": r["uses"]}
                              for r in rows]}
+
+    # ================================================= Fase 5 (v0.15)
+    @app.get("/cockpit/graph", dependencies=[Depends(auth)])
+    def graph():
+        return observatory.graph_data(s)
+
+    @app.get("/cockpit/insights", dependencies=[Depends(auth)])
+    def insights():
+        return observatory.insights(s)
+
+    @app.get("/cockpit/dictionary", dependencies=[Depends(auth)])
+    def dictionary():
+        return observatory.dictionary(s)
+
+    @app.get("/cockpit/traces", dependencies=[Depends(auth)])
+    def traces():
+        return {"traces": observatory.traces(s)}
+
+    @app.get("/cockpit/trace", dependencies=[Depends(auth)])
+    def trace(ask_id: str):
+        return observatory.trace(s, ask_id)
+
+    @app.get("/cockpit/tags", dependencies=[Depends(auth)])
+    def tags():
+        acc: dict[str, int] = {}
+        for p in _pages():
+            for t in p["tags"]:
+                acc[t] = acc.get(t, 0) + 1
+        return {"tags": sorted(acc.items(), key=lambda kv: -kv[1])}
+
+    @app.post("/cockpit/tags", dependencies=[Depends(auth)])
+    def tag_operation(body: dict):
+        try:
+            return curation.rename_tag(body["from"], body.get("to"))
+        except (KeyError, ValueError) as e:
+            raise HTTPException(400, str(e))
+
+    @app.get("/cockpit/config", dependencies=[Depends(auth)])
+    def config_get():
+        return s.snapshot()
+
+    @app.post("/cockpit/config", dependencies=[Depends(auth)])
+    def config_set(body: dict):
+        try:
+            snapshot = s.tune(body)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        bus.emit("system", "config.tuned", {"sections": sorted(body)})
+        return snapshot
+
+    @app.get("/cockpit/behavior", dependencies=[Depends(auth)])
+    def behavior():
+        rt = connect(s.app_support / "runtime.db")
+        weights = {r["stream"]: r["weight"] for r in rt.execute(
+            "SELECT stream, weight FROM stream_weights")}
+        rt.close()
+        adapters = s.path("adapters") / "ACTIVE"
+        return {"stream_weights": weights,
+                "flags": dict(s.flags),
+                "memory": dict(s.memory),
+                "active_adapter": adapters.read_text().strip()
+                                  if adapters.exists() else None,
+                "eval": eval_results()["categories"]}
+
+    @app.post("/cockpit/behavior/reset-streams", dependencies=[Depends(auth)])
+    def reset_streams():
+        rt = connect(s.app_support / "runtime.db")
+        rt.execute("DELETE FROM stream_weights")
+        rt.commit()
+        rt.close()
+        bus.emit("system", "behavior.streams_reset", {})
+        return {"ok": True}
+
+    @app.get("/cockpit/export", dependencies=[Depends(auth)])
+    def export(format: str = "zip", include_local: bool = False,
+               types: str = "", tag: str = ""):
+        try:
+            result = curation.export(
+                format=format, include_local=include_local,
+                types=[t for t in types.split(",") if t] or None,
+                tag=tag or None)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        return Response(
+            content=result["content"], media_type=result["media_type"],
+            headers={"Content-Disposition":
+                     f'attachment; filename="{result["filename"]}"'})
 
     # ---------- Base fria (v0.12): congelar · reciclar · inspecionar ----
     @app.post("/cockpit/freeze", dependencies=[Depends(auth)])

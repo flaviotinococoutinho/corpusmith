@@ -244,3 +244,7 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | POST /cockpit/freeze | Curation.freeze | FreezeMemory |
 | POST /cockpit/recycle | Curation.recycle | RecycleMemory |
 | GET /cockpit/cold | Curation.cold | cold_stats (puro) |
+| POST /cockpit/tags | Curation.rename_tag | RenameTag |
+| GET /cockpit/export | Curation.export | ExportMemory |
+| GET graph/insights/dictionary/traces | — (observatório, leitura pura) | retrieval/observatory.py |
+| GET/POST /cockpit/config | — | Settings.snapshot/tune |

@@ -57,6 +57,16 @@ GET  /cockpit/reflect            · GET /cockpit/review · POST /cockpit/review/
 POST /cockpit/freeze             {path, force?, reason?} — 409 quando um gate veta
 POST /cockpit/recycle            {path} — 404 se não está na base fria
 GET  /cockpit/cold               (count · compression_saved · recycles · entries)
+GET  /cockpit/graph              (Fase 5: nós+arestas+pontes p/ o grafo visual)
+GET  /cockpit/insights           (gaps · topology · activity · classifiers)
+GET  /cockpit/dictionary         (enums vivos: tipos, origens, confiança, autoridades)
+GET  /cockpit/traces · /cockpit/trace?ask_id=   (proveniência página→stream)
+GET/POST /cockpit/tags           (contagens; POST {from, to?} renomeia/funde/remove)
+GET/POST /cockpit/config         (seções TUNABLE: flags·ask·memory·policy·consolidate;
+                                  aplica A QUENTE + persiste em overrides.yaml)
+GET  /cockpit/behavior · POST /cockpit/behavior/reset-streams
+GET  /cockpit/export             ?format=zip|json|md &include_local &types &tag
+                                 (local_only fica de fora por default; manifesto)
 ```
 
 Resposta do `/ask`: `{answer, via, blocked, abstained, ask_id,
@@ -182,8 +192,15 @@ ConsolidateInbox (+`_ConsolidatedPage`) · ReconcileCandidate ·
 RebuildIndex · DetectCommunities.
 **Curation**: PromoteToMemory · MarkPageStale (+`dependents_of` puro) ·
 FreezeMemory · RecycleMemory (+`cold_search`/`cold_by_strong_id`/
-`cold_stats` puros) · LintBundle · ComputeWeeklyReview ·
-PublishWeeklyReview · ReflectOnUsage (+ `usage_candidates` puro).
+`cold_stats` puros) · RenameTag · ExportMemory · LintBundle ·
+ComputeWeeklyReview · PublishWeeklyReview · ReflectOnUsage
+(+ `usage_candidates` puro).
+
+Observatório (Fase 5, consultas puras em `retrieval/observatory.py`):
+`graph_data` · `insights` · `dictionary` · `traces`/`trace`. Config viva:
+`Settings.tune()` muta as seções TUNABLE compartilhadas (efeito imediato
+— use cases leem via get()/flag() no execute) e persiste em
+`app_support/overrides.yaml`, que o `Settings.load()` reaplica no boot.
 
 Reconciliador ganha a operação `RECYCLE` (memória fria com o mesmo id
 forte é reidratada e ATUALIZADA em vez de duplicada); o Template Method

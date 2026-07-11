@@ -4,7 +4,9 @@ from __future__ import annotations
 from ..harness.findings import Findings
 from ..settings import Settings
 from ..usecases.cold_memory import (FreezeMemory, RecycleMemory, cold_stats)
+from ..usecases.export_memory import ExportMemory
 from ..usecases.lint_bundle import LintBundle
+from ..usecases.manage_tags import RenameTag
 from ..usecases.mark_stale import MarkPageStale
 from ..usecases.promote_memory import PromoteToMemory
 from ..usecases.reflect_usage import ReflectOnUsage, usage_candidates
@@ -56,3 +58,15 @@ class CurationFacade:
 
     def cold(self) -> dict:
         return cold_stats(self._settings)
+
+    # ------------------------------------------------- Fase 5 (v0.15)
+    def rename_tag(self, old: str, new: str | None = None) -> dict:
+        """Renomear/fundir (new existente) ou remover (new vazio) uma tag."""
+        return RenameTag(self._settings, old, new).execute()
+
+    def export(self, *, format: str = "zip", include_local: bool = False,
+               types: list[str] | None = None, tag: str | None = None) -> dict:
+        """Export inteligente: local_only fica de fora por default."""
+        return ExportMemory(self._settings, format=format,
+                            include_local=include_local, types=types,
+                            tag=tag).execute()

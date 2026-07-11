@@ -6,6 +6,9 @@ import { ChatEvidencePanel } from "./panels/ChatEvidencePanel";
 import { QualityPanel } from "./panels/QualityPanel";
 import { ProcessesPanel } from "./panels/ProcessesPanel";
 import { MemoryPanel } from "./panels/MemoryPanel";
+import { GraphPanel } from "./panels/GraphPanel";
+import { InsightsPanel } from "./panels/InsightsPanel";
+import { CurationPanel } from "./panels/CurationPanel";
 import { StatusBar } from "./panels/StatusBar";
 
 const TABS = {
@@ -13,7 +16,10 @@ const TABS = {
   ask:       ["💬 Consulta", ChatEvidencePanel],
   inbox:     ["📥 Inbox", InboxPanel],
   wiki:      ["📚 Wiki", ExplorerPanel],
+  graph:     ["🕸 Grafo", GraphPanel],
+  insights:  ["📈 Indicadores", InsightsPanel],
   memory:    ["🧠 Memória", MemoryPanel],
+  curation:  ["🗂 Curadoria", CurationPanel],
   quality:   ["✅ Qualidade", QualityPanel],
   processes: ["⚙️ Processos", ProcessesPanel],
 } as const;
