@@ -1,7 +1,7 @@
 """Registry de jobs — contrato único: run(settings, payload, emit) -> dict."""
 from __future__ import annotations
 from . import (ask, compile as compile_job, consolidate, embed, leiden,
-               lora, ocr, reconcile, reflect, rerank, review)
+               lora, ocr, pipeline, reconcile, reflect, rerank, review)
 from ..harness import eval_memory
 from ..retrieval.fts import rebuild_index
 
@@ -23,4 +23,5 @@ REGISTRY = {
     "reflect": reflect.run,
     "eval_memory": eval_memory.run,
     "index_rebuild": _index,
+    "pipeline": pipeline.run,
 }

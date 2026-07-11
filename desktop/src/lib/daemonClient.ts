@@ -119,6 +119,12 @@ export class DaemonClient {
   configHistory = () => this.get<any>("/cockpit/config/history");
   configRollback = () => this.post<any>("/cockpit/config/rollback", {});
   healthFull = () => this.get<any>("/health/full");
+  // ------------------------------------------------ v0.17 (pipelines)
+  pipelines = () => this.get<any>("/cockpit/pipelines");
+  runPipeline = (name: string) =>
+    this.post<any>("/cockpit/pipelines/run", { name });
+  pipelineRuns = (name = "") =>
+    this.get<any>(`/cockpit/pipelines/runs?name=${encodeURIComponent(name)}`);
   behavior = () => this.get<any>("/cockpit/behavior");
   resetStreams = () => this.post<any>("/cockpit/behavior/reset-streams", {});
   exportUrl = (params: Record<string, string>) => {

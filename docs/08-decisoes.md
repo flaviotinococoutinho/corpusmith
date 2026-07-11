@@ -180,3 +180,28 @@ banda comum para hamming ≤ 8 (casa de pombos), então nenhum par
 verdadeiro escapa; falsos positivos são re-verificados por
 `converges_with`. **Rejeitado**: MinHash/LSH probabilístico (perderia
 a garantia de zero falso negativo que o determinismo do projeto exige).
+
+### ADR-18 — Pipelines configuráveis: orquestração como dado (v0.17)
+**Contexto**: pedido de sistemas de pipelines configuráveis (espec. AI
+Memory §11.4/EPIC-13: cadeia de estados, linhagem, transformações
+plugáveis).
+**Decisão**: um pipeline é um SPEC declarativo (`pipelines` no
+runtime.db, JSON com estágios) — cada estágio referencia um job já
+registrado, com `on_error: stop|continue` e passagem de resultado
+(`"$prev.chave"` no payload). Executa como job `pipeline` (slot heavy)
+pela MESMA fila; cada run tem trace snowflake, cada estágio um span, e
+o filme fica em `pipeline_runs` (últimos 200) + eventos
+`pipeline.stage`/`pipeline.done` no SSE. Builtin seedados idempotentes
+(`absorver-inbox`, `manutencao-semanal`, `qualidade-total`), editáveis
+e removíveis. **Invariantes preservados**: o pipeline orquestra ACIMA
+do Template Method — estágios são os jobs de sempre (sanduíche,
+reconciliação e gate DENTRO deles); configurar pipeline não abre
+caminho de escrita fora do trilho. DIP: o use case recebe o registry
+de handlers por injeção (`jobs/pipeline.py` injeta o REGISTRY real;
+testes injetam fakes) — domínio segue sem conhecer a camada adapter.
+**Rejeitados**: motor de workflow externo (Airflow/Temporal — um
+processo local com fila SQLite não paga orquestrador distribuído),
+DAG arbitrário com paralelismo (sequência cobre os casos reais; a
+fila já paraleliza ENTRE jobs), e pipeline-dentro-de-pipeline
+(recusado na validação — sem recursão). **Reentrada**: DAG quando
+existir um caso real de fan-out dentro de um mesmo run.

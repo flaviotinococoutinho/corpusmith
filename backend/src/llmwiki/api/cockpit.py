@@ -19,6 +19,7 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     curation = CurationFacade(s)
     memory_facade = MemoryFacade(s)
     compiler = CompilerFacade(s)
+    compiler.seed_pipelines()          # builtin idempotentes (v0.17)
 
     def writer() -> BundleWriter:
         return BundleWriter(kb)
@@ -434,6 +435,43 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     @app.get("/cockpit/cold", dependencies=[Depends(auth)])
     def cold():
         return curation.cold()
+
+    # ---------- Pipelines configuráveis (v0.17) ----------
+    @app.get("/cockpit/pipelines", dependencies=[Depends(auth)])
+    def pipelines_list():
+        from .system import links
+        return {"pipelines": compiler.pipelines(),
+                "_links": links(self="/cockpit/pipelines",
+                                runs="/cockpit/pipelines/runs",
+                                run="/cockpit/pipelines/run")}
+
+    @app.post("/cockpit/pipelines", dependencies=[Depends(auth)])
+    def pipelines_save(body: dict):
+        try:
+            return compiler.save_pipeline(body["name"], body)
+        except (KeyError, ValueError) as e:
+            raise HTTPException(400, str(e))
+
+    @app.delete("/cockpit/pipelines", dependencies=[Depends(auth)])
+    def pipelines_delete(name: str):
+        try:
+            return compiler.delete_pipeline(name)
+        except KeyError:
+            raise HTTPException(404)
+
+    @app.post("/cockpit/pipelines/run", dependencies=[Depends(auth)])
+    def pipelines_run(body: dict):
+        """Roda ASSÍNCRONO pela fila (job `pipeline`, slot heavy) — o
+        filme sai por SSE (`pipeline.stage`) e fica em pipeline_runs."""
+        if not any(p["name"] == body.get("name")
+                   for p in compiler.pipelines()):
+            raise HTTPException(404, f"pipeline desconhecido: {body.get('name')}")
+        jid = queue.enqueue("pipeline", {"name": body["name"]}, priority=6)
+        return {"job_id": jid, "pipeline": body["name"]}
+
+    @app.get("/cockpit/pipelines/runs", dependencies=[Depends(auth)])
+    def pipelines_runs(name: str = "", limit: int = 20):
+        return {"runs": compiler.pipeline_runs(name or None, limit)}
 
     # ---------- Candidatos do reflect (Dashboard, v0.8 §8) ----------
     @app.get("/cockpit/reflect", dependencies=[Depends(auth)])

@@ -1,4 +1,4 @@
-# LLM Wiki — v0.16 (NFRs Executáveis)
+# LLM Wiki — v0.17 (Pipelines Configuráveis)
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -56,6 +56,12 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   pares O(n²) por índice invertido + 9 bandas LSH acima de
   `consolidate.pairwise_max` — exato por casa de pombos (hamming ≤ 8
   sempre compartilha banda), zero falso negativo.
+- **Pipelines configuráveis** (v0.17, ADR-18): orquestração como DADO —
+  specs declarativos em `pipelines` (runtime.db) compõem jobs
+  registrados com `on_error: stop|continue` e passagem `"$prev.chave"`;
+  registry injetado por DIP; trace por run + span por estágio; builtin
+  `absorver-inbox`/`manutencao-semanal`/`qualidade-total`; card 🔗 no
+  painel Processos. O sanduíche epistêmico segue DENTRO de cada job.
 
 ## Coordenação dos dados — fundamentos (kernel/)
 
@@ -136,7 +142,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 155 testes de contrato/arquitetura/golden bundles
+just test             # 164 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

@@ -7,7 +7,8 @@ from __future__ import annotations
 import threading
 from contextlib import contextmanager
 
-HEAVY = {"compile_source", "lora_train", "leiden", "ocr"}
+HEAVY = {"compile_source", "lora_train", "leiden", "ocr",
+         "pipeline"}   # pipeline pode conter estágios pesados (v0.17)
 
 
 class Slots:

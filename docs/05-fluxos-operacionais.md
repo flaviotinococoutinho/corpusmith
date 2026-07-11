@@ -83,6 +83,28 @@ CompilerFacade.consolidate_inbox → ConsolidateInbox.execute()
  → {pending, clusters, pages, left}   (sem recorrência ⇒ fica pendente)
 ```
 
+## 1c. Pipeline configurável (orquestração como dado, v0.17)
+
+```
+POST /cockpit/pipelines {name, stages:[{job, payload?, on_error?}]}
+ → validação estrutural (slug, 1–20 estágios, sem recursão,
+   on_error ∈ stop|continue) → upsert em [pipelines]
+POST /cockpit/pipelines/run {name}
+ → job `pipeline` na fila (slot heavy)
+ → jobs/pipeline.py injeta o REGISTRY real → RunPipeline
+   1. fail-fast: todo estágio referencia job existente? senão NADA roda
+   2. trace snowflake do run · linha em [pipeline_runs]
+   3. para cada estágio: span próprio · payload resolve "$prev.chave"
+      do resultado anterior · handler roda inline · evento
+      pipeline.stage (running→done|failed)
+   4. falhou? on_error=stop encerra (state=failed);
+      continue segue (state final=partial)
+   5. pipeline.done + filme completo em [pipeline_runs] (últimos 200)
+Builtin (seed idempotente no mount): absorver-inbox ·
+manutencao-semanal · qualidade-total — card 🔗 no painel Processos
+(▶ rodar, encadeamento, último estado, filme dos runs)
+```
+
 ## 2. Perguntar (`/ask`)
 
 ```
@@ -273,4 +295,9 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | POST /cockpit/config | Curation.tune_config | TuneConfig |
 | POST /cockpit/config/rollback | Curation.rollback_config | RollbackConfig |
 | GET /cockpit/config/history | Curation.config_history | config_history (puro) |
+| GET /cockpit/pipelines | Compiler.pipelines | list_pipelines (puro) |
+| POST /cockpit/pipelines | Compiler.save_pipeline | SavePipeline |
+| DELETE /cockpit/pipelines | Compiler.delete_pipeline | DeletePipeline |
+| job pipeline | Compiler.run_pipeline (REGISTRY injetado) | RunPipeline |
+| GET /cockpit/pipelines/runs | Compiler.pipeline_runs | pipeline_runs (puro) |
 | GET / · /health · /health/full | — (sistema, api/system.py) | — |

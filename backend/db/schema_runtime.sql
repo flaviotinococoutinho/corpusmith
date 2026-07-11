@@ -74,6 +74,25 @@ CREATE TABLE IF NOT EXISTS stream_weights(
 -- entradas (a vigente é a mais recente; TuneConfig poda as excedentes).
 -- Cada linha guarda o delta pedido E o snapshot completo pós-aplicação —
 -- rollback é reaplicar o snapshot anterior, sem reconstruir deltas.
+-- Pipelines CONFIGURÁVEIS (v0.17): a orquestração é DADO, não código.
+-- O spec (json) compõe jobs já registrados; o sanduíche epistêmico segue
+-- DENTRO de cada job (o pipeline orquestra ACIMA do template, nunca o
+-- substitui). Runs guardam o filme: estado por estágio + trace snowflake.
+CREATE TABLE IF NOT EXISTS pipelines(
+  name TEXT PRIMARY KEY,
+  spec TEXT NOT NULL,          -- json {description, stages:[{job,payload,on_error}]}
+  builtin INTEGER NOT NULL DEFAULT 0,
+  created_at REAL DEFAULT (unixepoch('subsec')),
+  updated_at REAL DEFAULT (unixepoch('subsec')));
+CREATE TABLE IF NOT EXISTS pipeline_runs(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  pipeline TEXT NOT NULL,
+  trace_id TEXT,
+  state TEXT NOT NULL DEFAULT 'running',  -- running|done|partial|failed
+  stages TEXT NOT NULL DEFAULT '[]',      -- json [{job,state,span,ms,error}]
+  started_at REAL DEFAULT (unixepoch('subsec')),
+  finished_at REAL);
+
 CREATE TABLE IF NOT EXISTS config_history(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ts REAL DEFAULT (unixepoch('subsec')),

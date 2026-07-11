@@ -38,6 +38,7 @@ MODULES = {
     "unknown": 0, "ask": 1, "compile": 2, "consolidate": 3, "review": 4,
     "reflect": 5, "communities": 6, "freeze": 7, "recycle": 8,
     "config": 9, "job": 10, "daemon": 11, "ingest": 12, "eval": 13,
+    "pipeline": 14,
 }
 ALGORITHMS = {
     "none": 0, "rrf": 1, "ppr": 2, "actr": 3, "hedge": 4,

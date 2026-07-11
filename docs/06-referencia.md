@@ -72,6 +72,12 @@ GET/POST /cockpit/config         (seções TUNABLE: flags·ask·memory·policy·
                                   e devolve history_id+trace_id; 400 = guard recusou)
 GET  /cockpit/config/history     (linhagem: até 30 gerações, mais recente = vigente)
 POST /cockpit/config/rollback    (retorna à geração ANTERIOR; 409 sem anterior)
+GET  /cockpit/pipelines          (v0.17: specs + last_run; seed builtin no mount)
+POST /cockpit/pipelines          {name, description?, stages:[{job,payload?,on_error?}]}
+                                 (400 = validação estrutural recusou)
+DELETE /cockpit/pipelines?name=  (404 se não existe)
+POST /cockpit/pipelines/run      {name} → job `pipeline` na fila (404 se não existe)
+GET  /cockpit/pipelines/runs     ?name=&limit= (filme: estado por estágio + trace)
 GET  /cockpit/behavior · POST /cockpit/behavior/reset-streams
 GET  /cockpit/export             ?format=zip|json|md &include_local &types &tag
                                  (local_only fica de fora por default; manifesto)
@@ -96,7 +102,10 @@ HATEOAS (v0.16): `/`, `/health`, `/health/full`, `/status`,
 `ask_provenance(ask_id,page,stream)` · `stream_weights(stream,weight)` ·
 `config_history(trace_id, changes json, snapshot json,
 source∈cockpit|cli|baseline|rollback, note)` — ring de 30: o
-`TuneConfig` poda além do limite; a vigente é a linha mais recente
+`TuneConfig` poda além do limite; a vigente é a linha mais recente ·
+`pipelines(name, spec json, builtin)` ·
+`pipeline_runs(pipeline, trace_id, state∈running|done|partial|failed,
+stages json, started_at, finished_at)` — últimos 200 (v0.17)
 
 **cold.db** (base fria, v0.12 — NÃO derivado; conteúdo compactado):
 `cold_memories(page, digest, strong_ids, body_z zlib9, meta_json,
@@ -129,9 +138,11 @@ emitem `config.tuned`/`config.rolled_back` com trace.
 
 `compile_source · consolidate_inbox · ask · embed · rerank · leiden ·
 ocr · lora_train · review_weekly · reflect · eval_memory ·
-index_rebuild` — contrato `run(settings, payload, emit) -> dict`.
-Slots heavy: compile_source, lora_train, leiden, ocr. Scheduler:
-segunda ⇒ reflect + review_weekly; diário ⇒ embed + consolidate_inbox.
+index_rebuild · pipeline` — contrato `run(settings, payload, emit) -> dict`.
+Slots heavy: compile_source, lora_train, leiden, ocr, pipeline.
+Scheduler: segunda ⇒ reflect + review_weekly; diário ⇒ embed +
+consolidate_inbox. O job `pipeline` injeta o REGISTRY no
+`RunPipeline` (DIP) e roda os estágios inline no MESMO slot.
 
 ## 5. Configuração (`config/default.yaml` + Settings)
 

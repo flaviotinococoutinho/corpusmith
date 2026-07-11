@@ -77,7 +77,9 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
                     config_history="/cockpit/config/history",
                     config_rollback="/cockpit/config/rollback",
                     cold="/cockpit/cold", graph="/cockpit/graph",
-                    insights="/cockpit/insights", export="/cockpit/export")}
+                    insights="/cockpit/insights", export="/cockpit/export",
+                    pipelines="/cockpit/pipelines",
+                    pipeline_runs="/cockpit/pipelines/runs")}
 
     @app.get("/health")
     def health():
