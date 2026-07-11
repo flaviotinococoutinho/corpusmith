@@ -115,7 +115,9 @@ GET  /cognitive/curation         (CurationProjection: stale/contested/questions
                                   sob a ótica dos objetivos ativos; leitura pura)
 GET  /cognitive/metrics          (Brier, delayed recall, apply/transfer, recorrência,
                                   review completion, latência de retomada)
-GET  /cognitive/prompt           ?exercise=&title= (template determinístico)
+GET  /cognitive/prompt           ?exercise=&title=&item= (template determinístico
+                                  + scaffolding com fading pela streak do item)
+GET  /cognitive/episodes         (v0.21: linha do tempo episódica das sessões)
 GET  /cockpit/pipelines          (v0.17: specs + last_run; seed builtin no mount)
 POST /cockpit/pipelines          {name, description?, stages:[{job,payload?,on_error?}]}
                                  (400 = validação estrutural recusou)

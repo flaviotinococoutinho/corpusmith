@@ -219,11 +219,17 @@ def mount_cognitive(app: FastAPI, s: Settings, bus, auth) -> None:
                 "_links": links(self="/cognitive/metrics")}
 
     @app.get("/cognitive/prompt", dependencies=[Depends(auth)])
-    def prompt(exercise: str, title: str):
+    def prompt(exercise: str, title: str, item: str = ""):
         try:
-            return cognition.exercise_prompt(exercise, title)
+            return cognition.exercise_prompt(exercise, title, item or None)
         except ValueError as e:
             raise HTTPException(400, str(e))
+
+    @app.get("/cognitive/episodes", dependencies=[Depends(auth)])
+    def episodes(limit: int = 40):
+        return {"episodes": cognition.episodes(limit),
+                "_links": links(self="/cognitive/episodes",
+                                sessions="/cognitive/sessions")}
 
     @app.get("/cognitive/reviews/due", dependencies=[Depends(auth)])
     def reviews_due(limit: int = 30):

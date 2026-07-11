@@ -36,6 +36,11 @@ def cognitive_priority(view: KnowledgeItemView, goal: dict,
         "accessibility_heat": max(0.0, min(1.0, view.heat)),
         "cost_penalty": min(1.0, view.cost_min / 30.0),
     }
+    # Value of Information (v0.21): o que, se validado, mais reduz
+    # incerteza E destrava dependentes — lacuna × conectividade.
+    # SEPARADO de interesse pessoal (user_focus) por princípio (§9.2).
+    components["expected_information_gain"] = round(
+        components["knowledge_gap"] * components["dependency_unlock"], 4)
     score = sum(w[k] * v for k, v in components.items()
                 if k != "cost_penalty")
     score -= w["cost_penalty"] * components["cost_penalty"]
@@ -52,6 +57,9 @@ def cognitive_priority(view: KnowledgeItemView, goal: dict,
         reasons.append("revisão vencida na agenda espaçada")
     if components["dependency_unlock"] >= 0.5:
         reasons.append(f"nó conectivo: destrava {view.degree} vizinhos")
+    if components["expected_information_gain"] >= 0.5:
+        reasons.append("alto valor de informação: validar aqui reduz "
+                       "incerteza e destrava dependentes")
     if view.stale:
         reasons.append("⚠ marcada stale no canônico — ler com reserva")
     if view.contested:

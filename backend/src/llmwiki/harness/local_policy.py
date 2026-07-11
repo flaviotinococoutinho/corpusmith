@@ -17,7 +17,11 @@ RECOMMENDED_TYPES = {
     "collection_specification", "schema_specification", "field_profile",
     "message_channel", "feature_flag", "infrastructure_specification",
     "personal_reflection", "reference",
-    "authority_record", "community_summary"}
+    "authority_record", "community_summary",
+    # tipagem epistemológica explícita (v0.21, EPIC-11): a NATUREZA do
+    # conteúdo é tipo de primeira classe — hipótese não vira fato sem
+    # transição registrada (SUPERSEDE), nunca por edição silenciosa
+    "fact", "claim", "hypothesis", "observation", "opinion"}
 
 def check(docs, reader, git, mode: str = "write") -> list[Finding]:
     out: list[Finding] = []

@@ -20,7 +20,8 @@ DEFAULT_POLICY = {
         "knowledge_gap": 0.22,
         "dependency_unlock": 0.12,
         "review_urgency": 0.12,
-        "accessibility_heat": 0.06,
+        "accessibility_heat": 0.04,
+        "expected_information_gain": 0.06,   # VoI (v0.21): lacuna×unlock
         "cost_penalty": 0.08,          # subtrai — custo nunca soma
     },
     "budgets": {                        # working set LIMITADO e explícito

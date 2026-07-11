@@ -36,8 +36,12 @@ _PROMPTS = {
              "restrições, decisão e trade-offs aceitos.",
     "compare": "Compare «{title}» com o conceito vizinho mais próximo: o "
                "que muda, o que se preserva, quando escolher cada um?",
-    "critique": "Critique «{title}»: pressupostos, exceções e onde a "
-                "evidência é mais fraca.",
+    # Toulmin (v0.21): a crítica decompõe o argumento — claim, dado,
+    # garantia, qualificador e réplica — em vez de "opinar sobre"
+    "critique": "Critique «{title}» decompondo o argumento (Toulmin): "
+                "qual é a AFIRMAÇÃO central? que EVIDÊNCIA a sustenta? "
+                "qual GARANTIA liga evidência a afirmação? em que "
+                "CONDIÇÕES vale (qualificador)? qual a melhor RÉPLICA?",
     "transfer": "Aplique a ESTRUTURA de «{title}» em outra disciplina: "
                 "correspondências e o ponto exato onde a transferência "
                 "quebra.",
@@ -75,6 +79,45 @@ def depth_progress(desired: dict, successes: list[dict]) -> dict:
                     "measurable": measurable,
                     "progress": round(min(1.0, have / want), 2)
                     if measurable else None}
+    return out
+
+
+def support_level(streak: int) -> dict:
+    """Scaffolding com FADING (design instrucional, v0.21): quem nunca
+    recuperou recebe exemplo resolvido primeiro; uma recuperação dá
+    direito a dica; duas ou mais, suporte zero — a retirada do apoio é
+    parte do método (worked examples → fading), não economia."""
+    if streak <= 0:
+        return {"level": "worked_example",
+                "hint": "Leia um exemplo resolvido ANTES de tentar — "
+                        "depois tente sem olhar."}
+    if streak == 1:
+        return {"level": "hint",
+                "hint": "Tente primeiro; se travar, releia só a abertura "
+                        "da página."}
+    return {"level": "none",
+            "hint": "Sem apoio: recuperação limpa (o esforço é o método)."}
+
+
+def interleave(items: list[dict], key: str) -> list[dict]:
+    """Intercalação (v0.21, Rohrer/Taylor): alterna itens de grupos
+    diferentes em round-robin, preservando a ordem interna de cada
+    grupo — variar o contexto de recuperação fortalece a discriminação
+    entre conceitos vizinhos. Puro e estável."""
+    groups: dict[str, list[dict]] = {}
+    order: list[str] = []
+    for item in items:
+        bucket = str(item.get(key, "")).split("/")[0]
+        if bucket not in groups:
+            groups[bucket] = []
+            order.append(bucket)
+        groups[bucket].append(item)
+    out, index = [], 0
+    while any(groups[b] for b in order):
+        bucket = order[index % len(order)]
+        if groups[bucket]:
+            out.append(groups[bucket].pop(0))
+        index += 1
     return out
 
 

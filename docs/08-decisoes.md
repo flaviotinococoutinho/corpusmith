@@ -361,3 +361,35 @@ ring de gerações quando houver mais de um perfil de uso real.
 LLM nenhum; a pergunta vem do template, a resposta da pessoa).
 **Rejeitado de novo**: LLM avaliando respostas (continua na porta do
 ADR-26); analogia gerada por LLM entra apenas como origin=llm marcada.
+
+### ADR-31 — Triagem do mapa interdisciplinar (v0.21)
+**Contexto**: mapa de 6 pilares/26 teorias proposto para validação.
+**Já implementado e testado (não duplicar)**: Baddeley (working set),
+Sweller (budgets/gates), Nelson-Narens (object/meta), Efklides (11
+tipos declarados), Roediger-Karpicke (attempts), Cepeda (spaced-v1),
+Bjork (4p(1−p)), Tulving/CLS (raw→consolidação, episódico=sessões+log),
+ACT-R (acessibilidade≠verdade), Leroy (capsule), Dehaene (atenção→
+ação→feedback→consolidação = fluxo da sessão), TMS, AGM-lite
+(ADD/UPDATE/SUPERSEDE/CONTEST=overlay/REVIEW=stale), Brier/ECE, teoria
+de controle (setpoint=profundidade desejada; damping=clamp Hedge +
+min_support), IR híbrido (RRF/Hedge/PPR/FTS), DDD/hexagonal/FCIS/CQRS
+(projeções derivadas)/event-sourcing seletivo (feedback/linhagem)/
+policy-as-data/HITL/explainable ranking/privacy by design.
+**Adotados nesta rodada (afinidade × custo)**:
+1. Tipos epistemológicos de primeira classe (fact/claim/hypothesis/
+   observation/opinion na taxonomia; conversão SÓ por SUPERSEDE);
+2. Value of Information no score cognitivo (lacuna×unlock, peso
+   próprio, SEPARADO de interesse pessoal);
+3. Scaffolding com fading (worked_example→hint→none pela streak);
+4. Intercalação na fila de revisão (round-robin estável por grupo);
+5. Toulmin no exercício de crítica (claim/evidência/garantia/
+   qualificador/réplica);
+6. Memória episódica da experiência exposta (GET /cognitive/episodes —
+   linha do tempo de sessões; nunca promovida automaticamente).
+**Adiados com porta**: contextual integrity granular (scope/audience/
+allowed_uses por memória — quando houver segundo consumidor/export
+seletivo); IRT/psicometria (volume); learning-to-rank (volume);
+A/B-replay determinístico (a infra de eventos já permite).
+**Rejeitados (reafirmando §18)**: tipologias de personalidade, VARK,
+neuromitos, inferência emocional, NLP-como-psicometria, diagnóstico
+clínico, engajamento-como-aprendizagem, agente que reescreve perfil.

@@ -160,6 +160,11 @@ class CognitionFacade:
         from ..usecases.cognitive_journey import cognitive_metrics
         return cognitive_metrics(self._settings)
 
-    def exercise_prompt(self, exercise: str, title: str) -> dict:
+    def exercise_prompt(self, exercise: str, title: str,
+                        item: str | None = None) -> dict:
         from ..usecases.cognitive_journey import prompt_for
-        return prompt_for(exercise, title)
+        return prompt_for(self._settings, exercise, title, item)
+
+    def episodes(self, limit: int = 40) -> list[dict]:
+        from ..usecases.cognitive_journey import episodes
+        return episodes(self._settings, limit)

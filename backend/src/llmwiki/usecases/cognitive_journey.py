@@ -167,7 +167,15 @@ def due_reviews(settings: Settings, limit: int = 30) -> list[dict]:
         "WHERE r.status='due' AND r.due_at <= unixepoch('subsec') "
         "ORDER BY r.due_at LIMIT ?", (limit,)).fetchall()
     cog.close()
-    return [dict(r) for r in rows]
+    from ..cognitive.progress import interleave, support_level
+    out = []
+    for r in rows:
+        entry = dict(r)
+        entry["support"] = support_level(entry.get("streak") or 0)
+        out.append(entry)
+    # intercalação (v0.21): alterna grupos — variar contexto de
+    # recuperação discrimina conceitos vizinhos (Rohrer/Taylor)
+    return interleave(out, "item")
 
 
 # ------------------------------------------------------------- use cases
@@ -474,7 +482,8 @@ class CompleteReview(UseCase):
 # ============================== v0.20: profundidade · experiências ·
 # analogias · projeção de curadoria · métricas · prompts
 from ..cognitive.progress import (EXPERIENCE_TYPES, depth_progress,
-                                  exercise_prompt, new_analogy)  # noqa: E402
+                                  exercise_prompt, interleave, new_analogy,
+                                  support_level)  # noqa: E402
 from ..kernel.calibration import brier_score  # noqa: E402
 
 
@@ -706,5 +715,39 @@ class PromoteAnalogy(UseCase):
         return {"analogy_id": self._analogy_id, "page": result["pages"][0]}
 
 
-def prompt_for(exercise: str, title: str) -> dict:
-    return {"exercise": exercise, "prompt": exercise_prompt(exercise, title)}
+def prompt_for(settings: Settings, exercise: str, title: str,
+               item: str | None = None) -> dict:
+    """Prompt determinístico + scaffolding com fading: o nível de
+    apoio vem da sequência de recuperações do item (streak)."""
+    streak = 0
+    if item:
+        cog = _cog(settings)
+        row = cog.execute("SELECT streak FROM accessibility WHERE item=?",
+                          (item,)).fetchone()
+        cog.close()
+        streak = row["streak"] if row else 0
+    return {"exercise": exercise,
+            "prompt": exercise_prompt(exercise, title),
+            "support": support_level(streak)}
+
+
+def episodes(settings: Settings, limit: int = 40) -> list[dict]:
+    """Memória EPISÓDICA da experiência (Tulving): a linha do tempo de
+    passos/tentativas por sessão — contextual, datada, nunca promovida
+    automaticamente a conhecimento semântico (CLS)."""
+    cog = _cog(settings)
+    rows = cog.execute(
+        "SELECT id, goal_id, state, session, started_at "
+        "FROM cognitive_sessions ORDER BY started_at DESC LIMIT 12"
+    ).fetchall()
+    cog.close()
+    out = []
+    for r in rows:
+        data = json.loads(r["session"])
+        for step in data.get("steps", [])[-limit:]:
+            out.append({"session_id": r["id"], "goal_id": r["goal_id"],
+                        "at": step.get("at"), "kind": step.get("kind"),
+                        "item": step.get("item"),
+                        "note": step.get("note")})
+    out.sort(key=lambda e: -(e["at"] or 0))
+    return out[:limit]
