@@ -36,18 +36,32 @@ def _relative_imports(path: Path) -> set[str]:
 
 
 def test_kernel_and_normalize_are_pure():
-    """kernel/ e normalize/ são o núcleo IMUTÁVEL: stdlib pura, zero I/O.
-    Qualquer import proibido aqui é regressão de arquitetura."""
-    for package in ("kernel", "normalize"):
+    """kernel/, normalize/ e cognitive/ são núcleo PURO: stdlib, zero
+    I/O, zero framework. O domínio cognitivo (v0.19) é testável sem
+    SQLite/FastAPI/LLM/filesystem por construção."""
+    own_modules = {
+        "", "model", "masking", "grammar", "gazetteer", "engine",
+        "detectors", "dates", "quantities", "identifiers",
+        "standards", "geo", "information", "topology",
+        "policy", "gates", "scoring", "projection", "practice", "session"}
+    for package in ("kernel", "normalize", "cognitive"):
         for module in (SRC / package).rglob("*.py"):
             leaked = _absolute_imports(module) & FORBIDDEN_IN_PURE
             assert not leaked, f"{module}: núcleo puro importou {leaked}"
-            outward = _relative_imports(module) - {
-                "", "model", "masking", "grammar", "gazetteer", "engine",
-                "detectors", "dates", "quantities", "identifiers",
-                "standards", "geo", "information", "topology", package}
+            outward = _relative_imports(module) - own_modules - {package}
             assert not outward, \
                 f"{module}: núcleo importou camada externa {outward}"
+
+
+def test_memory_domain_does_not_depend_on_cognitive_domain():
+    """v0.19: a dependência é UNIDIRECIONAL — o plano cognitivo lê a
+    memória (via views montadas nos adapters); a memória JAMAIS conhece
+    o plano cognitivo. kernel/normalize/okf/harness/retrieval limpos."""
+    for package in ("kernel", "normalize", "okf", "harness", "retrieval"):
+        for module in (SRC / package).rglob("*.py"):
+            relative = _relative_imports(module)
+            assert "cognitive" not in relative, \
+                f"{module}: domínio de memória importou cognitive/"
 
 
 def test_usecases_do_not_reach_outward():
@@ -99,7 +113,7 @@ def test_domain_is_free_of_framework_and_transport():
     transport = {"fastapi", "uvicorn", "sse_starlette", "socket",
                  "httpx", "requests", "urllib"}
     for package in ("okf", "harness", "usecases", "facades",
-                    "retrieval", "runtime"):
+                    "retrieval", "runtime", "cognitive"):
         for module in (SRC / package).rglob("*.py"):
             leaked = _absolute_imports(module) & transport
             assert not leaked, \

@@ -131,6 +131,26 @@ export class DaemonClient {
     this.post<any>("/cockpit/cognition/observations/review", { id, action });
   attention = (minutes?: number) =>
     this.get<any>(`/cockpit/attention${minutes ? `?minutes=${minutes}` : ""}`);
+  // ------------------------------------------------ v0.19 (foco/jornada)
+  createGoal = (body: any) => this.post<any>("/cognitive/goals", body);
+  goals = () => this.get<any>("/cognitive/goals");
+  project = (body: any) => this.post<any>("/cognitive/projections", body);
+  startSession = (projection_id: string, mode = "understand") =>
+    this.post<any>("/cognitive/sessions", { projection_id, mode });
+  getSession = (id: string) => this.get<any>(`/cognitive/sessions/${id}`);
+  submitAttempt = (sid: string, body: any) =>
+    this.post<any>(`/cognitive/sessions/${sid}/attempts`, body);
+  sessionFeedback = (sid: string, body: any) =>
+    this.post<any>(`/cognitive/sessions/${sid}/feedback`, body);
+  suspendSession = (sid: string, body: any) =>
+    this.post<any>(`/cognitive/sessions/${sid}/suspend`, body);
+  resumeSession = (sid: string) =>
+    this.post<any>(`/cognitive/sessions/${sid}/resume`, {});
+  completeSession = (sid: string) =>
+    this.post<any>(`/cognitive/sessions/${sid}/complete`, {});
+  reviewsDue = () => this.get<any>("/cognitive/reviews/due");
+  completeReview = (id: number) =>
+    this.post<any>(`/cognitive/reviews/${id}/complete`, {});
   // ------------------------------------------------ v0.17 (pipelines)
   pipelines = () => this.get<any>("/cockpit/pipelines");
   runPipeline = (name: string) =>

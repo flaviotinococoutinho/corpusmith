@@ -7,6 +7,7 @@ import { QualityPanel } from "./panels/QualityPanel";
 import { ProcessesPanel } from "./panels/ProcessesPanel";
 import { MemoryPanel } from "./panels/MemoryPanel";
 import { CognitionPanel } from "./panels/CognitionPanel";
+import { FocusPanel } from "./panels/FocusPanel";
 import { GraphPanel } from "./panels/GraphPanel";
 import { InsightsPanel } from "./panels/InsightsPanel";
 import { CurationPanel } from "./panels/CurationPanel";
@@ -21,6 +22,7 @@ const TABS = {
   insights:  ["📈 Indicadores", InsightsPanel],
   memory:    ["🧠 Memória", MemoryPanel],
   cognition: ["🧭 Cognição", CognitionPanel],
+  focus:     ["🎯 Foco", FocusPanel],
   curation:  ["🗂 Curadoria", CurationPanel],
   quality:   ["✅ Qualidade", QualityPanel],
   processes: ["⚙️ Processos", ProcessesPanel],

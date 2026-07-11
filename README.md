@@ -1,4 +1,4 @@
-# LLM Wiki — v0.18 (Convívio Cognitivo)
+# LLM Wiki — v0.19 (Cognitive Experience Domain)
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -14,11 +14,21 @@ Knowledge base **OKF local-first** com daemon de compilação/consulta e
 ```
 kernel/      ← IMUTÁVEL: stdlib pura, zero I/O (matemática e invariantes)
 normalize/   ← puro: detectores, gazetteer, máscaras (dado, não infra)
-okf/ harness/← domínio: modelo OKF, writer, regras (muda devagar)
+cognitive/   ← puro (v0.19): Cognitive Experience Domain — gates, score,
+               working set, sessão, prática espaçada (testável sem infra)
+okf/ harness/← domínio canônico: modelo OKF, writer, regras (muda devagar)
 usecases/    ← aplicação: 1 classe = 1 operação = 1 método público execute()
-facades/     ← orquestração: Memory · Compiler · Curation
+facades/     ← orquestração: Memory · Compiler · Curation · Cognition
 jobs/ api/ cli · desktop/   ← adapters: a camada MAIS mutável (fila, HTTP, UI)
 ```
+
+**Dois domínios, contratos explícitos (v0.19)**: a memória governa o
+que é conhecido; o *Cognitive Control Plane* governa o que entra em
+foco; a experiência governa como se explora; o feedback governa como a
+experiência melhora. A dependência é UNIDIRECIONAL (a memória nunca
+importa `cognitive/` — asserção de arquitetura) e a jornada inteira
+(objetivo → projeção → sessão → tentativa → cápsula → revisão) deixa o
+canônico **byte-idêntico** (invariante testado).
 
 As regras não são convenção — são **asserções** (`tests/test_architecture.py`):
 
@@ -86,6 +96,30 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   estratégias e observações — o cockpit da metacognição.
 - Rejeitados com razão: learning styles/VARK (Pashler 2008), inferência
   emocional, incorporação automática de perfil.
+
+## Novidades da v0.19 — Cognitive Experience Domain (ADR-20…29)
+
+- **Separação dura**: confiança epistemológica (canônico) ≠
+  acessibilidade cognitiva (escada de 7 níveis em `cognitive.db`);
+  falhar numa recuperação NUNCA toca o bundle/index (testado byte a
+  byte). Quatro famílias de peso — nunca um "weight" único.
+- **Jornada vertical completa**: FocusGoal (profundidade em 7
+  dimensões) → CognitiveProjection (hard gates nomeados → score
+  decomposto+explicado → orçamento explícito; política versionada com
+  snapshot) → CognitiveWorkingSet limitado → CognitiveSession (modos
+  understand/apply/retain/critique/transfer) → RetrievalAttempt
+  (confiança ANTES de conferir) → feedback imutável tipado →
+  ReviewSchedule (spaced-v1: falha confiante volta primeiro) →
+  ResumeCapsule (suspender/retomar sem resíduo de atenção).
+- **API /cognitive/*** com HATEOAS por estado; eventos
+  focus.*/cognitive.*/retrieval.*/review.*; trace snowflake por
+  projeção e sessão (módulos focus/session).
+- **Painel 🎯 Foco**: setup → mapa focal (score bar, badges
+  epistemológicas SEPARADAS da prioridade, razões, 📌/🚫 com
+  re-projeção imutável) → sessão de recuperação ativa → revisões.
+- **Propriedades testadas**: monotonicidade do foco, orçamento nunca
+  cresce ao encolher, gate de privacidade vence prioridade máxima,
+  superseded nunca entra, cápsula preserva contexto, canônico intacto.
 
 ## Coordenação dos dados — fundamentos (kernel/)
 
@@ -166,7 +200,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 178 testes de contrato/arquitetura/golden bundles
+just test             # 193 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

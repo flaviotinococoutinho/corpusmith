@@ -13,6 +13,17 @@ from ..usecases.metacognition import (ObserveMetacognition,
                                       ReviewObservation, calibration_report,
                                       observations)
 from ..usecases.plan_attention import PlanAttention
+from ..usecases.cognitive_journey import (BuildProjection,
+                                          CompleteCognitiveSession,
+                                          CompleteReview, CreateFocusGoal,
+                                          RecordCognitiveFeedback,
+                                          ResumeCognitiveSession,
+                                          StartCognitiveSession,
+                                          SubmitRetrievalAttempt,
+                                          SuspendCognitiveSession,
+                                          due_reviews, get_goal,
+                                          get_projection, get_session,
+                                          list_goals)
 from ..runtime.db import connect
 
 
@@ -60,3 +71,61 @@ class CognitionFacade:
 
     def attention_plan(self, minutes: int | None = None) -> dict:
         return PlanAttention(self._settings, minutes=minutes).execute()
+
+    # ------------------------------- jornada de exploração focada (v0.19)
+    def create_goal(self, body: dict, notify=None) -> dict:
+        return CreateFocusGoal(self._settings, body, notify).execute()
+
+    def goal(self, goal_id: str) -> dict:
+        return get_goal(self._settings, goal_id)
+
+    def goals(self) -> list[dict]:
+        return list_goals(self._settings)
+
+    def build_projection(self, goal_id: str, policy: dict | None = None, *,
+                         pin: str | None = None, exclude: str | None = None,
+                         notify=None) -> dict:
+        return BuildProjection(self._settings, goal_id, policy,
+                               pin=pin, exclude=exclude,
+                               notify=notify).execute()
+
+    def projection(self, projection_id: str) -> dict:
+        return get_projection(self._settings, projection_id)
+
+    def start_session(self, projection_id: str, mode: str = "understand",
+                      notify=None) -> dict:
+        return StartCognitiveSession(self._settings, projection_id, mode,
+                                     notify).execute()
+
+    def session(self, session_id: str) -> dict:
+        return get_session(self._settings, session_id)
+
+    def submit_attempt(self, session_id: str, body: dict,
+                       notify=None) -> dict:
+        return SubmitRetrievalAttempt(self._settings, session_id, body,
+                                      notify).execute()
+
+    def record_feedback(self, session_id: str | None, body: dict,
+                        notify=None) -> dict:
+        return RecordCognitiveFeedback(self._settings, session_id, body,
+                                       notify).execute()
+
+    def suspend_session(self, session_id: str, *, reason: str = "",
+                        next_step: str | None = None, notify=None) -> dict:
+        return SuspendCognitiveSession(self._settings, session_id,
+                                       reason=reason, next_step=next_step,
+                                       notify=notify).execute()
+
+    def resume_session(self, session_id: str, notify=None) -> dict:
+        return ResumeCognitiveSession(self._settings, session_id,
+                                      notify).execute()
+
+    def complete_session(self, session_id: str, notify=None) -> dict:
+        return CompleteCognitiveSession(self._settings, session_id,
+                                        notify).execute()
+
+    def due_reviews(self, limit: int = 30) -> list[dict]:
+        return due_reviews(self._settings, limit)
+
+    def complete_review(self, review_id: int, notify=None) -> dict:
+        return CompleteReview(self._settings, review_id, notify).execute()

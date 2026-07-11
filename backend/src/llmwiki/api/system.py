@@ -82,7 +82,11 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
                     pipeline_runs="/cockpit/pipelines/runs",
                     cognition="/cockpit/cognition",
                     state="/cockpit/state",
-                    attention="/cockpit/attention")}
+                    attention="/cockpit/attention",
+                    focus_goals="/cognitive/goals",
+                    projections="/cognitive/projections",
+                    sessions="/cognitive/sessions",
+                    reviews_due="/cognitive/reviews/due")}
 
     @app.get("/health")
     def health():
@@ -202,4 +206,6 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
 
     from .cockpit import mount_cockpit
     mount_cockpit(app, s, queue, gov, bus, auth)
+    from .cognitive import mount_cognitive
+    mount_cognitive(app, s, bus, auth)
     return app

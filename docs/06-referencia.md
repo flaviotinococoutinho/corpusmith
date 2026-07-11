@@ -82,6 +82,29 @@ POST /cockpit/cognition/observations/review {id, action} — aceite aplica
                                   suggestion via linhagem (404 id, 400 action)
 GET  /cockpit/attention          ?minutes= (default: do estado ou 60) → plano
                                   com reason por item; carga alta ⇒ blocos ≤15min
+POST /cognitive/goals            (v0.19: {title*, root*, intent?, priority?,
+                                  horizon_days?, time_available_min?,
+                                  depth_desired?{7 dimensões 0..3}, excluded?,
+                                  pinned?} — 404 raiz inexistente)
+GET  /cognitive/goals · /cognitive/goals/{id}
+POST /cognitive/projections      ({goal_id, policy?, pin?, exclude?} → gates
+                                  duros + score decomposto + orçamento; NOVA
+                                  projeção a cada revisão — versões imutáveis)
+GET  /cognitive/projections/{id}
+POST /cognitive/sessions         ({projection_id, mode∈understand|apply|retain|
+                                  critique|transfer|resume})
+GET  /cognitive/sessions/{id}    (_links refletem o estado: active⇒attempt/
+                                  suspend/complete; suspended⇒resume)
+POST /cognitive/sessions/{id}/attempts   ({item*, exercise, confidence_before*
+                                  ∈[0,1] ANTES, result∈success|partial|failure,
+                                  answer?} → acessibilidade + agenda + gap)
+POST /cognitive/sessions/{id}/feedback   ({scope*, verdict*, target?, note?} —
+                                  evento imutável; vocabulários fechados)
+POST /cognitive/sessions/{id}/suspend    ({reason?, next_step?} → ResumeCapsule;
+                                  409 se não-active)
+POST /cognitive/sessions/{id}/resume     (409 se não-suspended)
+POST /cognitive/sessions/{id}/complete
+GET  /cognitive/reviews/due      · POST /cognitive/reviews/{id}/complete
 GET  /cockpit/pipelines          (v0.17: specs + last_run; seed builtin no mount)
 POST /cockpit/pipelines          {name, description?, stages:[{job,payload?,on_error?}]}
                                  (400 = validação estrutural recusou)
@@ -123,6 +146,19 @@ stages json, started_at, finished_at)` — últimos 200 (v0.17) ·
 `metacog_observations(kind∈strategy|load|calibration, statement,
 support, confidence, evidence json, suggestion json,
 status∈proposed|accepted|rejected|suspended)`
+
+**cognitive.db** (v0.19 — Cognitive Experience Domain, SEPARADO: só
+referências a páginas, zero conteúdo canônico; projeções
+reconstruíveis): `focus_goals(id snowflake, goal json, status)` ·
+`cognitive_projections(id, goal_id, policy json SNAPSHOT, working_set
+json, trace_id)` · `cognitive_sessions(id, state∈active|suspended|
+completed, session json c/ steps+capsule)` ·
+`retrieval_attempts(session_id, item, exercise, confidence_before,
+result, …)` · `accessibility(item PK, level∈escada de 7, streak,
+attempts)` — NUNCA é confiança epistemológica ·
+`review_schedules(item, due_at, interval_days, algorithm=spaced-v1,
+reason, status∈due|done|cancelled)` · `cognitive_feedback` (evento
+imutável, só INSERT)
 
 **cold.db** (base fria, v0.12 — NÃO derivado; conteúdo compactado):
 `cold_memories(page, digest, strong_ids, body_z zlib9, meta_json,

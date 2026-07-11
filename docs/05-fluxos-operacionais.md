@@ -242,6 +242,35 @@ GET /cockpit/attention?minutes=N
    `reason` por item; carga alta ⇒ só blocos pequenos
 ```
 
+## 5e. Jornada de exploração focada (Cognitive Experience, v0.19)
+
+```
+POST /cognitive/goals {title, root, depth_desired{7 dims}, horizonte…}
+ → CreateFocusGoal → [focus_goals] (404 se o raiz não existe no bundle)
+POST /cognitive/projections {goal_id, policy?}
+ → BuildProjection: BFS no grafo canônico (± max_distance do raiz)
+   → KnowledgeItemView (epistemológico SOMENTE-LEITURA + estrutura +
+     custo + acessibilidade/agenda do cognitive.db)
+   → domínio puro: hard gates (superseded/invalid/privacy/escopo —
+     NOMEADOS) → score decomposto (4 famílias de peso) → orçamento
+   → [cognitive_projections] (snapshot da política; trace snowflake)
+ revisão (pin/exclude) ⇒ NOVA projeção (imutáveis)
+POST /cognitive/sessions {projection_id, mode}
+ → sessão active com working set congelado + estado cognitivo vigente
+POST …/attempts {item, exercise, confidence_before ANTES, result}
+ → escada de acessibilidade sobe no sucesso (falha zera streak, não
+   rebaixa) → agenda spaced-v1 (falha confiante volta em 0.5d) →
+   passo na sessão → eventos retrieval.* + review.scheduled
+ → o CANÔNICO permanece byte-idêntico (invariante testado)
+POST …/suspend {reason, next_step} → ResumeCapsule (objetivo, decisão,
+   questões abertas, próximo passo, versão da política)
+POST …/resume → reconstrói do capsule · POST …/complete
+GET /cognitive/reviews/due → itens vencidos c/ nível+motivo → ✔ complete
+Painel 🎯 Foco: setup → mapa focal (score bar + badges epistemológicas
+   separadas + razões + 📌/🚫) → sessão (responder ANTES de conferir,
+   confiança, auto-avaliação) → revisões
+```
+
 ## 6. Revisão semanal
 
 ```

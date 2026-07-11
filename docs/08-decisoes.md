@@ -236,3 +236,101 @@ rótulo); inferência de emoção/saúde (restrição da própria espec);
 incorporação automática de perfil (FR-14.3 — só com aceite); estado
 inferido de comportamento (declarado ou nada). **Reentrada**: espaçamento
 ótimo por item (FSRS) quando houver histórico de revisão por página.
+
+## v0.19 — Cognitive Experience Domain (ADR-20 … ADR-29)
+
+### ADR-20 — Confiança epistemológica ≠ acessibilidade cognitiva
+**Contexto**: um único "confidence" mistura "isto é verdade?" com
+"consigo lembrar disto?". **Decisão**: campos e BANCOS distintos —
+confiança epistemológica mora no frontmatter canônico; acessibilidade é
+a escada `none→recognition→recall→explanation→application→transfer→
+critique` em cognitive.db, validada por prática. **Alternativa
+rejeitada**: score único ponderado (irreversível e ilegível).
+**Invariante (testado)**: falhar numa recuperação NUNCA altera
+confiança/evidência/validade canônicas — bundle e index.db ficam
+byte-idênticos após a jornada inteira. **Porta**: derivar "profundidade
+validada por dimensão" quando houver volume de tentativas.
+
+### ADR-21 — Cognitive Control Plane (domínios independentes)
+**Contexto**: risco de a experiência "ajudar" editando a memória.
+**Decisão**: `cognitive/` é núcleo PURO (stdlib; mesmo regime de
+kernel/normalize, asserção de arquitetura) e a dependência é
+unidirecional: adapters leem a memória governada e montam
+`KnowledgeItemView`; o domínio projeta; a memória JAMAIS importa
+cognitive/ (teste). O plano pode selecionar/ordenar/reduzir/ocultar/
+recomendar; não pode alterar fatos, evidências, temporalidade ou grafo.
+**Consequência**: testável sem SQLite/FastAPI/LLM/filesystem.
+**Porta**: um port formal (Protocol) se surgir segundo consumidor.
+
+### ADR-22 — Working set limitado e explícito (Baddeley como restrição)
+**Decisão**: `CognitiveWorkingSet` com orçamento DECLARADO na política
+(max_items/max_questions/max_cost_min/max_distance) — nada de "7±2"
+como verdade psicológica: defaults configuráveis e versionados. Todo
+corte é nomeado (`excluded_by_gate`, `trimmed_by_budget`).
+**Invariante (testado)**: reduzir orçamento nunca AUMENTA a projeção
+(subconjunto). **Porta**: orçamento por tokens quando a projeção
+alimentar contexto de LLM diretamente.
+
+### ADR-23 — Recuperação ≠ comprometimento (projection gate)
+**Contexto**: `artifact recall != state commitment` (Agent Cognitive
+Compressor). **Decisão**: o retrieval produz CANDIDATOS; o
+`build_working_set` (gates duros → score → orçamento) decide o que
+entra — e hard gate vence prioridade sempre (superseded/invalid/
+privacy/escopo barram antes de qualquer número; testado: página
+sensível com todos os sinais altos fica fora). **Porta**: gate
+adicional por "custo de switching" quando houver medição real.
+
+### ADR-24 — Score cognitivo configurável, decomposto, monotônico
+**Decisão**: prioridade = Σ wᵢ·componenteᵢ − w_custo·custo, com QUATRO
+famílias de peso separadas (cognitiva, estrutural, operacional,
+agenda) — nunca um "weight" único; coeficientes na CognitivePolicy
+versionada, snapshot persistido com a projeção (reproduzível).
+Decomposição + razões saem com o número. **Invariante (testado)**:
+subir user_focus não reduz o score. **Porta**: expected_information_
+gain como componente quando houver eval por conceito.
+
+### ADR-25 — ResumeCapsule (Leroy: attention residue)
+**Decisão**: suspender uma sessão SEMPRE gera cápsula (objetivo, item
+atual, última decisão, questões abertas, próximo passo, razão, versão
+da política); retomar reconstrói dela. Máquina de estados explícita
+active→suspended→active→completed com transições inválidas recusadas.
+**Invariante (testado)**: suspensa e retomada mantém objetivo, questões
+abertas e próxima ação. **Porta**: cápsula automática por inatividade.
+
+### ADR-26 — Retrieval practice como cidadão de primeira classe
+**Contexto**: apresentação não é aprendizagem (Roediger & Karpicke
+2006). **Decisão**: `RetrievalAttempt` exige `confidence_before` ANTES
+de conferir a fonte (matéria-prima de calibração — Brier já existe na
+v0.18); exercícios tipados (recall/explain/apply/compare/critique/
+transfer) mapeiam para a escada de acessibilidade; sucesso valida o
+nível, falha zera a sequência sem rebaixar o nível. **Rejeitado**:
+avaliação automática por LLM neste ciclo (auto-avaliação honesta +
+gap de calibração explícito primeiro). **Porta**: LLM como avaliador
+COM critérios explícitos e marca de inferido.
+
+### ADR-27 — Agenda espaçada spaced-v1 (Cepeda)
+**Decisão**: intervalo cresce ×2.2 no sucesso, reinicia na falha, e
+falha CONFIANTE volta antes de todos (0.5d) — sobreconfiança é o erro
+mais caro; teto = horizonte/3 (retenção desejada governa o
+espaçamento). Parâmetros na política; decisão sai com `reason`.
+**Rejeitado**: SM-2/FSRS completos agora (estado por item que ainda
+não temos volume para calibrar). **Porta**: FSRS quando houver
+histórico suficiente de tentativas por item (mesma tabela alimenta).
+
+### ADR-28 — Metacognição declarada (Efklides) e nunca diagnóstico
+**Decisão**: experiências metacognitivas são EVENTOS declarados e
+revisáveis — o feedback tipado (§11: too_shallow/confusing/
+missing_formalism/…) com escopo e imutabilidade cobre o vocabulário de
+Efklides na prática; estado cognitivo é declarado (v0.18) e a mineração
+de padrões continua com gate humano (ADR-19). **Rejeitado**: inferir
+fluência/dificuldade de telemetria. **Porta**: tipos de experiência
+dedicados (surpresa/conflito) se o feedback atual não bastar.
+
+### ADR-29 — Política cognitiva versionada com a projeção
+**Decisão**: toda projeção persiste o SNAPSHOT da política que a gerou
+(policy_version dentro do working set; sessão herda a versão) — mesma
+disciplina da linhagem de config (v0.16): reproduzir ontem usa a
+política de ontem. Ajustes de coeficiente pelo usuário passam pela
+validação estrutural (chave desconhecida/valor negativo ⇒ 400, nada
+muda). **Porta**: guardar políticas nomeadas em tabela própria com
+ring de gerações quando houver mais de um perfil de uso real.
