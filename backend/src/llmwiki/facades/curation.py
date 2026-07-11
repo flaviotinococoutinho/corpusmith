@@ -4,6 +4,8 @@ from __future__ import annotations
 from ..harness.findings import Findings
 from ..settings import Settings
 from ..usecases.cold_memory import (FreezeMemory, RecycleMemory, cold_stats)
+from ..usecases.configure_system import (RollbackConfig, TuneConfig,
+                                         config_history)
 from ..usecases.export_memory import ExportMemory
 from ..usecases.lint_bundle import LintBundle
 from ..usecases.manage_tags import RenameTag
@@ -70,3 +72,17 @@ class CurationFacade:
         return ExportMemory(self._settings, format=format,
                             include_local=include_local, types=types,
                             tag=tag).execute()
+
+    # ------------------------------------- configuração versionada (v0.16)
+    def tune_config(self, changes: dict, notify=None, *,
+                    source: str = "cockpit") -> dict:
+        """Ajuste a quente com guard de fitness + linha no ring de 30."""
+        return TuneConfig(self._settings, changes, notify,
+                          source=source).execute()
+
+    def rollback_config(self, notify=None) -> dict:
+        """Retorna à configuração anterior à vigente."""
+        return RollbackConfig(self._settings, notify).execute()
+
+    def config_history(self, limit: int = 30) -> list[dict]:
+        return config_history(self._settings, limit)

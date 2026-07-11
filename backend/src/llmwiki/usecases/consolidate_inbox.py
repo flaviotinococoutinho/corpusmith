@@ -24,7 +24,7 @@ from .base import DraftPage, MachinePageUseCase, UseCase
 from .compile_source import _slug
 from .reconcile_candidate import ReconcileCandidate, log_decision
 from ..ingestion.extract import ExtractError, extract
-from ..kernel.sketch import hamming, simhash
+from ..kernel.sketch import bands, hamming, simhash
 from ..models.router import ModelRouter, ModelUnavailable
 from ..normalize import analyze
 from ..okf.authorities import load_gazetteer
@@ -74,6 +74,8 @@ class _Signature:
 class _ConsolidatedPage(MachinePageUseCase):
     """Uma página por cluster — herda TODO o esqueleto (sanduíche →
     reconcile → gate → writer); aqui só a produção do rascunho."""
+
+    MODULE = "consolidate"
 
     def __init__(self, settings: Settings, cluster: list[_Signature],
                  notify=None):
@@ -155,6 +157,7 @@ class ConsolidateInbox(UseCase):
             else int(settings.get("consolidate.min_shared", 2))
         self._min_cluster = min_cluster if min_cluster is not None \
             else int(settings.get("consolidate.min_cluster", 2))
+        self._pairwise_max = int(settings.get("consolidate.pairwise_max", 32))
 
     def execute(self) -> dict:
         pending = self._pending_signatures()
@@ -201,11 +204,37 @@ class ConsolidateInbox(UseCase):
                 i = parent[i]
             return i
 
-        for i in range(len(pending)):
-            for j in range(i + 1, len(pending)):
-                if pending[i].converges_with(pending[j], self._min_shared):
-                    parent[find(i)] = find(j)
+        for i, j in self._candidate_pairs(pending):
+            if pending[i].converges_with(pending[j], self._min_shared):
+                parent[find(i)] = find(j)
         groups: dict[int, list[_Signature]] = {}
         for i, signature in enumerate(pending):
             groups.setdefault(find(i), []).append(signature)
         return [g for g in groups.values() if len(g) >= self._min_cluster]
+
+    def _candidate_pairs(self, pending: list[_Signature]):
+        """Seleção adaptativa de algoritmo (v0.16): a estrutura segue o
+        tamanho do dado. Inbox pequeno → todos os pares (constante baixa,
+        zero overhead de índice). Inbox grande → índice invertido por id
+        forte e por entidade + bandas LSH do SimHash (9 bandas cobrem
+        hamming ≤ 8 por casa de pombos). A geração é EXATA: todo par que
+        `converges_with` aceitaria compartilha ao menos um balde — o que
+        muda é só o custo de ACHÁ-los (O(n²) → O(n + candidatos))."""
+        n = len(pending)
+        if n <= self._pairwise_max:
+            return ((i, j) for i in range(n) for j in range(i + 1, n))
+        buckets: dict = {}
+        for i, signature in enumerate(pending):
+            for strong in signature.strong_ids:
+                buckets.setdefault(("id", strong), []).append(i)
+            for entity in signature.entities:
+                buckets.setdefault(("ent", entity), []).append(i)
+            for band in bands(signature.sketch,
+                              count=_Signature.NEAR_DUPLICATE_HAMMING + 1):
+                buckets.setdefault(("lsh", band), []).append(i)
+        pairs: set[tuple[int, int]] = set()
+        for members in buckets.values():
+            for a in range(len(members)):
+                for b in range(a + 1, len(members)):
+                    pairs.add((members[a], members[b]))
+        return sorted(pairs)

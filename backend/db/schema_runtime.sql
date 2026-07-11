@@ -68,3 +68,17 @@ CREATE TABLE IF NOT EXISTS ask_provenance(
 -- crédito por stream (Hedge/multiplicative weights sobre os desfechos)
 CREATE TABLE IF NOT EXISTS stream_weights(
   stream TEXT PRIMARY KEY, weight REAL NOT NULL DEFAULT 1.0);
+
+-- ============================ v0.16 ============================
+-- Configuração de negócio VERSIONADA em banco: ring buffer das últimas 30
+-- entradas (a vigente é a mais recente; TuneConfig poda as excedentes).
+-- Cada linha guarda o delta pedido E o snapshot completo pós-aplicação —
+-- rollback é reaplicar o snapshot anterior, sem reconstruir deltas.
+CREATE TABLE IF NOT EXISTS config_history(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts REAL DEFAULT (unixepoch('subsec')),
+  trace_id TEXT,               -- snowflake do ajuste (módulo=config)
+  changes TEXT NOT NULL,       -- delta aplicado (json)
+  snapshot TEXT NOT NULL,      -- seções TUNABLE completas após aplicar (json)
+  source TEXT NOT NULL DEFAULT 'cockpit',  -- cockpit|cli|baseline|rollback
+  note TEXT);

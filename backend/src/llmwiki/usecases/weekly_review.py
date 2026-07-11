@@ -54,6 +54,7 @@ class ComputeWeeklyReview(UseCase):
 
 class PublishWeeklyReview(MachinePageUseCase):
     LOG_KIND = "Review"
+    MODULE = "review"
 
     def __init__(self, settings: Settings, notify=None):
         super().__init__(settings, notify)

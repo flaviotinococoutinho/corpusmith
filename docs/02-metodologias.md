@@ -138,6 +138,7 @@ Aplicado onde paga, não como dogma:
 | `test_api_speaks_only_to_facades` | api não importa usecases nem jobs |
 | `test_every_usecase_has_single_public_method` | introspecção: métodos públicos ⊆ {execute} |
 | `test_machine_page_template_is_closed_for_modification` | nenhuma subclasse sobrescreve o esqueleto |
+| `test_domain_is_free_of_framework_and_transport` (v0.16) | okf/harness/usecases/facades/retrieval/runtime não importam fastapi/uvicorn/sse/socket/httpx — transporte é privilégio de api/cli/daemon/models |
 
 Gradiente de mutabilidade resultante (de dentro para fora, do estável
 para o volátil): `kernel` → `normalize` → `okf`/`harness` → `usecases`

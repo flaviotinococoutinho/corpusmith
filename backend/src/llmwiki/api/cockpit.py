@@ -67,13 +67,20 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
             actions.append(f"Linkar {len(orphans)} conceito(s) órfão(s)")
         if pending:
             actions.append(f"Acompanhar {pending} job(s) pendente(s)")
+        from .system import links
         return {"pages": len(pages), "chunks": chunks,
                 "decisions": by_type.get("decision", 0),
                 "stale": stale[:10], "stale_count": len(stale),
                 "orphans": orphans[:10], "orphan_count": len(orphans),
                 "pending_jobs": pending, "by_type": by_type,
                 "budget_left_usd": round(gov.budget_left(), 2),
-                "recommended_actions": actions}
+                "recommended_actions": actions,
+                "_links": links(self="/cockpit/dashboard",
+                                stats="/cockpit/stats", inbox="/cockpit/inbox",
+                                memory="/cockpit/memory",
+                                quality="/cockpit/quality",
+                                insights="/cockpit/insights",
+                                health="/health/full")}
 
     # ---------- Inbox de conhecimento (raw/ não compilado) ----------
     @app.get("/cockpit/inbox", dependencies=[Depends(auth)])
@@ -159,10 +166,15 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
             ["git", "-C", str(kb), "log", "-5", "--format=%h %ad %s",
              "--date=short", "--", f"bundle/{path}"],
             capture_output=True, text=True).stdout.splitlines()
+        from .system import links
         return {"path": path, "body": d.body,
                 "meta": d.meta.model_dump(exclude_none=True, mode="json"),
                 "git": gitlog,
-                "related": related_pages(s, path)}   # A-mem: o link que falta
+                "related": related_pages(s, path),   # A-mem: o link que falta
+                "_links": links(self=f"/cockpit/page?path={path}",
+                                stale="/cockpit/page/stale",
+                                freeze="/cockpit/freeze",
+                                collection="/cockpit/pages")}
 
     @app.post("/cockpit/page/stale", dependencies=[Depends(auth)])
     def mark_stale(body: dict):
@@ -313,18 +325,50 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
         except (KeyError, ValueError) as e:
             raise HTTPException(400, str(e))
 
+    from .system import links
+
     @app.get("/cockpit/config", dependencies=[Depends(auth)])
     def config_get():
-        return s.snapshot()
+        return {**s.snapshot(),
+                "_links": links(self="/cockpit/config",
+                                history="/cockpit/config/history",
+                                rollback="/cockpit/config/rollback")}
 
     @app.post("/cockpit/config", dependencies=[Depends(auth)])
     def config_set(body: dict):
+        """Ajuste versionado (v0.16): valida tipo/domínio, aplica a quente,
+        grava no ring de 30 gerações; probe reprovado reverte sozinho."""
         try:
-            snapshot = s.tune(body)
+            result = curation.tune_config(body, notify=lambda t, d:
+                                          bus.emit("system", t, d))
         except ValueError as e:
             raise HTTPException(400, str(e))
-        bus.emit("system", "config.tuned", {"sections": sorted(body)})
-        return snapshot
+        return {**result["snapshot"],
+                "history_id": result["history_id"],
+                "trace_id": result["trace_id"],
+                "_links": links(self="/cockpit/config",
+                                history="/cockpit/config/history",
+                                rollback="/cockpit/config/rollback")}
+
+    @app.get("/cockpit/config/history", dependencies=[Depends(auth)])
+    def config_hist(limit: int = 30):
+        return {"history": curation.config_history(limit),
+                "_links": links(self="/cockpit/config/history",
+                                config="/cockpit/config",
+                                rollback="/cockpit/config/rollback")}
+
+    @app.post("/cockpit/config/rollback", dependencies=[Depends(auth)])
+    def config_rollback():
+        """Retorna à configuração ANTERIOR à vigente (nova geração no ring)."""
+        try:
+            result = curation.rollback_config(notify=lambda t, d:
+                                              bus.emit("system", t, d))
+        except ValueError as e:
+            raise HTTPException(409, str(e))
+        return {**result,
+                "_links": links(self="/cockpit/config/rollback",
+                                config="/cockpit/config",
+                                history="/cockpit/config/history")}
 
     @app.get("/cockpit/behavior", dependencies=[Depends(auth)])
     def behavior():

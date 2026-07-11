@@ -172,6 +172,28 @@ RECYCLE (T3→T2): três portas
  frontmatter ganha `recycled: n`, heat reacende, cold entry sai
 ```
 
+## 5c. Ajustar configuração de negócio (linhagem + rollback, v0.16)
+
+```
+POST /cockpit/config {seção:{chave:valor}}
+ → CurationFacade.tune_config → TuneConfig
+   1. valida tipo/domínio contra o snapshot vigente
+      (número no lugar de bool? chave desconhecida? seção fora das
+       TUNABLE? → 400, NADA muda, nenhuma linha gravada)
+   2. banco virgem? grava geração-zero (source=baseline)
+   3. Settings.tune(): muta as seções vivas + persiste overrides.yaml
+   4. probe (round-trip do modelo) — falhou? reverte o snapshot
+      anterior sozinho + linha source=rollback + 400
+   5. linha no ring [config_history] (delta + snapshot + trace
+      snowflake; >30 ⇒ a mais velha cai) → evento config.tuned
+Problema notado DEPOIS (job falhando, retrieval degradado):
+POST /cockpit/config/rollback → RollbackConfig
+ → reaplica o snapshot da geração ANTERIOR (O(1)) e grava o retorno
+   como nova geração (a linhagem nunca anda para trás, o estado sim)
+ → 409 se não há geração anterior · botão ↩️ no card "Linhagem da
+   configuração" (Curadoria); StatusBar mostra 🩺 /health/full
+```
+
 ## 6. Revisão semanal
 
 ```
@@ -247,4 +269,8 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | POST /cockpit/tags | Curation.rename_tag | RenameTag |
 | GET /cockpit/export | Curation.export | ExportMemory |
 | GET graph/insights/dictionary/traces | — (observatório, leitura pura) | retrieval/observatory.py |
-| GET/POST /cockpit/config | — | Settings.snapshot/tune |
+| GET /cockpit/config | — (leitura pura) | Settings.snapshot |
+| POST /cockpit/config | Curation.tune_config | TuneConfig |
+| POST /cockpit/config/rollback | Curation.rollback_config | RollbackConfig |
+| GET /cockpit/config/history | Curation.config_history | config_history (puro) |
+| GET / · /health · /health/full | — (sistema, api/system.py) | — |

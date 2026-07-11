@@ -125,3 +125,58 @@ relatório de não-conformidade pós-mudança de schema (ADR-05). Functores
 explícitos não pagam o custo de manutenção aqui. **Reentrada**: se o
 bundle ganhar schemas migráveis versionados com transformações
 automáticas.
+
+### ADR-14 — Configuração como linhagem: ring de 30 + rollback (v0.16)
+**Contexto**: pedido de config de negócio em banco com histórico dos
+últimos 30 ajustes e retorno automático à anterior em caso de problema;
+pesquisa de conceitos de sistemas evolutivos.
+**Decisão**: `config_history` no runtime.db — cada ajuste é uma GERAÇÃO
+(delta + snapshot completo + trace snowflake); o ring poda além de 30;
+a vigente é a mais recente. Guard de fitness em três linhas: validação
+de tipo/domínio antes de tocar o estado, probe pós-aplicação com
+reversão automática, e `RollbackConfig` (endpoint/botão) reaplicando o
+snapshot anterior em O(1). Do vocabulário evolutivo adotamos o que o
+projeto JÁ pratica: variação (ajuste), seleção (guard + desfechos
+Hedge), hereditariedade (snapshot completo por geração). **Rejeitados**:
+algoritmos genéticos/neuroevolução sobre parâmetros (população de 1,
+fitness caro e ruidoso — seleção dirigida por humano + guard basta) e
+ler config do banco no boot (fonte de verdade continua Settings +
+overrides.yaml; o banco é MEMÓRIA da linhagem, não autoridade).
+**Reentrada**: auto-rollback dirigido por métricas (eval regredindo ⇒
+voltar geração) quando houver série histórica de eval suficiente.
+
+### ADR-15 — Contratos: HATEOAS sim; GraphQL não; MCP porta aberta (v0.16)
+**Adotado**: REST com `_links` (raiz `/` como mapa navegável do serviço,
+recursos apontando as transições prováveis) — custo zero de dependência
+e o Cockpit/CLI navegam por relação. **Rejeitado GraphQL**: um único
+consumidor local em localhost não tem problema de over/under-fetching
+que justifique schema+runtime extras; o "resolver" real aqui é SQLite.
+**MCP: porta explicitamente aberta** — expor a memória como servidor
+MCP (tools: ask/promote/outcome) é a evolução natural de um cockpit de
+memória AGÊNTICA, mas entra como adapter novo em `api/`, sem tocar
+domínio; fica para quando houver um cliente agêntico real conectado.
+
+### ADR-16 — Identidade snowflake de ponta a ponta (v0.16)
+**Decisão**: ids de 63 bits (41b tempo · 6b módulo · 6b algoritmo ·
+10b seq) em `kernel/identity.py` (puro), renderizados em Crockford
+base32 que ordena como o tempo. `ask_id` agora É o trace (módulo=ask,
+algoritmo=rrf — decodificável offline); todo `page.stage` carrega
+`trace_id` da execução + `span` do passo; eventos de job herdam o
+trace do worker; cada geração de config tem o seu; o daemon ganha
+identidade de INSTÂNCIA por boot (aparece em `/`, `/health*`).
+**Rejeitado**: UUID (não carrega tempo nem procedência; não ordena) e
+OpenTelemetry como dependência (o barramento SSE + runtime.db já são o
+coletor local; o formato não impede exportar depois).
+
+### ADR-17 — Seleção adaptativa de algoritmo na consolidação (v0.16)
+**Contexto**: `_cluster` comparava todos os pares — O(n²) era o
+primeiro gargalo real apontado na avaliação funcional.
+**Decisão**: a estrutura segue o tamanho do dado. n ≤
+`consolidate.pairwise_max` (32) mantém pares (constante mínima); acima
+disso, índice invertido por id forte e por entidade + 9 bandas LSH do
+SimHash geram os candidatos. EXATO por construção: convergência exige
+compartilhar id forte, entidade ou hamming ≤ 8 — e 9 bandas garantem
+banda comum para hamming ≤ 8 (casa de pombos), então nenhum par
+verdadeiro escapa; falsos positivos são re-verificados por
+`converges_with`. **Rejeitado**: MinHash/LSH probabilístico (perderia
+a garantia de zero falso negativo que o determinismo do projeto exige).

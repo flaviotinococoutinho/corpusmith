@@ -1,4 +1,4 @@
-# LLM Wiki — v0.14 (Consolidação Funcional)
+# LLM Wiki — v0.16 (NFRs Executáveis)
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -32,7 +32,30 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   writer); o teste garante que nenhuma subclasse (compile, review,
   community) consegue sobrescrevê-lo — só preencher hooks (OCP/LSP);
 - **camadas**: `api/` só importa `facades/`; `usecases/` nunca importam
-  `facades/`, `api/`, `jobs/` nem framework HTTP (Dependency Rule).
+  `facades/`, `api/`, `jobs/` nem framework HTTP (Dependency Rule);
+- **domínio sem transporte** (v0.16): `okf/ harness/ usecases/ facades/
+  retrieval/ runtime/` não importam fastapi/uvicorn/sse/httpx/socket —
+  falar com o mundo é privilégio de `api/`, `cli`, `daemon` e `models/`.
+
+## Novidades da v0.16 — requisitos não funcionais como código
+
+- **Identidade snowflake** (`kernel/identity.py`, puro): 41b tempo · 6b
+  módulo · 6b algoritmo · 10b seq; `ask_id` É o trace decodificável;
+  todo `page.stage` carrega `trace_id`+`span`; jobs herdam o trace do
+  worker; o daemon tem identidade de instância por boot (ADR-16).
+- **Configuração como linhagem** (ADR-14): ajustes passam por
+  `TuneConfig` — validação de tipo/domínio, probe com reversão
+  automática e geração gravada no ring `config_history` (30 entradas;
+  a mais velha cai); `POST /cockpit/config/rollback` volta à anterior
+  em O(1). Card "Linhagem da configuração" na Curadoria.
+- **Health profunda + HATEOAS** (ADR-15): `GET /` é o mapa navegável do
+  serviço; `GET /health/full` reporta instância, processo, fila, cada
+  stack de dados (bytes/WAL/integridade/tabelas), barramento, recursos
+  e orçamento — pulso 🩺 na StatusBar.
+- **Seleção adaptativa de algoritmo** (ADR-17): consolidação troca
+  pares O(n²) por índice invertido + 9 bandas LSH acima de
+  `consolidate.pairwise_max` — exato por casa de pombos (hamming ≤ 8
+  sempre compartilha banda), zero falso negativo.
 
 ## Coordenação dos dados — fundamentos (kernel/)
 
@@ -113,7 +136,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # golden bundles: 42 testes de contrato
+just test             # 155 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

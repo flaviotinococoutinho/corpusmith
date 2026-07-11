@@ -39,3 +39,19 @@ def simhash(text: str, *, shingle: int = 3) -> int:
 
 def hamming(a: int, b: int) -> int:
     return bin(a ^ b).count("1")
+
+
+def bands(value: int, *, count: int = 9, bits: int = BITS) -> tuple:
+    """Bandas LSH do sketch (v0.16) — geração de pares candidatos EXATA.
+
+    Casa de pombos: se dois hashes de 64 bits diferem em ≤ count−1 bits,
+    fatiá-los em `count` bandas garante ao menos UMA banda idêntica —
+    logo, indexar por (índice, valor) de banda recupera TODO par com
+    hamming ≤ count−1 sem comparar os n² pares. Com count=9, cobre o
+    limiar de near-duplicata da consolidação (hamming ≤ 8) sem falso
+    negativo; falsos positivos são baratos (re-verificados por hamming).
+    """
+    edges = [round(i * bits / count) for i in range(count + 1)]
+    return tuple(
+        (i, (value >> edges[i]) & ((1 << (edges[i + 1] - edges[i])) - 1))
+        for i in range(count))

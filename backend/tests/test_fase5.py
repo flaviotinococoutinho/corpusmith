@@ -112,7 +112,8 @@ def test_tag_rename_merge_and_remove(client, settings, kb):
 def test_config_tunes_live_and_persists(client, settings, kb):
     _seed(settings, kb)
     snap = client.get("/cockpit/config").json()
-    assert set(snap) == set(Settings.TUNABLE_SECTIONS)
+    # v0.16: além das seções, o recurso navega (_links HATEOAS)
+    assert set(Settings.TUNABLE_SECTIONS) <= set(snap)
     # sobe o threshold de abstenção a quente → o ask passa a abster
     r = client.post("/cockpit/config",
                     json={"ask": {"abstain_threshold": 99.0}})

@@ -40,7 +40,11 @@ Ausência de `# Citations` e de reservados **nunca** gera finding
 ## 2. Endpoints (API local, auth header `x-llmwiki-auth` OU `?auth=`)
 
 ```
-GET  /health                     (sem auth)
+GET  /                           (sem auth; raiz HATEOAS: mapa _links de todo o serviço)
+GET  /health                     (sem auth; ok · version · instance)
+GET  /health/full                (v0.16: instância{snowflake,pid,uptime} · process{rss,cpu,threads}
+                                  · queue{by_state,oldest_age} · stacks{bytes,wal,integrity,tables}/banco
+                                  · bus{subscribers} · config{gerações} · resources{disk} · budget)
 GET  /status                     · GET/POST /jobs · GET /events (SSE)
 POST /ask                        {query, deep?, local_only?, as_of?}
 GET  /cockpit/dashboard          · GET /cockpit/inbox
@@ -63,23 +67,36 @@ GET  /cockpit/dictionary         (enums vivos: tipos, origens, confiança, autor
 GET  /cockpit/traces · /cockpit/trace?ask_id=   (proveniência página→stream)
 GET/POST /cockpit/tags           (contagens; POST {from, to?} renomeia/funde/remove)
 GET/POST /cockpit/config         (seções TUNABLE: flags·ask·memory·policy·consolidate;
-                                  aplica A QUENTE + persiste em overrides.yaml)
+                                  aplica A QUENTE + persiste em overrides.yaml; v0.16:
+                                  valida tipo/domínio, grava geração no ring config_history
+                                  e devolve history_id+trace_id; 400 = guard recusou)
+GET  /cockpit/config/history     (linhagem: até 30 gerações, mais recente = vigente)
+POST /cockpit/config/rollback    (retorna à geração ANTERIOR; 409 sem anterior)
 GET  /cockpit/behavior · POST /cockpit/behavior/reset-streams
 GET  /cockpit/export             ?format=zip|json|md &include_local &types &tag
                                  (local_only fica de fora por default; manifesto)
 ```
 
 Resposta do `/ask`: `{answer, via, blocked, abstained, ask_id,
-uncertainty, evidence[{page,resource,body,stale}], gaps, as_of,
-trajectory[{dir,picked}]}`.
+identity{ts_ms,iso,module,algorithm,seq}, uncertainty,
+evidence[{page,resource,body,stale}], gaps, as_of,
+trajectory[{dir,picked}]}`. O `ask_id` é um snowflake renderizado
+(módulo=ask, algoritmo=rrf) — decodificável por `kernel.identity.parse`.
+
+HATEOAS (v0.16): `/`, `/health`, `/health/full`, `/status`,
+`/cockpit/dashboard`, `/cockpit/page`, `/cockpit/config*` carregam
+`_links{rel:{href}}` — navegação por relação, não por URL montada.
 
 ## 3. Tabelas
 
 **runtime.db**: `jobs` · `events` · `ledger` · `compile_cache` ·
 `ask_outcomes(verdict∈useful|dead_end|corrected)` ·
 `page_heat(reads,cites,last_seen,first_seen,score)` ·
-`reconcile_log(op∈ADD|UPDATE|SUPERSEDE|NOOP)` · `eval_runs` ·
-`ask_provenance(ask_id,page,stream)` · `stream_weights(stream,weight)`
+`reconcile_log(op∈ADD|UPDATE|SUPERSEDE|NOOP|RECYCLE)` · `eval_runs` ·
+`ask_provenance(ask_id,page,stream)` · `stream_weights(stream,weight)` ·
+`config_history(trace_id, changes json, snapshot json,
+source∈cockpit|cli|baseline|rollback, note)` — ring de 30: o
+`TuneConfig` poda além do limite; a vigente é a linha mais recente
 
 **cold.db** (base fria, v0.12 — NÃO derivado; conteúdo compactado):
 `cold_memories(page, digest, strong_ids, body_z zlib9, meta_json,
@@ -102,7 +119,11 @@ Migrações em `runtime/db.py:_migrate`: `graph_edges.confidence`,
 Eventos da pipeline (SSE): todo `MachinePageUseCase` emite `page.stage`
 (`produce → normalize → reconcile → write → done`, com `id` do job) —
 o Inbox e o painel Processos renderizam o stepper ao vivo; ingestão
-emite `source.ingested`.
+emite `source.ingested`. Tracing (v0.16): cada execução do template
+carrega UM `trace_id` snowflake e cada stage um `span` próprio (spans
+ordenam lexicográfica = temporalmente); eventos de job levam o
+`trace_id` da execução (o `emit` do worker injeta); ajustes de config
+emitem `config.tuned`/`config.rolled_back` com trace.
 
 ## 4. Jobs (REGISTRY em `jobs/__init__.py`)
 
@@ -127,6 +148,26 @@ worker:  {heavy_slots: 1, light_slots: 2, poll_seconds: 1.0}
 
 Helpers: `s.path(nome)` · `s.app_support` · `s.resolve_privacy(rel)` ·
 `s.flag(nome)` · `s.get("a.b", default)` · `s.with_overrides(**kw)`.
+
+Consolidação: `consolidate.{min_shared, min_cluster, pairwise_max=32}` —
+acima de `pairwise_max` fontes pendentes, a clusterização troca pares
+O(n²) por índice invertido (id forte, entidade) + 9 bandas LSH do
+SimHash (seleção adaptativa v0.16; geração de candidatos EXATA).
+
+Configuração de negócio (v0.16): mutações passam por
+`usecases/configure_system.TuneConfig` (validação de tipo/domínio →
+aplica → probe → linha no ring `config_history`); `RollbackConfig`
+reaplica o snapshot da geração anterior. `Settings.tune()` continua
+sendo o mecanismo baixo (mutação + overrides.yaml) — não chame direto
+fora de testes.
+
+Identidade (v0.16, `kernel/identity.py`): snowflake 63 bits =
+41b ms desde 2026-01-01 · 6b módulo (MODULES) · 6b algoritmo
+(ALGORITHMS) · 10b sequência/ms; `render()` = 13 chars Crockford
+base32 com ordem lexicográfica = temporal; `parse()` decodifica;
+`factory(módulo, algoritmo)` compartilha o gerador por processo
+(unicidade entre instâncias); relógio para trás é clampado e estouro
+de sequência avança 1 ms lógico.
 
 ## 6. Tipos OKF recomendados
 
@@ -174,6 +215,9 @@ kernel/, normalize/     PURO: proibido sqlite3, httpx, subprocess, fastapi,
                         sse_starlette, socket, urllib, pathlib
 usecases/               proibido: fastapi, facades, api, jobs
 api/                    proibido: usecases, jobs (só facades)
+okf/ harness/ usecases/ facades/ retrieval/ runtime/
+                        proibido TRANSPORTE (v0.16): fastapi, uvicorn,
+                        sse_starlette, socket, httpx, requests, urllib
 UseCase                 métodos públicos ⊆ {execute}
 MachinePageUseCase      subclasses não sobrescrevem execute
 ```

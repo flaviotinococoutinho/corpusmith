@@ -202,6 +202,18 @@ determinístico entre processos) dá à consolidação um sinal de
 NEAR-DUPLICATA em O(1) por par: quase-cópias convergem mesmo sem nenhuma
 entidade curada em comum (hamming ≤ 8).
 
+**Bandas LSH exatas (v0.16)** — a versão de Indyk-Motwani do LSH usa
+bandas probabilísticas; aqui o mesmo truque vira GARANTIA pela casa de
+pombos: fatiando os 64 bits em 9 bandas, um par com hamming ≤ 8 tem no
+máximo 8 bandas "sujas" — logo ao menos uma banda idêntica, e indexar
+por (índice, valor) de banda recupera todo par candidato sem tocar os
+n² (`kernel/sketch.py::bands`, `ConsolidateInbox._candidate_pairs`).
+Junto com o índice invertido por id forte/entidade, a geração de
+candidatos cobre EXATAMENTE o predicado `converges_with`: zero falso
+negativo, falsos positivos re-verificados (propriedade testada com
+pares aleatórios em `test_v16.py`). A troca pares↔índice acontece em
+`consolidate.pairwise_max` (seleção adaptativa de algoritmo).
+
 ### 3.4d Sugestão de links (A-mem, determinístico)
 **Xu et al., "A-mem: Agentic Memory for LLM Agents" (arXiv:2502.12110)**:
 memória nova gera links Zettelkasten para vizinhas e evolui o contexto

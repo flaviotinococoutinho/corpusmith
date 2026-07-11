@@ -28,6 +28,7 @@ def _slug(name: str) -> str:
 
 class _CommunitySummaryPage(MachinePageUseCase):
     LOG_KIND = "Update"
+    MODULE = "communities"
 
     def __init__(self, settings: Settings, label: str, summary: str,
                  members: list[tuple[str, str]], fingerprint: str):

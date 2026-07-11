@@ -115,6 +115,10 @@ export class DaemonClient {
     this.post<any>("/cockpit/tags", { from, to });
   configGet = () => this.get<any>("/cockpit/config");
   configSet = (body: any) => this.post<any>("/cockpit/config", body);
+  // ------------------------------------------------ v0.16 (NFR)
+  configHistory = () => this.get<any>("/cockpit/config/history");
+  configRollback = () => this.post<any>("/cockpit/config/rollback", {});
+  healthFull = () => this.get<any>("/health/full");
   behavior = () => this.get<any>("/cockpit/behavior");
   resetStreams = () => this.post<any>("/cockpit/behavior/reset-streams", {});
   exportUrl = (params: Record<string, string>) => {

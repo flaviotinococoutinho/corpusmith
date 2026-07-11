@@ -21,18 +21,25 @@ export function CurationPanel() {
   const [notice, setNotice] = useState("");
   const [renaming, setRenaming] = useState<{ from: string; to: string } | null>(null);
   const [exp, setExp] = useState({ format: "zip", include_local: false, tag: "" });
+  const [hist, setHist] = useState<any[]>([]);
 
   const load = () => {
     client.tags().then(r => setTags(r.tags));
     client.dictionary().then(setDict);
     client.configGet().then(setConfig);
     client.behavior().then(setBehavior);
+    client.configHistory().then(r => setHist(r.history)).catch(() => {});
   };
   useEffect(() => { client.connect().then(load); }, []);
 
   const tune = (section: string, key: string, value: any) =>
     client.configSet({ [section]: { [key]: value } })
-      .then(c => { setConfig(c); setNotice(`⚙️ ${section}.${key} = ${value}`); });
+      .then(c => { setConfig(c); setNotice(`⚙️ ${section}.${key} = ${value} `
+        + `(geração #${c.history_id} · ${c.trace_id})`); })
+      .catch(() => setNotice(`🚫 ajuste recusado pelo guard: ${
+        section}.${key} = ${value}`))
+      .then(() => client.configHistory()
+        .then(r => setHist(r.history)).catch(() => {}));
 
   if (!config) return <div className="p-6">Carregando curadoria…</div>;
   return (
@@ -109,6 +116,37 @@ export function CurationPanel() {
                      onChange={e => tune(sec, key, Number(e.target.value))} />
               <code className="text-neutral-400">{sec}.{key}</code>
             </label>))}
+        </div>
+      </Card>
+
+      <Card title="🕘 Linhagem da configuração (ring de 30)">
+        <div className="text-xs space-y-2">
+          <p className="text-neutral-400">
+            Cada ajuste é uma geração com identidade própria; problema na
+            vigente? o sistema volta para a anterior.</p>
+          <button className="border rounded px-2 py-1"
+                  disabled={hist.length < 2}
+                  onClick={() => client.configRollback()
+                    .then(r => { setNotice(`↩️ voltou à geração #${
+                      r.restored}`); load(); })
+                    .catch(() => setNotice("🚫 sem geração anterior"))}>
+            ↩️ voltar à configuração anterior</button>
+          <div className="max-h-40 overflow-auto space-y-1">
+            {hist.map((h, i) => (
+              <div key={h.id} className="font-mono truncate"
+                   title={JSON.stringify(h.changes)}>
+                {i === 0 ? "● " : "○ "}#{h.id}{" "}
+                {{ cockpit: "⚙️", rollback: "↩️", baseline: "🌱",
+                   cli: "⌨️" }[h.source as string] ?? "⚙️"}{" "}
+                {Object.entries(h.changes).map(([sec, kv]: any) =>
+                  Object.entries(kv).map(([k, v]) =>
+                    `${sec}.${k}=${v}`).join(" ")).join(" ") ||
+                  h.note || "—"}
+                <span className="text-neutral-400"> · {h.trace_id}</span>
+              </div>))}
+            {!hist.length && <span className="text-neutral-400">
+              nenhum ajuste ainda — a linhagem nasce no primeiro</span>}
+          </div>
         </div>
       </Card>
 

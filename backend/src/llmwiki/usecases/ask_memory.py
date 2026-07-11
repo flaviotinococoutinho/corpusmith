@@ -13,10 +13,10 @@ Melhorias de coordenação sobre o fluxo anterior:
 from __future__ import annotations
 import re
 import time
-import uuid
 from collections import defaultdict
 from .base import UseCase
 from ..kernel.graphwalk import personalized_pagerank
+from ..kernel.identity import factory as id_factory, parse as parse_id
 from ..kernel.information import surprisal
 from ..models.router import ModelRouter, ModelUnavailable
 from ..normalize import analyze
@@ -74,7 +74,9 @@ class AskMemory(UseCase):
                 "evidence": [], "as_of": as_of, "trajectory": trajectory}
 
     def execute(self) -> dict:
-        ask_id = uuid.uuid4().hex[:12]
+        # ask_id É o trace id (v0.16): snowflake com módulo=ask e
+        # algoritmo=rrf — quem tiver só o id recupera quando/quem/como
+        ask_id = id_factory("ask", "rrf").next_rendered()
         kb = self._settings.path("knowledge")
         gazetteer = load_gazetteer(BundleReader(kb / "bundle"))
         idx = connect(self._settings.app_support / "index.db")
@@ -124,6 +126,7 @@ class AskMemory(UseCase):
         answer, via, blocked = self._compose(evidence)
         return {"answer": answer, "via": via, "blocked": blocked,
                 "abstained": False, "ask_id": ask_id,
+                "identity": parse_id(ask_id),
                 "uncertainty": fused.uncertainty,
                 "evidence": evidence, "gaps": [],
                 "as_of": as_of, "trajectory": trajectory}

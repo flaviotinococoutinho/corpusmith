@@ -57,8 +57,11 @@ class Settings(BaseModel):
                               "max_recall_probability": 0.05,
                               "min_idle_days": 90,
                               "auto_recycle": False}
-    # variações do método de captura/organização (Fase 5, editável no app)
-    consolidate: dict[str, Any] = {"min_shared": 2, "min_cluster": 2}
+    # variações do método de captura/organização (Fase 5, editável no app);
+    # pairwise_max: acima disso a clusterização troca pares O(n²) por
+    # índice invertido + bandas LSH (seleção adaptativa, v0.16)
+    consolidate: dict[str, Any] = {"min_shared": 2, "min_cluster": 2,
+                                   "pairwise_max": 32}
 
     # seções que o Cockpit pode editar a quente (POST /cockpit/config)
     TUNABLE_SECTIONS: ClassVar[tuple[str, ...]] = (

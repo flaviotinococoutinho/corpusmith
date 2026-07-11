@@ -90,6 +90,22 @@ def test_every_usecase_has_single_public_method():
                 f"{cls.__qualname__}: métodos públicos além de execute: {public}"
 
 
+def test_domain_is_free_of_framework_and_transport():
+    """v0.16: os DOMÍNIOS (okf, harness, usecases, facades, retrieval) e o
+    runtime não conhecem framework HTTP nem transporte — falar com o mundo
+    é privilégio de api/, cli, daemon e models/ (o adapter de LLM). Assim a
+    regra 'domínio não depende de framework, I/O de rede ou transporte'
+    é asserção executável, não convenção."""
+    transport = {"fastapi", "uvicorn", "sse_starlette", "socket",
+                 "httpx", "requests", "urllib"}
+    for package in ("okf", "harness", "usecases", "facades",
+                    "retrieval", "runtime"):
+        for module in (SRC / package).rglob("*.py"):
+            leaked = _absolute_imports(module) & transport
+            assert not leaked, \
+                f"{module}: domínio importou transporte {leaked}"
+
+
 def test_machine_page_template_is_closed_for_modification():
     """Template Method: nenhuma subclasse pode REDEFINIR o esqueleto
     execute() — só preencher hooks (OCP/LSP)."""

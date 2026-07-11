@@ -42,6 +42,10 @@ class EventBus:
             if q in self._subscribers:
                 self._subscribers.remove(q)
 
+    def subscriber_count(self) -> int:
+        with self._lock:
+            return len(self._subscribers)
+
     def tail(self, limit: int = 50) -> list[dict]:
         rows = self.db.execute(
             "SELECT seq,channel,type,data,created_at FROM events "
