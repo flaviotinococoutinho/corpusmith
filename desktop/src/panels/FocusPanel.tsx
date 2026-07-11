@@ -122,6 +122,13 @@ export function FocusPanel() {
                   <span className="text-neutral-400"> · {g.root}</span></span>
                 <button className="border rounded px-1"
                         onClick={() => project(g.id)}>🗺 projetar</button>
+                <button className="border rounded px-1" title="profundidade
+declarada × validada por prática"
+                  onClick={() => client.goalProgress(g.id).then(p =>
+                    setNotice("🎓 " + Object.entries(p.depth).map(
+                      ([d, v]: any) => `${d}: ${v.measurable
+                        ? `${v.validated}/${v.desired}`
+                        : "sem instrumento"}`).join(" · ")))}>🎓</button>
               </div>))}
           </div>
         </div>
@@ -215,7 +222,10 @@ export function FocusPanel() {
               {EXERCISES.map(x => (
                 <button key={x} className={`border rounded px-1 ${
                     attempt.exercise === x ? "bg-neutral-200" : ""}`}
-                  onClick={() => setAttempt({ ...attempt, exercise: x })}>
+                  onClick={() => { setAttempt({ ...attempt, exercise: x });
+                    client.exercisePrompt(x, attempt.item)
+                      .then(p => setNotice("❔ " + p.prompt))
+                      .catch(() => {}); }}>
                   {x}</button>))}
             </div>
             <textarea className="border rounded p-1 w-full" rows={3}
@@ -240,6 +250,20 @@ export function FocusPanel() {
                       {{ success: "✅ acertei", partial: "〰 parcial",
                          failure: "❌ errei" }[r]}</button>))}
                 </div>}
+            <div className="flex gap-1 flex-wrap pt-1 border-t"
+                 title="experiência metacognitiva declarada (Efklides) —
+evento revisável, nunca diagnóstico">
+              {[["familiarity", "🙂 familiar"], ["difficulty", "🧗 difícil"],
+                ["surprise", "😮 surpresa"], ["conflict", "⚔ conflito"],
+                ["familiar_cannot_explain", "🤐 sei mas não explico"]]
+                .map(([t, label]) => (
+                <button key={t} className="border rounded px-1"
+                  onClick={() => client.reportExperience({
+                    session_id: session.id, item: attempt.item,
+                    type: t, intensity: 4 })
+                    .then(() => setNotice(`🪞 experiência: ${label}`))}>
+                  {label}</button>))}
+            </div>
             <div className="flex gap-1 flex-wrap pt-1 border-t">
               {["useful", "too_shallow", "too_deep", "confusing",
                 "missing_example"].map(v => (

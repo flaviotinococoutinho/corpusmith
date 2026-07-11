@@ -129,3 +129,37 @@ class CognitionFacade:
 
     def complete_review(self, review_id: int, notify=None) -> dict:
         return CompleteReview(self._settings, review_id, notify).execute()
+
+    # -------------------------------------------------------------- v0.20
+    def goal_progress(self, goal_id: str) -> dict:
+        from ..usecases.cognitive_journey import goal_progress
+        return goal_progress(self._settings, goal_id)
+
+    def report_experience(self, body: dict, notify=None) -> dict:
+        from ..usecases.cognitive_journey import ReportMetacognitiveExperience
+        return ReportMetacognitiveExperience(self._settings, body,
+                                             notify).execute()
+
+    def register_analogy(self, body: dict, notify=None) -> dict:
+        from ..usecases.cognitive_journey import RegisterAnalogy
+        return RegisterAnalogy(self._settings, body, notify).execute()
+
+    def analogies(self) -> list[dict]:
+        from ..usecases.cognitive_journey import list_analogies
+        return list_analogies(self._settings)
+
+    def promote_analogy(self, analogy_id: str, notify=None) -> dict:
+        from ..usecases.cognitive_journey import PromoteAnalogy
+        return PromoteAnalogy(self._settings, analogy_id, notify).execute()
+
+    def curation_projection(self, limit: int = 20) -> dict:
+        from ..usecases.cognitive_journey import curation_projection
+        return curation_projection(self._settings, limit)
+
+    def cognitive_metrics(self) -> dict:
+        from ..usecases.cognitive_journey import cognitive_metrics
+        return cognitive_metrics(self._settings)
+
+    def exercise_prompt(self, exercise: str, title: str) -> dict:
+        from ..usecases.cognitive_journey import prompt_for
+        return prompt_for(exercise, title)

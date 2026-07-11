@@ -105,6 +105,17 @@ POST /cognitive/sessions/{id}/suspend    ({reason?, next_step?} → ResumeCapsul
 POST /cognitive/sessions/{id}/resume     (409 se não-suspended)
 POST /cognitive/sessions/{id}/complete
 GET  /cognitive/reviews/due      · POST /cognitive/reviews/{id}/complete
+GET  /cognitive/goals/{id}/progress  (v0.20: profundidade declarada×validada
+                                  por dimensão; sem instrumento ⇒ measurable=false)
+POST /cognitive/experiences      ({type∈11 tipos Efklides, intensity 1..5,
+                                  session_id?, item?, note?})
+POST/GET /cognitive/analogies    (contrato exige mappings E breaks; 400 sem ruptura)
+POST /cognitive/analogies/{id}/promote  (gate humano → PromoteToMemory)
+GET  /cognitive/curation         (CurationProjection: stale/contested/questions
+                                  sob a ótica dos objetivos ativos; leitura pura)
+GET  /cognitive/metrics          (Brier, delayed recall, apply/transfer, recorrência,
+                                  review completion, latência de retomada)
+GET  /cognitive/prompt           ?exercise=&title= (template determinístico)
 GET  /cockpit/pipelines          (v0.17: specs + last_run; seed builtin no mount)
 POST /cockpit/pipelines          {name, description?, stages:[{job,payload?,on_error?}]}
                                  (400 = validação estrutural recusou)
@@ -158,7 +169,9 @@ result, …)` · `accessibility(item PK, level∈escada de 7, streak,
 attempts)` — NUNCA é confiança epistemológica ·
 `review_schedules(item, due_at, interval_days, algorithm=spaced-v1,
 reason, status∈due|done|cancelled)` · `cognitive_feedback` (evento
-imutável, só INSERT)
+imutável, só INSERT) · `metacog_experiences(type, intensity 1..5,
+status∈declared|revised|retracted)` · `analogies(id, analogy json,
+status∈draft|kept|promoted|discarded, feedback_score)` (v0.20)
 
 **cold.db** (base fria, v0.12 — NÃO derivado; conteúdo compactado):
 `cold_memories(page, digest, strong_ids, body_z zlib9, meta_json,

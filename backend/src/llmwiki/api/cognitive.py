@@ -167,6 +167,64 @@ def mount_cognitive(app: FastAPI, s: Settings, bus, auth) -> None:
         return {**session, "_links": links(
             goals="/cognitive/goals", reviews="/cognitive/reviews/due")}
 
+    # ------------------------------------------------------------ v0.20
+    @app.get("/cognitive/goals/{goal_id}/progress",
+             dependencies=[Depends(auth)])
+    def goal_progress(goal_id: str):
+        """Profundidade declarada × validada por dimensão (só prática
+        bem-sucedida conta; dimensão sem instrumento diz que não mede)."""
+        try:
+            return {**cognition.goal_progress(goal_id),
+                    "_links": _goal_links(goal_id)}
+        except KeyError:
+            raise HTTPException(404)
+
+    @app.post("/cognitive/experiences", dependencies=[Depends(auth)])
+    def report_experience(body: dict):
+        try:
+            return cognition.report_experience(body, notify=emit)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+
+    @app.post("/cognitive/analogies", dependencies=[Depends(auth)])
+    def register_analogy(body: dict):
+        """Recusa analogia sem pontos de ruptura (nunca equivalência)."""
+        try:
+            return cognition.register_analogy(body, notify=emit)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+
+    @app.get("/cognitive/analogies", dependencies=[Depends(auth)])
+    def analogies():
+        return {"analogies": cognition.analogies()}
+
+    @app.post("/cognitive/analogies/{analogy_id}/promote",
+              dependencies=[Depends(auth)])
+    def promote_analogy(analogy_id: str):
+        """Gate humano: analogia → memória canônica via PromoteToMemory."""
+        try:
+            return cognition.promote_analogy(analogy_id, notify=emit)
+        except KeyError:
+            raise HTTPException(404)
+
+    @app.get("/cognitive/curation", dependencies=[Depends(auth)])
+    def curation(limit: int = 20):
+        return {**cognition.curation_projection(limit),
+                "_links": links(self="/cognitive/curation",
+                                goals="/cognitive/goals")}
+
+    @app.get("/cognitive/metrics", dependencies=[Depends(auth)])
+    def metrics():
+        return {**cognition.cognitive_metrics(),
+                "_links": links(self="/cognitive/metrics")}
+
+    @app.get("/cognitive/prompt", dependencies=[Depends(auth)])
+    def prompt(exercise: str, title: str):
+        try:
+            return cognition.exercise_prompt(exercise, title)
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+
     @app.get("/cognitive/reviews/due", dependencies=[Depends(auth)])
     def reviews_due(limit: int = 30):
         return {"reviews": cognition.due_reviews(limit),

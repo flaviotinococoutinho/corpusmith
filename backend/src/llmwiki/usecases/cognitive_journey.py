@@ -469,3 +469,242 @@ class CompleteReview(UseCase):
             raise KeyError(f"revisão {self._review_id} não está devida")
         self._notify("review.completed", {"review_id": self._review_id})
         return {"review_id": self._review_id, "status": "done"}
+
+
+# ============================== v0.20: profundidade · experiências ·
+# analogias · projeção de curadoria · métricas · prompts
+from ..cognitive.progress import (EXPERIENCE_TYPES, depth_progress,
+                                  exercise_prompt, new_analogy)  # noqa: E402
+from ..kernel.calibration import brier_score  # noqa: E402
+
+
+def goal_progress(settings: Settings, goal_id: str) -> dict:
+    """Profundidade declarada × validada por dimensão — só de tentativas
+    BEM-SUCEDIDAS em itens que pertenceram a projeções deste objetivo."""
+    goal = get_goal(settings, goal_id)
+    cog = _cog(settings)
+    pages = set()
+    for r in cog.execute("SELECT working_set FROM cognitive_projections "
+                         "WHERE goal_id=?", (goal_id,)):
+        ws = json.loads(r["working_set"])
+        pages |= {i["page"] for i in ws["items"]}
+    rows = cog.execute(
+        "SELECT item, exercise FROM retrieval_attempts WHERE result='success'"
+    ).fetchall()
+    level_by_item = {r["item"]: r["level"] for r in
+                     cog.execute("SELECT item, level FROM accessibility")}
+    cog.close()
+    evidence = [{"exercise": r["exercise"],
+                 "level": level_by_item.get(r["item"], "none")}
+                for r in rows if r["item"] in pages]
+    return {"goal_id": goal_id, "title": goal["title"],
+            "depth": depth_progress(goal["depth_desired"], evidence),
+            "evidence_n": len(evidence)}
+
+
+def curation_projection(settings: Settings, limit: int = 20) -> dict:
+    """CurationProjection (§5.11): prioriza o trabalho de curadoria SOB
+    a ótica cognitiva (alinhamento com objetivos ativos) — leitura pura,
+    zero escrita no canônico."""
+    cog = _cog(settings)
+    focus_pages: set = set()
+    for r in cog.execute("SELECT goal FROM focus_goals WHERE status='active'"):
+        goal = json.loads(r["goal"])
+        focus_pages.add(goal["root"])
+        focus_pages |= set(goal.get("pinned", []))
+    cog.close()
+    idx = connect(settings.app_support / "index.db")
+    contested = {r["page"] for r in idx.execute(
+        "SELECT page FROM page_overlay WHERE status='contested'")}
+    idx.close()
+    items = []
+    reader = BundleReader(settings.path("knowledge") / "bundle")
+    for doc in reader.iter_concepts():
+        meta = doc.meta.model_dump(exclude_none=True)
+        signals = []
+        if meta.get("stale_as_of"):
+            signals.append(("stale", 0.6))
+        if doc.rel_path in contested:
+            signals.append(("contested", 0.8))
+        if doc.meta.type == "question":
+            signals.append(("question", 0.7))
+        if not signals:
+            continue
+        aligned = doc.rel_path in focus_pages
+        score = max(w for _, w in signals) + (0.3 if aligned else 0.0)
+        items.append({"page": doc.rel_path,
+                      "signals": [s for s, _ in signals],
+                      "aligned_with_focus": aligned,
+                      "score": round(score, 2),
+                      "reason": " + ".join(s for s, _ in signals)
+                      + (" · alinhada a um objetivo ativo" if aligned
+                         else "")})
+    items.sort(key=lambda i: (-i["score"], i["page"]))
+    return {"items": items[:limit], "considered": len(items)}
+
+
+def cognitive_metrics(settings: Settings) -> dict:
+    """Métricas §17.2/17.3 — computadas dos dados, nomeadas, sem rótulo."""
+    cog = _cog(settings)
+    attempts = [dict(r) for r in cog.execute(
+        "SELECT item, exercise, confidence_before, result, created_at "
+        "FROM retrieval_attempts ORDER BY created_at")]
+    reviews = cog.execute("SELECT status, COUNT(*) c FROM review_schedules "
+                          "GROUP BY status").fetchall()
+    sessions = [dict(r) for r in cog.execute(
+        "SELECT session FROM cognitive_sessions")]
+    cog.close()
+    pairs = [(a["confidence_before"], 1 if a["result"] == "success" else 0)
+             for a in attempts]
+    seen: dict[str, float] = {}
+    delayed = []
+    for a in attempts:                       # recall com ≥1 dia de intervalo
+        if a["item"] in seen and a["created_at"] - seen[a["item"]] >= 86400:
+            delayed.append(1 if a["result"] == "success" else 0)
+        seen[a["item"]] = a["created_at"]
+    apply_like = [a for a in attempts
+                  if a["exercise"] in ("apply", "transfer")]
+    fails: dict[str, int] = {}
+    for a in attempts:
+        if a["result"] == "failure":
+            fails[a["item"]] = fails.get(a["item"], 0) + 1
+    review_counts = {r["status"]: r["c"] for r in reviews}
+    latencies = []
+    for s in sessions:
+        data = json.loads(s["session"])
+        if data.get("resumed_at") and data.get("suspended_at"):
+            latencies.append(data["resumed_at"] - data["suspended_at"])
+    def _rate(xs):
+        return round(sum(xs) / len(xs), 3) if xs else None
+    return {
+        "attempts": len(attempts),
+        "brier": brier_score(pairs),
+        "delayed_recall_rate": _rate(delayed),
+        "application_success_rate": _rate(
+            [1 if a["result"] == "success" else 0 for a in apply_like]),
+        "error_recurrence_items": sorted(
+            i for i, n in fails.items() if n >= 2),
+        "review_completion": {
+            "done": review_counts.get("done", 0),
+            "due": review_counts.get("due", 0),
+            "cancelled": review_counts.get("cancelled", 0)},
+        "resumption_latency_s": _rate(latencies),
+        "sessions": {"total": len(sessions)},
+    }
+
+
+class ReportMetacognitiveExperience(UseCase):
+    """Experiência DECLARADA (Efklides): evento revisável, não diagnóstico."""
+
+    def __init__(self, settings: Settings, body: dict, notify=None):
+        self._settings = settings
+        self._body = body
+        self._notify = notify or (lambda *a, **k: None)
+
+    def execute(self) -> dict:
+        kind = self._body.get("type")
+        if kind not in EXPERIENCE_TYPES:
+            raise ValueError(f"type ∈ {EXPERIENCE_TYPES}")
+        intensity = int(self._body.get("intensity", 3))
+        if not 1 <= intensity <= 5:
+            raise ValueError("intensity: escala 1..5")
+        cog = _cog(self._settings)
+        cur = cog.execute(
+            "INSERT INTO metacog_experiences(session_id, item, type, "
+            "intensity, note) VALUES (?,?,?,?,?)",
+            (self._body.get("session_id"), self._body.get("item"),
+             kind, intensity, self._body.get("note")))
+        cog.commit()
+        experience_id = cur.lastrowid
+        cog.close()
+        self._notify("metacognitive.experience.reported",
+                     {"type": kind, "intensity": intensity})
+        return {"id": experience_id, "type": kind, "intensity": intensity}
+
+
+class RegisterAnalogy(UseCase):
+    """Analogia estruturada — recusa sem pontos de ruptura declarados."""
+
+    def __init__(self, settings: Settings, body: dict, notify=None):
+        self._settings = settings
+        self._body = body
+        self._notify = notify or (lambda *a, **k: None)
+
+    def execute(self) -> dict:
+        analogy = new_analogy(
+            analogy_id=_FOCUS_IDS.next_rendered(),
+            source=self._body.get("source", ""),
+            target=self._body.get("target", ""),
+            mappings=self._body.get("mappings", []),
+            preserved=self._body.get("preserved"),
+            breaks=self._body.get("breaks"),
+            didactic_goal=self._body.get("didactic_goal", ""),
+            origin=self._body.get("origin", "human"))
+        cog = _cog(self._settings)
+        cog.execute("INSERT INTO analogies(id, analogy) VALUES (?,?)",
+                    (analogy["id"], json.dumps(analogy)))
+        cog.commit()
+        cog.close()
+        self._notify("analogy.registered", {"id": analogy["id"]})
+        return analogy
+
+
+def list_analogies(settings: Settings) -> list[dict]:
+    cog = _cog(settings)
+    rows = cog.execute("SELECT analogy, status, feedback_score FROM "
+                       "analogies ORDER BY created_at DESC LIMIT 50")
+    out = [{**json.loads(r["analogy"]), "status": r["status"],
+            "feedback_score": r["feedback_score"]} for r in rows]
+    cog.close()
+    return out
+
+
+class PromoteAnalogy(UseCase):
+    """Gate humano: a analogia SÓ vira memória canônica por gesto
+    explícito — via o MESMO PromoteToMemory de sempre (sanduíche e
+    lint inclusos), com os limites SEMPRE no corpo."""
+
+    def __init__(self, settings: Settings, analogy_id: str, notify=None):
+        self._settings = settings
+        self._analogy_id = analogy_id
+        self._notify = notify or (lambda *a, **k: None)
+
+    def execute(self) -> dict:
+        cog = _cog(self._settings)
+        row = cog.execute("SELECT analogy FROM analogies WHERE id=? AND "
+                          "status IN ('draft','kept')",
+                          (self._analogy_id,)).fetchone()
+        cog.close()
+        if not row:
+            raise KeyError(f"analogia {self._analogy_id}")
+        a = json.loads(row["analogy"])
+        body = (f"Analogia entre **{a['source']}** e **{a['target']}**"
+                f" ({a['didactic_goal'] or 'didática'}).\n\n"
+                "## Correspondências\n"
+                + "\n".join(f"- {m}" for m in a["mappings"])
+                + ("\n\n## Relações preservadas\n"
+                   + "\n".join(f"- {p}" for p in a["preserved"])
+                   if a["preserved"] else "")
+                + "\n\n## Onde a analogia QUEBRA\n"
+                + "\n".join(f"- {b}" for b in a["breaks"])
+                + "\n\nNão é equivalência exata.")
+        from .promote_memory import PromoteToMemory
+        result = PromoteToMemory(
+            self._settings, kind="semantic",
+            title=f"Analogia: {a['source']} ↔ {a['target']}",
+            content=body, source="cognitive:analogy",
+            privacy="local_only",
+            tags=["analogia"]).execute()
+        cog = _cog(self._settings)
+        cog.execute("UPDATE analogies SET status='promoted', "
+                    "updated_at=unixepoch('subsec') WHERE id=?",
+                    (self._analogy_id,))
+        cog.commit()
+        cog.close()
+        self._notify("analogy.promoted", {"id": self._analogy_id,
+                                          "page": result["pages"][0]})
+        return {"analogy_id": self._analogy_id, "page": result["pages"][0]}
+
+
+def prompt_for(exercise: str, title: str) -> dict:
+    return {"exercise": exercise, "prompt": exercise_prompt(exercise, title)}

@@ -1,4 +1,4 @@
-# LLM Wiki — v0.19 (Cognitive Experience Domain)
+# LLM Wiki — v0.20 (Experiência Cognitiva Completa)
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -120,6 +120,13 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
 - **Propriedades testadas**: monotonicidade do foco, orçamento nunca
   cresce ao encolher, gate de privacidade vence prioridade máxima,
   superseded nunca entra, cápsula preserva contexto, canônico intacto.
+- **v0.20 (ADR-30)**: profundidade validada por dimensão (dimensão sem
+  instrumento diz que não mede); experiências metacognitivas declaradas
+  (11 tipos Efklides, eventos revisáveis); analogias com contrato que
+  RECUSA equivalência exata (breaks obrigatórios) e promoção só por
+  gate humano; CurationProjection; métricas §17 (Brier, delayed recall,
+  apply/transfer, recorrência, latência de retomada); prompts de
+  exercício determinísticos.
 
 ## Coordenação dos dados — fundamentos (kernel/)
 
@@ -200,7 +207,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 193 testes de contrato/arquitetura/golden bundles
+just test             # 198 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

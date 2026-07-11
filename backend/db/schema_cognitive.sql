@@ -63,6 +63,28 @@ CREATE TABLE IF NOT EXISTS review_schedules(
   created_at REAL DEFAULT (unixepoch('subsec')));
 CREATE INDEX IF NOT EXISTS reviews_due ON review_schedules(status, due_at);
 
+-- experiências metacognitivas DECLARADAS (v0.20, Efklides): eventos
+-- revisáveis (status), nunca diagnósticos
+CREATE TABLE IF NOT EXISTS metacog_experiences(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT, item TEXT,
+  type TEXT NOT NULL, intensity INTEGER CHECK(intensity BETWEEN 1 AND 5),
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'declared'
+    CHECK(status IN ('declared','revised','retracted')),
+  created_at REAL DEFAULT (unixepoch('subsec')));
+
+-- analogias (v0.20, §10): correspondências + PONTOS DE RUPTURA sempre
+-- juntos; promoção ao canônico só por gesto humano (gate)
+CREATE TABLE IF NOT EXISTS analogies(
+  id TEXT PRIMARY KEY,
+  analogy TEXT NOT NULL,       -- json (new_analogy)
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK(status IN ('draft','kept','promoted','discarded')),
+  feedback_score INTEGER NOT NULL DEFAULT 0,
+  created_at REAL DEFAULT (unixepoch('subsec')),
+  updated_at REAL DEFAULT (unixepoch('subsec')));
+
 -- feedback: EVENTO imutável (só INSERT; nenhum UPDATE no código)
 CREATE TABLE IF NOT EXISTS cognitive_feedback(
   id INTEGER PRIMARY KEY AUTOINCREMENT,

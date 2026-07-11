@@ -149,6 +149,15 @@ export class DaemonClient {
   completeSession = (sid: string) =>
     this.post<any>(`/cognitive/sessions/${sid}/complete`, {});
   reviewsDue = () => this.get<any>("/cognitive/reviews/due");
+  goalProgress = (id: string) =>
+    this.get<any>(`/cognitive/goals/${id}/progress`);
+  reportExperience = (body: any) =>
+    this.post<any>("/cognitive/experiences", body);
+  exercisePrompt = (exercise: string, title: string) =>
+    this.get<any>(`/cognitive/prompt?exercise=${exercise}&title=${
+      encodeURIComponent(title)}`);
+  cognitiveMetrics = () => this.get<any>("/cognitive/metrics");
+  curationProjection = () => this.get<any>("/cognitive/curation");
   completeReview = (id: number) =>
     this.post<any>(`/cognitive/reviews/${id}/complete`, {});
   // ------------------------------------------------ v0.17 (pipelines)

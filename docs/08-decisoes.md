@@ -334,3 +334,30 @@ política de ontem. Ajustes de coeficiente pelo usuário passam pela
 validação estrutural (chave desconhecida/valor negativo ⇒ 400, nada
 muda). **Porta**: guardar políticas nomeadas em tabela própria com
 ring de gerações quando houver mais de um perfil de uso real.
+
+### ADR-30 — Fechamento das portas da v0.19 (v0.20)
+**Decisão** (quatro portas fechadas + uma nova entidade):
+1. *Profundidade validada por dimensão* (porta do ADR-20): exercício →
+   dimensão (mapa 1:1 honesto em `cognitive/progress.py`); nível
+   validado = maior nível bem-sucedido; dimensões SEM instrumento
+   (mathematical, historical) reportam `measurable=false` — nunca um
+   número inventado. `GET /cognitive/goals/{id}/progress`.
+2. *Experiências metacognitivas declaradas* (Efklides, porta do
+   ADR-28): 11 tipos fechados (familiarity … formalism_no_intuition),
+   intensidade 1..5, eventos revisáveis (declared|revised|retracted),
+   chips na sessão do painel Foco.
+3. *Analogias como entidade* (§10): contrato `new_analogy` RECUSA
+   analogia sem pontos de ruptura declarados; vive em cognitive.db
+   como draft/kept; promoção ao canônico SÓ por gesto humano via o
+   PromoteToMemory de sempre (corpo carrega "Onde a analogia QUEBRA").
+4. *CurationProjection* (§5.11): `GET /cognitive/curation` prioriza
+   stale/contested/questions sob a ótica dos objetivos ativos —
+   leitura pura, canônico intacto (testado).
+5. *Métricas §17*: `GET /cognitive/metrics` — Brier das tentativas,
+   delayed recall (≥1 dia), sucesso em apply/transfer, recorrência de
+   erro, conclusão de revisões, latência de retomada. Computadas dos
+   dados, nomeadas, sem rótulo psicológico.
+**Também**: prompts de exercício DETERMINÍSTICOS (template por tipo —
+LLM nenhum; a pergunta vem do template, a resposta da pessoa).
+**Rejeitado de novo**: LLM avaliando respostas (continua na porta do
+ADR-26); analogia gerada por LLM entra apenas como origin=llm marcada.
