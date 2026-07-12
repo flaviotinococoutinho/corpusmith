@@ -129,6 +129,27 @@ def cmd_daemon(s: Settings, args) -> int:
     return 0
 
 
+def cmd_seed(s: Settings, args) -> int:
+    """Migração de dados PRÉ-DEFINIDOS (v1.0): referência do mundo
+    (db/seeds/reference_seed.json ou --file) + pipelines builtin.
+    Idempotente — nunca sobrescreve dado do usuário."""
+    import json as _json
+    from pathlib import Path as _P
+    from .usecases.manage_reference import ImportReferenceData, seed_reference
+    from .usecases.run_pipeline import seed_default_pipelines
+    seed_reference(s)
+    seed_default_pipelines(s)
+    path = _P(args.file) if getattr(args, "file", None) else \
+        _P(__file__).resolve().parent.parent.parent / "db" / "seeds" / \
+        "reference_seed.json"
+    counts = {}
+    if path.is_file():
+        counts = ImportReferenceData(
+            s, _json.loads(path.read_text()), replace=False).execute()
+    print(f"seed ok: {counts or 'builtin apenas'} (+pipelines)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="llmwiki")
     ap.add_argument("--config", help="caminho de config YAML alternativo")
@@ -142,6 +163,9 @@ def main(argv: list[str] | None = None) -> int:
     okf_sub.add_parser("index").set_defaults(fn=cmd_index)
     okf_sub.add_parser("bootstrap").set_defaults(fn=cmd_bootstrap)
 
+    seed = sub.add_parser("seed", help="dados pré-definidos (idempotente)")
+    seed.add_argument("--file", default=None)
+    seed.set_defaults(fn=cmd_seed)
     sub.add_parser("status").set_defaults(fn=cmd_status)
     sub.add_parser("jobs").set_defaults(fn=cmd_jobs)
     sub.add_parser("daemon").set_defaults(fn=cmd_daemon)

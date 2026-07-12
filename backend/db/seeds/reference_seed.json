@@ -1,0 +1,32 @@
+{
+  "terms": [
+    {"canonical": "Grace Hopper", "kind": "person", "aliases": ["hopper", "grace m. hopper"]},
+    {"canonical": "Alan Kay", "kind": "person", "aliases": ["kay"]},
+    {"canonical": "Barbara Liskov", "kind": "person", "aliases": ["liskov"]},
+    {"canonical": "Leslie Lamport", "kind": "person", "aliases": ["lamport"]},
+    {"canonical": "John von Neumann", "kind": "person", "aliases": ["von neumann"]},
+    {"canonical": "Ada Lovelace", "kind": "person", "aliases": ["lovelace"]},
+    {"canonical": "Tim Berners-Lee", "kind": "person", "aliases": ["berners-lee"]}
+  ],
+  "quotations": [
+    {"quote": "The most dangerous phrase in the language is, 'We've always done it this way.'",
+     "author": "Grace Hopper", "source": "entrevista, Information Week (1987)"},
+    {"quote": "The best way to predict the future is to invent it.",
+     "author": "Alan Kay", "source": "reunião Xerox PARC (1971)"},
+    {"quote": "A distributed system is one in which the failure of a computer you didn't even know existed can render your own computer unusable.",
+     "author": "Leslie Lamport", "source": "e-mail DEC SRC (1987)"}
+  ],
+  "facts": [
+    {"kind": "law", "name": "Lei de Amdahl", "statement": "S(n) = 1 / ((1−p) + p/n)", "domain": "paralelismo"},
+    {"kind": "law", "name": "Lei de Conway", "statement": "Organizações projetam sistemas que espelham suas estruturas de comunicação.", "domain": "engenharia de software"},
+    {"kind": "law", "name": "Lei de Brooks", "statement": "Adicionar pessoas a um projeto de software atrasado o atrasa ainda mais.", "domain": "gestão de software"},
+    {"kind": "law", "name": "Lei de Gustafson", "statement": "S(n) = n − (1−p)·(n−1)", "domain": "paralelismo"},
+    {"kind": "equation", "name": "Teorema de Bayes", "statement": "P(A|B) = P(B|A)·P(A) / P(B)", "domain": "probabilidade"},
+    {"kind": "equation", "name": "Identidade de Euler", "statement": "e^(iπ) + 1 = 0", "domain": "matemática"},
+    {"kind": "equation", "name": "Teorema de Pitágoras", "statement": "a² + b² = c²", "domain": "geometria"},
+    {"kind": "axiom", "name": "Princípio da identidade", "statement": "A = A", "domain": "lógica"},
+    {"kind": "axiom", "name": "Princípio da não-contradição", "statement": "¬(P ∧ ¬P)", "domain": "lógica"},
+    {"kind": "logic_rule", "name": "Modus tollens", "statement": "P→Q; ¬Q ⊢ ¬P", "domain": "lógica"},
+    {"kind": "logic_rule", "name": "Leis de De Morgan", "statement": "¬(P∧Q) ≡ ¬P∨¬Q; ¬(P∨Q) ≡ ¬P∧¬Q", "domain": "lógica"}
+  ]
+}

@@ -1,0 +1,8 @@
+# Config do container (v1.0): igual ao default, mas escutando 0.0.0.0
+# (o compose publica só em 127.0.0.1 do host — continua local-first).
+home: /data
+server: {host: 0.0.0.0, port: 8377}
+privacy: {default: local_only, rules: []}
+models:
+  local: {provider: ollama, base_url: "http://ollama:11434",
+          chat: "qwen2.5:7b-instruct", embed: "nomic-embed-text"}

@@ -22,7 +22,7 @@ from ..runtime.governor import Governor
 from ..runtime.queue import JobQueue
 from ..settings import Settings
 
-VERSION = "0.16.0"
+VERSION = "1.0.0"
 
 
 def links(**rels: str) -> dict:

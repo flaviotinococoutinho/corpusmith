@@ -1,0 +1,23 @@
+# LLM Wiki v1.0 — daemon containerizado, dados no volume.
+#   docker compose up -d          → sobe o daemon (API em 127.0.0.1:8377)
+#   docker compose exec llmwiki cat /data/state/daemon.json   → token
+#   docker compose --profile ml up -d   → inclui Ollama (modelos locais)
+services:
+  llmwiki:
+    build: ./backend
+    ports:
+      - "127.0.0.1:8377:8377"     # só o host — local-first vale no Docker
+    volumes:
+      - llmwiki-data:/data        # bundle Git + 5 bancos SQLite + handshake
+    restart: unless-stopped
+  ollama:                          # opcional: modelos locais p/ síntese
+    image: ollama/ollama:latest
+    profiles: ["ml"]
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+volumes:
+  llmwiki-data:
+  ollama-models:

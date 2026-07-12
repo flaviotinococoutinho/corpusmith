@@ -414,3 +414,19 @@ fuzzy matching de citação (falso positivo custa mais que falso
 negativo — precision-first). **Porta**: regra de lint corpus
 (`policy.quote_misattributed`) quando o custo de varrer citações em
 todo lint for medido; datasets maiores via import (CSV→payload).
+
+### ADR-33 — Fechamento v1.0: empacotamento, seeds e backlog auditado
+**Decisão**: (1) Docker Compose com daemon empacotado (bootstrap+seed
+no boot, healthcheck em /health, porta publicada só em 127.0.0.1 —
+local-first vale no container; perfil `ml` opcional com Ollama em rede
+interna); (2) migração de dados pré-definidos: `llmwiki seed`
+idempotente (referência do mundo via db/seeds/reference_seed.json +
+pipelines builtin — nunca sobrescreve dado do usuário); (3) backlog
+auditado e FECHADO em docs/09-backlog.md — entregue × porta-por-volume
+× porta-por-caso-de-uso × rejeitado; (4) limpeza auditada: jobs/
+reconcile.py foi INVESTIGADO como artefato e MANTIDO (adapter de
+compatibilidade v0.8 consumido por teste de contrato — remoção
+quebraria a suíte; agora documentado no import). Versão da API: 1.0.0.
+**Rejeitado**: empacotar o Electron no compose (desktop é nativo por
+natureza; o daemon é o serviço) e seeds automáticos silenciosos fora
+do boot explícito.

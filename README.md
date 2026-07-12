@@ -1,4 +1,4 @@
-# LLM Wiki — v0.22 (Referência do Mundo)
+# LLM Wiki — v1.0
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -202,7 +202,32 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   Qualidade → Processos, com o botão **⭐ Promover para memória**
   (`generated_via: human:promote`, sem exigência de `source_sha256`).
 
-## Montagem
+## Instalação
+
+**Local (desenvolvimento e uso diário):**
+
+```bash
+just bootstrap                      # venv + pip install -e backend[dev]
+backend/scripts/llmwiki okf bootstrap
+backend/scripts/llmwiki seed        # dados pré-definidos (idempotente):
+                                    # referência do mundo + pipelines builtin
+just daemon &                       # API em 127.0.0.1:8377 (token efêmero)
+cd desktop && npm i && npm run dev  # cockpit Electron
+```
+
+**Docker (daemon empacotado; desktop conecta de fora):**
+
+```bash
+docker compose up -d                # build + daemon; bootstrap+seed automáticos
+docker compose exec llmwiki cat /data/state/daemon.json   # host/porta/token
+docker compose --profile ml up -d   # + Ollama (modelos locais) em rede interna
+```
+
+Dados no volume `llmwiki-data` (bundle Git + 5 bancos SQLite + handshake);
+a porta publica só em 127.0.0.1 — local-first vale também no Docker.
+Backlog fechado e portas abertas: [`docs/09-backlog.md`](docs/09-backlog.md).
+
+## Montagem (detalhe)
 
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
