@@ -106,6 +106,7 @@ export class DaemonClient {
   // ------------------------------------------------ Fase 5 (v0.15)
   graph = () => this.get<any>("/cockpit/graph");
   insights = () => this.get<any>("/cockpit/insights");
+  gaps = () => this.get<any>("/cockpit/gaps");   // v1.1: lacunas estruturais
   dictionary = () => this.get<any>("/cockpit/dictionary");
   traces = () => this.get<any>("/cockpit/traces");
   trace = (askId: string) =>

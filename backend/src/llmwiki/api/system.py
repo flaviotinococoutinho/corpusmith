@@ -22,7 +22,7 @@ from ..runtime.governor import Governor
 from ..runtime.queue import JobQueue
 from ..settings import Settings
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 
 def links(**rels: str) -> dict:
@@ -77,7 +77,8 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
                     config_history="/cockpit/config/history",
                     config_rollback="/cockpit/config/rollback",
                     cold="/cockpit/cold", graph="/cockpit/graph",
-                    insights="/cockpit/insights", export="/cockpit/export",
+                    insights="/cockpit/insights", gaps="/cockpit/gaps",
+                    export="/cockpit/export",
                     pipelines="/cockpit/pipelines",
                     pipeline_runs="/cockpit/pipelines/runs",
                     cognition="/cockpit/cognition",

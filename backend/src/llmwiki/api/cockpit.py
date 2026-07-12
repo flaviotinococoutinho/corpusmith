@@ -302,6 +302,12 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     def insights():
         return observatory.insights(s)
 
+    @app.get("/cockpit/gaps", dependencies=[Depends(auth)])
+    def structural_gaps(limit: int = 8):
+        """Lacunas estruturais (v1.1, InfraNodus próprio): blocos que
+        quase não se conectam + pergunta-ponte + articuladores."""
+        return observatory.structural_gaps(s, limit)
+
     @app.get("/cockpit/dictionary", dependencies=[Depends(auth)])
     def dictionary():
         return observatory.dictionary(s)

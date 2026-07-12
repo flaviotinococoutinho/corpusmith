@@ -430,3 +430,28 @@ quebraria a suíte; agora documentado no import). Versão da API: 1.0.0.
 **Rejeitado**: empacotar o Electron no compose (desktop é nativo por
 natureza; o daemon é o serviço) e seeds automáticos silenciosos fora
 do boot explícito.
+
+### ADR-34 — Leitura de rede de texto: InfraNodus como solução própria (v1.1)
+**Contexto**: aplicar a ideia do InfraNodus (análise de rede de texto:
+comunidades, intermediação, lacunas estruturais, pergunta geradora) à
+experiência com a memória.
+**Já tínhamos (~metade)**: comunidades (leiden), grafo visual
+(GraphPanel estilo Obsidian), pontes frágeis (persistência 0-dim),
+gaps epistêmicos (perguntas/órfãos/contestadas). **Novo e adotado**:
+(1) intermediação de Brandes (`betweenness_centrality`, kernel puro) —
+o articulador, não o mais citado; (2) LACUNAS ESTRUTURAIS
+(`structural_gaps`) — o fio AUSENTE medido pelo déficit sob o modelo de
+configuração de Newman (a MESMA hipótese nula da modularidade que o
+Leiden já usa: sob fiação aleatória preservando graus, A e B
+compartilhariam K_A·K_B/2m arestas; muito menos ⇒ lacuna); (3)
+pergunta-ponte determinística que a lacuna gera, capturável como
+`question` via o promote de sempre — fecha o laço de sensemaking
+(Pirolli & Card); (4) estrutura do discurso (disperso/focado/diverso)
+por entropia normalizada dos tamanhos de comunidade × conectividade
+(reusa `shannon_entropy`). **Determinístico — LLM nenhum**: a
+diferença do InfraNodus (que usa GPT para a ideação) é opcional aqui e
+fica na porta do ADR-26. **Rejeitado**: dependência de grafo externo
+(o kernel já faz union-find/persistência/Brandes sem libs) e o serviço
+online do InfraNodus (viola local-first). **Porta**: sizing dos nós do
+GraphPanel por intermediação (dado já exposto em graph_data) e frase da
+pergunta-ponte por LLM local marcada como inferida.

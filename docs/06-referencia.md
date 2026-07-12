@@ -62,7 +62,10 @@ POST /cockpit/freeze             {path, force?, reason?} — 409 quando um gate 
 POST /cockpit/recycle            {path} — 404 se não está na base fria
 GET  /cockpit/cold               (count · compression_saved · recycles · entries)
 GET  /cockpit/graph              (Fase 5: nós+arestas+pontes p/ o grafo visual)
-GET  /cockpit/insights           (gaps · topology · activity · classifiers)
+GET  /cockpit/insights           (gaps · topology{+structure∈disperso|focado|
+                                  diverso, communities, evenness} · activity · classifiers)
+GET  /cockpit/gaps               (v1.1: lacunas estruturais{déficit, pergunta-ponte,
+                                  representantes} + articuladores por intermediação)
 GET  /cockpit/dictionary         (enums vivos: tipos, origens, confiança, autoridades)
 GET  /cockpit/traces · /cockpit/trace?ask_id=   (proveniência página→stream)
 GET/POST /cockpit/tags           (contagens; POST {from, to?} renomeia/funde/remove)

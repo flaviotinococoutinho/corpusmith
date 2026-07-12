@@ -29,19 +29,62 @@ function Bars({ data }: { data: [string, number][] }) {
   );
 }
 
+const STRUCTURE_LABEL: Record<string, string> = {
+  incipiente: "🌱 incipiente", disperso: "🏝 disperso (ilhas)",
+  focado: "🎯 focado (1–2 temas dominam)",
+  diverso: "🌐 diverso (temas equilibrados e ligados)",
+};
+
 export function InsightsPanel() {
   const [ins, setIns] = useState<any>(null);
   const [traces, setTraces] = useState<any[]>([]);
   const [detail, setDetail] = useState<any>(null);
+  const [gaps, setGaps] = useState<any>(null);
+  const [notice, setNotice] = useState("");
   const load = () => {
     client.insights().then(setIns);
     client.traces().then(r => setTraces(r.traces));
+    client.gaps().then(setGaps).catch(() => {});
   };
   useEffect(() => { client.connect().then(load); }, []);
   if (!ins) return <div className="p-6">Calculando indicadores…</div>;
   const g = ins.gaps, t = ins.topology;
   return (
     <div className="p-4 grid grid-cols-2 gap-3 text-sm">
+      {notice && <p className="col-span-2 text-xs border rounded p-2
+        bg-neutral-50">{notice}</p>}
+      <Section title="🔗 Lacunas estruturais (fios ausentes do discurso)">
+        <div className="text-xs space-y-2">
+          <p className="text-neutral-400">
+            Dois temas grandes que quase nunca se conectam — a pergunta-ponte
+            é o que mais agrega ao entendimento (déficit vs. o esperado por
+            acaso, modelo de configuração).</p>
+          {gaps?.gaps?.length ? gaps.gaps.map((gp: any) => (
+            <div key={gp.rep_a + gp.rep_b} className="border rounded p-2">
+              <div className="font-medium">{gp.title_a} ↔ {gp.title_b}
+                <span className="text-neutral-400 ml-2">déficit {
+                  gp.deficit} · esperava {gp.expected}, tem {gp.actual}</span>
+              </div>
+              <div className="italic text-neutral-600">"{gp.question}"</div>
+              <button className="border rounded px-1 mt-1"
+                onClick={() => client.promote({
+                  kind: "question", title: gp.question,
+                  content: `# ${gp.question}\n\nPergunta-ponte entre `
+                    + `**${gp.title_a}** (${gp.rep_a}) e **${gp.title_b}** `
+                    + `(${gp.rep_b}) — temas que a memória mantém separados.`,
+                  tags: ["ponte"] }).then(() => {
+                    setNotice(`❓ pergunta-ponte capturada: ${gp.question}`);
+                    load(); })}>
+                ➕ capturar como pergunta</button>
+            </div>)) : <span className="text-neutral-400">
+            sem lacunas (rode o job leiden p/ comunidades, ou a base ainda
+            é pequena/coesa)</span>}
+          {gaps?.articulators?.length > 0 && (
+            <div className="pt-1 border-t">Articuladores (intermediação):{" "}
+              {gaps.articulators.slice(0, 5).map((a: any) =>
+                a.title).join(" · ")}</div>)}
+        </div>
+      </Section>
       <Section title="🕳 Gaps epistêmicos">
         <div className="text-xs space-y-2">
           <div><b>{g.questions.length}</b> pergunta(s) aberta(s)
@@ -70,6 +113,10 @@ export function InsightsPanel() {
           <div>{t.nodes} nós · {t.edges} arestas · {t.components}{" "}
             componente(s) · grau médio {t.avg_degree}</div>
           <div>maior componente cobre <b>{t.largest_component_pct}%</b> da base</div>
+          {t.structure && <div>estrutura do discurso:{" "}
+            <b>{STRUCTURE_LABEL[t.structure] ?? t.structure}</b>{" "}
+            <span className="text-neutral-400">({t.communities} comunidade(s),
+            uniformidade {t.evenness})</span></div>}
           {t.bridges.map((b: any) => (
             <div key={b.src + b.dst} className="font-mono truncate">
               🌉 {b.src} ↔ {b.dst} <span className="text-neutral-400">

@@ -1,4 +1,4 @@
-# LLM Wiki — v1.0
+# LLM Wiki — v1.1
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -128,6 +128,25 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   apply/transfer, recorrência, latência de retomada); prompts de
   exercício determinísticos.
 
+## Novidades da v1.1 — leitura de rede de texto (InfraNodus próprio, ADR-34)
+
+- **Intermediação de Brandes** (`kernel/topology.py`, puro): o
+  articulador do discurso é quem LIGA blocos, não o mais citado — o nó
+  por onde passam as geodésicas. Alimenta o "tamanho por influência"
+  do grafo e os representantes das lacunas.
+- **Lacunas estruturais** — o diferencial: a ponte frágil aponta o fio
+  FRACO que existe; a lacuna aponta o fio AUSENTE. Dois blocos grandes
+  que quase nunca se conectam, medidos pelo DÉFICIT sob o modelo de
+  configuração (a mesma hipótese nula da modularidade do Leiden). Cada
+  lacuna vira uma **pergunta-ponte** determinística ("como A se
+  relaciona com B?") capturável como `question` (fecha o laço de
+  sensemaking: topologia → pergunta → nó → nova topologia).
+- **Estrutura do discurso**: a base é classificada em `disperso`
+  (ilhas), `focado` (1–2 temas dominam) ou `diverso` (equilibrado e
+  ligado) — entropia normalizada dos tamanhos de comunidade ×
+  conectividade. Tudo determinístico; LLM nenhum. `GET /cockpit/gaps`
+  + seção 🔗 no painel Indicadores.
+
 ## Coordenação dos dados — fundamentos (kernel/)
 
 - **NCD — Cilibrasi & Vitányi, *Clustering by Compression* (IEEE Trans.
@@ -232,7 +251,7 @@ Backlog fechado e portas abertas: [`docs/09-backlog.md`](docs/09-backlog.md).
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 208 testes de contrato/arquitetura/golden bundles
+just test             # 217 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

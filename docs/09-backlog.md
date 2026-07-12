@@ -17,7 +17,9 @@ Domain (jornada FocusGoal→…→ResumeCapsule, canônico byte-idêntico) ·
 profundidade validada, experiências Efklides, analogias com ruptura
 obrigatória, CurationProjection, métricas §17 · VoI, fading,
 intercalação, Toulmin, tipos epistemológicos, episódios ·
-reference.db com precedência e má-atribuição · Docker Compose + seeds.
+reference.db com precedência e má-atribuição · Docker Compose + seeds ·
+leitura de rede de texto (intermediação de Brandes, lacunas estruturais
+com pergunta-ponte, estrutura do discurso — InfraNodus próprio, v1.1).
 
 ## ⏳ Portas abertas — dependem de VOLUME DE USO (dados já coletados)
 | Porta | Condição de entrada | ADR |

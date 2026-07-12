@@ -6,7 +6,9 @@ recomputável a partir de bundle + index.db + runtime.db.
 from __future__ import annotations
 import json
 from collections import defaultdict
-from ..kernel.topology import fragile_bridges
+from ..kernel.information import shannon_entropy
+from ..kernel.topology import (betweenness_centrality, fragile_bridges,
+                               structural_gaps as _structural_gaps)
 from ..okf.bundle import BundleReader
 from ..runtime.db import connect
 from ..settings import Settings
@@ -57,12 +59,50 @@ def graph_data(settings: Settings) -> dict:
         linked.add(e["dst"])
         e["bridge"] = (e["src"], e["dst"]) in bridges \
             or (e["dst"], e["src"]) in bridges
+    # intermediação (v1.1): o "tamanho por influência" do grafo — quem
+    # articula, calculado uma vez e reaproveitado pelas lacunas
+    weighted = [(e["src"], e["dst"], EDGE_WEIGHT.get(e["confidence"], 0.5))
+                for e in edges]
+    betweenness = betweenness_centrality(weighted)
     nodes = [{**p, "degree": degree.get(p["page"], 0),
               "heat": round(heat.get(p["page"], 0.0), 3),
+              "betweenness": betweenness.get(p["page"], 0.0),
               "community": community.get(p["page"], -1),
               "orphan": p["page"] not in linked}
              for p in pages]
     return {"nodes": nodes, "edges": edges}
+
+
+# ------------------------------------------ lacunas estruturais (v1.1)
+def structural_gaps(settings: Settings, limit: int = 8) -> dict:
+    """Fios AUSENTES do discurso (solução própria inspirada no
+    InfraNodus): blocos que quase nunca se conectam, com a pergunta-ponte
+    determinística e os articuladores de cada lado."""
+    graph = graph_data(settings)
+    titles = {n["page"]: n["title"] for n in graph["nodes"]}
+    betweenness = {n["page"]: n["betweenness"] for n in graph["nodes"]}
+    community_of = {n["page"]: n["community"] for n in graph["nodes"]
+                    if n["community"] >= 0}
+    weighted = [(e["src"], e["dst"], EDGE_WEIGHT.get(e["confidence"], 0.5))
+                for e in graph["edges"]]
+    gaps = _structural_gaps(weighted, community_of, betweenness, limit=limit)
+    out = []
+    for g in gaps:
+        ta = titles.get(g.rep_a, g.rep_a)
+        tb = titles.get(g.rep_b, g.rep_b)
+        out.append({
+            "community_a": g.community_a, "community_b": g.community_b,
+            "rep_a": g.rep_a, "rep_b": g.rep_b, "title_a": ta, "title_b": tb,
+            "deficit": g.deficit, "expected": g.expected, "actual": g.actual,
+            "question": f"Como {ta} se relaciona com {tb}?"})
+    articulators = sorted(
+        ({"page": n["page"], "title": n["title"],
+          "betweenness": n["betweenness"]}
+         for n in graph["nodes"] if n["betweenness"] > 0),
+        key=lambda a: -a["betweenness"])[:10]
+    return {"gaps": out, "articulators": articulators,
+            "communities": len({n["community"] for n in graph["nodes"]
+                                if n["community"] >= 0})}
 
 
 # --------------------------------------------------------------- topologia
@@ -127,6 +167,23 @@ def insights(settings: Settings) -> dict:
     node_names = {p["page"] for p in pages}
     components = _components(graph["edges"], node_names) or [0]
     degrees = [n["degree"] for n in graph["nodes"]] or [0]
+    largest_pct = round(100 * components[0] / max(1, len(node_names)))
+    # estrutura do discurso (v1.1, InfraNodus): evenness das comunidades
+    # (entropia normalizada dos tamanhos) × conectividade (maior comp.)
+    community_sizes: dict[int, int] = defaultdict(int)
+    for n in graph["nodes"]:
+        if n["community"] >= 0:
+            community_sizes[n["community"]] += 1
+    evenness = shannon_entropy(list(community_sizes.values()))
+    connectedness = largest_pct / 100.0
+    if len(node_names) < 3 or not community_sizes:
+        structure = "incipiente"
+    elif connectedness < 0.6:
+        structure = "disperso"        # nenhum componente domina: ilhas
+    elif evenness < 0.5:
+        structure = "focado"          # um ou dois temas dominam
+    else:
+        structure = "diverso"         # vários temas equilibrados e ligados
     return {
         "gaps": {
             "questions": [p["page"] for p in pages if p["type"] == "question"],
@@ -139,10 +196,12 @@ def insights(settings: Settings) -> dict:
         "topology": {
             "nodes": len(graph["nodes"]), "edges": len(graph["edges"]),
             "components": len(components),
-            "largest_component_pct": round(
-                100 * components[0] / max(1, len(node_names))),
+            "largest_component_pct": largest_pct,
             "avg_degree": round(sum(degrees) / max(1, len(degrees)), 2),
             "bridges": bridge_rows,
+            "communities": len(community_sizes),
+            "structure": structure,
+            "evenness": round(evenness, 3),
         },
         "activity": {"events_per_day": events_day,
                      "top_events": top_events},
