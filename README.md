@@ -1,4 +1,4 @@
-# LLM Wiki — v0.21 (Fundamentos Interdisciplinares)
+# LLM Wiki — v0.22 (Referência do Mundo)
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -207,7 +207,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 203 testes de contrato/arquitetura/golden bundles
+just test             # 208 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

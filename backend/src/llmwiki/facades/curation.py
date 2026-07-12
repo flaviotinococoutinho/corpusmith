@@ -86,3 +86,22 @@ class CurationFacade:
 
     def config_history(self, limit: int = 30) -> list[dict]:
         return config_history(self._settings, limit)
+
+    # ------------------------------------- referência do mundo (v0.22)
+    def reference_stats(self) -> dict:
+        from ..usecases.manage_reference import reference_stats
+        return reference_stats(self._settings)
+
+    def import_reference(self, payload: dict, notify=None) -> dict:
+        from ..usecases.manage_reference import ImportReferenceData
+        return ImportReferenceData(self._settings, payload,
+                                   notify=notify).execute()
+
+    def seed_reference(self) -> None:
+        from ..usecases.manage_reference import seed_reference
+        seed_reference(self._settings)
+
+    def check_quotation(self, text: str,
+                        claimed_author: str | None = None) -> dict:
+        from ..usecases.manage_reference import check_quotation
+        return check_quotation(self._settings, text, claimed_author)

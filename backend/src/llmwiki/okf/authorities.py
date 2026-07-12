@@ -48,6 +48,24 @@ def _derived(reader: BundleReader) -> dict:
     return _CACHE[key]
 
 
+def _reference_terms(bundle_root: Path) -> list[dict]:
+    """Termos do reference.db (v0.22) — referência DO MUNDO, relacional,
+    separada do bundle. Layout padrão: <home>/knowledge/bundle ⇒
+    <home>/state/reference.db; ausente ⇒ lista vazia (opcional)."""
+    path = bundle_root.parent.parent / "state" / "reference.db"
+    if not path.is_file():
+        return []
+    import json
+    from ..runtime.db import connect
+    conn = connect(path)
+    rows = conn.execute("SELECT canonical, kind, aliases FROM ref_terms")
+    out = [{"canonical": r["canonical"],
+            "aliases": json.loads(r["aliases"]),
+            "authority": r["kind"], "qid": None} for r in rows]
+    conn.close()
+    return out
+
+
 def _build_derived(reader: BundleReader) -> dict:
     extra: list[dict] = []
     schemas: dict[str, dict] = {}
@@ -62,7 +80,24 @@ def _build_derived(reader: BundleReader) -> dict:
             schemas[str(x["applies_to"])] = {
                 "required_fields": list(x.get("required_fields", [])),
                 "page": d.rel_path}
+    # precedência (v0.22): authority_record VENCE reference.db, que vence
+    # os SEEDS — a curadoria humana no bundle é sempre a última palavra
+    taken = {e["canonical"].lower() for e in extra} | {
+        str(a).lower() for e in extra for a in e["aliases"]}
+    for term in _reference_terms(reader.root):
+        # colisão por canonical OU por QUALQUER alias: a autoridade
+        # curada no bundle fica com o termo inteiro
+        claimed = {term["canonical"].lower()} | {
+            str(a).lower() for a in term["aliases"]}
+        if claimed & taken:
+            continue
+        extra.append(term)
     return {"gazetteer": Gazetteer.load(extra), "schemas": schemas}
+
+
+def invalidate_cache() -> None:
+    """Import de referência não passa pelo Git — invalida o cache HEAD."""
+    _CACHE.clear()
 
 
 def load_gazetteer(reader: BundleReader) -> Gazetteer:

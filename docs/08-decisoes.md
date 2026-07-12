@@ -393,3 +393,24 @@ A/B-replay determinístico (a infra de eventos já permite).
 **Rejeitados (reafirmando §18)**: tipologias de personalidade, VARK,
 neuromitos, inferência emocional, NLP-como-psicometria, diagnóstico
 clínico, engajamento-como-aprendizagem, agente que reescreve perfil.
+
+### ADR-32 — reference.db: referência do mundo em banco relacional (v0.22)
+**Contexto**: a avaliação funcional (v0.15) apontou que dados
+determinísticos DO MUNDO (nomes próprios, leis, equações, axiomas,
+citações célebres) não são memória pessoal — pediam banco relacional
+separado das outras estruturas.
+**Decisão**: `reference.db` (4º banco: ref_terms, ref_quotations com
+norma de matching, ref_facts law|equation|axiom|logic_rule) com seeds
+idempotentes que NUNCA sobrescrevem dado importado pelo usuário.
+Precedência no gazetteer: **authority_record (bundle) > ref_terms >
+SEEDS** — colisão por canonical OU alias entrega o termo inteiro à
+curadoria humana; import invalida o cache HEAD (não passa pelo Git).
+Verificador de citação mal-atribuída (`/cockpit/reference/check`):
+match determinístico por substring normalizada + comparação de autor
+tolerante a iniciais — irmão dos check-digits (anti-alucinação).
+**Rejeitado**: Wikidata/DBpedia como dependência online (viola
+local-first; o import aceita qualquer dataset externo convertido) e
+fuzzy matching de citação (falso positivo custa mais que falso
+negativo — precision-first). **Porta**: regra de lint corpus
+(`policy.quote_misattributed`) quando o custo de varrer citações em
+todo lint for medido; datasets maiores via import (CSV→payload).

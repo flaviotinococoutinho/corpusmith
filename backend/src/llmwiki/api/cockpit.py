@@ -21,6 +21,7 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     memory_facade = MemoryFacade(s)
     compiler = CompilerFacade(s)
     compiler.seed_pipelines()          # builtin idempotentes (v0.17)
+    curation.seed_reference()          # referência do mundo (v0.22)
     cognition = CognitionFacade(s)
 
     def writer() -> BundleWriter:
@@ -525,6 +526,26 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     @app.get("/cockpit/pipelines/runs", dependencies=[Depends(auth)])
     def pipelines_runs(name: str = "", limit: int = 20):
         return {"runs": compiler.pipeline_runs(name or None, limit)}
+
+    # ---------- Referência do mundo (v0.22) ----------
+    @app.get("/cockpit/reference", dependencies=[Depends(auth)])
+    def reference():
+        return curation.reference_stats()
+
+    @app.post("/cockpit/reference", dependencies=[Depends(auth)])
+    def reference_import(body: dict):
+        try:
+            return curation.import_reference(
+                body, notify=lambda t, d: bus.emit("system", t, d))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+
+    @app.post("/cockpit/reference/check", dependencies=[Depends(auth)])
+    def reference_check(body: dict):
+        """Citação mal-atribuída: confere quote×autor contra a base
+        determinística (anti-alucinação, irmão dos check-digits)."""
+        return curation.check_quotation(body.get("text", ""),
+                                        body.get("author"))
 
     # ---------- Candidatos do reflect (Dashboard, v0.8 §8) ----------
     @app.get("/cockpit/reflect", dependencies=[Depends(auth)])

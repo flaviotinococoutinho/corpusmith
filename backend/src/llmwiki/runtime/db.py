@@ -15,6 +15,7 @@ _SCHEMAS = {
     "index.db": "schema_index.sql",
     "cold.db": "schema_cold.sql",
     "cognitive.db": "schema_cognitive.sql",   # experiência (v0.19) — separado
+    "reference.db": "schema_reference.sql",   # referência do mundo (v0.22)
 }
 
 

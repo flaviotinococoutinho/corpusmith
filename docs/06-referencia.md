@@ -124,6 +124,9 @@ POST /cockpit/pipelines          {name, description?, stages:[{job,payload?,on_e
 DELETE /cockpit/pipelines?name=  (404 se não existe)
 POST /cockpit/pipelines/run      {name} → job `pipeline` na fila (404 se não existe)
 GET  /cockpit/pipelines/runs     ?name=&limit= (filme: estado por estágio + trace)
+GET  /cockpit/reference          (v0.22: contagens + facts; seed no mount)
+POST /cockpit/reference          ({terms?, quotations?, facts?} — upsert; 400 forma)
+POST /cockpit/reference/check    ({text, author?} → matches + misattributions)
 GET  /cockpit/behavior · POST /cockpit/behavior/reset-streams
 GET  /cockpit/export             ?format=zip|json|md &include_local &types &tag
                                  (local_only fica de fora por default; manifesto)
@@ -174,6 +177,14 @@ reason, status∈due|done|cancelled)` · `cognitive_feedback` (evento
 imutável, só INSERT) · `metacog_experiences(type, intensity 1..5,
 status∈declared|revised|retracted)` · `analogies(id, analogy json,
 status∈draft|kept|promoted|discarded, feedback_score)` (v0.20)
+
+**reference.db** (v0.22 — referência DO MUNDO, relacional, separada):
+`ref_terms(canonical UNIQUE, kind∈entity|person|standard|toponym,
+aliases json)` · `ref_quotations(quote, author, source, norm UNIQUE)` ·
+`ref_facts(kind∈law|equation|axiom|logic_rule, name, statement, domain,
+UNIQUE(kind,name))`. Precedência no gazetteer: authority_record >
+ref_terms > SEEDS (colisão por canonical OU alias); import invalida o
+cache HEAD do gazetteer.
 
 **cold.db** (base fria, v0.12 — NÃO derivado; conteúdo compactado):
 `cold_memories(page, digest, strong_ids, body_z zlib9, meta_json,
