@@ -1,7 +1,11 @@
-// 🕸 Grafo da memória (Fase 5) — visão estilo Obsidian em SVG puro:
+// 🕸 Grafo da memória (Fase 5 · v1.1) — visão estilo Obsidian em SVG puro:
 // simulação de forças própria (repulsão + molas + gravidade), cor por
 // classificador (tipo/comunidade/privacidade/stale/heat), pontes frágeis
 // tracejadas em vermelho, clique abre cartão com ações de curadoria.
+// v1.1 (InfraNodus próprio): tamanho do nó = grau + ARTICULAÇÃO
+// (intermediação de Brandes) e lacunas estruturais como ARESTAS-FANTASMA
+// roxas pontilhadas — o link que FALTA, com "?" clicável que captura a
+// pergunta-ponte como question.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { client } from "../lib/client";
 
@@ -28,21 +32,26 @@ export function GraphPanel() {
   const [data, setData] = useState<any>(null);
   const [mode, setMode] = useState("type");
   const [selected, setSelected] = useState<any>(null);
+  const [gaps, setGaps] = useState<any[]>([]);
+  const [notice, setNotice] = useState("");
   const [tick, setTick] = useState(0);
   const nodesRef = useRef<Node[]>([]);
   const running = useRef(false);
 
   useEffect(() => {
-    client.connect().then(() => client.graph().then((g) => {
-      const W = 900, H = 640;
-      nodesRef.current = g.nodes.map((n: any, i: number) => ({
-        ...n,
-        x: W / 2 + 220 * Math.cos((2 * Math.PI * i) / g.nodes.length),
-        y: H / 2 + 220 * Math.sin((2 * Math.PI * i) / g.nodes.length),
-        vx: 0, vy: 0,
-      }));
-      setData(g);
-    }));
+    client.connect().then(() => {
+      client.graph().then((g) => {
+        const W = 900, H = 640;
+        nodesRef.current = g.nodes.map((n: any, i: number) => ({
+          ...n,
+          x: W / 2 + 220 * Math.cos((2 * Math.PI * i) / g.nodes.length),
+          y: H / 2 + 220 * Math.sin((2 * Math.PI * i) / g.nodes.length),
+          vx: 0, vy: 0,
+        }));
+        setData(g);
+      });
+      client.gaps().then(g => setGaps(g.gaps)).catch(() => {});
+    });
   }, []);
 
   // simulação: roda ~240 ticks e congela (re-renderiza a cada 4)
@@ -112,7 +121,10 @@ export function GraphPanel() {
             </select></label>
           <span className="text-neutral-400">
             {data.nodes.length} nós · {data.edges.length} arestas ·
-            pontes em vermelho</span>
+            pontes em vermelho · lacunas em roxo (clique no ?) ·
+            tamanho = grau + articulação</span>
+          {notice && <span className="border rounded px-2 py-0.5
+            bg-violet-50 text-violet-700">{notice}</span>}
         </div>
         <svg className="flex-1 bg-neutral-50" viewBox="0 0 900 640">
           {data.edges.map((e: any, i: number) => {
@@ -124,15 +136,42 @@ export function GraphPanel() {
               strokeWidth={e.confidence === "extracted" ? 1.4 : 0.7}
               opacity={0.8} />;
           })}
+          {gaps.map((gp: any, i: number) => {
+            // aresta-fantasma: o link AUSENTE entre os articuladores
+            const a = positions[gp.rep_a], b = positions[gp.rep_b];
+            if (!a || !b) return null;
+            const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+            return (
+              <g key={`gap${i}`} className="cursor-pointer"
+                 onClick={() => client.promote({
+                   kind: "question", title: gp.question,
+                   content: `# ${gp.question}\n\nPergunta-ponte entre `
+                     + `**${gp.title_a}** (${gp.rep_a}) e `
+                     + `**${gp.title_b}** (${gp.rep_b}) — lacuna `
+                     + `estrutural (déficit ${gp.deficit}).`,
+                   tags: ["ponte"] }).then(() =>
+                     setNotice(`❓ capturada: ${gp.question}`))}>
+                <title>{gp.question} (déficit {gp.deficit})</title>
+                <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                  stroke="#7c3aed" strokeDasharray="2 6"
+                  strokeWidth={1.2} opacity={0.55} />
+                <circle cx={mx} cy={my} r={7} fill="#ede9fe"
+                        stroke="#7c3aed" strokeWidth={1} />
+                <text x={mx} y={my + 3.5} fontSize="10" fill="#7c3aed"
+                      textAnchor="middle">?</text>
+              </g>);
+          })}
           {nodes.map(n => (
             <g key={n.page} onClick={() => setSelected(n)}
                className="cursor-pointer">
               <circle cx={n.x} cy={n.y}
-                r={4 + Math.log1p(n.degree) * 3}
+                r={4 + Math.log1p(n.degree) * 2
+                     + (n.betweenness ?? 0) * 16}
                 fill={colorOf(n, mode)}
                 stroke={selected?.page === n.page ? "#111" : "#fff"}
                 strokeWidth={selected?.page === n.page ? 2 : 1} />
-              {(n.degree >= 3 || selected?.page === n.page) && (
+              {(n.degree >= 3 || (n.betweenness ?? 0) > 0.15 ||
+                selected?.page === n.page) && (
                 <text x={n.x + 8} y={n.y + 3} fontSize="9"
                       fill="#475569">{n.title}</text>)}
             </g>))}
@@ -145,7 +184,9 @@ export function GraphPanel() {
             <tbody>
               {[["página", selected.page], ["tipo", selected.type],
                 ["comunidade", selected.community],
-                ["grau", selected.degree], ["heat", selected.heat],
+                ["grau", selected.degree],
+                ["articulação", selected.betweenness ?? 0],
+                ["heat", selected.heat],
                 ["privacidade", selected.privacy],
                 ["origem", selected.origin],
                 ["órfã", selected.orphan ? "sim" : "não"],

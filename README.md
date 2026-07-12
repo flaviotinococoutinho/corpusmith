@@ -146,6 +146,10 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   ligado) — entropia normalizada dos tamanhos de comunidade ×
   conectividade. Tudo determinístico; LLM nenhum. `GET /cockpit/gaps`
   + seção 🔗 no painel Indicadores.
+- **Grafo com articulação (v1.1.1)**: raio do nó = grau + intermediação
+  (articuladores saltam aos olhos) e lacunas como **arestas-fantasma**
+  roxas pontilhadas entre os articuladores — clicar no "?" captura a
+  pergunta-ponte como `question` sem sair do grafo.
 
 ## Coordenação dos dados — fundamentos (kernel/)
 

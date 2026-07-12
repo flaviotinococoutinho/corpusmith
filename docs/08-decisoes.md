@@ -452,6 +452,10 @@ por entropia normalizada dos tamanhos de comunidade × conectividade
 diferença do InfraNodus (que usa GPT para a ideação) é opcional aqui e
 fica na porta do ADR-26. **Rejeitado**: dependência de grafo externo
 (o kernel já faz union-find/persistência/Brandes sem libs) e o serviço
-online do InfraNodus (viola local-first). **Porta**: sizing dos nós do
-GraphPanel por intermediação (dado já exposto em graph_data) e frase da
-pergunta-ponte por LLM local marcada como inferida.
+online do InfraNodus (viola local-first). **Porta fechada (v1.1.1)**: sizing dos nós do GraphPanel por
+intermediação (raio = grau + articulação·16) e lacunas renderizadas
+como ARESTAS-FANTASMA roxas pontilhadas entre os articuladores, com
+"?" clicável no ponto médio que captura a pergunta-ponte como
+`question` — o link ausente fica literalmente visível no grafo.
+**Porta remanescente**: frase da pergunta-ponte por LLM local marcada
+como inferida (continua na condição do ADR-26).
