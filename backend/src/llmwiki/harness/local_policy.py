@@ -160,6 +160,35 @@ def check_corpus(docs, reader) -> list[Finding]:
     return out
 
 
+def check_quotations(docs, reader) -> list[Finding]:
+    """Atribuição de citação (v1.2, porta do ADR-32 fechada): página que
+    contém uma citação CONHECIDA do reference.db sem mencionar o autor
+    em lugar nenhum do texto — ou está sem atribuição, ou atribuída a
+    outra pessoa. Warn, nunca error: a curadoria decide. Custo: as
+    normas vêm pré-computadas do banco; por página é 1 normalização do
+    corpo + Q buscas de substring (Q = citações conhecidas)."""
+    from ..okf.authorities import load_quotations
+    quotations = load_quotations(reader)
+    if not quotations:
+        return []
+    out: list[Finding] = []
+    for d in docs:
+        body_norm = " " + re.sub(r"[^a-z0-9]+", " ", d.body.lower()) + " "
+        for q in quotations:
+            if q["norm"] not in body_norm:
+                continue
+            surname = q["author"].lower().split()[-1]
+            if re.sub(r"[^a-z0-9]+", " ", surname) in body_norm:
+                continue                      # autor citado: ok
+            out.append(Finding(
+                "warn", "policy.quotation_attribution", d.rel_path,
+                f"citação conhecida de {q['author']} "
+                f"({q['source'] or 'fonte registrada'}) sem o autor no "
+                f"texto — confira a atribuição",
+                meta={"author": q["author"], "quote": q["quote"][:80]}))
+    return out
+
+
 def _section(body: str, name: str) -> str:
     m = re.search(rf"^#{{1,3}}\s*{name}\s*$(.*?)(?=^#{{1,3}}\s|\Z)",
                   body, re.M | re.S)

@@ -20,7 +20,8 @@ intercalação, Toulmin, tipos epistemológicos, episódios ·
 reference.db com precedência e má-atribuição · Docker Compose + seeds ·
 leitura de rede de texto (intermediação de Brandes, lacunas estruturais
 com pergunta-ponte, estrutura do discurso — InfraNodus próprio, v1.1) ·
-grafo com articulação e arestas-fantasma clicáveis (v1.1.1).
+grafo com articulação e arestas-fantasma clicáveis (v1.1.1) · lint de
+atribuição de citação no corpus (`policy.quotation_attribution`, v1.2).
 
 ## ⏳ Portas abertas — dependem de VOLUME DE USO (dados já coletados)
 | Porta | Condição de entrada | ADR |
@@ -35,7 +36,6 @@ grafo com articulação e arestas-fantasma clicáveis (v1.1.1).
 | Porta | Condição | ADR |
 |---|---|---|
 | Servidor MCP (memória p/ agentes) | cliente agêntico real conectado | 15 |
-| Lint corpus de citação mal-atribuída | custo de varredura medido | 32 |
 | Contextual integrity granular | export seletivo/2º consumidor | 31 |
 | DAG em pipelines | fan-out real num run | 18 |
 | Avaliação de resposta por LLM | critérios explícitos + marca inferido | 26 |

@@ -48,6 +48,24 @@ def _derived(reader: BundleReader) -> dict:
     return _CACHE[key]
 
 
+def _reference_quotations(bundle_root: Path) -> list[dict]:
+    """Citações do reference.db (v1.2) — norma pré-computada no banco;
+    o lint só normaliza o CORPO e faz busca de substring."""
+    path = bundle_root.parent.parent / "state" / "reference.db"
+    if not path.is_file():
+        return []
+    from ..runtime.db import connect
+    conn = connect(path)
+    rows = [dict(r) for r in conn.execute(
+        "SELECT quote, author, source, norm FROM ref_quotations")]
+    conn.close()
+    return rows
+
+
+def load_quotations(reader: BundleReader) -> list[dict]:
+    return _derived(reader)["quotations"]
+
+
 def _reference_terms(bundle_root: Path) -> list[dict]:
     """Termos do reference.db (v0.22) — referência DO MUNDO, relacional,
     separada do bundle. Layout padrão: <home>/knowledge/bundle ⇒
@@ -92,7 +110,8 @@ def _build_derived(reader: BundleReader) -> dict:
         if claimed & taken:
             continue
         extra.append(term)
-    return {"gazetteer": Gazetteer.load(extra), "schemas": schemas}
+    return {"gazetteer": Gazetteer.load(extra), "schemas": schemas,
+            "quotations": _reference_quotations(reader.root)}
 
 
 def invalidate_cache() -> None:

@@ -35,6 +35,7 @@ Ausência de `# Citations` e de reservados **nunca** gera finding
 | `policy.pii_requires_local` | error | PII com DV válido + `privacy: api_allowed` |
 | `policy.temporal_order` | error | `invalid_at ≤ valid_at` |
 | `policy.schema_required_field` | error | campo obrigatório declarado por `collection_specification` (`applies_to`) ausente na página do tipo |
+| `policy.quotation_attribution` | warn (só lint, corpus) | citação conhecida do reference.db presente no corpo sem o sobrenome do autor em lugar nenhum do texto — sem atribuição ou mal-atribuída (v1.2; normas pré-computadas, custo medido < 2s na suíte) |
 | `policy.contradiction_candidate` | warn (só lint, corpus) | mesmo identificador forte (doi/isbn/issn/arxiv) em 2+ páginas sem sucessão (`superseded_by`/`supersedes` no grupo ou `invalid_at`); o finding nomeia a página mais entrincheirada (humana > máquina) |
 
 ## 2. Endpoints (API local, auth header `x-llmwiki-auth` OU `?auth=`)

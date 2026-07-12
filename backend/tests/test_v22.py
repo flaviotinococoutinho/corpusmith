@@ -112,3 +112,31 @@ def test_reference_http_contract(client):
         "text": "Talk is cheap. Show me the code.",
         "author": "Bill Gates"}).json()
     assert check["misattributions"][0]["author"] == "Linus Torvalds"
+
+
+def test_lint_flags_unattributed_known_quotation(settings, kb, runner):
+    """v1.2: porta do ADR-32 fechada — lint de corpus com custo medido."""
+    import time as _time
+    seed_reference(settings)
+    invalidate_cache()
+    quote = ("Program testing can be used to show the presence of bugs, "
+             "but never to show their absence!")
+    BundleWriter(kb).write([
+        OKFDocument(rel_path="concepts/testes.md",
+                    body=f'# Testes\n\nComo se diz: "{quote}"\n',
+                    meta=OKFFrontMatter(type="concept", title="Testes",
+                                        privacy="local_only")),
+        OKFDocument(rel_path="concepts/testes-ok.md",
+                    body=f'# Testes 2\n\nDijkstra: "{quote}"\n',
+                    meta=OKFFrontMatter(type="concept", title="Testes 2",
+                                        privacy="local_only")),
+    ], log_kind="Creation", log_message="m", commit_message="c")
+    invalidate_cache()
+    started = _time.perf_counter()
+    findings = runner.lint_bundle(kb / "bundle")
+    elapsed = _time.perf_counter() - started
+    hits = [f for f in findings.to_dicts()
+            if f["rule"] == "policy.quotation_attribution"]
+    assert [h["path"] for h in hits] == ["concepts/testes.md"]
+    assert "Dijkstra" in hits[0]["message"]      # aponta o autor correto
+    assert elapsed < 2.0                          # custo medido: trivial

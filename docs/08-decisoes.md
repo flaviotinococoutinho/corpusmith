@@ -411,9 +411,14 @@ tolerante a iniciais — irmão dos check-digits (anti-alucinação).
 **Rejeitado**: Wikidata/DBpedia como dependência online (viola
 local-first; o import aceita qualquer dataset externo convertido) e
 fuzzy matching de citação (falso positivo custa mais que falso
-negativo — precision-first). **Porta**: regra de lint corpus
-(`policy.quote_misattributed`) quando o custo de varrer citações em
-todo lint for medido; datasets maiores via import (CSV→payload).
+negativo — precision-first). **Porta fechada (v1.2)**: regra de lint corpus
+`policy.quotation_attribution` — warn quando uma citação conhecida
+aparece numa página sem o sobrenome do autor em lugar nenhum do texto
+(sem atribuição OU mal-atribuída; a curadoria decide). Condição de
+entrada satisfeita: as normas vêm pré-computadas do banco e o custo é
+1 normalização de corpo + Q substrings por página — medido na suíte
+(< 2s no lint completo com seeds). **Porta remanescente**: datasets
+maiores via import (CSV→payload).
 
 ### ADR-33 — Fechamento v1.0: empacotamento, seeds e backlog auditado
 **Decisão**: (1) Docker Compose com daemon empacotado (bootstrap+seed
