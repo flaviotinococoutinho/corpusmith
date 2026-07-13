@@ -97,6 +97,29 @@ class CreateBackup(UseCase):
         stamp = time.strftime("%Y%m%d-%H%M%S")
         archive = Path(self._out) if self._out else \
             _backup_dir(self._settings) / f"llmwiki-backup-{stamp}.zip"
+        lock = self._settings.app_support / "backup.lock"
+        lock.write_text(stamp)               # begin-backup: worker pausa
+        try:
+            self._await_quiescence()
+            return self._snapshot(home, archive)
+        finally:
+            lock.unlink(missing_ok=True)     # end-backup
+
+    def _await_quiescence(self, timeout_s: float = 30.0) -> None:
+        """Espera nenhum job em execução (o worker já parou de leasear
+        pelo lock; o job em voo termina). Bounded — segue mesmo assim."""
+        deadline = time.time() + timeout_s
+        while time.time() < deadline:
+            rt = connect(self._settings.app_support / "runtime.db")
+            busy = rt.execute(
+                "SELECT COUNT(*) c FROM jobs WHERE state IN "
+                "('leased','cancel_requested')").fetchone()["c"]
+            rt.close()
+            if not busy:
+                return
+            time.sleep(0.2)
+
+    def _snapshot(self, home: Path, archive: Path) -> dict:
         # checkpoint dos WAL: o arquivo .db fica completo p/ cópia fria
         for name in _STATE_FILES:
             path = home / "state" / name

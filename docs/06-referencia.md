@@ -47,6 +47,8 @@ GET  /health/full                (v0.16: instância{snowflake,pid,uptime} · pro
                                   · queue{by_state,oldest_age} · stacks{bytes,wal,integrity,tables}/banco
                                   · bus{subscribers} · config{gerações} · resources{disk} · budget)
 GET  /status                     · GET/POST /jobs · GET /events (SSE)
+POST /jobs/{id}/cancel           (v1.3: queued→cancelled; leased→cancel_requested)
+POST /jobs/{id}/retry            (failed/dead_lettered/cancelled → queued)
 POST /ask                        {query, deep?, local_only?, as_of?}
 GET  /cockpit/dashboard          · GET /cockpit/inbox
 POST /cockpit/ingest             {filename, content|content_base64, subdir?, compile?}

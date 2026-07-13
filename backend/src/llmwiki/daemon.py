@@ -35,6 +35,9 @@ def main() -> None:
     slots = Slots(int(s.worker.get("heavy_slots", 1)),
                   int(s.worker.get("light_slots", 2)))
 
+    recovered = queue.recover_orphans()      # REL-3: órfãos do último crash
+    if recovered:
+        bus.emit("jobs", "orphans.recovered", {"count": recovered})
     worker = Worker(s, queue, bus, gov, slots)
     worker.start()
     scheduler = Scheduler(queue)

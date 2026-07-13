@@ -128,3 +128,17 @@ def test_restore_refuses_newer_schema(settings, kb, tmp_path):
         zf.writestr("manifest.json", _json.dumps(manifest))
     with pytest.raises(ValueError, match="MAIS NOVA"):
         RestoreBackup(settings, future, force=True).execute()
+
+
+def test_backup_uses_quiescence_lock(settings, kb):
+    """v1.4: begin-backup cria o lock; end-backup o remove; a
+    quiescência espera nenhum job em execução (sem daemon: imediato)."""
+    _seed(settings, kb)
+    # simula um job em execução: a espera é bounded, não trava
+    rt = connect(settings.app_support / "runtime.db")
+    rt.execute("INSERT INTO jobs(id,type,payload,state,created_at) "
+               "VALUES ('x','embed','{}','done', 1.0)")
+    rt.commit(); rt.close()
+    result = CreateBackup(settings).execute()
+    assert result["files"] > 3
+    assert not (settings.app_support / "backup.lock").exists()  # liberado

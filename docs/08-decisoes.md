@@ -496,3 +496,34 @@ tradução de jargão (UX-2); onboarding com workspace de exemplo (UX-3);
 presets de uso (UX-4); UI para analogias/métricas/curadoria projetada
 (UX-5); constantes sem teste de sensibilidade (QA-4); sweep de startup
 de órfãos (REL-3); doctor de invariantes com repair (DATA-1).
+
+### ADR-36 — Integridade round 2: doctor, watchdog, quiescência, schema safety (v1.4)
+**Contexto**: avaliação externa da v1.3 validou o rumo (fundações) e
+apontou lacunas concretas na sequência recomendada. Esta rodada fecha
+as fatíveis-e-testáveis aqui.
+**Corrigido/adicionado (com teste)**:
+- versão: fonte única `__version__` = 1.4.0 (README/pyproject alinhados
+  — a v1.3 tinha pyproject=1.2.0, pego pela avaliação);
+- `connect()` REJEITA banco de schema mais novo (`SchemaTooNewError`) —
+  o acesso direto agora tem a proteção que só o restore tinha; ledger
+  `schema_migrations(from→to, applied_at)` — trilha auditável;
+- `llmwiki doctor [--repair]` (backlog DATA-1): INV-001 (índice órfão),
+  INV-002 (geração/HEAD do índice), INV-003 (supersedida sem marca),
+  PIPE (job inexistente), COG (acessibilidade órfã); repair reconstrói
+  a projeção (FULL) — nunca toca o canônico; reverifica após reparar;
+- watchdog de job (REL-2): HEARTBEAT renova o lease (job legítimo longo
+  não é mais falso-órfão), TIMEOUT por classe marca cancel_requested;
+- cancelamento COOPERATIVO real (não só "não publicar"): `JobContext`
+  substitui o `emit`, expõe `.cancelled()`; `RunPipeline` consulta
+  entre estágios e PARA no meio — testado (b não roda);
+- sweep de órfãos no BOOT (REL-3): `recover_orphans` devolve leased/
+  cancel_requested a queued na hora do restart, sem esperar o lease;
+- backup por QUIESCÊNCIA (Frente A, consistência): `backup.lock` faz o
+  worker parar de leasear; `_await_quiescence` espera nenhum job em voo
+  antes do checkpoint+cópia — instante consistente, não cross-state.
+**Limitação honesta registrada**: o timeout NÃO mata thread síncrona
+CPU-bound do Python (sem isolamento de processo) — marca para não
+publicar e evita re-execução por falso-órfão; hard-kill fica para
+isolamento de processo (backlog REL-2b). CI verde no GitHub e default
+branch continuam sendo ações de administração do repositório (fora do
+alcance de `git push` nesta branch) — sinalizadas, não fingidas.

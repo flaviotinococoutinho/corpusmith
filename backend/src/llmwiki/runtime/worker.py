@@ -1,8 +1,18 @@
 """Worker: consome a fila e despacha para o registry de jobs
 (Parte V §5.8). Cada job roda com slot da sua classe e emite eventos
-job.started / job.done / job.failed no canal "jobs"."""
+job.started / job.done / job.failed no canal "jobs".
+
+v1.4 (REL-2, backlog da auditoria): cada job roda sob um WATCHDOG que
+(a) renova o lease periodicamente — HEARTBEAT: um job legítimo passando
+de LEASE_SECONDS não é mais tratado como órfão e re-executado em
+paralelo; (b) impõe TIMEOUT por classe — estourou, marca cancel_requested.
+O `emit` virou um JobContext: além de emitir eventos, expõe `.cancelled()`
+— o token de cancelamento COOPERATIVO que handlers longos (pipeline)
+consultam em boundaries seguros para parar NO MEIO, não só no fim.
+"""
 from __future__ import annotations
 import threading
+import time
 import traceback
 from ..kernel.identity import factory as id_factory
 from ..settings import Settings
@@ -10,6 +20,32 @@ from .events import EventBus
 from .governor import Governor
 from .queue import JobQueue
 from .slots import Slots
+
+# tempo de parede máximo por classe de job (segundos). Estourou ⇒
+# cancel_requested; handlers cooperativos param no próximo boundary.
+JOB_TIMEOUTS = {"lora_train": 3600, "ocr": 1200, "compile_source": 900,
+                "consolidate_inbox": 900, "leiden": 600, "pipeline": 1800}
+DEFAULT_TIMEOUT = 600
+_HEARTBEAT_SECONDS = 30.0
+
+
+class JobContext:
+    """Passado aos handlers no lugar da antiga função `emit`. Chamá-lo
+    emite evento (compatível com todo handler existente); `.cancelled()`
+    é o token cooperativo."""
+
+    def __init__(self, bus: EventBus, job_id: str, trace_id: str,
+                 queue: JobQueue):
+        self._bus, self._job_id, self._trace = bus, job_id, trace_id
+        self._queue = queue
+
+    def __call__(self, type: str, data: dict | None = None) -> None:
+        self._bus.emit("jobs", type,
+                       {"id": self._job_id, "trace_id": self._trace,
+                        **(data or {})})
+
+    def cancelled(self) -> bool:
+        return self._queue.cancel_requested(self._job_id)
 
 
 class Worker(threading.Thread):
@@ -22,10 +58,31 @@ class Worker(threading.Thread):
     def stop(self) -> None:
         self._stop.set()
 
+    def _watchdog(self, job: dict, done: threading.Event) -> None:
+        """Heartbeat + timeout enquanto o handler roda."""
+        timeout = JOB_TIMEOUTS.get(job["type"], DEFAULT_TIMEOUT)
+        started = time.time()
+        while not done.wait(_HEARTBEAT_SECONDS):
+            self.queue.renew_lease(job["id"])            # heartbeat
+            if time.time() - started > timeout:
+                try:
+                    self.queue.cancel(job["id"])         # pede parada
+                except KeyError:
+                    pass
+                self.bus.emit("jobs", "job.timeout",
+                              {"id": job["id"], "type": job["type"],
+                               "after_s": round(time.time() - started)})
+                return
+
     def run(self) -> None:
         from ..jobs import REGISTRY
         poll = float(self.s.worker.get("poll_seconds", 1.0))
         while not self._stop.is_set():
+            # quiescência de backup (v1.4): com o lock presente, não
+            # LEASE novos jobs — o backup captura um instante consistente
+            if (self.s.app_support / "backup.lock").exists():
+                self._stop.wait(poll)
+                continue
             job = self.queue.lease()
             if not job:
                 self._stop.wait(poll)
@@ -34,25 +91,23 @@ class Worker(threading.Thread):
             if handler is None:
                 self.queue.fail(job["id"], f"job type desconhecido: {job['type']}")
                 continue
-            # trace da EXECUÇÃO (v0.16): eventos emitidos pelo job herdam
-            # o mesmo trace_id — identidade ponta a ponta no /events
             trace_id = id_factory("job").next_rendered()
             self.bus.emit("jobs", "job.started",
                           {"id": job["id"], "type": job["type"],
                            "trace_id": trace_id})
-
-            def emit(type: str, data: dict | None = None,
-                     _jid=job["id"], _trace=trace_id):
-                self.bus.emit("jobs", type,
-                              {"id": _jid, "trace_id": _trace, **(data or {})})
-
+            ctx = JobContext(self.bus, job["id"], trace_id, self.queue)
+            done = threading.Event()
+            watch = threading.Thread(target=self._watchdog, args=(job, done),
+                                     daemon=True)
+            watch.start()
             try:
                 with self.slots.hold(job["type"]):
-                    result = handler(self.s, job["payload"], emit)
+                    result = handler(self.s, job["payload"], ctx)
+                done.set()
                 if self.queue.cancel_requested(job["id"]):
-                    # cancelamento cooperativo: honrado no boundary do job
-                    self.queue.fail(job["id"], "cancelado (efeitos do "
-                                    "handler já aplicados)")
+                    # cooperativo: honrado no boundary (handlers longos já
+                    # pararam no meio ao ver ctx.cancelled())
+                    self.queue.fail(job["id"], "cancelado")
                     self.bus.emit("jobs", "job.cancelled",
                                   {"id": job["id"], "trace_id": trace_id})
                     continue
@@ -61,6 +116,7 @@ class Worker(threading.Thread):
                               {"id": job["id"], "type": job["type"],
                                "trace_id": trace_id})
             except Exception as e:
+                done.set()
                 transient = isinstance(e, (TimeoutError, ConnectionError,
                                            InterruptedError, OSError))
                 state = self.queue.fail(

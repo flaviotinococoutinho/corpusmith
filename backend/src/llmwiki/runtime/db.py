@@ -41,23 +41,45 @@ def connect(path: Path | str) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys=ON")
     schema = _SCHEMAS.get(path.name)
     if schema:
-        conn.executescript((_SQL_DIR / schema).read_text())
-        _migrate(conn, path.name)
         conn.execute("CREATE TABLE IF NOT EXISTS _meta("
                      "key TEXT PRIMARY KEY, value TEXT)")
-        # check-first: conexão em regime não escreve (evita contenção
-        # de lock — o carimbo só muda em upgrade de schema)
-        current = conn.execute("SELECT value FROM _meta WHERE "
+        # REJEITA banco de versão FUTURA antes de escrever nada (v1.4):
+        # abrir um DB de um produto mais novo e recarimbá-lo para baixo
+        # corromperia dados que este código não entende. O restore já
+        # protegia via manifesto; agora TODO acesso direto protege.
+        stamped = conn.execute("SELECT value FROM _meta WHERE "
                                "key='schema_version'").fetchone()
-        wanted = str(SCHEMA_VERSIONS[path.name])
-        if current is None or current["value"] != wanted:
+        wanted = SCHEMA_VERSIONS[path.name]
+        if stamped is not None and int(stamped["value"]) > wanted:
+            conn.close()
+            raise SchemaTooNewError(
+                f"{path.name}: schema v{stamped['value']} é MAIS NOVO que "
+                f"este produto suporta (v{wanted}) — atualize o llmwiki")
+        conn.executescript((_SQL_DIR / schema).read_text())
+        _migrate(conn, path.name)
+        # ledger de migração (v1.4): registra from→to quando a versão
+        # carimbada muda — trilha auditável, não só o número final
+        if stamped is None or int(stamped["value"]) != wanted:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS schema_migrations("
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "from_version INTEGER, to_version INTEGER, "
+                "applied_at REAL DEFAULT (unixepoch('subsec')))")
             try:
+                conn.execute(
+                    "INSERT INTO schema_migrations(from_version, to_version) "
+                    "VALUES (?,?)",
+                    (int(stamped["value"]) if stamped else None, wanted))
                 conn.execute("INSERT OR REPLACE INTO _meta(key, value) "
-                             "VALUES ('schema_version', ?)", (wanted,))
+                             "VALUES ('schema_version', ?)", (str(wanted),))
             except sqlite3.OperationalError:
                 pass                    # advisory: outra conexão carimba
         conn.commit()
     return conn
+
+
+class SchemaTooNewError(RuntimeError):
+    """Banco gravado por uma versão MAIS NOVA do produto (v1.4)."""
 
 
 def _columns(conn: sqlite3.Connection, table: str) -> set[str]:

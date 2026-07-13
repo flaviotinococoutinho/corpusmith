@@ -134,6 +134,28 @@ class JobQueue:
                               (job_id,)).fetchone()
         return bool(row and row["state"] == "cancel_requested")
 
+    def renew_lease(self, job_id: str) -> None:
+        """Heartbeat (v1.4): estende o lease de um job em execução para
+        que o watchdog não o trate como órfão. Só afeta jobs leased/
+        cancel_requested (o cancel pediu parada mas o job ainda roda)."""
+        with self._lock:
+            self.db.execute(
+                "UPDATE jobs SET leased_until=? WHERE id=? AND state IN "
+                "('leased','cancel_requested')",
+                (time.time() + self.LEASE_SECONDS, job_id))
+            self.db.commit()
+
+    def recover_orphans(self) -> int:
+        """Sweep de STARTUP (v1.4, REL-3): jobs 'leased'/'cancel_requested'
+        de um daemon que morreu voltam a 'queued' na hora, sem esperar o
+        lease vencer. Idempotente; devolve quantos recuperou."""
+        with self._lock:
+            n = self.db.execute(
+                "UPDATE jobs SET state='queued', leased_until=NULL "
+                "WHERE state IN ('leased','cancel_requested')").rowcount
+            self.db.commit()
+            return n
+
     def retry_manual(self, job_id: str) -> None:
         """failed/dead_lettered/cancelled ⇒ queued (zera tentativas)."""
         with self._lock:

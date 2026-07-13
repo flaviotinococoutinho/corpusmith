@@ -49,10 +49,11 @@ class CompilerFacade:
         return DeletePipeline(self._settings, name).execute()
 
     def run_pipeline(self, name: str, registry: Mapping[str, Callable],
-                     notify=None) -> dict:
+                     notify=None, cancelled=None) -> dict:
         """O registry de jobs entra por injeção (DIP) — quem conhece os
         handlers é a camada adapter, nunca o domínio."""
-        return RunPipeline(self._settings, name, registry, notify).execute()
+        return RunPipeline(self._settings, name, registry, notify,
+                           cancelled=cancelled).execute()
 
     def pipeline_runs(self, name: str | None = None,
                       limit: int = 20) -> list[dict]:

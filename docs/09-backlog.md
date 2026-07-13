@@ -51,9 +51,9 @@ inferência emocional/diagnóstico/perfil auto-reescrito (ADR-19/31).
 | ID | P | Problema (evidência da auditoria) | Aceite |
 |---|---|---|---|
 | REL-1 | P0 | compile_source cria ModelRouter SEM governor ⇒ fura orçamento e ledger | gov injetado; ledger reflete compile; teste |
-| DATA-1 | P0 | sem verificação/repair de invariantes em runtime | `llmwiki doctor`: INV-001/002/003 + config×history; repair=rebuild |
-| REL-2 | P1 | sem timeout/heartbeat: job travado congela o worker único | timeout por classe; lease renovado; teste |
-| REL-3 | P1 | recuperação de órfãos só preguiçosa | sweep no boot do daemon; teste |
+| ~~DATA-1~~ (v1.4) | P0 | sem verificação/repair de invariantes em runtime | `llmwiki doctor`: INV-001/002/003 + config×history; repair=rebuild |
+| REL-2 | P1 | ~~heartbeat/timeout/cancel cooperativo (v1.4)~~; resta hard-kill de thread síncrona (REL-2b: isolamento de processo) | isolamento de processo p/ hard-kill |
+| ~~REL-3~~ (v1.4) | P1 | recuperação de órfãos só preguiçosa | sweep no boot do daemon; teste |
 | QA-1 | P1 | golden_eval.jsonl não é distribuído; eval é no-op out-of-the-box; sem Recall@K/MRR | seed com ≥10 casos (temporal/update/abstain); métricas fracionárias |
 | QA-3 | P1 | /ask não valida [n]→evidência (só header, só api:) | validação estrutural p/ local: e api:; teste |
 | UX-1 | P1 | 8 superfícies concorrentes de "o que fazer agora" | UMA fila unificada com origem explicada |

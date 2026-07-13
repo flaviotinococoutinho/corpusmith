@@ -156,12 +156,15 @@ class RunPipeline(UseCase):
 
     def __init__(self, settings: Settings, name: str,
                  registry: Mapping[str, Callable], notify=None, *,
-                 spec: dict | None = None):
+                 spec: dict | None = None, cancelled=None):
         self._settings = settings
         self._name = name
         self._registry = registry
         self._notify = notify or (lambda *a, **k: None)
         self._spec = spec
+        # token cooperativo (v1.4): o worker passa ctx.cancelled; entre
+        # estágios o pipeline consulta e PARA no meio se pedido
+        self._cancelled = cancelled or (lambda: False)
 
     def execute(self) -> dict:
         spec = self._spec or self._load()
@@ -176,6 +179,12 @@ class RunPipeline(UseCase):
         prev_result: dict = {}
         failed = 0
         for index, stage in enumerate(spec["stages"]):
+            if self._cancelled():                # boundary de cancelamento
+                self._notify("pipeline.cancelled",
+                             {"pipeline": self._name, "run_id": run_id,
+                              "at_stage": index})
+                return self._close_run(run_id, trace_id, "cancelled",
+                                       stages_log)
             span = _IDS.next_rendered()
             entry = {"job": stage["job"], "state": "running", "span": span}
             self._emit_stage(run_id, trace_id, index, entry)

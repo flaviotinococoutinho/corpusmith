@@ -12,5 +12,8 @@ def run(s: Settings, payload: dict, emit) -> dict:
     def notify(type: str, data: dict | None = None):
         emit(type, data or {})
 
+    # token cooperativo (v1.4): o worker passa um JobContext com
+    # .cancelled(); repassamos ao RunPipeline p/ parada entre estágios
+    cancelled = getattr(emit, "cancelled", None)
     return CompilerFacade(s).run_pipeline(payload["name"], REGISTRY,
-                                          notify=notify)
+                                          notify=notify, cancelled=cancelled)

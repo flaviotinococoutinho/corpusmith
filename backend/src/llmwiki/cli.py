@@ -150,6 +150,18 @@ def cmd_seed(s: Settings, args) -> int:
     return 0
 
 
+def cmd_doctor(s: Settings, args) -> int:
+    """Verifica invariantes (INV-001/002/003 + pipelines + cognitivo);
+    --repair reconstrói o índice (nunca toca o canônico)."""
+    import json as _json
+    from .usecases.diagnose import DiagnoseSystem
+    from .jobs import REGISTRY
+    result = DiagnoseSystem(s, repair=args.repair,
+                            known_jobs=set(REGISTRY)).execute()
+    print(_json.dumps(result, indent=1, default=str))
+    return 0 if result["ok"] else 2
+
+
 def cmd_backup(s: Settings, args) -> int:
     """backup create|verify|list|restore [--dry-run] [--force] [path]"""
     from .usecases.backup_restore import (CreateBackup, RestoreBackup,
@@ -184,6 +196,9 @@ def main(argv: list[str] | None = None) -> int:
     okf_sub.add_parser("index").set_defaults(fn=cmd_index)
     okf_sub.add_parser("bootstrap").set_defaults(fn=cmd_bootstrap)
 
+    doctor = sub.add_parser("doctor", help="verifica/repara invariantes")
+    doctor.add_argument("--repair", action="store_true")
+    doctor.set_defaults(fn=cmd_doctor)
     backup = sub.add_parser("backup", help="backup lógico verificável")
     backup.add_argument("op", choices=["create", "verify", "list", "restore"])
     backup.add_argument("path", nargs="?", default=None)
