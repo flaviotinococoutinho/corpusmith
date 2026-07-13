@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS chunks (
     privacy    TEXT,
     stale      INTEGER NOT NULL DEFAULT 0,
     valid_at   TEXT,               -- bi-temporalidade (v0.8 §6): tempo de MUNDO
-    invalid_at TEXT
+    invalid_at TEXT,
+    superseded INTEGER NOT NULL DEFAULT 0   -- INV-003 (v1.3): fora do default
 );
 CREATE INDEX IF NOT EXISTS chunks_page ON chunks(page);
 

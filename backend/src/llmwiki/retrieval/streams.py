@@ -64,8 +64,14 @@ class EvidenceStreams:
             scores[cid] *= factor
         ordered = sorted(by_id.values(), key=lambda h: -scores[h["id"]])
         if as_of:
+            # consulta HISTÓRICA: a partição bi-temporal decide (uma
+            # supersedida podia ser válida na data pedida)
             ordered = [h for h in ordered if _valid_at(h, as_of)] \
                     + [h for h in ordered if not _valid_at(h, as_of)]
+        else:
+            # INV-003 (v1.3): memória substituída NÃO participa da
+            # recuperação padrão — filtro duro, não despriorização
+            ordered = [h for h in ordered if not h.get("superseded")]
         hits = ordered[:limit]
         return FusedEvidence(
             hits=hits,

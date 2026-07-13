@@ -49,13 +49,23 @@ class Worker(threading.Thread):
             try:
                 with self.slots.hold(job["type"]):
                     result = handler(self.s, job["payload"], emit)
+                if self.queue.cancel_requested(job["id"]):
+                    # cancelamento cooperativo: honrado no boundary do job
+                    self.queue.fail(job["id"], "cancelado (efeitos do "
+                                    "handler já aplicados)")
+                    self.bus.emit("jobs", "job.cancelled",
+                                  {"id": job["id"], "trace_id": trace_id})
+                    continue
                 self.queue.complete(job["id"], result)
                 self.bus.emit("jobs", "job.done",
                               {"id": job["id"], "type": job["type"],
                                "trace_id": trace_id})
             except Exception as e:
-                self.queue.fail(job["id"], f"{type(e).__name__}: {e}\n"
-                                + traceback.format_exc(limit=5))
-                self.bus.emit("jobs", "job.failed",
+                transient = isinstance(e, (TimeoutError, ConnectionError,
+                                           InterruptedError, OSError))
+                state = self.queue.fail(
+                    job["id"], f"{type(e).__name__}: {e}\n"
+                    + traceback.format_exc(limit=5), transient=transient)
+                self.bus.emit("jobs", f"job.{state}",
                               {"id": job["id"], "type": job["type"],
                                "trace_id": trace_id, "error": str(e)})

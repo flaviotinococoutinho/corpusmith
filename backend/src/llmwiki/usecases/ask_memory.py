@@ -143,7 +143,8 @@ class AskMemory(UseCase):
 
         self._record_usage(ask_id, fused)
         evidence = [{"page": h["page"], "resource": h.get("resource"),
-                     "body": h["text"], "stale": bool(h.get("stale"))}
+                     "body": h["text"], "stale": bool(h.get("stale")),
+                     "superseded": bool(h.get("superseded"))}
                     for h in fused.hits]
         answer, via, blocked = self._compose(evidence)
         return {"answer": answer, "via": via, "blocked": blocked,
@@ -228,7 +229,8 @@ class AskMemory(UseCase):
         for page in pages:
             row = idx.execute(
                 "SELECT id, page, text, resource, privacy, stale, valid_at, "
-                "invalid_at FROM chunks WHERE page=? ORDER BY ord LIMIT 1",
+                "invalid_at, superseded FROM chunks WHERE page=? "
+                "ORDER BY ord LIMIT 1",
                 (page,)).fetchone()
             if row:
                 out.append(dict(row))

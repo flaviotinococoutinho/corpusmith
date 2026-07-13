@@ -48,6 +48,18 @@ class CompileSource(MachinePageUseCase):
 
     # -------------------------------------------------------------- hooks
     def _produce(self) -> DraftPage:
+        # idempotência (v1.2, auditoria D-6): fonte com o MESMO sha do
+        # compile_cache já foi compilada — SKIP sem custo de modelo
+        import hashlib as _hl
+        from ..runtime.db import connect as _connect
+        if self._source.exists():
+            _sha = _hl.sha256(self._source.read_bytes()).hexdigest()
+            _rt = _connect(self._settings.app_support / "runtime.db")
+            _row = _rt.execute("SELECT sha FROM compile_cache WHERE source=?",
+                               (self._relative_source,)).fetchone()
+            _rt.close()
+            if _row and _row["sha"] == _sha:
+                return None
         if not self._source.is_file():
             raise FileNotFoundError(f"fonte inexistente: {self._source}")
         self._sha = hashlib.sha256(self._source.read_bytes()).hexdigest()

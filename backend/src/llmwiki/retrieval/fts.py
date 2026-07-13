@@ -69,10 +69,11 @@ def _index_page(idx, d, gaz) -> None:
     for i, text in enumerate(_chunk(d.body)):
         idx.execute(
             "INSERT INTO chunks(page,ord,text,resource,privacy,stale,"
-            "valid_at,invalid_at) VALUES (?,?,?,?,?,?,?,?)",
+            "valid_at,invalid_at,superseded) VALUES (?,?,?,?,?,?,?,?,?)",
             (d.rel_path, i, text, d.meta.resource,
              x.get("privacy"), int(bool(x.get("stale_as_of"))),
-             x.get("valid_at"), x.get("invalid_at")))
+             x.get("valid_at"), x.get("invalid_at"),
+             int(bool(x.get("superseded_by")))))
     for link in parse_links(d.body):
         if is_internal(link.target):
             dst = resolve(link.target, d.rel_path)
@@ -97,6 +98,9 @@ def _gazetteer_fingerprint(gaz) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
+INDEX_GENERATION = f"g2:chunk={CHUNK_CHARS}"   # bump ⇒ full rebuild (INV-002)
+
+
 def rebuild_index(s: Settings, *, full: bool = False) -> dict:
     """Reconstrução INCREMENTAL por default (v0.13, espírito LSM):
     só páginas com sha alterado são reindexadas; removidas são purgadas
@@ -113,6 +117,12 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
     stored = idx.execute("SELECT value FROM index_meta "
                          "WHERE key='gazetteer_fp'").fetchone()
     if stored is None or stored["value"] != fingerprint:
+        full = True
+    # INV-002 (v1.3): mudança no CÓDIGO de indexação (geração) força
+    # full — sem isto, alterar chunking deixaria chunks velhos servindo
+    generation = idx.execute("SELECT value FROM index_meta "
+                             "WHERE key='index_generation'").fetchone()
+    if generation is None or generation["value"] != INDEX_GENERATION:
         full = True
 
     current = {rel: hashlib.sha256((bundle / rel).read_bytes()).hexdigest()
@@ -141,6 +151,11 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
                     "VALUES (?,?)", (rel, current[rel]))
     idx.execute("INSERT OR REPLACE INTO index_meta(key, value) "
                 "VALUES ('gazetteer_fp', ?)", (fingerprint,))
+    from ..okf.authorities import _kb_head
+    idx.execute("INSERT OR REPLACE INTO index_meta(key, value) "
+                "VALUES ('index_generation', ?)", (INDEX_GENERATION,))
+    idx.execute("INSERT OR REPLACE INTO index_meta(key, value) "
+                "VALUES ('bundle_head', ?)", (_kb_head(bundle) or '',))
     idx.commit()
     pages = idx.execute("SELECT COUNT(*) c FROM page_index_state"
                         ).fetchone()["c"]
@@ -189,7 +204,8 @@ def search(s: Settings, query: str, *, limit: int = 8,
            local_only: bool = False) -> list[dict]:
     idx = connect(s.app_support / "index.db")
     sql = ("SELECT c.id, c.page, c.text, c.resource, c.privacy, c.stale, "
-           "c.valid_at, c.invalid_at, bm25(chunks_fts) score FROM chunks_fts "
+           "c.valid_at, c.invalid_at, c.superseded, "
+           "bm25(chunks_fts) score FROM chunks_fts "
            "JOIN chunks c ON c.id = chunks_fts.rowid "
            "WHERE chunks_fts MATCH ? ")
     args: list = [_fts_query(query)]

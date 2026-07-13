@@ -45,3 +45,21 @@ GraphQL (ADR-15) · CRDTs/WFST/Verhoeff-Damm/steering vectors
 (ADR-04…09) · métricas sem procedência (ADR-10) · bancos externos
 (ADR-13) · algoritmos genéticos sobre config (ADR-14) · VARK/
 inferência emocional/diagnóstico/perfil auto-reescrito (ADR-19/31).
+
+
+## Backlog executável pós-auditoria (v1.3) — priorizado
+| ID | P | Problema (evidência da auditoria) | Aceite |
+|---|---|---|---|
+| REL-1 | P0 | compile_source cria ModelRouter SEM governor ⇒ fura orçamento e ledger | gov injetado; ledger reflete compile; teste |
+| DATA-1 | P0 | sem verificação/repair de invariantes em runtime | `llmwiki doctor`: INV-001/002/003 + config×history; repair=rebuild |
+| REL-2 | P1 | sem timeout/heartbeat: job travado congela o worker único | timeout por classe; lease renovado; teste |
+| REL-3 | P1 | recuperação de órfãos só preguiçosa | sweep no boot do daemon; teste |
+| QA-1 | P1 | golden_eval.jsonl não é distribuído; eval é no-op out-of-the-box; sem Recall@K/MRR | seed com ≥10 casos (temporal/update/abstain); métricas fracionárias |
+| QA-3 | P1 | /ask não valida [n]→evidência (só header, só api:) | validação estrutural p/ local: e api:; teste |
+| UX-1 | P1 | 8 superfícies concorrentes de "o que fazer agora" | UMA fila unificada com origem explicada |
+| UX-2 | P1 | 12 abas planas; jargão (BLA/Hedge/gate/trace) exposto | 3 níveis (essencial/análise/avançado); glossário aplicado |
+| UX-3 | P1 | onboarding inexistente; bundle vazio = becos | workspace de exemplo removível + tutorial |
+| UX-4 | P1 | presets não existem | ≥3 presets versionados via linhagem de config |
+| QA-2 | P2 | claims 92×/29× sem harness reprodutível | bench.py frio×quente e full×incremental versionado |
+| QA-4 | P2 | ~20 constantes de decisão sem teste de sensibilidade | testes paramétricos nos limiares críticos |
+| UX-5 | P2 | analogias/métricas/curation-projection sem UI | superfícies mínimas ou remoção do anúncio |

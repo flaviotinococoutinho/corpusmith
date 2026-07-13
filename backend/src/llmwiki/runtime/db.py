@@ -18,6 +18,18 @@ _SCHEMAS = {
     "reference.db": "schema_reference.sql",   # referência do mundo (v0.22)
 }
 
+# Versão de schema POR BANCO (v1.2): incrementar a cada mudança de forma.
+# Carimbada em _meta em toda conexão; o manifesto de backup a registra e o
+# restore em versão mais nova é seguro por construção (connect() reaplica
+# CREATE IF NOT EXISTS + _migrate idempotente ao abrir o banco restaurado).
+SCHEMA_VERSIONS = {
+    "runtime.db": 6,     # v0.7 base … v0.16 config_history, v0.17 pipelines
+    "index.db": 5,       # chunks bi-temporais, overlay, bridges, incremental
+    "cold.db": 1,
+    "cognitive.db": 2,   # v0.19 base + v0.20 experiências/analogias
+    "reference.db": 1,
+}
+
 
 def connect(path: Path | str) -> sqlite3.Connection:
     path = Path(path)
@@ -31,6 +43,19 @@ def connect(path: Path | str) -> sqlite3.Connection:
     if schema:
         conn.executescript((_SQL_DIR / schema).read_text())
         _migrate(conn, path.name)
+        conn.execute("CREATE TABLE IF NOT EXISTS _meta("
+                     "key TEXT PRIMARY KEY, value TEXT)")
+        # check-first: conexão em regime não escreve (evita contenção
+        # de lock — o carimbo só muda em upgrade de schema)
+        current = conn.execute("SELECT value FROM _meta WHERE "
+                               "key='schema_version'").fetchone()
+        wanted = str(SCHEMA_VERSIONS[path.name])
+        if current is None or current["value"] != wanted:
+            try:
+                conn.execute("INSERT OR REPLACE INTO _meta(key, value) "
+                             "VALUES ('schema_version', ?)", (wanted,))
+            except sqlite3.OperationalError:
+                pass                    # advisory: outra conexão carimba
         conn.commit()
     return conn
 
@@ -50,6 +75,9 @@ def _migrate(conn: sqlite3.Connection, name: str) -> None:
         for col in ("valid_at", "invalid_at"):
             if col not in chunk_cols:
                 conn.execute(f"ALTER TABLE chunks ADD COLUMN {col} TEXT")
+        if "superseded" not in chunk_cols:      # INV-003 (v1.3)
+            conn.execute("ALTER TABLE chunks ADD COLUMN "
+                         "superseded INTEGER NOT NULL DEFAULT 0")
     if name == "runtime.db":
         if "first_seen" not in _columns(conn, "page_heat"):
             conn.execute("ALTER TABLE page_heat ADD COLUMN first_seen REAL")

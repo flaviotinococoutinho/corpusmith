@@ -22,7 +22,7 @@ from ..runtime.governor import Governor
 from ..runtime.queue import JobQueue
 from ..settings import Settings
 
-VERSION = "1.1.0"
+from .. import __version__ as VERSION  # fonte única (v1.2)
 
 
 def links(**rels: str) -> dict:
@@ -170,6 +170,21 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
     @app.get("/jobs", dependencies=[Depends(auth)])
     def jobs(limit: int = 50):
         return {"jobs": queue.list(limit)}
+
+    @app.post("/jobs/{job_id}/cancel", dependencies=[Depends(auth)])
+    def cancel_job(job_id: str):
+        try:
+            return {"job_id": job_id, "state": queue.cancel(job_id)}
+        except KeyError as e:
+            raise HTTPException(409, str(e))
+
+    @app.post("/jobs/{job_id}/retry", dependencies=[Depends(auth)])
+    def retry_job(job_id: str):
+        try:
+            queue.retry_manual(job_id)
+        except KeyError as e:
+            raise HTTPException(409, str(e))
+        return {"job_id": job_id, "state": "queued"}
 
     @app.post("/jobs", dependencies=[Depends(auth)])
     def enqueue(body: dict):

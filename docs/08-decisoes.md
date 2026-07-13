@@ -54,7 +54,7 @@ subproduto natural: mudou o schema, o lint lista quem não conforma.
 **Contexto**: gazetteer/schemas varriam o bundle inteiro a cada
 ask/lint/compile. **Decisão**: cache de 1 entrada keyed por `(kb, HEAD)`
 — toda escrita commita, logo o HEAD é chave de invalidação perfeita.
-Medido: ~92× no hit já em bundle mínimo (frio cresce linear; quente é
+Medido: ~92× no hit (medição de sessão de desenvolvimento; harness reprodutível pendente — backlog QA-2) já em bundle mínimo (frio cresce linear; quente é
 constante). Sem HEAD legível ⇒ sem cache (correto por construção).
 
 ## Rejeitados (com porta de reentrada)
@@ -107,7 +107,7 @@ TencentDB→pipeline local, Zep→bi-temporal, LongMemEval→eval).
 **Adotados**: HippoRAG/PPR (stream `graph` multi-hop), A-mem
 (relacionadas determinísticas), índice incremental por sha+fingerprint
 (o conceito de layout de Arrow/FlatBuffers/LSM reduzido ao nosso
-invariante "índice derivado" — medido 29× em 150 páginas), SimHash
+invariante "índice derivado" — 29× em 150 páginas (medição de sessão de desenvolvimento; harness reprodutível pendente — backlog QA-2)), SimHash
 (Charikar) como sinal de near-duplicata na consolidação.
 **Rejeitados**: trocar SQLite por LanceDB/memgraph/Milvus (viola
 local-first + índice-derivado); Arrow/FlatBuffers/zerocopy como
@@ -464,3 +464,35 @@ como ARESTAS-FANTASMA roxas pontilhadas entre os articuladores, com
 `question` — o link ausente fica literalmente visível no grafo.
 **Porta remanescente**: frase da pergunta-ponte por LLM local marcada
 como inferida (continua na condição do ADR-26).
+
+### ADR-35 — Auditoria multiagente e endurecimento P0 (v1.3)
+**Contexto**: auditoria por 4 agentes independentes (dados, runtime,
+recuperação, UX+crítico) com o CÓDIGO como fonte primária.
+**Achados graves confirmados e CORRIGIDOS nesta rodada**:
+(1) crash do scheduler por UNIQUE(dedupe_key) ao reenfileirar chave de
+job concluído — enqueue agora libera a chave de jobs terminais;
+(2) INV-003 violado: página supersedida era indexada, recuperada e
+citada sem marca — agora filtro DURO na recuperação padrão, partição
+bi-temporal decide sob as_of, evidência carrega `superseded`;
+(3) divergência silenciosa do índice — index_meta agora carimba
+`index_generation` (mudar chunking força full) e `bundle_head`;
+(4) sem retry/cancel/DLQ — máquina de estados completa (retry_scheduled
+com backoff+jitter, dead_lettered, cancel cooperativo, retry manual,
+attempts coerente no lease);
+(5) sem backup — backup lógico portátil com manifesto+sha256, verify,
+restore --dry-run/force com pre-restore-* e rebuild da projeção,
+recusa de schema mais novo; teste de desastre completo;
+(6) 3 versões de produto divergentes — fonte única `__version__`;
+schema_version carimbado em _meta por banco (check-first);
+(7) compile sem idempotência — SKIP por sha do compile_cache;
+(8) claims 92×/29× sem harness — marcadas como pendentes (QA-2).
+**Registrado como backlog com evidência (não corrigido nesta rodada)**:
+governor não injetado no router do compile (orçamento furado — REL-1);
+timeout/heartbeat de job (REL-2); golden_eval.jsonl como seed real +
+Recall@K/MRR (QA-1); harness dos multiplicadores (QA-2); verificação
+de citação no /ask vivo (QA-3); consolidação das 8 superfícies de
+"o que fazer agora" (UX-1); progressive disclosure em 3 níveis e
+tradução de jargão (UX-2); onboarding com workspace de exemplo (UX-3);
+presets de uso (UX-4); UI para analogias/métricas/curadoria projetada
+(UX-5); constantes sem teste de sensibilidade (QA-4); sweep de startup
+de órfãos (REL-3); doctor de invariantes com repair (DATA-1).

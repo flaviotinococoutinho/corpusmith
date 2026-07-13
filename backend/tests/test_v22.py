@@ -140,3 +140,59 @@ def test_lint_flags_unattributed_known_quotation(settings, kb, runner):
     assert [h["path"] for h in hits] == ["concepts/testes.md"]
     assert "Dijkstra" in hits[0]["message"]      # aponta o autor correto
     assert elapsed < 2.0                          # custo medido: trivial
+
+
+def test_inv003_superseded_out_of_default_retrieval(settings, kb):
+    """INV-003 (v1.3): substituída NÃO participa da recuperação padrão;
+    com as_of histórico, a partição bi-temporal decide e a evidência
+    carrega a marca."""
+    from llmwiki.facades import MemoryFacade
+    from llmwiki.retrieval.fts import rebuild_index as _rb
+    BundleWriter(kb).write([
+        OKFDocument(rel_path="concepts/porta-v1.md",
+                    body="# Porta\n\nporta do daemon era 9000.",
+                    meta=OKFFrontMatter(
+                        type="concept", title="Porta v1",
+                        privacy="local_only",
+                        valid_at="2024-01-01T00:00:00+00:00",
+                        invalid_at="2025-01-01T00:00:00+00:00",
+                        **{"superseded_by": "concepts/porta-v2.md"})),
+        OKFDocument(rel_path="concepts/porta-v2.md",
+                    body="# Porta\n\nporta do daemon agora 8377.",
+                    meta=OKFFrontMatter(type="concept", title="Porta v2",
+                                        privacy="local_only",
+                                        valid_at="2025-01-01T00:00:00+00:00")),
+    ], log_kind="Creation", log_message="m", commit_message="c")
+    _rb(settings)
+    r = MemoryFacade(settings).ask("porta do daemon", local_only=True)
+    pages = [e["page"] for e in r["evidence"]]
+    assert "concepts/porta-v2.md" in pages
+    assert "concepts/porta-v1.md" not in pages     # filtro DURO no default
+    hist = MemoryFacade(settings).ask("porta do daemon",
+                                      local_only=True, as_of="2024-06-01")
+    v1 = next(e for e in hist["evidence"]
+              if e["page"] == "concepts/porta-v1.md")
+    assert v1["superseded"] is True                # histórico legítimo, marcado
+
+
+def test_inv002_index_generation_change_forces_full_rebuild(settings, kb):
+    from llmwiki.retrieval import fts
+    BundleWriter(kb).write(
+        [OKFDocument(rel_path="concepts/a.md", body="# A\n\ncorpo.",
+                     meta=OKFFrontMatter(type="concept", title="A",
+                                         privacy="local_only"))],
+        log_kind="Creation", log_message="m", commit_message="c")
+    fts.rebuild_index(settings)
+    idx = connect(settings.app_support / "index.db")
+    meta = {r["key"]: r["value"] for r in
+            idx.execute("SELECT key, value FROM index_meta")}
+    idx.close()
+    assert meta["index_generation"] == fts.INDEX_GENERATION
+    assert len(meta.get("bundle_head", "")) == 40   # sha do HEAD carimbado
+    # bump de geração ⇒ full mesmo sem NENHUM arquivo mudar
+    idx = connect(settings.app_support / "index.db")
+    idx.execute("UPDATE index_meta SET value='g0:antiga' "
+                "WHERE key='index_generation'")
+    idx.commit(); idx.close()
+    result = fts.rebuild_index(settings)
+    assert result["mode"] == "full"

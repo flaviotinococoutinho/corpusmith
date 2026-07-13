@@ -1,4 +1,4 @@
-# LLM Wiki — v1.1
+# LLM Wiki — v1.3
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -221,8 +221,9 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   para conteúdo `api:*`).
 - **Runtime**: fila de jobs SQLite + worker + scheduler + governor de
   orçamento de API + eventos SSE; índice FTS5 (+denso opcional) derivado.
-- **Cockpit**: Dashboard → Consulta com Evidências → Inbox → Wiki →
-  Qualidade → Processos, com o botão **⭐ Promover para memória**
+- **Cockpit** (12 abas): Estado · Consulta · Inbox · Wiki · Grafo ·
+  Indicadores · Memória · Cognição · Foco · Curadoria · Qualidade ·
+  Processos — com o botão **⭐ Promover para memória**
   (`generated_via: human:promote`, sem exigência de `source_sha256`).
 
 ## Instalação
@@ -255,7 +256,7 @@ Backlog fechado e portas abertas: [`docs/09-backlog.md`](docs/09-backlog.md).
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 217 testes de contrato/arquitetura/golden bundles
+just test             # 231 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

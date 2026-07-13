@@ -150,6 +150,27 @@ def cmd_seed(s: Settings, args) -> int:
     return 0
 
 
+def cmd_backup(s: Settings, args) -> int:
+    """backup create|verify|list|restore [--dry-run] [--force] [path]"""
+    from .usecases.backup_restore import (CreateBackup, RestoreBackup,
+                                          list_backups, verify_backup)
+    import json as _json
+    if args.op == "create":
+        print(_json.dumps(CreateBackup(s, args.path).execute(), indent=1))
+    elif args.op == "verify":
+        result = verify_backup(args.path)
+        print(_json.dumps(result, indent=1))
+        return 0 if result["ok"] else 1
+    elif args.op == "list":
+        for b in list_backups(s):
+            print(_json.dumps(b))
+    elif args.op == "restore":
+        result = RestoreBackup(s, args.path, dry_run=args.dry_run,
+                               force=args.force).execute()
+        print(_json.dumps(result, indent=1, default=str))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="llmwiki")
     ap.add_argument("--config", help="caminho de config YAML alternativo")
@@ -163,6 +184,12 @@ def main(argv: list[str] | None = None) -> int:
     okf_sub.add_parser("index").set_defaults(fn=cmd_index)
     okf_sub.add_parser("bootstrap").set_defaults(fn=cmd_bootstrap)
 
+    backup = sub.add_parser("backup", help="backup lógico verificável")
+    backup.add_argument("op", choices=["create", "verify", "list", "restore"])
+    backup.add_argument("path", nargs="?", default=None)
+    backup.add_argument("--dry-run", action="store_true", dest="dry_run")
+    backup.add_argument("--force", action="store_true")
+    backup.set_defaults(fn=cmd_backup)
     seed = sub.add_parser("seed", help="dados pré-definidos (idempotente)")
     seed.add_argument("--file", default=None)
     seed.set_defaults(fn=cmd_seed)
