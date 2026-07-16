@@ -6,17 +6,22 @@
 
 ## 1. Armazenamento
 
-### SQLite (runtime.db + index.db)
+### SQLite (5 bancos: runtime · index · cold · cognitive · reference)
 - **Contrato**: `runtime/db.py:connect()` é a ÚNICA porta — aplica WAL,
   `synchronous=NORMAL`, row_factory, o schema idempotente
   (`CREATE IF NOT EXISTS` de `db/schema_*.sql`) e as migrações
   (`_migrate`: ALTERs guardados por `PRAGMA table_info`). Qualquer
-  consumidor conecta sem cerimônia.
-- **Dois bancos, dois destinos**: `runtime.db` é operacional (fila,
-  eventos, ledger, heat, outcomes, proveniência) — perdê-lo perde
-  histórico operacional, não conhecimento. `index.db` é 100% DERIVADO —
-  apagar e rodar `okf index` reconstrói tudo (chunks, FTS, arestas,
-  entidades, níveis, pontes).
+  consumidor conecta sem cerimônia. (A spec BC-ENG-001 §5.2 propõe uma
+  `StoragePolicy` por store — hoje o `synchronous` é uniforme; ver
+  [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md) §5.2.)
+- **Cinco bancos, autoridades distintas** (`DB_SCHEMAS` em `runtime/db.py`):
+  `runtime.db` operacional (fila, eventos, ledger, heat, outcomes,
+  proveniência); `index.db` 100% DERIVADO — apagar e rodar `okf index`
+  reconstrói tudo (chunks, FTS, arestas, entidades, níveis, pontes);
+  `cold.db` base fria compactada (v0.12); `cognitive.db` experiência
+  cognitiva separada (v0.19); `reference.db` referência do mundo
+  relacional (v0.22). Só `index.db` é projeção sem autoridade; os demais
+  guardam estado não-derivável. Detalhe de tabelas: [`06-referencia.md`](06-referencia.md) §3.
 - **FTS5**: virtual tables `chunks_fts` e `fts_levels` com
   `content=`-tables + triggers de sincronização. bm25() nativo (menor =
   melhor). Consultas sempre via `fts_terms()` (quote + OR + stopwords
@@ -54,7 +59,7 @@
 Worker/Scheduler são threads daemon; `JobQueue`/`EventBus` protegem o
 SQLite compartilhado com locks Python (CPython ≥3.11: sqlite3
 threadsafety=3). Slots por classe de job: `heavy` (compile, lora,
-leiden, ocr) = 1; `light` = 2.
+leiden, ocr, pipeline) = 1; `light` = 2.
 
 ### Extras opcionais (nunca requisitos)
 - `llmwiki[parsers]` — pymupdf4llm, ebooklib (**AGPL**): executados em
@@ -91,8 +96,11 @@ de API grava tokens/USD no `ledger`.
   pipeline do Inbox/Processos via os eventos `page.stage`.
 - **Vite**: config em `vite.config.mts` (ESM-only por causa do plugin
   Tailwind v4) com `vite-plugin-electron` buildando main+preload CJS.
-- **Painéis**: Dashboard, ChatEvidence (+PromoteDialog), Inbox, Explorer,
-  Quality, Processes — todos consomem apenas o daemonClient.
+- **Painéis** (12 abas em `App.tsx:TABS`): Estado (Dashboard), Consulta
+  (ChatEvidence +PromoteDialog), Inbox, Wiki (Explorer), Grafo, Indicadores
+  (Insights), Memória, Cognição, Foco, Curadoria, Qualidade, Processos —
+  todos consomem apenas o daemonClient. *(A consolidação em 3 níveis —
+  essencial/análise/avançado — é a frente UX-2 do backlog.)*
 
 ## 5. Implantação
 

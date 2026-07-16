@@ -123,7 +123,7 @@ O normalizador compila (seeds embutidos ∪ authority_records) num único
 autômato regex no load. Efeitos: curadoria versionada no Git, lintável
 pelo Harness, editável no Explorer — **corrigir uma grafia é um commit,
 não um deploy**. Termos com alto risco de falso positivo (`Go`, `R`,
-`C`, `Rust`, `Nature`) estão em `UNSAFE_BARE`: nunca casam sozinhos.
+`C`, `Rust`, `Swift`, `Nature`) estão em `UNSAFE_BARE`: nunca casam sozinhos.
 
 ## 7. Proveniência e a divisão máquina/humano
 

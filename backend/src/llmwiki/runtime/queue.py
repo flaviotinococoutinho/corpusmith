@@ -4,11 +4,22 @@ Dedupe por chave (ex.: "review:2026-W27") — reenfileirar o mesmo trabalho
 devolve o job existente em vez de duplicar.
 """
 from __future__ import annotations
+import hashlib
 import json
 import threading
 import time
 import uuid
 from sqlite3 import Connection
+
+
+def _stable_jitter(job_id: str) -> float:
+    """Jitter em [0,1) derivado de hash CRIPTOGRÁFICO estável (blake2b),
+    NÃO do `hash()` do Python — que é randomizado por processo
+    (PYTHONHASHSEED) e daria backoff diferente em cada worker (spec
+    BC-ENG-001 §8.3 / achado A-06). Assim o atraso de retry é o mesmo em
+    qualquer processo, condição para o lease multiprocesso futuro (S2)."""
+    digest = hashlib.blake2b(job_id.encode(), digest_size=8).digest()
+    return (int.from_bytes(digest, "big") % 1000) / 1000.0
 
 
 class JobQueue:
@@ -97,7 +108,7 @@ class JobQueue:
             elif attempts >= self.MAX_ATTEMPTS:
                 state, due = "dead_lettered", None
             else:
-                jitter = (hash(job_id) % 100) / 100.0
+                jitter = _stable_jitter(job_id)
                 state = "retry_scheduled"
                 due = time.time() + self.BACKOFF_BASE * (2 ** (attempts - 1))                     + jitter
             self.db.execute(

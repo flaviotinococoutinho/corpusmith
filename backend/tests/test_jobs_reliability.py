@@ -4,12 +4,24 @@ from __future__ import annotations
 import time
 import pytest
 from llmwiki.runtime.db import connect
-from llmwiki.runtime.queue import JobQueue
+from llmwiki.runtime.queue import JobQueue, _stable_jitter
 
 
 @pytest.fixture
 def queue(settings):
     return JobQueue(connect(settings.app_support / "runtime.db"))
+
+
+def test_retry_jitter_is_process_stable():
+    """v1.5 (spec §8.3 / A-06): o jitter de backoff MUST vir de hash
+    estável, nunca de `hash()` do Python (randomizado por processo). O
+    mesmo job_id devolve sempre o mesmo valor em [0,1) — condição para
+    coordenar retries entre processos no lease multiprocesso futuro."""
+    assert _stable_jitter("job-abc") == _stable_jitter("job-abc")
+    assert 0.0 <= _stable_jitter("job-abc") < 1.0
+    assert _stable_jitter("job-abc") != _stable_jitter("job-xyz")
+    # valor congelado: prova que independe de PYTHONHASHSEED
+    assert _stable_jitter("job-abc") == pytest.approx(0.057)
 
 
 def test_cancel_queued_is_immediate(queue):

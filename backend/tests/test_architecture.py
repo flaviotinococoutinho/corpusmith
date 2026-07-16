@@ -13,6 +13,12 @@ SRC = Path(__file__).resolve().parent.parent / "src" / "llmwiki"
 FORBIDDEN_IN_PURE = {"sqlite3", "httpx", "subprocess", "fastapi", "uvicorn",
                      "git", "requests", "frontmatter", "yaml", "pydantic",
                      "sse_starlette", "socket", "urllib", "pathlib"}
+# transporte proibido nos domínios (falar com o mundo é só dos adapters)
+TRANSPORT = {"fastapi", "uvicorn", "sse_starlette", "socket",
+             "httpx", "requests", "urllib"}
+PURE_PACKAGES = ("kernel", "normalize", "cognitive")
+DOMAIN_PACKAGES = ("okf", "harness", "usecases", "facades",
+                   "retrieval", "runtime", "cognitive")
 
 
 def _absolute_imports(path: Path) -> set[str]:
@@ -110,12 +116,9 @@ def test_domain_is_free_of_framework_and_transport():
     é privilégio de api/, cli, daemon e models/ (o adapter de LLM). Assim a
     regra 'domínio não depende de framework, I/O de rede ou transporte'
     é asserção executável, não convenção."""
-    transport = {"fastapi", "uvicorn", "sse_starlette", "socket",
-                 "httpx", "requests", "urllib"}
-    for package in ("okf", "harness", "usecases", "facades",
-                    "retrieval", "runtime", "cognitive"):
+    for package in DOMAIN_PACKAGES:
         for module in (SRC / package).rglob("*.py"):
-            leaked = _absolute_imports(module) & transport
+            leaked = _absolute_imports(module) & TRANSPORT
             assert not leaked, \
                 f"{module}: domínio importou transporte {leaked}"
 

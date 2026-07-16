@@ -1,13 +1,18 @@
-# LLM Wiki — v1.4
+# LLM Wiki — v1.5
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
 
+> **Para agentes de IA e mantenedores:** comece por [`AGENTS.md`](AGENTS.md)
+> (ponto de entrada normativo) e pela spec de engenharia
+> [`docs/10-engenharia-ai-friendly.md`](docs/10-engenharia-ai-friendly.md); as
+> regras de arquitetura legíveis-por-máquina estão em
+> [`architecture.toml`](architecture.toml) (presas a teste).
+>
 > **Documentação conceitual completa em [`docs/`](docs/README.md)** —
-> conceitos, metodologias, fundamentos teóricos (com papers), tecnologias,
-> fluxos operacionais, referência dura e a matriz de sinergias. Mantida
-> sincronizada com o código pela skill local `/docs-sync`
-> (`.claude/skills/docs-sync/SKILL.md`).
+> índice roteado por especialidade (produto · ciência · engenharia · NFR ·
+> referência · operacional · governança). Mantida sincronizada com o código
+> pela skill local `/docs-sync` (`.claude/skills/docs-sync/SKILL.md`).
 
 ## Arquitetura v0.9 — imutável no centro, mutável na borda
 
@@ -151,6 +156,26 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   roxas pontilhadas entre os articuladores — clicar no "?" captura a
   pergunta-ponte como `question` sem sair do grafo.
 
+## Trilha de endurecimento (v1.2 → v1.5)
+
+- **v1.2** — lint de atribuição de citação no corpus
+  (`policy.quotation_attribution`); máquina de estados de jobs
+  (retry_scheduled/dead_lettered/cancel_requested com backoff).
+- **v1.3** — auditoria multiagente + endurecimento P0: INV-003 (página
+  supersedida fora do retrieval), INV-002 (índice carimba geração+HEAD),
+  backup/restore com manifesto+sha256 (ADR-35).
+- **v1.4** — integridade round 2: `llmwiki doctor [--repair]`, watchdog
+  (heartbeat + timeout), cancelamento cooperativo, sweep de órfãos no
+  boot, backup por quiescência, `SchemaTooNewError`, fonte única
+  `__version__` (ADR-36).
+- **v1.5** — validação da spec de engenharia **BC-ENG-001** e doc
+  AI-friendly: [`docs/10-engenharia-ai-friendly.md`](docs/10-engenharia-ai-friendly.md)
+  (com selo ✅ implementado / 🎯 proposto por mecanismo),
+  [`AGENTS.md`](AGENTS.md) + [`architecture.toml`](architecture.toml)
+  (contrato preso a `test_architecture_toml.py`), índice de docs roteado
+  por especialidade, e correção A-06 (jitter de retry por hash estável).
+  Ver ADR-37.
+
 ## Coordenação dos dados — fundamentos (kernel/)
 
 - **NCD — Cilibrasi & Vitányi, *Clustering by Compression* (IEEE Trans.
@@ -165,7 +190,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   seu conteúdo de informação — entidade rara vale mais que a onipresente
   (é o IDF na formulação original).
 - **Hedge — Freund & Schapire (JCSS, 1997)**: cada stream de retrieval
-  (fts, dense, entity, descend, global) é um *expert*; os desfechos
+  (fts, dense, entity, graph, descend, global) é um *expert*; os desfechos
   `useful/dead_end` do usuário são as perdas; `stream_weights` converge por
   *multiplicative weights* (com clamp [0.5, 2.0] para nunca silenciar um
   stream) e realimenta a fusão RRF — a proveniência página→stream fica em
@@ -286,9 +311,10 @@ backend/
                 descend, dense, related, streams (fusão RRF+Hedge)
     models/     router (local Ollama × API Anthropic, privacidade + orçamento)
     api/        system (auth header OU ?auth=), cockpit (+outcome/eval/
-                authorities/reflect, v0.8 §11)
+                authorities/reflect, v0.8 §11), cognitive (/cognitive/* v0.19)
     daemon.py · cli.py · settings.py (flags + get)
-  db/           schema_runtime.sql · schema_index.sql (tabelas v0.8 §2.1)
+  db/           schema_runtime.sql · schema_index.sql · schema_cognitive.sql
+                · schema_cold.sql · schema_reference.sql (5 bancos, v0.8 §2.1)
   config/       default.yaml (privacy.default: local_only · flags v0.8)
   build.spec    PyInstaller onedir (AGPL fora do binário)
 desktop/

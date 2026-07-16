@@ -42,7 +42,8 @@ o sistema pode responder E confessar dúvida.
 ### 1.3 Surprisal (conteúdo de informação)
 **−log₂ p(e)** — a formulação original do que o IR conhece como IDF.
 **Uso**: o stream de entidades do `/ask` pondera cada entidade pelo seu
-conteúdo de informação (`AskMemory._entity_stream`): uma entidade
+conteúdo de informação (montado inline em `AskMemory` via
+`_first_chunks`, ponderado por surprisal): uma entidade
 presente em 1 de 1000 páginas informa ~10 bits; presente em todas,
 0 bits. Evita que `JSON` (onipresente) domine `leidenalg` (raríssima) na
 recuperação por entidade.
@@ -52,7 +53,7 @@ recuperação por entidade.
 Learning and an Application to Boosting", JCSS 1997** (algoritmo Hedge;
 família dos multiplicative weights, com arrependimento sublinear
 garantido contra o melhor expert fixo). **Uso**: cada stream de retrieval
-(`global`, `fts`, `dense`, `entity`, `descend`) é um *expert*; o desfecho
+(`global`, `fts`, `dense`, `entity`, `graph`, `descend`) é um *expert*; o desfecho
 do usuário é a perda (useful = −1, dead_end/corrected = +1);
 `w ← w·exp(−η·loss)` com η=0.25 e **clamp [0.5, 2.0]** — o clamp preserva
 exploração (nenhum stream é silenciado para sempre; o mundo muda).

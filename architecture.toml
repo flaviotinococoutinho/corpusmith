@@ -1,0 +1,88 @@
+# architecture.toml — contrato de arquitetura LEGÍVEL POR MÁQUINA.
+#
+# Fonte única das regras estruturais para humanos E agentes de IA. NÃO é
+# decorativo: `backend/tests/test_architecture_toml.py` cruza este arquivo
+# com as asserções de `test_architecture.py` — se um divergir do outro, a
+# suíte quebra. Assim a doc de arquitetura não pode mentir sobre o código.
+#
+# Referências: docs/10-engenharia-ai-friendly.md (spec BC-ENG-001) · AGENTS.md
+schema_version = 1
+product_version = "1.5.0"
+
+[project]
+name = "brain-compiler"        # também LLM Wiki
+kind = "local-first knowledge & memory platform"
+source_of_truth = ["knowledge/bundle (Markdown OKF)", "git"]
+derived_stores = ["index.db"]           # reconstruível de rebuild_index
+transport_allowed_only_in = ["api", "cli", "daemon", "models"]
+
+# Gradiente de mutabilidade (interno = estável/puro → externo = volátil).
+layers = [
+  "kernel", "normalize", "cognitive",   # núcleo PURO (stdlib, zero I/O)
+  "okf", "harness", "retrieval",        # domínio canônico
+  "usecases",                            # aplicação (1 método público)
+  "facades",                             # orquestração
+  "jobs", "api", "cli", "daemon", "models", "desktop",  # adapters
+]
+
+# --- núcleo PURO: nenhum destes imports pode aparecer (test_architecture:
+#     FORBIDDEN_IN_PURE). ---
+[pure]
+packages = ["kernel", "normalize", "cognitive"]
+forbidden_imports = [
+  "sqlite3", "httpx", "subprocess", "fastapi", "uvicorn", "git",
+  "requests", "frontmatter", "yaml", "pydantic", "sse_starlette",
+  "socket", "urllib", "pathlib",
+]
+
+# --- domínio livre de transporte (test_architecture: TRANSPORT). ---
+[domain]
+packages = ["okf", "harness", "usecases", "facades", "retrieval",
+            "runtime", "cognitive"]
+forbidden_imports = ["fastapi", "uvicorn", "sse_starlette", "socket",
+                     "httpx", "requests", "urllib"]
+
+# --- regra de dependência entre camadas. ---
+[dependency_rule]
+usecases_forbidden = ["facades", "api", "jobs"]   # + nenhum framework HTTP
+api_allowed_internal = ["facades"]                # nunca usecases/jobs
+memory_must_not_import = ["cognitive"]            # dependência unidirecional
+
+[usecase]
+single_public_method = "execute"                  # Object Calisthenics
+machine_page_template_closed = true               # subclasses não sobrescrevem execute
+
+# --- bancos e autoridade (docs/06 §3 · spec §5.1). ---
+[[database]]
+name = "runtime.db"
+authority = "operacional"
+rebuildable = false
+schema_version = 6
+[[database]]
+name = "index.db"
+authority = "nenhuma (projeção)"
+rebuildable = true
+schema_version = 5
+[[database]]
+name = "cold.db"
+authority = "memória fria"
+rebuildable = "parcial (via Git)"
+schema_version = 1
+[[database]]
+name = "cognitive.db"
+authority = "experiência (separada)"
+rebuildable = false
+schema_version = 2
+[[database]]
+name = "reference.db"
+authority = "referência do mundo"
+rebuildable = "parcial (via seed/import)"
+schema_version = 1
+
+# --- comandos de verificação (o gate único da spec §14.4). ---
+[commands]
+backend_tests = "cd backend && .venv/bin/python -m pytest tests -q"
+desktop_typecheck = "cd desktop && npx tsc --noEmit"
+compose_check = "docker compose config -q"
+doctor = "cd backend && .venv/bin/python -m llmwiki.cli doctor"
+backup = "cd backend && .venv/bin/python -m llmwiki.cli backup create"

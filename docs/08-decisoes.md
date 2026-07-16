@@ -527,3 +527,36 @@ publicar e evita re-execução por falso-órfão; hard-kill fica para
 isolamento de processo (backlog REL-2b). CI verde no GitHub e default
 branch continuam sendo ações de administração do repositório (fora do
 alcance de `git push` nesta branch) — sinalizadas, não fingidas.
+
+### ADR-37 — Validação da spec de engenharia (BC-ENG-001) e doc por especialidade (v1.5)
+**Contexto**: a spec técnica **BC-ENG-001** (arquitetura AI-friendly) foi
+submetida para validar solidez/alinhamento/escala/manutenibilidade e para
+tornar a documentação legível por humano E por IA, separando as
+especialidades (produto × ciência × engenharia/algoritmos/paradigmas ×
+NFR) e removendo referências órfãs.
+**Decisão e o que foi feito (com teste onde aplicável)**:
+- a spec vira [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md),
+  a doc de **engenharia + NFR**, com **selo explícito por mecanismo**
+  (✅ implementado / ⚠️ parcial / 🎯 proposto) — resolve a ambiguidade de
+  "descrito ≠ implementado"; `BundleUnitOfWork`, `StoragePolicy`, outbox,
+  lease `RETURNING`, Problem Details e value objects ficam marcados 🎯,
+  não como se existissem;
+- `architecture.toml` (contrato legível-por-máquina) + `AGENTS.md` (ponto
+  de entrada normativo) materializam a §18.1 da spec; `test_architecture_
+  toml.py` (5 testes) **prende o TOML à realidade** — se divergir das
+  constantes de `test_architecture.py`, do `__version__` ou dos
+  `SCHEMA_VERSIONS`, o CI quebra;
+- `test_architecture.py` refatorado: constantes `TRANSPORT`/`PURE_PACKAGES`/
+  `DOMAIN_PACKAGES` hoisted para nível de módulo (fonte única cruzada);
+- `docs/README.md` reescrito como **índice roteado por especialidade**
+  (produto/ciência/engenharia/NFR/referência/operacional/governança); o
+  órfão `09-backlog.md` (antes fora do índice) e o novo `10` entram;
+- **A-06 corrigido**: o jitter de retry usava `hash()` do Python
+  (randomizado por PYTHONHASHSEED, quebra coordenação entre processos);
+  agora `_stable_jitter` (blake2b), congelado por teste — pré-condição do
+  lease multiprocesso futuro (S2).
+**Não feito de propósito (evitar big-bang)**: os P0/P1 de atomicidade
+(A-01/A-02 `BundleUnitOfWork`), durabilidade (A-03 `StoragePolicy`),
+contratos (A-05/A-08/A-10) ficam documentados como 🎯 com porta de
+reentrada — não implementados nesta rodada de consolidação de doc, para
+não misturar mudança estrutural com trabalho de documentação.

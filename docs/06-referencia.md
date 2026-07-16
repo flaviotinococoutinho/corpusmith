@@ -316,12 +316,12 @@ PII sensível: cpf, cnpj, iban (com DV válido).
 ## 9. Camadas e regras de import (test_architecture.py)
 
 ```
-kernel/, normalize/     PURO: proibido sqlite3, httpx, subprocess, fastapi,
-                        uvicorn, git, requests, frontmatter, yaml, pydantic,
+kernel/, normalize/,    PURO: proibido sqlite3, httpx, subprocess, fastapi,
+cognitive/              uvicorn, git, requests, frontmatter, yaml, pydantic,
                         sse_starlette, socket, urllib, pathlib
 usecases/               proibido: fastapi, facades, api, jobs
 api/                    proibido: usecases, jobs (só facades)
-okf/ harness/ usecases/ facades/ retrieval/ runtime/
+okf/ harness/ usecases/ facades/ retrieval/ runtime/ cognitive/
                         proibido TRANSPORTE (v0.16): fastapi, uvicorn,
                         sse_starlette, socket, httpx, requests, urllib
 UseCase                 métodos públicos ⊆ {execute}

@@ -13,16 +13,17 @@ daemon.main()
  ├─ connect(runtime.db) + connect(index.db)   ← schema + migrações aqui
  ├─ JobQueue · EventBus · Governor · Slots
  ├─ Worker (thread: lease → REGISTRY[type](s, payload, emit) → done/failed)
- ├─ Scheduler (thread: segunda-feira ⇒ reflect + review_weekly; diário ⇒ embed)
+ ├─ Scheduler (thread: segunda ⇒ reflect + review_weekly + metacog; diário ⇒ embed + consolidate_inbox)
  ├─ issue_token() → state/daemon.json (handshake p/ Electron e CLI)
  └─ uvicorn 127.0.0.1:8377
 ```
 
-Jobs registrados: `compile_source · consolidate_inbox · ask · embed ·
-rerank · leiden · ocr · lora_train · review_weekly · reflect ·
-eval_memory · index_rebuild`. Scheduler: segunda ⇒ reflect +
-review_weekly; diário ⇒ embed + consolidate_inbox. Dedupe por chave
-(ex.: `review:2026-W27`) impede duplicatas na fila.
+Jobs registrados (14 em `jobs/__init__.py:REGISTRY`): `compile_source ·
+consolidate_inbox · ask · embed · rerank · leiden · ocr · lora_train ·
+review_weekly · reflect · eval_memory · index_rebuild · pipeline ·
+metacog`. Scheduler: segunda ⇒ reflect + review_weekly + metacog; diário
+⇒ embed + consolidate_inbox. Dedupe por chave (ex.: `review:2026-W27`)
+impede duplicatas na fila.
 
 ## 1. Compilar uma fonte (o fluxo mais denso)
 
@@ -345,6 +346,9 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | GET /cockpit/cold | Curation.cold | cold_stats (puro) |
 | POST /cockpit/tags | Curation.rename_tag | RenameTag |
 | GET /cockpit/export | Curation.export | ExportMemory |
+| GET /cockpit/reference | Curation.reference_stats | reference_stats (puro) |
+| POST /cockpit/reference | Curation.import_reference | ImportReferenceData |
+| POST /cockpit/reference/check | Curation.check_quotation | check_quotation |
 | GET graph/insights/dictionary/traces | — (observatório, leitura pura) | retrieval/observatory.py |
 | GET /cockpit/config | — (leitura pura) | Settings.snapshot |
 | POST /cockpit/config | Curation.tune_config | TuneConfig |

@@ -1,8 +1,12 @@
-# 09 · Backlog — estado de fechamento (v1.0)
+# 09 · Backlog — estado de fechamento (v1.5)
 
-> Última auditoria: v1.0. Tudo que foi pedido nas 22 rodadas está
-> ✅ entregue, ⏳ aguardando volume de uso (porta com condição de
-> entrada em ADR), ou ❌ rejeitado com razão registrada.
+> Última auditoria: validação da spec **BC-ENG-001** sobre o baseline
+> 1.4.0 (ver [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md)
+> §21); a rodada de consolidação de doc é a v1.5 (ADR-37). Tudo que foi
+> pedido está ✅ entregue, ⏳ aguardando volume de uso
+> (porta com condição de entrada em ADR), 🎯 alvo de engenharia proposto
+> (rastreado em `10` §21, achados A-01…A-10), ou ❌ rejeitado com razão
+> registrada.
 
 ## ✅ Entregue (com teste)
 Núcleo OKF/Harness/daemon/Cockpit (v0.7–0.15) · qualidade epistêmica
@@ -63,3 +67,12 @@ inferência emocional/diagnóstico/perfil auto-reescrito (ADR-19/31).
 | QA-2 | P2 | claims 92×/29× sem harness reprodutível | bench.py frio×quente e full×incremental versionado |
 | QA-4 | P2 | ~20 constantes de decisão sem teste de sensibilidade | testes paramétricos nos limiares críticos |
 | UX-5 | P2 | analogias/métricas/curation-projection sem UI | superfícies mínimas ou remoção do anúncio |
+| ~~A-06~~ (v1.5) | P2 | jitter de retry usava `hash()` do Python (randomizado por processo) | `_stable_jitter` blake2b; teste `test_retry_jitter_is_process_stable` |
+
+## Achados de engenharia da spec BC-ENG-001 (rastreados em `10` §21)
+Os riscos A-01…A-10 da validação de arquitetura (atomicidade do
+BundleWriter, SUPERSEDE atômico, `StoragePolicy`, lease transacional,
+tipos do frontend, outbox, idempotência HTTP, hard-kill, OpenAPI→TS)
+estão listados com prioridade, status e porta de reentrada em
+[`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md) §21, para
+não duplicar a tabela. A-06 já foi corrigido (acima).

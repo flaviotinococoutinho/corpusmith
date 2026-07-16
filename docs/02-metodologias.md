@@ -149,7 +149,8 @@ para o volátil): `kernel` → `normalize` → `okf`/`harness` → `usecases`
 Comando ≠ consulta em pares explícitos: `ComputeWeeklyReview` (puro, o
 cockpit consome direto) × `PublishWeeklyReview` (materializa página);
 `usage_candidates()` (puro) × `ReflectOnUsage` (recalcula heat/overlay);
-`reconcile.plan` (puro — devolve o plano) × aplicação no template.
+`ReconcileCandidate.execute()` (devolve a decisão como dict) × aplicação
+da operação pelo hook `_reconcile` no template.
 Consultas puras podem ser chamadas por endpoint GET sem medo; teste
 `test_review_compute_is_side_effect_free` garante.
 
