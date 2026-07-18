@@ -123,6 +123,13 @@ export function QualityPanel() {
               </div>);
           })}
         </div>
+        {q.eval_metrics && (
+          <p className="text-xs text-neutral-500 mt-2">
+            📐 recall@5 médio {q.eval_metrics.mean_recall_at_5 ?? "—"} ·
+            {" "}MRR médio {q.eval_metrics.mean_mrr ?? "—"} ·
+            {" "}taxa geral {q.eval_metrics.overall_pass_rate ?? "—"}
+            {" "}({q.eval_metrics.graded_cases ?? 0} casos ranqueados —
+            do Generalization Envelope mais recente)</p>)}
       </section>
       {q.bridges?.length > 0 && (
         <section>
