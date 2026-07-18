@@ -133,6 +133,10 @@ GET  /cockpit/pipelines/runs     ?name=&limit= (filme: estado por estágio + tra
 GET  /cockpit/reference          (v0.22: contagens + facts; seed no mount)
 POST /cockpit/reference          ({terms?, quotations?, facts?} — upsert; 400 forma)
 POST /cockpit/reference/check    ({text, author?} → matches + misattributions)
+GET  /cockpit/epistemics         (v1.6: lint + mecanismos{garantia, status
+                                  de avaliação, fallback} — ADR-38)
+GET  /cockpit/epistemics/{id}    (contrato completo + últimas avaliações; 404)
+GET  /cockpit/epistemics/{id}/evaluations  (Generalization Envelopes)
 GET  /cockpit/behavior · POST /cockpit/behavior/reset-streams
 GET  /cockpit/export             ?format=zip|json|md &include_local &types &tag
                                  (local_only fica de fora por default; manifesto)
@@ -167,7 +171,12 @@ stages json, started_at, finished_at)` — últimos 200 (v0.17) ·
 `strategy_weights(strategy, weight)` ·
 `metacog_observations(kind∈strategy|load|calibration, statement,
 support, confidence, evidence json, suggestion json,
-status∈proposed|accepted|rejected|suspended)`
+status∈proposed|accepted|rejected|suspended)` ·
+`evaluation_envelopes(mechanism_id, dataset+sha256, sample_size,
+query_categories json, metrics json, out_of_scope json, eval_run_ids
+json, evaluation_status∈unevaluated|partially_evaluated|evaluated|
+drifted|invalidated)` — Generalization Envelope por mecanismo do
+`epistemics.toml` (v1.6/ADR-38; schema runtime 6→7)
 
 **cognitive.db** (v0.19 — Cognitive Experience Domain, SEPARADO: só
 referências a páginas, zero conteúdo canônico; projeções
@@ -317,11 +326,11 @@ PII sensível: cpf, cnpj, iban (com DV válido).
 
 ```
 kernel/, normalize/,    PURO: proibido sqlite3, httpx, subprocess, fastapi,
-cognitive/              uvicorn, git, requests, frontmatter, yaml, pydantic,
+cognitive/, epistemic/  uvicorn, git, requests, frontmatter, yaml, pydantic,
                         sse_starlette, socket, urllib, pathlib
 usecases/               proibido: fastapi, facades, api, jobs
 api/                    proibido: usecases, jobs (só facades)
-okf/ harness/ usecases/ facades/ retrieval/ runtime/ cognitive/
+okf/ harness/ usecases/ facades/ retrieval/ runtime/ cognitive/ epistemic/
                         proibido TRANSPORTE (v0.16): fastapi, uvicorn,
                         sse_starlette, socket, httpx, requests, urllib
 UseCase                 métodos públicos ⊆ {execute}
@@ -332,7 +341,9 @@ MachinePageUseCase      subclasses não sobrescrevem execute
 
 CLI ganha (v0.14): `llmwiki cold` · `llmwiki freeze <page> [--force]` ·
 `llmwiki recycle <page>`; `ask` exibe incerteza alta e memórias frias
-compatíveis na abstenção. Painel novo: 🧠 Memória (4 camadas + base
+compatíveis na abstenção. CLI (v1.6):
+`llmwiki epistemics lint|list|show <id>|evaluations <id>` — contratos
+epistemológicos (ADR-38; lint sai 1 com erros, mesma fonte do painel). Painel novo: 🧠 Memória (4 camadas + base
 fria). Processos: jobs falhos têm ↻ reexecutar (payload na listagem).
 Removido: retrieval/fusion.py (substituído por streams desde a v0.9).
 

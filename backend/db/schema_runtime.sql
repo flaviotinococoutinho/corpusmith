@@ -128,3 +128,34 @@ CREATE TABLE IF NOT EXISTS config_history(
   snapshot TEXT NOT NULL,      -- seções TUNABLE completas após aplicar (json)
   source TEXT NOT NULL DEFAULT 'cockpit',  -- cockpit|cli|baseline|rollback
   note TEXT);
+
+-- ============================ v1.6 (ADR-38) ============================
+-- Generalization Envelopes: o CONTEXTO exato de cada avaliação — em que
+-- regime um mecanismo foi medido e onde NÃO foi. Colunas JSON carregam
+-- payload_schema_version (governança de JSON em coluna, spec §5.5).
+CREATE TABLE IF NOT EXISTS evaluation_envelopes(
+  id TEXT PRIMARY KEY,
+  mechanism_id TEXT NOT NULL,
+  contract_version TEXT,
+  policy_version TEXT,
+  product_version TEXT,
+  bundle_head TEXT,
+  dataset TEXT,
+  dataset_sha256 TEXT,
+  sample_size INTEGER NOT NULL DEFAULT 0,
+  query_categories TEXT NOT NULL DEFAULT '[]',   -- json array
+  languages TEXT NOT NULL DEFAULT '[]',          -- json array
+  domains TEXT NOT NULL DEFAULT '[]',            -- json array
+  temporal_range TEXT,
+  metrics TEXT NOT NULL DEFAULT '{}',            -- json object
+  confidence_intervals TEXT,                     -- json object|null
+  known_exclusions TEXT NOT NULL DEFAULT '[]',   -- json array
+  out_of_scope TEXT NOT NULL DEFAULT '[]',       -- json array
+  eval_run_ids TEXT NOT NULL DEFAULT '[]',       -- json array de eval_runs.id
+  evaluation_status TEXT NOT NULL
+    CHECK(evaluation_status IN ('unevaluated','partially_evaluated',
+                                'evaluated','drifted','invalidated')),
+  payload_schema_version INTEGER NOT NULL DEFAULT 1,
+  created_at REAL DEFAULT (unixepoch('subsec')));
+CREATE INDEX IF NOT EXISTS idx_envelopes_mechanism
+  ON evaluation_envelopes(mechanism_id, created_at);

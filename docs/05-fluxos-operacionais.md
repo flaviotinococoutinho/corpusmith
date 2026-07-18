@@ -349,6 +349,8 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | GET /cockpit/reference | Curation.reference_stats | reference_stats (puro) |
 | POST /cockpit/reference | Curation.import_reference | ImportReferenceData |
 | POST /cockpit/reference/check | Curation.check_quotation | check_quotation |
+| GET /cockpit/epistemics | Curation.epistemics_overview | harness.epistemics (leitura) |
+| GET /cockpit/epistemics/{id}[/evaluations] | Curation.epistemics_* | harness.epistemics + envelopes_for |
 | GET graph/insights/dictionary/traces | — (observatório, leitura pura) | retrieval/observatory.py |
 | GET /cockpit/config | — (leitura pura) | Settings.snapshot |
 | POST /cockpit/config | Curation.tune_config | TuneConfig |

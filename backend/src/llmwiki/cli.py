@@ -183,6 +183,45 @@ def cmd_backup(s: Settings, args) -> int:
     return 0
 
 
+def cmd_epistemics(s: Settings, args) -> int:
+    """epistemics lint|list|show <id>|evaluations <id> — a MESMA
+    implementação do painel e dos testes (harness.epistemics + facade)."""
+    import json as _json
+    facade = CurationFacade(s)
+    if args.op == "lint":
+        result = facade.epistemics_lint()
+        for f in result["findings"]:
+            where = f["mechanism_id"] or "<registro>"
+            print(f"{f['severity']:5s} {f['code']:40s} {where}: "
+                  f"{f['message']}")
+        print(f"\n{result['mechanisms']} mecanismo(s), "
+              f"{len(result['findings'])} finding(s)")
+        return 0 if result["ok"] else 1
+    if args.op == "list":
+        overview = facade.epistemics_overview()
+        for m in overview["mechanisms"]:
+            fallback = ",".join(m["fallback"]) or "-"
+            print(f"{m['mechanism_id']:32s} {m['guarantee_kind']:24s} "
+                  f"{m['evaluation_status']:20s} fallback={fallback}")
+        return 0
+    if not args.mechanism:
+        print("informe o mechanism-id", file=sys.stderr)
+        return 2
+    if args.op == "show":
+        try:
+            data = facade.epistemics_mechanism(args.mechanism)
+        except KeyError as e:
+            print(str(e), file=sys.stderr)
+            return 2
+        print(_json.dumps(data, indent=1, ensure_ascii=False))
+        return 0
+    if args.op == "evaluations":
+        for env in facade.epistemics_evaluations(args.mechanism):
+            print(_json.dumps(env, ensure_ascii=False))
+        return 0
+    return 2
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="llmwiki")
     ap.add_argument("--config", help="caminho de config YAML alternativo")
@@ -205,6 +244,12 @@ def main(argv: list[str] | None = None) -> int:
     backup.add_argument("--dry-run", action="store_true", dest="dry_run")
     backup.add_argument("--force", action="store_true")
     backup.set_defaults(fn=cmd_backup)
+    epistemics = sub.add_parser(
+        "epistemics", help="contratos epistemológicos (epistemics.toml)")
+    epistemics.add_argument("op", choices=["lint", "list", "show",
+                                           "evaluations"])
+    epistemics.add_argument("mechanism", nargs="?", default=None)
+    epistemics.set_defaults(fn=cmd_epistemics)
     seed = sub.add_parser("seed", help="dados pré-definidos (idempotente)")
     seed.add_argument("--file", default=None)
     seed.set_defaults(fn=cmd_seed)

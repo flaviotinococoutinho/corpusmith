@@ -560,3 +560,54 @@ NFR) e removendo referências órfãs.
 contratos (A-05/A-08/A-10) ficam documentados como 🎯 com porta de
 reentrada — não implementados nesta rodada de consolidação de doc, para
 não misturar mudança estrutural com trabalho de documentação.
+
+### ADR-38 — Epistemic Contract Registry + Generalization Envelope (v1.6)
+**Contexto**: os mecanismos heurísticos/adaptativos (RRF+Hedge, entropia
+de retrieval, abstenção, reconciliação, prioridade cognitiva, mineração
+metacognitiva) embutem vieses indutivos, pressupostos e limites que
+estavam espalhados por código/ADRs/docs — risco de leitura além do
+regime avaliado (por humano E por IA).
+**Decisão**: infraestrutura operacional pequena, uma fonte única:
+- `epistemics.toml` na raiz (fonte normativa, como architecture.toml é
+  para estrutura) com 7 contratos; `[mechanisms.*.parameters]` carrega
+  as constantes reais, CRUZADAS com o código por
+  `test_epistemics_toml.py` (η/clamp do Hedge, RRF_K, HI/LO, janela de
+  entropia, cortes do metacog, componentes do score) — contrato que
+  mente sobre o código quebra a suíte;
+- pacote PURO `epistemic/` (model: enums fechados GuaranteeKind/
+  DecisionFallback/EvaluationStatus/EvidenceKind + dataclasses
+  congeladas; parse: texto→tipos sem I/O; validate: regras→findings
+  determinísticos com códigos estáveis) — 4º pacote puro, asserção de
+  arquitetura atualizada (architecture.toml [pure]);
+- loader ÚNICO em `harness/epistemics.py` (a única checagem com
+  filesystem: existência dos implementation_refs); CLI
+  (`llmwiki epistemics lint|list|show|evaluations`), API
+  (3 GETs `/cockpit/epistemics*` via CurationFacade) e painel Qualidade
+  consomem a mesma fonte;
+- **Generalization Envelope**: `evaluation_envelopes` no runtime.db
+  (schema 6→7, migração idempotente + ledger) — cada eval grava dataset
+  +sha256, amostra, categorias, HEAD, versões; amostra <
+  `epistemics.min_sample` (20) ⇒ `partially_evaluated`. Estende
+  eval_runs (referência por eval_run_ids), não duplica plataforma.
+**Regras normativas do lint**: `universal_guarantee=true` PROIBIDO;
+garantia declara referencial; heurístico exige failure modes; empírico
+exige envelope; alto impacto exige fallback; adaptativo exige loss
+signal; composto exige componentes; evidência só-self_reported PROIBIDA
+(não-autocertificação); Gödel/No-Free-Lunch PROIBIDOS como justificativa
+em contrato (motivam postura, não fornecem bounds de ML).
+**Alternativas rejeitadas**: ontologia filosófica desacoplada (sem
+consumidor); knowledge graph epistemológico paralelo (duplicaria fonte);
+campos dentro do frontmatter OKF (mistura conhecimento com meta-registro
+de mecanismo); renomear `expected_information_gain` (quebraria clientes
+— preservado o nome externo, natureza de PROXY declarada no contrato:
+dívida registrada aqui).
+**Invariantes**: pureza do novo pacote (AST); semântica de
+`epistemic_confidence`/`confidence` INTOCADA (eixos separados por
+construção); monotonicidade do score cognitivo preservada; byte-identidade
+do canônico intacta; loader somente-leitura (testado).
+**Migração**: runtime.db 6→7 aditiva (CREATE IF NOT EXISTS) — rollback =
+ignorar a tabela; nenhum dado existente alterado.
+**Consequências**: o Cockpit mostra por mecanismo garantia/avaliação/
+fallback com badge "não avaliado" honesto; sem golden set distribuído
+(QA-1) tudo aparece `unevaluated` — o que é o retrato correto.
+36 testes novos; 284 no total.

@@ -105,3 +105,51 @@ class CurationFacade:
                         claimed_author: str | None = None) -> dict:
         from ..usecases.manage_reference import check_quotation
         return check_quotation(self._settings, text, claimed_author)
+
+    # --------------------------- contratos epistêmicos (v1.6, ADR-38)
+    def epistemics_overview(self) -> dict:
+        """Lista {id, garantia, status de avaliação, fallback} por
+        mecanismo + resultado do lint — a MESMA fonte de CLI e testes."""
+        from ..harness.epistemics import lint, load_registry
+        from ..usecases.evaluate_memory import envelopes_for
+        result = lint()
+        mechanisms = []
+        if result["registry_version"]:
+            registry, _ = load_registry()
+            for c in registry.contracts:
+                latest = envelopes_for(self._settings, c.mechanism_id,
+                                       limit=1)
+                mechanisms.append({
+                    "mechanism_id": c.mechanism_id,
+                    "title": c.title,
+                    "decision": c.decision,
+                    "guarantee_kind": c.guarantee.kind.value,
+                    "guarantee_relative_to": c.guarantee.relative_to,
+                    "fallback": [f.value for f in c.fallback],
+                    "evaluation_status": (latest[0]["evaluation_status"]
+                                          if latest else "unevaluated"),
+                    "last_evaluated_at": (latest[0]["created_at"]
+                                          if latest else None),
+                    "high_impact": c.high_impact})
+        return {"lint": result, "mechanisms": mechanisms}
+
+    def epistemics_mechanism(self, mechanism_id: str) -> dict:
+        from ..harness.epistemics import load_registry
+        from ..usecases.evaluate_memory import envelopes_for
+        registry, _ = load_registry()
+        contract = registry.get(mechanism_id)
+        if contract is None:
+            raise KeyError(f"mecanismo desconhecido: {mechanism_id}")
+        return {**contract.to_dict(),
+                "registry_version": registry.version,
+                "evaluations": envelopes_for(self._settings, mechanism_id,
+                                             limit=5)}
+
+    def epistemics_evaluations(self, mechanism_id: str,
+                               limit: int = 20) -> list[dict]:
+        from ..usecases.evaluate_memory import envelopes_for
+        return envelopes_for(self._settings, mechanism_id, limit)
+
+    def epistemics_lint(self) -> dict:
+        from ..harness.epistemics import lint
+        return lint()

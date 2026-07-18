@@ -169,6 +169,9 @@ export class DaemonClient {
     this.get<any>(`/cockpit/pipelines/runs?name=${encodeURIComponent(name)}`);
   behavior = () => this.get<any>("/cockpit/behavior");
   resetStreams = () => this.post<any>("/cockpit/behavior/reset-streams", {});
+  epistemics = () => this.get<any>("/cockpit/epistemics");
+  epistemicsMechanism = (id: string) =>
+    this.get<any>(`/cockpit/epistemics/${encodeURIComponent(id)}`);
   exportUrl = (params: Record<string, string>) => {
     const q = new URLSearchParams({ ...params,
       auth: (this as any).info?.token ?? "" });

@@ -553,6 +553,26 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
         return curation.check_quotation(body.get("text", ""),
                                         body.get("author"))
 
+    # ---------- Contratos epistêmicos (v1.6, ADR-38) — só leitura ----------
+    @app.get("/cockpit/epistemics", dependencies=[Depends(auth)])
+    def epistemics():
+        return curation.epistemics_overview()
+
+    @app.get("/cockpit/epistemics/{mechanism_id}",
+             dependencies=[Depends(auth)])
+    def epistemics_mechanism(mechanism_id: str):
+        try:
+            return curation.epistemics_mechanism(mechanism_id)
+        except KeyError as e:
+            raise HTTPException(404, str(e))
+
+    @app.get("/cockpit/epistemics/{mechanism_id}/evaluations",
+             dependencies=[Depends(auth)])
+    def epistemics_evaluations(mechanism_id: str, limit: int = 20):
+        return {"mechanism_id": mechanism_id,
+                "evaluations": curation.epistemics_evaluations(
+                    mechanism_id, min(limit, 100))}
+
     # ---------- Candidatos do reflect (Dashboard, v0.8 §8) ----------
     @app.get("/cockpit/reflect", dependencies=[Depends(auth)])
     def reflect_candidates():
