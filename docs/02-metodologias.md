@@ -166,7 +166,11 @@ Consultas puras podem ser chamadas por endpoint GET sem medo; teste
   contrapartes inválidas.
 - **Golden eval** (`bundle/harness/golden_eval.jsonl`): perguntas com
   resposta esperada por categoria, versionadas NO bundle do usuário —
-  o eval mede a memória dele, não um benchmark alheio.
+  o eval mede a memória dele, não um benchmark alheio. O `llmwiki seed`
+  distribui um baseline (v1.6.3, QA-1): 7 páginas avaliáveis + 12 casos
+  nas 5 categorias, nunca sobrescrevendo golden curado; além do
+  passa/não-passa, cada caso com `expect_pages` ganha recall@5 e MRR
+  (médias gravadas no Generalization Envelope).
 
 ## 11. Único caminho de escrita
 

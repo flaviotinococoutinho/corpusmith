@@ -1,0 +1,71 @@
+{
+  "_comment": "QA-1 (v1.6.3): golden eval distribuído — páginas avaliáveis + 12 casos (extract/multi_session/temporal/update/abstain). Vocabulário distintivo por página para o FTS local; abstain usa termos SEM cobertura em qualquer página seedada.",
+  "pages": [
+    {
+      "rel_path": "concepts/okf-bundle.md",
+      "type": "concept",
+      "title": "Bundle OKF",
+      "privacy": "local_only",
+      "body": "# Bundle OKF\n\nO bundle OKF é o repositório canônico de conhecimento: páginas Markdown com frontmatter tipado, versionadas em Git. Toda escrita passa pelo Harness e pelo BundleWriter — nunca direto no disco. O índice FTS é uma projeção reconstruível do bundle.\n"
+    },
+    {
+      "rel_path": "concepts/abstencao-epistemica.md",
+      "type": "concept",
+      "title": "Abstenção epistêmica",
+      "privacy": "local_only",
+      "body": "# Abstenção epistêmica\n\nSem cobertura na base, o sistema se abstém de responder: devolve abstained com as lacunas, em vez de fabricar resposta. A abstenção é um contrato do produto, inspirado no LongMemEval — honestidade vale mais que fluência.\n"
+    },
+    {
+      "rel_path": "concepts/governor-orcamento.md",
+      "type": "concept",
+      "title": "Governor de orçamento",
+      "privacy": "local_only",
+      "body": "# Governor de orçamento\n\nO governor controla o orçamento diário de API em dólares: cada chamada registra tokens e custo no ledger, e quando o orçamento do dia estoura novas chamadas de API são bloqueadas — o sistema degrada para o modo local.\n"
+    },
+    {
+      "rel_path": "concepts/lacunas-estruturais.md",
+      "type": "concept",
+      "title": "Lacunas estruturais",
+      "privacy": "local_only",
+      "body": "# Lacunas estruturais\n\nUma lacuna estrutural é o fio AUSENTE do discurso: dois blocos de conhecimento que, sob o modelo de configuração, deveriam se conectar mas quase não se falam. Cada lacuna vira uma pergunta-ponte determinística entre os articuladores dos dois lados. Compare com as pontes frágeis, que são o fio FRACO existente.\n"
+    },
+    {
+      "rel_path": "concepts/pontes-frageis.md",
+      "type": "concept",
+      "title": "Pontes frágeis",
+      "privacy": "local_only",
+      "body": "# Pontes frágeis\n\nUma ponte frágil é o fio FRACO que existe: a aresta de peso baixo que une dois blocos grandes de conhecimento na filtração de persistência topológica. A curadoria deve reforçar essas pontes linkando mais os dois temas. Compare com as lacunas estruturais, o fio ausente.\n"
+    },
+    {
+      "rel_path": "decisions/porta-do-daemon.md",
+      "type": "decision",
+      "title": "Porta do daemon (histórica)",
+      "privacy": "local_only",
+      "valid_at": "2024-01-01T00:00:00+00:00",
+      "invalid_at": "2025-06-30T23:59:59+00:00",
+      "body": "# Porta do daemon (histórica)\n\nDecisão vigente em 2024: o daemon escutava na porta 8080, escolhida provisoriamente durante o protótipo. Substituída em julho de 2025 pela porta definitiva.\n"
+    },
+    {
+      "rel_path": "decisions/porta-do-daemon-atual.md",
+      "type": "decision",
+      "title": "Porta do daemon (vigente)",
+      "privacy": "local_only",
+      "valid_at": "2025-07-01T00:00:00+00:00",
+      "body": "# Porta do daemon (vigente)\n\nDecisão vigente desde julho de 2025: o daemon escuta na porta 8377, publicada somente em 127.0.0.1 — local-first também na rede. Esta decisão substitui a porta provisória do protótipo.\n"
+    }
+  ],
+  "cases": [
+    {"q": "o que é o bundle OKF canônico?", "category": "extract", "expect_pages": ["concepts/okf-bundle.md"]},
+    {"q": "quando o sistema se abstém de responder?", "category": "extract", "expect_pages": ["concepts/abstencao-epistemica.md"]},
+    {"q": "o que o governor de orçamento bloqueia quando o dia estoura?", "category": "extract", "expect_pages": ["concepts/governor-orcamento.md"]},
+    {"q": "qual a diferença entre lacunas estruturais e pontes frágeis?", "category": "multi_session", "expect_pages": ["concepts/lacunas-estruturais.md", "concepts/pontes-frageis.md"]},
+    {"q": "o que a curadoria faz com pontes frágeis e o que vira pergunta-ponte?", "category": "multi_session", "expect_pages": ["concepts/pontes-frageis.md", "concepts/lacunas-estruturais.md"]},
+    {"q": "qual porta o daemon escutava?", "category": "temporal", "as_of": "2024-06-01T00:00:00+00:00", "expect_pages": ["decisions/porta-do-daemon.md"]},
+    {"q": "qual porta o daemon escuta?", "category": "temporal", "as_of": "2026-01-01T00:00:00+00:00", "expect_pages": ["decisions/porta-do-daemon-atual.md"]},
+    {"q": "qual é a porta vigente do daemon?", "category": "update", "expect_pages": ["decisions/porta-do-daemon-atual.md"]},
+    {"q": "qual decisão substitui a porta provisória do protótipo?", "category": "update", "expect_pages": ["decisions/porta-do-daemon-atual.md"]},
+    {"q": "qual a capital da Mongólia?", "category": "abstain", "expect_abstain": true},
+    {"q": "receita de pão de queijo mineiro", "category": "abstain", "expect_abstain": true},
+    {"q": "cronograma do campeonato de xadrez de 1997", "category": "abstain", "expect_abstain": true}
+  ]
+}

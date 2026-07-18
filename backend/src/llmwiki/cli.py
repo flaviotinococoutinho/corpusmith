@@ -131,12 +131,14 @@ def cmd_daemon(s: Settings, args) -> int:
 
 def cmd_seed(s: Settings, args) -> int:
     """Migração de dados PRÉ-DEFINIDOS (v1.0): referência do mundo
-    (db/seeds/reference_seed.json ou --file) + pipelines builtin.
+    (db/seeds/reference_seed.json ou --file) + pipelines builtin +
+    golden eval (v1.6.3, QA-1 — o eval funciona out-of-the-box).
     Idempotente — nunca sobrescreve dado do usuário."""
     import json as _json
     from pathlib import Path as _P
     from .usecases.manage_reference import ImportReferenceData, seed_reference
     from .usecases.run_pipeline import seed_default_pipelines
+    from .usecases.seed_eval import seed_golden_eval
     seed_reference(s)
     seed_default_pipelines(s)
     path = _P(args.file) if getattr(args, "file", None) else \
@@ -146,7 +148,9 @@ def cmd_seed(s: Settings, args) -> int:
     if path.is_file():
         counts = ImportReferenceData(
             s, _json.loads(path.read_text()), replace=False).execute()
-    print(f"seed ok: {counts or 'builtin apenas'} (+pipelines)")
+    eval_counts = seed_golden_eval(s)
+    print(f"seed ok: {counts or 'builtin apenas'} (+pipelines; "
+          f"golden eval: {eval_counts})")
     return 0
 
 
