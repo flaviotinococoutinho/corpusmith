@@ -62,6 +62,7 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 |---|---|
 | [05-fluxos-operacionais.md](05-fluxos-operacionais.md) | Fluxos fim-a-fim: compilar, perguntar, promover, desfecho→reflect, revisão, comunidades, eval, implantação |
 | [07-sinergias.md](07-sinergias.md) | Matriz de interação entre conceitos + receitas de composição e extensão |
+| [12-instalacao.md](12-instalacao.md) | Instalação validada (local, Docker, launchd), smoke tests da API e solução de problemas reais (`scripts/install.sh`) |
 
 ### 🏛️ Governança — DECIDIR e o que falta
 | Doc | Conteúdo |
@@ -78,6 +79,7 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 - É **quanto/quão rápido/quão durável** (CAP, SLO, escala, segurança)? → `10` §5–17.
 - É **uma constante/regra/endpoint** que preciso consultar? → `06`.
 - É **uma decisão tomada ou o que ainda falta**? → `08`, `09`.
+- É **como instalar/verificar o ambiente**? → `12` + `scripts/install.sh`.
 
 ## Como manter esta documentação
 

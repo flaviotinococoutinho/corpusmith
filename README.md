@@ -265,6 +265,10 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
 
 ## Instalação
 
+> Guia validado passo a passo (requisitos, smoke tests, solução de
+> problemas): [`docs/12-instalacao.md`](docs/12-instalacao.md). Instalador
+> automatizado: `scripts/install.sh --with-tests --with-smoke`.
+
 **Local (desenvolvimento e uso diário):**
 
 ```bash
@@ -293,7 +297,7 @@ Backlog fechado e portas abertas: [`docs/09-backlog.md`](docs/09-backlog.md).
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 242 testes de contrato/arquitetura/golden bundles
+just test             # 289 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

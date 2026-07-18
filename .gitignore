@@ -12,6 +12,9 @@ desktop/dist/
 desktop/dist-electron/
 desktop/release/
 
+# macOS
+.DS_Store
+
 # Dados locais do usuário (nunca versionados aqui — o kb tem git próprio)
 *.db
 *.db-wal

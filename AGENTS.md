@@ -16,10 +16,10 @@ Panorama de produto: [`docs/01-conceitos.md`](docs/01-conceitos.md).
 
 ## 2. Verificação — o gate único
 
-Toda mudança MUST passar por (rode na raiz do repo):
+Toda mudança MUST passar por (rode na raiz do repo; atalho: `just verify`):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # 284 testes
+cd backend && .venv/bin/python -m pytest tests -q   # 289 testes
 cd desktop && npx tsc --noEmit                        # typecheck do cockpit
 docker compose config -q                              # compose válido
 ```
