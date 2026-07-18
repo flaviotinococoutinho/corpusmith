@@ -55,6 +55,17 @@ _STRATEGY_HINT = {
 }
 
 
+# QA-3 (v1.6.2): [n] de 1–2 dígitos é citação; [2024] é ano e `](` é
+# link markdown — precisão > recall: só flagra o que é claramente citação.
+_CITATION = re.compile(r"\[(\d{1,2})\](?!\()")
+
+
+def _invalid_citations(text: str, n_evidence: int) -> list[int]:
+    """Números citados fora de 1..n_evidence — proveniência fabricada."""
+    cited = {int(m) for m in _CITATION.findall(text)}
+    return sorted(n for n in cited if n < 1 or n > n_evidence)
+
+
 class AskMemory(UseCase):
     def __init__(self, settings: Settings, query: str, *, deep: bool = False,
                  local_only: bool = False, gov=None, as_of: str | None = None,
@@ -278,6 +289,11 @@ class AskMemory(UseCase):
                 prompt, privacy=privacy, deep=self._deep,
                 max_tokens=self._budget["max_tokens"])
             text, via = r["text"], r["via"]
+            # QA-3: citação [n] sem evidência correspondente é proveniência
+            # fabricada (vale para local: E api:) — degrada para o
+            # extrativo, correto por construção; `via` sinaliza ao cliente
+            if _invalid_citations(text, len(evidence)):
+                return self._extractive(evidence), "local:extractive", False
             blocked = (via.startswith("api:")
                        and self._settings.policy.get("citation_required", True)
                        and not re.search(r"^#{1,2}\s*Citations\s*$", text, re.M))

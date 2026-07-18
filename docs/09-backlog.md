@@ -59,7 +59,7 @@ inferência emocional/diagnóstico/perfil auto-reescrito (ADR-19/31).
 | REL-2 | P1 | ~~heartbeat/timeout/cancel cooperativo (v1.4)~~; resta hard-kill de thread síncrona (REL-2b: isolamento de processo) | isolamento de processo p/ hard-kill |
 | ~~REL-3~~ (v1.4) | P1 | recuperação de órfãos só preguiçosa | sweep no boot do daemon; teste |
 | QA-1 | P1 | golden_eval.jsonl não é distribuído; eval é no-op out-of-the-box; sem Recall@K/MRR | seed com ≥10 casos (temporal/update/abstain); métricas fracionárias |
-| QA-3 | P1 | /ask não valida [n]→evidência (só header, só api:) | validação estrutural p/ local: e api:; teste |
+| ~~QA-3~~ (v1.6.2) | P1 | /ask não validava [n]→evidência (só header, só api:) | `_invalid_citations` em ask_memory (local: E api:); citação fabricada degrada p/ extrativo; `test_qa3_citations.py` |
 | UX-1 | P1 | 8 superfícies concorrentes de "o que fazer agora" | UMA fila unificada com origem explicada |
 | UX-2 | P1 | 12 abas planas; jargão (BLA/Hedge/gate/trace) exposto | 3 níveis (essencial/análise/avançado); glossário aplicado |
 | UX-3 | P1 | onboarding inexistente; bundle vazio = becos | workspace de exemplo removível + tutorial |

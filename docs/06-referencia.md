@@ -147,6 +147,9 @@ identity{ts_ms,iso,module,algorithm,seq}, uncertainty,
 evidence[{page,resource,body,stale}], gaps, as_of,
 trajectory[{dir,picked}]}`. O `ask_id` é um snowflake renderizado
 (módulo=ask, algoritmo=rrf) — decodificável por `kernel.identity.parse`.
+Síntese com citação `[n]` fora de 1..len(evidence) (v1.6.2/QA-3, local:
+E api:) degrada para o extrativo — `via: local:extractive` sinaliza;
+`[2024]` (ano) e `[n](link)` markdown não contam como citação.
 
 HATEOAS (v0.16): `/`, `/health`, `/health/full`, `/status`,
 `/cockpit/dashboard`, `/cockpit/page`, `/cockpit/config*` carregam
