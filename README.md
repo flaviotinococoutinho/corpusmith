@@ -175,6 +175,9 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   (contrato preso a `test_architecture_toml.py`), índice de docs roteado
   por especialidade, e correção A-06 (jitter de retry por hash estável).
   Ver ADR-37.
+- **v1.6.6** — UX-5 (fatia métricas): recall@5/MRR/taxa geral do eval
+  ganham superfície no `/cockpit/eval`, no `/cockpit/quality` e no
+  painel Qualidade — mesma fonte do Generalization Envelope.
 - **v1.6.5** — UX-4 fechado: presets de configuração
   (fabrica · precisao · exploracao) aplicados PELA linhagem
   (`source=preset:<nome>`, mesmo guard/probe/rollback), com delta
@@ -323,7 +326,7 @@ Backlog fechado e portas abertas: [`docs/09-backlog.md`](docs/09-backlog.md).
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 342 testes de contrato/arquitetura/golden bundles
+just test             # 345 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

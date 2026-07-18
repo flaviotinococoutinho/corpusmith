@@ -252,7 +252,9 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
             "SELECT src, dst, weight, small_side, large_side "
             "FROM graph_bridges ORDER BY weight LIMIT 10")]
         idx.close()
-        return {"eval": eval_results()["categories"],
+        ev = eval_results()
+        return {"eval": ev["categories"],
+                "eval_metrics": ev["metrics"],
                 "findings": findings.to_dicts(),
                 "errors": findings.count("error"),
                 "warnings": findings.count("warn"),
@@ -276,15 +278,23 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     # ---------- Eval de memória (v0.8 §10) ----------
     @app.get("/cockpit/eval", dependencies=[Depends(auth)])
     def eval_results():
+        import json as _json
         rt = connect(s.app_support / "runtime.db")
         rows = rt.execute(
             "SELECT category, total, passed FROM eval_runs e "
             "WHERE ts = (SELECT MAX(ts) FROM eval_runs "
             "            WHERE category = e.category) "
             "GROUP BY category").fetchall()
+        # UX-5 (v1.6.6): as métricas fracionárias que o envelope já grava
+        # (recall@5/MRR médios, v1.6.3) ganham superfície — mesma fonte
+        envelope = rt.execute(
+            "SELECT metrics FROM evaluation_envelopes "
+            "ORDER BY created_at DESC, rowid DESC LIMIT 1").fetchone()
         rt.close()
+        metrics = _json.loads(envelope["metrics"]) if envelope else None
         return {"categories": [{"category": r["category"], "total": r["total"],
-                                "passed": r["passed"]} for r in rows]}
+                                "passed": r["passed"]} for r in rows],
+                "metrics": metrics}
 
     # ---------- Controle de autoridade (v0.8 §4) ----------
     @app.get("/cockpit/authorities", dependencies=[Depends(auth)])

@@ -133,7 +133,9 @@ def test_outcome_endpoint_and_correction_to_inbox(client, kb, settings):
 
 
 def test_eval_authorities_reflect_endpoints(client):
-    assert client.get("/cockpit/eval").json() == {"categories": []}
+    # v1.6.6 (UX-5): resposta ganhou `metrics` (envelope mais recente)
+    assert client.get("/cockpit/eval").json() == {"categories": [],
+                                                  "metrics": None}
     assert "entities" in client.get("/cockpit/authorities").json()
     cand = client.get("/cockpit/reflect").json()
     assert set(cand) == {"promote", "archive", "contested"}
