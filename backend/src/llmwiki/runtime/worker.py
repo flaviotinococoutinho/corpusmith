@@ -32,12 +32,14 @@ _HEARTBEAT_SECONDS = 30.0
 class JobContext:
     """Passado aos handlers no lugar da antiga função `emit`. Chamá-lo
     emite evento (compatível com todo handler existente); `.cancelled()`
-    é o token cooperativo."""
+    é o token cooperativo; `.gov` é o Governor do daemon (REL-1: jobs
+    que chamam modelo herdam orçamento e ledger, nunca criam rota solta)."""
 
     def __init__(self, bus: EventBus, job_id: str, trace_id: str,
-                 queue: JobQueue):
+                 queue: JobQueue, gov: Governor | None = None):
         self._bus, self._job_id, self._trace = bus, job_id, trace_id
         self._queue = queue
+        self.gov = gov
 
     def __call__(self, type: str, data: dict | None = None) -> None:
         self._bus.emit("jobs", type,
@@ -53,10 +55,12 @@ class Worker(threading.Thread):
                  gov: Governor, slots: Slots):
         super().__init__(daemon=True, name="llmwiki-worker")
         self.s, self.queue, self.bus, self.gov, self.slots = s, queue, bus, gov, slots
-        self._stop = threading.Event()
+        # `_halt`, não `_stop`: Thread usa `_stop()` como MÉTODO interno —
+        # sombreá-lo com um Event quebra `join()` (TypeError)
+        self._halt = threading.Event()
 
     def stop(self) -> None:
-        self._stop.set()
+        self._halt.set()
 
     def _watchdog(self, job: dict, done: threading.Event) -> None:
         """Heartbeat + timeout enquanto o handler roda."""
@@ -77,15 +81,15 @@ class Worker(threading.Thread):
     def run(self) -> None:
         from ..jobs import REGISTRY
         poll = float(self.s.worker.get("poll_seconds", 1.0))
-        while not self._stop.is_set():
+        while not self._halt.is_set():
             # quiescência de backup (v1.4): com o lock presente, não
             # LEASE novos jobs — o backup captura um instante consistente
             if (self.s.app_support / "backup.lock").exists():
-                self._stop.wait(poll)
+                self._halt.wait(poll)
                 continue
             job = self.queue.lease()
             if not job:
-                self._stop.wait(poll)
+                self._halt.wait(poll)
                 continue
             handler = REGISTRY.get(job["type"])
             if handler is None:
@@ -95,7 +99,8 @@ class Worker(threading.Thread):
             self.bus.emit("jobs", "job.started",
                           {"id": job["id"], "type": job["type"],
                            "trace_id": trace_id})
-            ctx = JobContext(self.bus, job["id"], trace_id, self.queue)
+            ctx = JobContext(self.bus, job["id"], trace_id, self.queue,
+                             gov=self.gov)
             done = threading.Event()
             watch = threading.Thread(target=self._watchdog, args=(job, done),
                                      daemon=True)

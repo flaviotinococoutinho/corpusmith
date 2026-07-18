@@ -19,6 +19,8 @@ def answer_local(s: Settings, query: str, *, as_of: str | None = None,
 
 
 def run(s: Settings, payload: dict, emit) -> dict:
+    # REL-1: o Governor viaja no JobContext (getattr: testes passam função nua)
     return answer(s, payload["query"], deep=payload.get("deep", False),
                   local_only=payload.get("local_only", False),
+                  gov=getattr(emit, "gov", None),
                   as_of=payload.get("as_of"))

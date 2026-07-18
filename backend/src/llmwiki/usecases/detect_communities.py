@@ -55,10 +55,11 @@ class _CommunitySummaryPage(MachinePageUseCase):
 
 
 class DetectCommunities(UseCase):
-    def __init__(self, settings: Settings, notify=None):
+    def __init__(self, settings: Settings, notify=None, *, gov=None):
         self._settings = settings
         self._notify = notify or (lambda *a, **k: None)
-        self._router = ModelRouter(settings)
+        # REL-1: rota de modelo carrega o Governor — orçamento e ledger
+        self._router = ModelRouter(settings, gov)
 
     def execute(self) -> dict:
         idx = connect(self._settings.app_support / "index.db")

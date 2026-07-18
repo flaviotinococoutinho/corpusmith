@@ -10,4 +10,6 @@ def run(s: Settings, payload: dict, emit) -> dict:
     def notify(type: str, data: dict | None = None):
         emit(type, data or {})
 
-    return CompilerFacade(s).compile(payload["path"], notify=notify)
+    # REL-1: o Governor viaja no JobContext (getattr: testes passam função nua)
+    return CompilerFacade(s, gov=getattr(emit, "gov", None)) \
+        .compile(payload["path"], notify=notify)

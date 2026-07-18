@@ -175,6 +175,12 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   (contrato preso a `test_architecture_toml.py`), índice de docs roteado
   por especialidade, e correção A-06 (jitter de retry por hash estável).
   Ver ADR-37.
+- **v1.6.1** — confiabilidade do runner: REL-1 fechado (P0 — Governor
+  injetado em TODO caminho de modelo dos jobs via `JobContext.gov`;
+  orçamento e ledger nunca furados), `Thread._stop` não é mais sombreado
+  em Worker/Scheduler (`join()` seguro no shutdown), `actual` das
+  lacunas estruturais preserva peso fracionário (fio fraco ≠ fio
+  ausente), skills de trabalho `verify-env` e `ship-pr`.
 - **v1.6** — **Epistemic Contract Registry + Generalization Envelope**
   (ADR-38): [`epistemics.toml`](epistemics.toml) registra, por mecanismo
   heurístico (RRF+Hedge, incerteza, abstenção, reconciliação, prioridade
@@ -297,7 +303,7 @@ Backlog fechado e portas abertas: [`docs/09-backlog.md`](docs/09-backlog.md).
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 289 testes de contrato/arquitetura/golden bundles
+just test             # 302 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

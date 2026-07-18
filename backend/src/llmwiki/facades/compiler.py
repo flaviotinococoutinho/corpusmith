@@ -14,8 +14,9 @@ from ..usecases.run_pipeline import (DeletePipeline, RunPipeline,
 
 
 class CompilerFacade:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, gov=None):
         self._settings = settings
+        self._gov = gov
 
     def ingest(self, *, filename: str, content: str | None = None,
                content_base64: str | None = None,
@@ -26,17 +27,20 @@ class CompilerFacade:
                             subdir=subdir).execute()
 
     def compile(self, source_path: str, notify=None) -> dict:
-        return CompileSource(self._settings, source_path, notify).execute()
+        return CompileSource(self._settings, source_path, notify,
+                             gov=self._gov).execute()
 
     def consolidate_inbox(self, notify=None) -> dict:
         """CLS: uma chamada de LLM por CLUSTER recorrente, não por nota."""
-        return ConsolidateInbox(self._settings, notify).execute()
+        return ConsolidateInbox(self._settings, notify,
+                                gov=self._gov).execute()
 
     def rebuild_index(self) -> dict:
         return RebuildIndex(self._settings).execute()
 
     def detect_communities(self, notify=None) -> dict:
-        return DetectCommunities(self._settings, notify).execute()
+        return DetectCommunities(self._settings, notify,
+                                 gov=self._gov).execute()
 
     # ------------------------------------- pipelines configuráveis (v0.17)
     def pipelines(self) -> list[dict]:

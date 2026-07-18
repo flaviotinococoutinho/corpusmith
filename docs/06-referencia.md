@@ -233,7 +233,10 @@ emitem `config.tuned`/`config.rolled_back` com trace.
 `compile_source · consolidate_inbox · ask · embed · rerank · leiden ·
 ocr · lora_train · review_weekly · reflect · eval_memory ·
 index_rebuild · pipeline · metacog` — contrato
-`run(settings, payload, emit) -> dict`.
+`run(settings, payload, emit) -> dict`. O `emit` é um `JobContext`:
+chamável (emite evento), `.cancelled()` (cancelamento cooperativo) e
+`.gov` (v1.6.1/REL-1: jobs que chamam modelo herdam orçamento e ledger
+do Governor do daemon em vez de criar rota solta).
 Slots heavy: compile_source, lora_train, leiden, ocr, pipeline.
 Scheduler: segunda ⇒ reflect + review_weekly + metacog; diário ⇒
 embed + consolidate_inbox. O job `pipeline` injeta o REGISTRY no

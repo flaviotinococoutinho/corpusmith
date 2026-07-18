@@ -34,7 +34,8 @@ def _slug(name: str) -> str:
 
 
 class CompileSource(MachinePageUseCase):
-    def __init__(self, settings: Settings, source_path: str, notify=None):
+    def __init__(self, settings: Settings, source_path: str, notify=None,
+                 *, gov=None):
         super().__init__(settings, notify)
         kb = settings.path("knowledge")
         source = Path(source_path)
@@ -43,7 +44,8 @@ class CompileSource(MachinePageUseCase):
                                  if self._source.is_relative_to(kb)
                                  else self._source.name)
         self._via = "local:compile"
-        self._router: ModelRouter | None = ModelRouter(settings)
+        # REL-1: rota de modelo carrega o Governor — orçamento e ledger
+        self._router: ModelRouter | None = ModelRouter(settings, gov)
         self._sha = ""
 
     # -------------------------------------------------------------- hooks

@@ -9,4 +9,6 @@ def run(s: Settings, payload: dict, emit) -> dict:
     def notify(type: str, data: dict | None = None):
         emit(type, data or {})
 
-    return CompilerFacade(s).consolidate_inbox(notify=notify)
+    # REL-1: o Governor viaja no JobContext (getattr: testes passam função nua)
+    return CompilerFacade(s, gov=getattr(emit, "gov", None)) \
+        .consolidate_inbox(notify=notify)
