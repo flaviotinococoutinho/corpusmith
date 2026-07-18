@@ -19,7 +19,7 @@ Panorama de produto: [`docs/01-conceitos.md`](docs/01-conceitos.md).
 Toda mudança MUST passar por (rode na raiz do repo; atalho: `just verify`):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # 330 testes
+cd backend && .venv/bin/python -m pytest tests -q   # 332 testes
 cd desktop && npx tsc --noEmit                        # typecheck do cockpit
 docker compose config -q                              # compose válido
 ```

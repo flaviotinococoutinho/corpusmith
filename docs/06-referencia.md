@@ -376,7 +376,8 @@ recriada quando o CHECK antigo não aceita `RECYCLE` (dados preservados).
 
 Derivados do bundle (gazetteer + schemas de tipo) são cacheados por
 `(kb, HEAD)` em `okf/authorities.py` — toda escrita commita, então o
-HEAD é chave de invalidação perfeita (~92× mais rápido no hit).
+HEAD é chave de invalidação perfeita (236× no hit a 150 páginas,
+636× a 500 — harness reprodutível `python -m llmwiki.bench`, QA-2).
 
 ## 11. Constantes calibráveis
 
