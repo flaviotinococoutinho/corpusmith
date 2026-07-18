@@ -54,7 +54,7 @@ inferência emocional/diagnóstico/perfil auto-reescrito (ADR-19/31).
 ## Backlog executável pós-auditoria (v1.3) — priorizado
 | ID | P | Problema (evidência da auditoria) | Aceite |
 |---|---|---|---|
-| REL-1 | P0 | compile_source cria ModelRouter SEM governor ⇒ fura orçamento e ledger | gov injetado; ledger reflete compile; teste |
+| ~~REL-1~~ (v1.6.1) | P0 | compile_source criava ModelRouter SEM governor ⇒ furava orçamento e ledger (idem consolidate/leiden/ask enfileirado) | `JobContext.gov` → adapters → facades → usecases; `test_rel1_governor.py` (fiação worker→router + ledger) |
 | ~~DATA-1~~ (v1.4) | P0 | sem verificação/repair de invariantes em runtime | `llmwiki doctor`: INV-001/002/003 + config×history; repair=rebuild |
 | REL-2 | P1 | ~~heartbeat/timeout/cancel cooperativo (v1.4)~~; resta hard-kill de thread síncrona (REL-2b: isolamento de processo) | isolamento de processo p/ hard-kill |
 | ~~REL-3~~ (v1.4) | P1 | recuperação de órfãos só preguiçosa | sweep no boot do daemon; teste |

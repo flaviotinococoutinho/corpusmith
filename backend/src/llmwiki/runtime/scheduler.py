@@ -14,13 +14,15 @@ class Scheduler(threading.Thread):
         super().__init__(daemon=True, name="llmwiki-scheduler")
         self.queue = queue
         self.interval = interval
-        self._stop = threading.Event()
+        # `_halt`, não `_stop`: Thread usa `_stop()` como MÉTODO interno —
+        # sombreá-lo com um Event quebra `join()` (TypeError)
+        self._halt = threading.Event()
 
     def stop(self) -> None:
-        self._stop.set()
+        self._halt.set()
 
     def run(self) -> None:
-        while not self._stop.is_set():
+        while not self._halt.is_set():
             now = time.localtime()
             if now.tm_wday == 0:                       # segunda-feira
                 week = time.strftime("%Y-W%W")
@@ -35,4 +37,4 @@ class Scheduler(threading.Thread):
                                dedupe_key=f"embed:{today}")
             self.queue.enqueue("consolidate_inbox", {}, priority=4,
                                dedupe_key=f"consolidate:{today}")
-            self._stop.wait(self.interval)
+            self._halt.wait(self.interval)

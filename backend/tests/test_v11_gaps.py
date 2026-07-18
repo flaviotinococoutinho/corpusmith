@@ -65,6 +65,19 @@ def test_disconnected_clusters_are_a_gap():
     assert gap.expected > 0
 
 
+def test_gap_actual_preserva_peso_fracionario():
+    """Fio FRACO ≠ fio AUSENTE (a distinção central do produto): `actual`
+    carrega o peso fracionário real — arestas `inferred` pesam 0.5 e
+    truncar para int chamava de "ausente" uma ligação que existe."""
+    edges = _triangle("x/") + _triangle("y/") + [("x/a", "y/a", 0.5)]
+    community = {"x/a": 0, "x/b": 0, "x/c": 0,
+                 "y/a": 1, "y/b": 1, "y/c": 1}
+    gaps = structural_gaps(edges, community, betweenness_centrality(edges))
+    assert len(gaps) == 1
+    assert gaps[0].actual == pytest.approx(0.5)    # fio fraco, não ausente
+    assert gaps[0].deficit == pytest.approx(gaps[0].expected - 0.5, abs=1e-3)
+
+
 def test_well_connected_pair_is_not_a_gap():
     # ligadas ACIMA do esperado pelo acaso (bipartido completo) ⇒ sem lacuna
     edges = [("0/a", "1/c", 1.0), ("0/a", "1/d", 1.0),

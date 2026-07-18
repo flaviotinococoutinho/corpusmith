@@ -146,16 +146,18 @@ def betweenness_centrality(
 @dataclass(frozen=True)
 class StructuralGap:
     """Fio AUSENTE: dois blocos (comunidades) que, sob o modelo de
-    configuração, deveriam compartilhar `expected` arestas mas
-    compartilham só `actual` — o `deficit` é o quanto falta. `rep_a`/
-    `rep_b` são os articuladores (maior intermediação) de cada lado."""
+    configuração, deveriam compartilhar `expected` de peso de aresta mas
+    compartilham só `actual` (peso REAL, fracionário — 0.5 de aresta
+    inferida é fio fraco, não ausente) — o `deficit` é o quanto falta.
+    `rep_a`/`rep_b` são os articuladores (maior intermediação) de cada
+    lado."""
     community_a: int
     community_b: int
     rep_a: str
     rep_b: str
     deficit: float
     expected: float
-    actual: int
+    actual: float
 
 
 def structural_gaps(edges: list[tuple[str, str, float]],
@@ -201,5 +203,5 @@ def structural_gaps(edges: list[tuple[str, str, float]],
                 continue
             gaps.append(StructuralGap(
                 ca, cb, representative[ca], representative[cb],
-                round(deficit, 3), round(expected, 3), int(actual)))
+                round(deficit, 3), round(expected, 3), round(actual, 3)))
     return sorted(gaps, key=lambda g: -g.deficit)[:limit]

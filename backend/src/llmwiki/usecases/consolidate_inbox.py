@@ -78,11 +78,12 @@ class _ConsolidatedPage(MachinePageUseCase):
     MODULE = "consolidate"
 
     def __init__(self, settings: Settings, cluster: list[_Signature],
-                 notify=None):
+                 notify=None, *, gov=None):
         super().__init__(settings, notify)
         self._cluster = cluster
         self._via = "local:consolidate"
-        self._router: ModelRouter | None = ModelRouter(settings)
+        # REL-1: rota de modelo carrega o Governor — orçamento e ledger
+        self._router: ModelRouter | None = ModelRouter(settings, gov)
 
     def _produce(self) -> DraftPage:
         shared = set.intersection(*(s.entities for s in self._cluster)) \
@@ -150,9 +151,10 @@ class _ConsolidatedPage(MachinePageUseCase):
 class ConsolidateInbox(UseCase):
     def __init__(self, settings: Settings, notify=None, *,
                  min_shared: int | None = None,
-                 min_cluster: int | None = None):
+                 min_cluster: int | None = None, gov=None):
         self._settings = settings
         self._notify = notify or (lambda *a, **k: None)
+        self._gov = gov
         self._min_shared = min_shared if min_shared is not None \
             else int(settings.get("consolidate.min_shared", 2))
         self._min_cluster = min_cluster if min_cluster is not None \
@@ -165,7 +167,7 @@ class ConsolidateInbox(UseCase):
         pages = []
         for cluster in clusters:
             result = _ConsolidatedPage(self._settings, cluster,
-                                       self._notify).execute()
+                                       self._notify, gov=self._gov).execute()
             if result.get("page"):
                 pages.append(result["page"])
         consolidated = {s.relative for c in clusters for s in c}
