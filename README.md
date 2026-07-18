@@ -175,6 +175,13 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   (contrato preso a `test_architecture_toml.py`), índice de docs roteado
   por especialidade, e correção A-06 (jitter de retry por hash estável).
   Ver ADR-37.
+- **v1.6.4** — QA-2 e QA-4 fechados: bench REPRODUTÍVEL
+  (`python -m llmwiki.bench`, bundle sintético determinístico, JSON
+  schema 1) — gazetteer frio×quente medido 236×@150/636×@500 (o claim
+  ~92× era conservador) e índice incremental 4–13× (**o claim 29× não
+  se reproduziu**; ADRs-06/07 corrigidos — a doc nunca descreve o que o
+  teste não confirma); 17 testes de sensibilidade nos limiares críticos
+  (clamp Hedge, overlay RRF, abstain, orçamento, hamming, citação).
 - **v1.6.3** — QA-1 fechado: `llmwiki seed` distribui o golden eval
   (7 páginas avaliáveis + 12 casos nas 5 categorias — o eval funciona
   out-of-the-box, 12/12 local) e o eval ganha métricas fracionárias
@@ -311,7 +318,7 @@ Backlog fechado e portas abertas: [`docs/09-backlog.md`](docs/09-backlog.md).
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 330 testes de contrato/arquitetura/golden bundles
+just test             # 332 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

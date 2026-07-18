@@ -54,8 +54,10 @@ subproduto natural: mudou o schema, o lint lista quem não conforma.
 **Contexto**: gazetteer/schemas varriam o bundle inteiro a cada
 ask/lint/compile. **Decisão**: cache de 1 entrada keyed por `(kb, HEAD)`
 — toda escrita commita, logo o HEAD é chave de invalidação perfeita.
-Medido: ~92× no hit (medição de sessão de desenvolvimento; harness reprodutível pendente — backlog QA-2) já em bundle mínimo (frio cresce linear; quente é
-constante). Sem HEAD legível ⇒ sem cache (correto por construção).
+Medido (harness reprodutível `python -m llmwiki.bench`, QA-2/v1.6.4):
+236× no hit a 150 páginas sintéticas e 636× a 500 — frio cresce linear,
+quente é constante; o ~92× anterior (medição de sessão) era
+CONSERVADOR. Sem HEAD legível ⇒ sem cache (correto por construção).
 
 ## Rejeitados (com porta de reentrada)
 
@@ -107,7 +109,11 @@ TencentDB→pipeline local, Zep→bi-temporal, LongMemEval→eval).
 **Adotados**: HippoRAG/PPR (stream `graph` multi-hop), A-mem
 (relacionadas determinísticas), índice incremental por sha+fingerprint
 (o conceito de layout de Arrow/FlatBuffers/LSM reduzido ao nosso
-invariante "índice derivado" — 29× em 150 páginas (medição de sessão de desenvolvimento; harness reprodutível pendente — backlog QA-2)), SimHash
+invariante "índice derivado" — medido no harness reprodutível
+(`llmwiki.bench`, QA-2/v1.6.4): 4–5× com 1 página alterada e 11–13× no
+no-op, a 150–500 páginas sintéticas; o 29× anterior era medição de
+sessão NÃO reproduzida — o custo fixo do caminho incremental
+(gazetteer pós-commit + passada de grafo) domina nessa escala), SimHash
 (Charikar) como sinal de near-duplicata na consolidação.
 **Rejeitados**: trocar SQLite por LanceDB/memgraph/Milvus (viola
 local-first + índice-derivado); Arrow/FlatBuffers/zerocopy como
