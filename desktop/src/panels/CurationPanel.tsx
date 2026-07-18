@@ -22,6 +22,7 @@ export function CurationPanel() {
   const [renaming, setRenaming] = useState<{ from: string; to: string } | null>(null);
   const [exp, setExp] = useState({ format: "zip", include_local: false, tag: "" });
   const [hist, setHist] = useState<any[]>([]);
+  const [presets, setPresets] = useState<any[]>([]);
 
   const load = () => {
     client.tags().then(r => setTags(r.tags));
@@ -29,6 +30,7 @@ export function CurationPanel() {
     client.configGet().then(setConfig);
     client.behavior().then(setBehavior);
     client.configHistory().then(r => setHist(r.history)).catch(() => {});
+    client.configPresets().then(r => setPresets(r.presets)).catch(() => {});
   };
   useEffect(() => { client.connect().then(load); }, []);
 
@@ -124,6 +126,20 @@ export function CurationPanel() {
           <p className="text-neutral-400">
             Cada ajuste é uma geração com identidade própria; problema na
             vigente? o sistema volta para a anterior.</p>
+          {presets.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-neutral-400">presets:</span>
+              {presets.map((p: any) => (
+                <button key={p.name} className="border rounded px-2 py-1"
+                        title={p.description}
+                        onClick={() => client.applyPreset(p.name)
+                          .then(c => { setConfig(c); setNotice(
+                            `🎚 preset "${p.name}" aplicado (geração #${
+                              c.history_id})`); load(); })
+                          .catch(() => setNotice(
+                            `🚫 preset recusado pelo guard: ${p.name}`))}>
+                  🎚 {p.name}</button>))}
+            </div>)}
           <button className="border rounded px-2 py-1"
                   disabled={hist.length < 2}
                   onClick={() => client.configRollback()
@@ -136,8 +152,9 @@ export function CurationPanel() {
               <div key={h.id} className="font-mono truncate"
                    title={JSON.stringify(h.changes)}>
                 {i === 0 ? "● " : "○ "}#{h.id}{" "}
-                {{ cockpit: "⚙️", rollback: "↩️", baseline: "🌱",
-                   cli: "⌨️" }[h.source as string] ?? "⚙️"}{" "}
+                {h.source?.startsWith("preset:") ? "🎚" :
+                 ({ cockpit: "⚙️", rollback: "↩️", baseline: "🌱",
+                    cli: "⌨️" }[h.source as string] ?? "⚙️")}{" "}
                 {Object.entries(h.changes).map(([sec, kv]: any) =>
                   Object.entries(kv).map(([k, v]) =>
                     `${sec}.${k}=${v}`).join(" ")).join(" ") ||

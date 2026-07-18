@@ -4,8 +4,9 @@ from __future__ import annotations
 from ..harness.findings import Findings
 from ..settings import Settings
 from ..usecases.cold_memory import (FreezeMemory, RecycleMemory, cold_stats)
-from ..usecases.configure_system import (RollbackConfig, TuneConfig,
-                                         config_history)
+from ..usecases.configure_system import (PRESETS, RollbackConfig,
+                                         TuneConfig, config_history,
+                                         list_presets)
 from ..usecases.export_memory import ExportMemory
 from ..usecases.lint_bundle import LintBundle
 from ..usecases.manage_tags import RenameTag
@@ -86,6 +87,18 @@ class CurationFacade:
 
     def config_history(self, limit: int = 30) -> list[dict]:
         return config_history(self._settings, limit)
+
+    # ------------------------------------------- presets (UX-4, v1.6.5)
+    def preset_list(self) -> list[dict]:
+        return list_presets()
+
+    def apply_preset(self, name: str, notify=None) -> dict:
+        """Aplica um preset PELA linhagem (source=preset:<nome>) — mesma
+        validação, mesmo probe, mesmo rollback dos ajustes manuais."""
+        preset = PRESETS[name]                    # KeyError se desconhecido
+        return TuneConfig(self._settings, preset["changes"], notify,
+                          source=f"preset:{name}",
+                          note=preset["description"]).execute()
 
     # ------------------------------------- referência do mundo (v0.22)
     def reference_stats(self) -> dict:

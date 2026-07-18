@@ -175,6 +175,11 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   (contrato preso a `test_architecture_toml.py`), índice de docs roteado
   por especialidade, e correção A-06 (jitter de retry por hash estável).
   Ver ADR-37.
+- **v1.6.5** — UX-4 fechado: presets de configuração
+  (fabrica · precisao · exploracao) aplicados PELA linhagem
+  (`source=preset:<nome>`, mesmo guard/probe/rollback), com delta
+  explícito no `GET /cockpit/config/presets` e botões 🎚 no card
+  Linhagem da Curadoria.
 - **v1.6.4** — QA-2 e QA-4 fechados: bench REPRODUTÍVEL
   (`python -m llmwiki.bench`, bundle sintético determinístico, JSON
   schema 1) — gazetteer frio×quente medido 236×@150/636×@500 (o claim
@@ -318,7 +323,7 @@ Backlog fechado e portas abertas: [`docs/09-backlog.md`](docs/09-backlog.md).
 ```bash
 just bootstrap        # venv + pip install -e backend[dev]
 just models           # ollama pull (opcional — tudo degrada p/ modo extrativo)
-just test             # 332 testes de contrato/arquitetura/golden bundles
+just test             # 342 testes de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/llmwikictl status
 backend/scripts/llmwiki okf lint        # 0 erros num bundle recém-bootstrapado

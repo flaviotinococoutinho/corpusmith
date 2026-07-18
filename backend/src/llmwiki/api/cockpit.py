@@ -3,6 +3,7 @@ import time
 from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import Response
+from pydantic import BaseModel
 from ..facades import (CognitionFacade, CompilerFacade, CurationFacade,
                        MemoryFacade)
 from ..retrieval import observatory
@@ -14,6 +15,11 @@ from ..okf.writer import BundleWriter
 SEMANTIC_TYPES = {"concept", "academic_paper", "decision",
                   "schema_specification", "field_profile", "learning_note"}
 PROCEDURAL_TYPES = {"runbook", "skill"}
+
+
+class PresetBody(BaseModel):
+    """Corpo de POST /cockpit/config/preset (UX-4) — borda tipada."""
+    name: str
 
 def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     kb = s.path("knowledge")
@@ -379,6 +385,33 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
                 "_links": links(self="/cockpit/config/rollback",
                                 config="/cockpit/config",
                                 history="/cockpit/config/history")}
+
+    @app.get("/cockpit/config/presets", dependencies=[Depends(auth)])
+    def config_presets():
+        """Presets nomeados (UX-4) com o delta explícito de cada um."""
+        return {"presets": curation.preset_list(),
+                "_links": links(self="/cockpit/config/presets",
+                                apply="/cockpit/config/preset",
+                                config="/cockpit/config")}
+
+    @app.post("/cockpit/config/preset", dependencies=[Depends(auth)])
+    def config_preset(body: PresetBody):
+        """Aplica um preset PELA linhagem (source=preset:<nome>) —
+        mesma validação, probe e rollback dos ajustes manuais."""
+        try:
+            result = curation.apply_preset(body.name, notify=lambda t, d:
+                                           bus.emit("system", t, d))
+        except KeyError:
+            raise HTTPException(404, f"preset desconhecido: {body.name}")
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        return {**result["snapshot"],
+                "history_id": result["history_id"],
+                "trace_id": result["trace_id"],
+                "_links": links(self="/cockpit/config/preset",
+                                presets="/cockpit/config/presets",
+                                config="/cockpit/config",
+                                rollback="/cockpit/config/rollback")}
 
     @app.get("/cockpit/behavior", dependencies=[Depends(auth)])
     def behavior():

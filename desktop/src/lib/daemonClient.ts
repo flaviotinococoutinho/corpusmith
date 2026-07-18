@@ -119,6 +119,10 @@ export class DaemonClient {
   // ------------------------------------------------ v0.16 (NFR)
   configHistory = () => this.get<any>("/cockpit/config/history");
   configRollback = () => this.post<any>("/cockpit/config/rollback", {});
+  // ------------------------------------------------ v1.6.5 (UX-4)
+  configPresets = () => this.get<any>("/cockpit/config/presets");
+  applyPreset = (name: string) =>
+    this.post<any>("/cockpit/config/preset", { name });
   healthFull = () => this.get<any>("/health/full");
   // ------------------------------------------------ v0.18 (cognição)
   declareState = (body: { load: number; focus?: number; energy?: number;
