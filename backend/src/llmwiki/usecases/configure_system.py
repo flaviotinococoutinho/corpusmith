@@ -23,6 +23,57 @@ from ..settings import Settings
 HISTORY_LIMIT = 30
 _IDS = SnowflakeFactory("config")
 
+# UX-4 (v1.6.5): presets são conjuntos NOMEADOS de ajustes que passam
+# pela MESMA linhagem (TuneConfig, source=preset:<nome>) — aplicar é uma
+# geração no ring, desfazer é o rollback de sempre. Só chaves com
+# default em TUNABLE_SECTIONS (o guard de fitness rejeita o resto).
+PRESETS: dict[str, dict] = {
+    "fabrica": {
+        "description": "Padrão de fábrica: devolve as seções ajustáveis "
+                       "aos valores de origem.",
+        "changes": {
+            "flags": {"retrieval.descend": True,
+                      "reconcile.llm_arbiter": False},
+            "ask": {"abstain_threshold": 0.0},
+            "memory": {"auto_recycle": False},
+            "policy": {"citation_required": True},
+            "consolidate": {"min_shared": 2, "min_cluster": 2},
+            "profile": {"preferred_strategy": "auto", "analogies": True,
+                        "formalism": "medio"},
+        },
+    },
+    "precisao": {
+        "description": "Precisão máxima: sem descida hierárquica, "
+                       "consolidação exige mais convergência, formalismo "
+                       "alto — menos recall, mais certeza.",
+        "changes": {
+            "flags": {"retrieval.descend": False,
+                      "reconcile.llm_arbiter": False},
+            "policy": {"citation_required": True},
+            "consolidate": {"min_shared": 3, "min_cluster": 3},
+            "profile": {"formalism": "alto"},
+        },
+    },
+    "exploracao": {
+        "description": "Exploração ampla: descida hierárquica ligada, "
+                       "memória fria reidrata sozinha, analogias — mais "
+                       "recall, revisões mais frequentes.",
+        "changes": {
+            "flags": {"retrieval.descend": True},
+            "memory": {"auto_recycle": True},
+            "consolidate": {"min_shared": 2, "min_cluster": 2},
+            "profile": {"analogies": True, "formalism": "medio"},
+        },
+    },
+}
+
+
+def list_presets() -> list[dict]:
+    """Presets na ordem declarada, com o delta explícito (transparência:
+    o usuário vê O QUE cada preset muda antes de aplicar)."""
+    return [{"name": name, "description": p["description"],
+             "changes": p["changes"]} for name, p in PRESETS.items()]
+
 
 def config_history(settings: Settings, limit: int = HISTORY_LIMIT) -> list[dict]:
     rt = connect(settings.app_support / "runtime.db")

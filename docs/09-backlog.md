@@ -63,7 +63,7 @@ inferência emocional/diagnóstico/perfil auto-reescrito (ADR-19/31).
 | UX-1 | P1 | 8 superfícies concorrentes de "o que fazer agora" | UMA fila unificada com origem explicada |
 | UX-2 | P1 | 12 abas planas; jargão (BLA/Hedge/gate/trace) exposto | 3 níveis (essencial/análise/avançado); glossário aplicado |
 | UX-3 | P1 | onboarding inexistente; bundle vazio = becos | workspace de exemplo removível + tutorial |
-| UX-4 | P1 | presets não existem | ≥3 presets versionados via linhagem de config |
+| ~~UX-4~~ (v1.6.5) | P1 | presets não existiam | 3 presets (fabrica·precisao·exploracao) aplicados PELA linhagem (`TuneConfig`, source=preset:<nome>, guard+rollback); `GET/POST /cockpit/config/preset*`; botões 🎚 no card Linhagem da Curadoria; `test_ux4_presets.py` (10 testes) |
 | ~~QA-2~~ (v1.6.4) | P2 | claims 92×/29× sem harness reprodutível | `llmwiki.bench` (bundle sintético determinístico, JSON schema 1): gazetteer frio×quente 236×@150/636×@500 (claim 92× era conservador); índice incremental 4–5× (1 pág) e 11–13× (no-op) — **claim 29× não reproduzido**, ADRs corrigidos; `test_qa2_bench.py` |
 | ~~QA-4~~ (suíte, v1.6.3) | P2 | constantes de decisão sem teste de sensibilidade | `test_qa4_sensitivity.py` (17 testes, dois lados de cada fronteira): clamp Hedge, overlay 1.15/0.8 na fusão, abstain_threshold, orçamento do Governor, hamming ≤ 8, dígitos de citação; LSH/backoff já cobertos |
 | UX-5 | P2 | analogias/métricas/curation-projection sem UI | superfícies mínimas ou remoção do anúncio |

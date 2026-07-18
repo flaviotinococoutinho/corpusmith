@@ -78,6 +78,9 @@ GET/POST /cockpit/config         (seções TUNABLE: flags·ask·memory·policy·
                                   e devolve history_id+trace_id; 400 = guard recusou)
 GET  /cockpit/config/history     (linhagem: até 30 gerações, mais recente = vigente)
 POST /cockpit/config/rollback    (retorna à geração ANTERIOR; 409 sem anterior)
+GET  /cockpit/config/presets     (v1.6.5/UX-4: fabrica·precisao·exploracao com delta explícito)
+POST /cockpit/config/preset      ({name} — aplica PELA linhagem, source=preset:<nome>;
+                                  404 desconhecido · 400 guard · 422 corpo malformado)
 POST /cockpit/state              (v0.18: {load 1..5*, focus?, energy?,
                                   time_available_min?, note?} — declarado, TTL 8h)
 GET  /cockpit/cognition          (estado · perfil · strategy_weights · calibração
