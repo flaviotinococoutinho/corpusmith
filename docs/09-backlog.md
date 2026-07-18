@@ -58,7 +58,7 @@ inferência emocional/diagnóstico/perfil auto-reescrito (ADR-19/31).
 | ~~DATA-1~~ (v1.4) | P0 | sem verificação/repair de invariantes em runtime | `llmwiki doctor`: INV-001/002/003 + config×history; repair=rebuild |
 | REL-2 | P1 | ~~heartbeat/timeout/cancel cooperativo (v1.4)~~; resta hard-kill de thread síncrona (REL-2b: isolamento de processo) | isolamento de processo p/ hard-kill |
 | ~~REL-3~~ (v1.4) | P1 | recuperação de órfãos só preguiçosa | sweep no boot do daemon; teste |
-| QA-1 | P1 | golden_eval.jsonl não é distribuído; eval é no-op out-of-the-box; sem Recall@K/MRR | seed com ≥10 casos (temporal/update/abstain); métricas fracionárias |
+| ~~QA-1~~ (v1.6.3) | P1 | golden_eval.jsonl não era distribuído; eval era no-op out-of-the-box; sem Recall@K/MRR | `llmwiki seed` → `seed_golden_eval` (7 páginas + 12 casos, 5 categorias, 12/12 local); recall@5 + MRR por caso e média no envelope; `test_qa1_eval_seed.py` |
 | ~~QA-3~~ (v1.6.2) | P1 | /ask não validava [n]→evidência (só header, só api:) | `_invalid_citations` em ask_memory (local: E api:); citação fabricada degrada p/ extrativo; `test_qa3_citations.py` |
 | UX-1 | P1 | 8 superfícies concorrentes de "o que fazer agora" | UMA fila unificada com origem explicada |
 | UX-2 | P1 | 12 abas planas; jargão (BLA/Hedge/gate/trace) exposto | 3 níveis (essencial/análise/avançado); glossário aplicado |

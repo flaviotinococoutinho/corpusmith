@@ -37,6 +37,7 @@ class EvaluateMemory(UseCase):
         stats: dict[str, list[int]] = {}
         details = []
         as_ofs: list[str] = []
+        ranked_metrics: list[dict] = []
         for line in gold_text.splitlines():
             if not line.strip():
                 continue
@@ -49,14 +50,18 @@ class EvaluateMemory(UseCase):
             stats[category] = [total + 1, ok + int(passed)]
             if case.get("as_of"):
                 as_ofs.append(str(case["as_of"]))
+            case_metrics = self._rank_metrics(case, response)
+            if case_metrics:
+                ranked_metrics.append(case_metrics)
             details.append({"q": case["q"], "category": category,
-                            "ok": passed})
+                            "ok": passed, "metrics": case_metrics})
+        metrics = self._aggregate(ranked_metrics)
         run_ids = self._persist(stats, details)
         envelopes = self._persist_envelopes(gold_text, stats, as_ofs,
-                                            run_ids)
+                                            run_ids, metrics)
         self._notify("eval.done", {"stats": {c: f"{p}/{t}"
                                              for c, (t, p) in stats.items()}})
-        return {"stats": stats, "envelopes": envelopes}
+        return {"stats": stats, "metrics": metrics, "envelopes": envelopes}
 
     @staticmethod
     def _grade(case: dict, response: dict) -> bool:
@@ -69,6 +74,33 @@ class EvaluateMemory(UseCase):
         if case.get("expect_regex") and response.get("answer"):
             ok &= bool(re.search(case["expect_regex"], response["answer"]))
         return ok
+
+    @staticmethod
+    def _rank_metrics(case: dict, response: dict) -> dict | None:
+        """QA-1 (v1.6.3): métricas FRACIONÁRIAS por caso com expect_pages —
+        recall@5 (fração das páginas esperadas presentes) e MRR (1/rank da
+        primeira esperada) — o passa/não-passa esconde a qualidade do rank."""
+        expected = case.get("expect_pages")
+        if not expected:
+            return None
+        ranked = [e["page"] for e in response.get("evidence", [])]
+        recall = len(set(expected) & set(ranked)) / len(expected)
+        reciprocal = 0.0
+        for position, page in enumerate(ranked):
+            if page in expected:
+                reciprocal = 1.0 / (position + 1)
+                break
+        return {"recall_at_5": round(recall, 4), "mrr": round(reciprocal, 4)}
+
+    @staticmethod
+    def _aggregate(ranked: list[dict]) -> dict:
+        if not ranked:
+            return {"graded_cases": 0}
+        n = len(ranked)
+        return {"graded_cases": n,
+                "mean_recall_at_5": round(
+                    sum(m["recall_at_5"] for m in ranked) / n, 4),
+                "mean_mrr": round(sum(m["mrr"] for m in ranked) / n, 4)}
 
     def _persist(self, stats, details) -> list[int]:
         rt = connect(self._settings.app_support / "runtime.db")
@@ -113,8 +145,8 @@ class EvaluateMemory(UseCase):
         return f"config#{row['id']}" if row else "baseline"
 
     def _persist_envelopes(self, gold_text: str, stats: dict,
-                           as_ofs: list[str],
-                           run_ids: list[int]) -> list[dict]:
+                           as_ofs: list[str], run_ids: list[int],
+                           rank_metrics: dict | None = None) -> list[dict]:
         contracts = self._covered_mechanisms()
         if not contracts:
             return []
@@ -125,6 +157,8 @@ class EvaluateMemory(UseCase):
                    for c, (t, p) in sorted(stats.items()) if t}
         metrics["overall_pass_rate"] = round(
             sum(p for _, p in stats.values()) / sample, 4) if sample else 0.0
+        for key, value in (rank_metrics or {}).items():
+            metrics[key] = value           # QA-1: recall@5/MRR no envelope
         temporal = f"{min(as_ofs)}..{max(as_ofs)}" if as_ofs else ""
         rt = connect(self._settings.app_support / "runtime.db")
         policy = self._policy_version(rt)
