@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 from ..facades import MemoryFacade
 from ..kernel.identity import factory as id_factory, parse as parse_id
@@ -29,6 +30,23 @@ def links(**rels: str) -> dict:
     """HATEOAS (RFC 8288 em espírito): todo recurso diz aonde se pode ir
     a partir dele — o cliente navega por relação, não por URL decorada."""
     return {rel: {"href": href} for rel, href in rels.items()}
+
+
+class EnqueueBody(BaseModel):
+    """Corpo de POST /jobs — a borda valida (422 com campo apontado);
+    `dict` cru não atravessa a camada (AGENTS §5)."""
+    type: str
+    payload: dict = {}
+    priority: int = 5
+    dedupe_key: str | None = None
+
+
+class AskBody(BaseModel):
+    """Corpo de POST /ask (v0.8 §6.2: deep, local_only e as_of temporal)."""
+    query: str
+    deep: bool = False
+    local_only: bool = False
+    as_of: str | None = None
 
 
 def issue_token(s: Settings) -> str:
@@ -187,18 +205,18 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
         return {"job_id": job_id, "state": "queued"}
 
     @app.post("/jobs", dependencies=[Depends(auth)])
-    def enqueue(body: dict):
-        jid = queue.enqueue(body["type"], body.get("payload", {}),
-                            priority=body.get("priority", 5),
-                            dedupe_key=body.get("dedupe_key"))
+    def enqueue(body: EnqueueBody):
+        jid = queue.enqueue(body.type, body.payload,
+                            priority=body.priority,
+                            dedupe_key=body.dedupe_key)
         return {"job_id": jid}
 
     @app.post("/ask", dependencies=[Depends(auth)])
-    def ask(body: dict):
+    def ask(body: AskBody):
         return MemoryFacade(s, gov).ask(
-            body["query"], deep=body.get("deep", False),
-            local_only=body.get("local_only", False),
-            as_of=body.get("as_of"))
+            body.query, deep=body.deep,
+            local_only=body.local_only,
+            as_of=body.as_of)
 
     @app.get("/events", dependencies=[Depends(auth)])
     async def events(request: Request):

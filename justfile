@@ -4,12 +4,24 @@ default:
     @just --list
 
 # venv + instalação editável do backend (com extras de dev)
-bootstrap:
-    cd backend && python3 -m venv .venv && \
+# PY: interpretador do venv (Homebrew 3.14 pode falhar no ensurepip —
+# use `just bootstrap python3.12` ou `scripts/install.sh`, que sonda sozinho)
+bootstrap PY="python3":
+    cd backend && {{PY}} -m venv .venv && \
       .venv/bin/pip install -U pip && \
       .venv/bin/pip install -e ".[dev]"
     chmod +x backend/scripts/llmwiki backend/scripts/llmwikictl \
       backend/scripts/pull_models.sh backend/scripts/install_daemon.sh
+
+# instalação completa validada (backend + desktop + smoke) — docs/12-instalacao.md
+install:
+    scripts/install.sh --with-tests --with-smoke
+
+# gate único do AGENTS.md §2: testes + typecheck do cockpit + compose
+verify:
+    cd backend && .venv/bin/python -m pytest tests -q
+    cd desktop && npx tsc --noEmit
+    docker compose config -q
 
 # baixa modelos locais (Ollama)
 models:
