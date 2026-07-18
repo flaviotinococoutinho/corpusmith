@@ -1,8 +1,90 @@
-// QualityPanel.tsx — o "CI visual" da base (+ eval de memória, v0.8 §10/§11.2)
+// QualityPanel.tsx — o "CI visual" da base (+ eval de memória, v0.8 §10/§11.2;
+// + contratos epistêmicos, v1.6 ADR-38)
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";
 
 const EVAL_CATS = ["extract", "multi_session", "temporal", "update", "abstain"];
+
+// badge por status de avaliação — linguagem operacional, não filosófica
+const EVAL_BADGE: Record<string, [string, string]> = {
+  evaluated: ["avaliado", "bg-green-100 text-green-700"],
+  partially_evaluated: ["parcial", "bg-amber-100 text-amber-700"],
+  unevaluated: ["não avaliado", "bg-neutral-200 text-neutral-600"],
+  drifted: ["drifted", "bg-red-100 text-red-700"],
+  invalidated: ["invalidado", "bg-red-100 text-red-700"],
+};
+
+function EpistemicsSection() {
+  const [data, setData] = useState<any>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [detail, setDetail] = useState<any>(null);
+  useEffect(() => { client.epistemics().then(setData).catch(() => {}); }, []);
+  useEffect(() => {
+    if (open) client.epistemicsMechanism(open).then(setDetail);
+    else setDetail(null);
+  }, [open]);
+  if (!data) return null;
+  return (
+    <section>
+      <h3 className="font-medium mb-2">🔬 Contratos epistêmicos
+        <span className="text-neutral-400 text-xs ml-2">
+          (o que cada mecanismo pode legitimamente alegar — epistemics.toml)
+        </span>
+        {!data.lint?.ok &&
+          <span className="ml-2 bg-red-600 text-white rounded px-1 text-xs">
+            lint com erros</span>}
+      </h3>
+      <table className="w-full text-xs">
+        <thead><tr className="text-left text-neutral-500">
+          <th>Mecanismo</th><th>Garantia (relativa)</th>
+          <th>Avaliação</th><th>Fallback</th></tr></thead>
+        <tbody>{(data.mechanisms ?? []).map((m: any) => {
+          const [label, cls] = EVAL_BADGE[m.evaluation_status] ??
+            EVAL_BADGE.unevaluated;
+          return (
+            <tr key={m.mechanism_id} className="border-t align-top cursor-pointer"
+                onClick={() => setOpen(open === m.mechanism_id ? null
+                                        : m.mechanism_id)}>
+              <td className="font-mono py-1">{m.mechanism_id}
+                {m.high_impact &&
+                  <span className="ml-1 text-red-600" title="alto impacto">●</span>}
+              </td>
+              <td>{m.guarantee_kind}
+                <div className="text-neutral-400">{m.guarantee_relative_to}</div>
+              </td>
+              <td><span className={`rounded px-1 ${cls}`}>{label}</span></td>
+              <td className="font-mono">{(m.fallback ?? []).join(", ") || "—"}</td>
+            </tr>);
+        })}</tbody>
+      </table>
+      {detail && (
+        <div className="mt-2 border rounded p-3 text-xs space-y-2 bg-neutral-50">
+          <div className="font-medium">{detail.title}</div>
+          <div><b>Decisão:</b> {detail.decision}</div>
+          <div><b>Vieses indutivos:</b>
+            <ul className="list-disc ml-4">{detail.inductive_biases.map(
+              (t: string, i: number) => <li key={i}>{t}</li>)}</ul></div>
+          <div><b>Pressupostos:</b>
+            <ul className="list-disc ml-4">{detail.assumptions.map(
+              (t: string, i: number) => <li key={i}>{t}</li>)}</ul></div>
+          <div><b>Failure modes conhecidos:</b>
+            <ul className="list-disc ml-4">{detail.known_failure_modes.map(
+              (t: string, i: number) => <li key={i}>{t}</li>)}</ul></div>
+          <div><b>Não interprete como:</b>
+            <ul className="list-disc ml-4">{(detail.misinterpretations ?? []).map(
+              (t: string, i: number) => <li key={i}>{t}</li>)}</ul></div>
+          <div><b>Escopo avaliado:</b> {detail.evaluations?.length
+            ? detail.evaluations.map((e: any) =>
+                `${e.dataset} (n=${e.sample_size}; ` +
+                `${(e.query_categories ?? []).join(", ")})`).join(" · ")
+            : "nenhuma avaliação registrada — não há evidência de " +
+              "generalização"}</div>
+          <div><b>Fora de escopo:</b> {(detail.evaluations?.[0]?.out_of_scope
+            ?? detail.validity_scope ?? []).join(" · ")}</div>
+        </div>)}
+    </section>
+  );
+}
 
 export function QualityPanel() {
   const [q, setQ] = useState<any>(null);
@@ -69,6 +151,7 @@ export function QualityPanel() {
             <td>{f.message}</td>
           </tr>))}</tbody>
       </table>
+      <EpistemicsSection />
     </div>
   );
 }

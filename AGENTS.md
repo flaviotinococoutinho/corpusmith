@@ -19,7 +19,7 @@ Panorama de produto: [`docs/01-conceitos.md`](docs/01-conceitos.md).
 Toda mudança MUST passar por (rode na raiz do repo):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # 248 testes
+cd backend && .venv/bin/python -m pytest tests -q   # 284 testes
 cd desktop && npx tsc --noEmit                        # typecheck do cockpit
 docker compose config -q                              # compose válido
 ```
@@ -29,12 +29,13 @@ Integridade em runtime (não são testes, são ferramentas de operação):
 ```bash
 cd backend && .venv/bin/python -m llmwiki.cli doctor          # invariantes INV-*
 cd backend && .venv/bin/python -m llmwiki.cli backup create   # backup verificável
+cd backend && .venv/bin/python -m llmwiki.cli epistemics lint # contratos epistêmicos
 ```
 
 ## 3. Mapa de camadas (gradiente de mutabilidade)
 
 ```
-kernel/ normalize/ cognitive/   ← núcleo PURO: stdlib, zero I/O (asserção de teste)
+kernel/ normalize/ cognitive/ epistemic/  ← núcleo PURO: stdlib, zero I/O (asserção de teste)
 okf/ harness/ retrieval/        ← domínio canônico
 usecases/                       ← aplicação: 1 classe = 1 operação = execute()
 facades/                        ← orquestração (Memory·Compiler·Curation·Cognition)
@@ -61,6 +62,7 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | INV-PRIV-001 | conteúdo `local_only` não sai da máquina | `harness/local_policy.py` |
 | INV-OPS-001 | config aplicada tem linhagem, validação e rollback | `test_v16.py` |
 | INV-OPS-002 | todo job termina em estado terminal ou permanece recuperável | `test_jobs_reliability.py` |
+| INV-EPI-001 | mecanismo heurístico tem contrato em `epistemics.toml`: sem garantia universal, com vieses/failure modes/fallback declarados e sem autocertificação | `test_epistemics.py`, `test_epistemics_toml.py`, `llmwiki epistemics lint` |
 
 ## 5. Caminhos PROIBIDOS (MUST NOT)
 
@@ -72,7 +74,9 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 - tratar o LLM como autoridade de escrita, validação ou reconciliação;
 - retry de erro permanente; retry sem idempotência;
 - `dict[str, Any]` cru atravessando mais de uma camada;
-- mudar default de privacidade sem RFC.
+- mudar default de privacidade sem RFC;
+- alegar garantia universal para um mecanismo, ou validá-lo apenas com
+  métrica produzida por ele mesmo (`epistemics.toml` + lint proíbem).
 
 ## 6. Fontes de verdade
 
@@ -83,6 +87,7 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | jobs/telemetria | `runtime.db` | métricas |
 | experiência cognitiva | `cognitive.db` | relatórios |
 | referência do mundo | `reference.db` | gazetteer (cache) |
+| contratos epistêmicos | `epistemics.toml` (raiz) | CLI/API/painel (mesma fonte); envelopes em `runtime.db` |
 
 `index.db` NUNCA participa da transação canônica; converge para
 `bundle_head`. Detalhe: [`docs/06-referencia.md`](docs/06-referencia.md).
@@ -123,6 +128,7 @@ Lista completa: `docs/10` §23.
 
 - **Produto** (o que é, para quem): `docs/01-conceitos.md`
 - **Ciência & teoria** (papers, cognição, informação): `docs/03-teoria.md`
+- **Epistemologia operacional** (o que cada mecanismo pode alegar): `docs/11-epistemic-contracts.md` + `epistemics.toml`
 - **Engenharia** (arquitetura, padrões, algoritmos, ADTs): `docs/10-engenharia-ai-friendly.md`, `docs/02-metodologias.md`, `docs/04-tecnologias.md`
 - **Requisitos não funcionais** (CAP, SLO, escala, durabilidade, segurança): `docs/10` §5–17
 - **Referência dura** (endpoints, tabelas, regras, constantes): `docs/06-referencia.md`

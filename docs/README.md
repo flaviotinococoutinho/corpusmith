@@ -37,6 +37,7 @@ Disciplina de software, técnicas de algoritmo, padrões e paradigmas.
 | Doc | Conteúdo |
 |---|---|
 | [10-engenharia-ai-friendly.md](10-engenharia-ai-friendly.md) | **Spec de arquitetura-alvo (BC-ENG-001)**: Functional Core/Imperative Shell, tipos/ADTs, transações, fila, estruturas de dados, padrões, Object Calisthenics — **com selo ✅ implementado / ⚠️ parcial / 🎯 proposto** |
+| [11-epistemic-contracts.md](11-epistemic-contracts.md) | **Contratos epistêmicos (ADR-38)**: o que cada mecanismo heurístico pode legitimamente alegar — vieses, pressupostos, garantias RELATIVAS, failure modes, Generalization Envelopes (`epistemics.toml`) |
 | [02-metodologias.md](02-metodologias.md) | Método de construção: sanduíche determinístico, precisão>recall, use cases + facades, Template Method, arquitetura-como-teste, golden tests |
 | [04-tecnologias.md](04-tecnologias.md) | Stack e contratos de infra: SQLite/FTS5/WAL, Git, FastAPI/SSE, Electron/Vite, roteador de modelos |
 
@@ -54,6 +55,7 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 |---|---|
 | [06-referencia.md](06-referencia.md) | Todas as regras do Harness, endpoints, tabelas dos 5 bancos, jobs, flags, tipos OKF, frontmatter |
 | [../architecture.toml](../architecture.toml) | Contrato de arquitetura legível-por-máquina (preso a `test_architecture_toml.py`) |
+| [../epistemics.toml](../epistemics.toml) | Contratos epistemológicos legíveis-por-máquina (presos a `test_epistemics_toml.py`; lint em `llmwiki epistemics lint`) |
 
 ### 🔄 Fluxos operacionais — QUANDO / ONDE
 | Doc | Conteúdo |
@@ -72,6 +74,7 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 - É **o que o usuário vê / por que o produto existe**? → `01`.
 - É **por que uma técnica funciona** (prova, paper, matemática)? → `03`.
 - É **como o software é organizado** (camada, tipo, padrão, algoritmo)? → `10`, `02`, `04`.
+- É **o que um mecanismo heurístico pode ALEGAR / onde foi avaliado**? → `11` + `epistemics.toml`.
 - É **quanto/quão rápido/quão durável** (CAP, SLO, escala, segurança)? → `10` §5–17.
 - É **uma constante/regra/endpoint** que preciso consultar? → `06`.
 - É **uma decisão tomada ou o que ainda falta**? → `08`, `09`.

@@ -689,7 +689,9 @@ remoção. Runtime recebe escrutínio maior que dev.
 
 ```text
 AGENTS.md              ✅  ponto de entrada normativo
-architecture.toml      ✅  contrato legível-por-máquina (preso a teste)
+architecture.toml      ✅  contrato ESTRUTURAL legível-por-máquina (preso a teste)
+epistemics.toml        ✅  contrato EPISTEMOLÓGICO legível-por-máquina (v1.6,
+                           ADR-38 — preso a test_epistemics_toml.py; docs/11)
 docs/10-…              ✅  esta spec
 docs/08-decisoes.md    ✅  ADRs
 docs/ (rfc/)           🎯  quando o primeiro RFC nascer

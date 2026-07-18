@@ -7,7 +7,7 @@
 #
 # Referências: docs/10-engenharia-ai-friendly.md (spec BC-ENG-001) · AGENTS.md
 schema_version = 1
-product_version = "1.5.0"
+product_version = "1.6.0"
 
 [project]
 name = "brain-compiler"        # também LLM Wiki
@@ -18,7 +18,7 @@ transport_allowed_only_in = ["api", "cli", "daemon", "models"]
 
 # Gradiente de mutabilidade (interno = estável/puro → externo = volátil).
 layers = [
-  "kernel", "normalize", "cognitive",   # núcleo PURO (stdlib, zero I/O)
+  "kernel", "normalize", "cognitive", "epistemic",  # núcleo PURO (zero I/O)
   "okf", "harness", "retrieval",        # domínio canônico
   "usecases",                            # aplicação (1 método público)
   "facades",                             # orquestração
@@ -26,9 +26,10 @@ layers = [
 ]
 
 # --- núcleo PURO: nenhum destes imports pode aparecer (test_architecture:
-#     FORBIDDEN_IN_PURE). ---
+#     FORBIDDEN_IN_PURE). epistemic/ (v1.6): contratos epistemológicos —
+#     regras em epistemics.toml na raiz, loader em harness/epistemics.py. ---
 [pure]
-packages = ["kernel", "normalize", "cognitive"]
+packages = ["kernel", "normalize", "cognitive", "epistemic"]
 forbidden_imports = [
   "sqlite3", "httpx", "subprocess", "fastapi", "uvicorn", "git",
   "requests", "frontmatter", "yaml", "pydantic", "sse_starlette",
@@ -38,7 +39,7 @@ forbidden_imports = [
 # --- domínio livre de transporte (test_architecture: TRANSPORT). ---
 [domain]
 packages = ["okf", "harness", "usecases", "facades", "retrieval",
-            "runtime", "cognitive"]
+            "runtime", "cognitive", "epistemic"]
 forbidden_imports = ["fastapi", "uvicorn", "sse_starlette", "socket",
                      "httpx", "requests", "urllib"]
 
@@ -57,7 +58,7 @@ machine_page_template_closed = true               # subclasses não sobrescrevem
 name = "runtime.db"
 authority = "operacional"
 rebuildable = false
-schema_version = 6
+schema_version = 7          # v1.6: + evaluation_envelopes (ADR-38)
 [[database]]
 name = "index.db"
 authority = "nenhuma (projeção)"
@@ -86,3 +87,4 @@ desktop_typecheck = "cd desktop && npx tsc --noEmit"
 compose_check = "docker compose config -q"
 doctor = "cd backend && .venv/bin/python -m llmwiki.cli doctor"
 backup = "cd backend && .venv/bin/python -m llmwiki.cli backup create"
+epistemics_lint = "cd backend && .venv/bin/python -m llmwiki.cli epistemics lint"

@@ -1,0 +1,348 @@
+# epistemics.toml — REGISTRO DE CONTRATOS EPISTEMOLÓGICOS (ADR-38, v1.6).
+#
+# Fonte normativa dos pressupostos dos mecanismos heurísticos/adaptativos,
+# como architecture.toml é a fonte dos contratos estruturais. NÃO é
+# decorativo: `backend/tests/test_epistemics_toml.py` cruza os parâmetros
+# declarados aqui com as constantes reais do código, e
+# `llmwiki epistemics lint` (mesma implementação da API e do painel)
+# valida as regras obrigatórias — contrato que mente sobre o código quebra
+# a suíte.
+#
+# Vocabulários fechados (epistemic/model.py): guarantee_kind ∈
+# deterministic|property_tested|empirical|calibrated_empirical|
+# probabilistic|online_regret_relative|heuristic|formal|none · fallback ∈
+# abstain|deterministic_fallback|request_human_review|degrade|
+# duplicate_in_doubt|no_decision · evidence ∈ golden_set|human_feedback|
+# deterministic_check|property_test|independent_validator|self_reported.
+#
+# universal_guarantee = true é PROIBIDO (lint) — toda garantia declara a
+# que é relativa. Evidência composta só por self_reported é PROIBIDA
+# (não-autocertificação).
+schema_version = 1
+
+[registry]
+version = "1.0.0"
+
+# ============================================================ retrieval
+[mechanisms.retrieval_rrf_hedge]
+title = "Retrieval multi-stream com fusão RRF ponderada por crédito Hedge"
+decision = "ordenar evidências candidatas do bundle para responder uma consulta"
+implementation_refs = [
+  "backend/src/llmwiki/retrieval/streams.py",
+  "backend/src/llmwiki/usecases/ask_memory.py",
+  "backend/src/llmwiki/kernel/information.py",
+  "backend/src/llmwiki/usecases/record_outcome.py",
+]
+inductive_biases = [
+  "evidência relevante tende a aparecer bem posicionada em pelo menos um stream (fts, dense, entity, graph, descend, global)",
+  "posições em rankings são mais comparáveis que scores brutos heterogêneos (por isso RRF, não soma de scores)",
+  "desfechos passados (useful/dead_end/corrected) contêm informação sobre a utilidade futura de cada stream",
+  "vizinhança no grafo de links importa: fatos a 1+ saltos das entidades da pergunta são alcançáveis por PPR (HippoRAG)",
+]
+assumptions = [
+  "o regime de consultas não muda abruptamente (os pesos aprendidos continuam informativos)",
+  "os desfechos registrados pelo usuário representam utilidade real, não humor do momento",
+  "os streams têm diversidade suficiente de erros (falha correlacionada anula o ganho da fusão)",
+]
+validity_scope = [
+  "consultas sobre o bundle local (não sobre o mundo aberto)",
+  "streams registrados em stream_weights e presentes na consulta corrente",
+  "idiomas e domínios presentes no golden set (hoje: casos do bundle do usuário, pt-BR dominante)",
+]
+known_failure_modes = [
+  "feedback escasso ou sistematicamente enviesado (poucos outcomes ⇒ pesos ~1.0, fusão não aprendeu nada)",
+  "mudança abrupta na distribuição de consultas (concept drift; o clamp acelera a readaptação mas não a elimina)",
+  "falha correlacionada de todos os streams (pergunta fora da cobertura do corpus)",
+  "loss atribuído por página, não por stream individual: streams que co-trouxeram a página dividem o mesmo julgamento",
+]
+guarantee_kind = "online_regret_relative"
+guarantee_relative_to = "melhor stream fixo entre os observados, sob as perdas registradas; o clamp [0.5, 2.0] troca parte do bound formal por exploração garantida (nenhum stream é silenciado para sempre)"
+universal_guarantee = false
+fallback = ["degrade"]
+adaptive = true
+feedback_signal = "ask_outcomes (useful=-1, dead_end/corrected=+1) roteado por ask_provenance página→stream (RecordOutcome._update_stream_credit)"
+evidence = ["golden_set", "human_feedback"]
+evaluated_by = ["eval_memory"]
+misinterpretations = [
+  "Hedge compete com o melhor stream fixo observado; não garante ótimo universal nem relevância objetiva",
+  "peso alto de um stream não significa que a resposta é verdadeira — significa histórico de desfechos úteis",
+]
+high_impact = false
+abstention_supported = true
+human_review_available = true
+[mechanisms.retrieval_rrf_hedge.parameters]
+rrf_k = 60
+hedge_eta = 0.25
+hedge_clamp_floor = 0.5
+hedge_clamp_ceiling = 2.0
+loss_useful = -1.0
+loss_not_useful = 1.0
+overlay_preferred_boost = 1.15
+overlay_contested_penalty = 0.8
+
+[mechanisms.retrieval_uncertainty]
+title = "Incerteza de retrieval por entropia normalizada da fusão"
+decision = "quantificar a DISPERSÃO da evidência fundida (sinal para hedging na UI e insumo da abstenção)"
+implementation_refs = [
+  "backend/src/llmwiki/retrieval/streams.py",
+  "backend/src/llmwiki/kernel/information.py",
+]
+inductive_biases = [
+  "massa de score espalhada entre muitos chunks indica que o sistema não sabe onde está a resposta (parente do semantic entropy de Kuhn et al. 2023)",
+  "massa concentrada num chunk indica evidência localizada — o que NÃO é o mesmo que evidência correta",
+]
+assumptions = [
+  "a distribuição de scores RRF dos top-12 é um proxy razoável da concentração de evidência",
+  "os streams cobrem o espaço de respostas plausíveis (entropia baixa por cobertura pobre é falsa certeza)",
+]
+validity_scope = [
+  "distribuições de score da fusão RRF corrente (top-12 hits ordenados)",
+  "uso como sinal RELATIVO na mesma base — não comparável entre bundles diferentes",
+]
+known_failure_modes = [
+  "evidência concentrada E incorreta: entropia baixa, resposta errada (falsa confiança)",
+  "base minúscula: com <2 hits positivos a entropia é 0 por construção, não por certeza",
+  "1 − uncertainty é gravado como `confidence` em ask_context e alimenta a calibração — se lido como probabilidade de verdade, o Brier mede a heurística errada",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "dispersão da distribuição de scores fundidos — mede espalhamento de evidência, não verdade factual"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+evidence = ["deterministic_check", "human_feedback"]
+misinterpretations = [
+  "a incerteza mede dispersão do retrieval, NÃO é probabilidade de a afirmação ser verdadeira",
+  "não substitui calibração factual (Brier sobre desfechos observados é o eixo separado)",
+  "entropia baixa não valida a resposta: pode haver evidência concentrada e incorreta",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.retrieval_uncertainty.parameters]
+entropy_window_hits = 12
+ui_hedge_threshold = 0.85
+
+[mechanisms.abstention]
+title = "Abstenção com fallback determinístico para a base fria"
+decision = "responder OU confessar ausência de cobertura (custo de silêncio < custo de resposta fabricada)"
+implementation_refs = [
+  "backend/src/llmwiki/usecases/ask_memory.py",
+  "backend/src/llmwiki/usecases/cold_memory.py",
+]
+inductive_biases = [
+  "evidência vazia ou top_score abaixo do limiar indica ausência de cobertura, não resposta difícil",
+  "memória congelada que casa com a pergunta é melhor pista que uma resposta fabricada (cold_matches)",
+]
+assumptions = [
+  "o limiar ask.abstain_threshold está calibrado para o bundle do usuário (default 0.0 = abstém só com evidência vazia)",
+  "o usuário prefere um 'não sei' com lacunas nomeadas a uma alucinação plausível",
+]
+validity_scope = [
+  "consultas /ask sobre o bundle local; categorias expect_abstain do golden set",
+]
+known_failure_modes = [
+  "falso silêncio: limiar alto demais abstém com evidência utilizável (custo: fricção, perda de confiança no sistema)",
+  "resposta fabricada: limiar baixo demais responde sem cobertura (custo: erro citado como fato — pior que o silêncio)",
+  "default 0.0 significa que score baixo-mas-positivo NUNCA abstém — a proteção real depende de calibrar o limiar",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "limiar configurado sobre o top_score da fusão; graded no golden set pela categoria expect_abstain"
+universal_guarantee = false
+fallback = ["abstain", "deterministic_fallback"]
+adaptive = false
+feedback_signal = ""
+evidence = ["golden_set", "human_feedback"]
+evaluated_by = ["eval_memory"]
+misinterpretations = [
+  "abstenção não é prova de que a resposta não existe no mundo — só de que não há cobertura NA BASE",
+  "o fallback extrativo (modelo indisponível) é degradação, não abstenção: são caminhos distintos",
+]
+high_impact = true
+abstention_supported = true
+human_review_available = true
+[mechanisms.abstention.parameters]
+threshold_config_key = "ask.abstain_threshold"
+threshold_default = 0.0
+
+# ======================================================== reconciliação
+[mechanisms.reconciliation]
+title = "Reconciliação ADD/UPDATE/SUPERSEDE/NOOP/RECYCLE por escada determinística"
+decision = "decidir se um candidato compilado é novo (ADD), atualiza (UPDATE), substitui (SUPERSEDE), nada acrescenta (NOOP) ou reidrata memória fria (RECYCLE)"
+implementation_refs = [
+  "backend/src/llmwiki/usecases/reconcile_candidate.py",
+  "backend/src/llmwiki/kernel/information.py",
+]
+inductive_biases = [
+  "identificador forte compartilhado (doi, isbn, issn, arxiv, git_sha) identifica o mesmo objeto do mundo — determinístico, precede tudo",
+  "textos sobre o mesmo objeto comprimem-se mutuamente (NCD, Cilibrasi & Vitányi 2005) — sinal barato, imune a paráfrase superficial",
+  "similaridade composta = 0.4·rank(FTS título) + 0.3·Jaccard(entidades) + 0.3·(1−NCD)",
+  "na dúvida, duplicar: duplicação é REVERSÍVEL (consolidação futura resolve); fusão errada é DESTRUTIVA",
+]
+assumptions = [
+  "os cortes HI=0.82 / LO=0.55 separam mesmo-objeto de objetos-distintos no corpus típico (calibráveis via bench)",
+  "entidades extraídas pelo normalizador representam o conteúdo (Jaccard sobre entidades ruins degrada o sinal)",
+]
+validity_scope = [
+  "candidatos do pipeline de compilação contra o bundle local e a base fria",
+  "textos em que zlib captura redundância (NCD com corpos truncados em 8000 chars)",
+]
+known_failure_modes = [
+  "zona cinzenta [0.55, 0.82) sem árbitro: cai em ADD — pode duplicar conceito existente (aceito por projeto: precisão > recall)",
+  "árbitro LLM local (flag reconcile.llm_arbiter) responde JSON inválido ou fica indisponível: silenciosamente vira ADD",
+  "identificador forte FALSO no texto (ex.: DOI citado, não do documento) força UPDATE errado — o único degrau capaz de fusão destrutiva",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "escada determinística (identificadores) primeiro; heurística composta calibrada nos cortes HI/LO depois; trilha completa em reconcile_log"
+universal_guarantee = false
+fallback = ["duplicate_in_doubt", "request_human_review"]
+adaptive = false
+feedback_signal = ""
+evidence = ["deterministic_check", "property_test"]
+misinterpretations = [
+  "score ≥ HI significa 'similar o suficiente para UPDATE', não identidade provada — só o degrau de identificador forte prova identidade",
+  "confidence extracted/inferred/ambiguous da decisão é PROVENIÊNCIA do degrau, não probabilidade de acerto",
+]
+high_impact = true
+abstention_supported = false
+human_review_available = true
+[mechanisms.reconciliation.parameters]
+similarity_hi = 0.82
+similarity_lo = 0.55
+weight_title_rank = 0.4
+weight_jaccard = 0.3
+weight_ncd = 0.3
+ncd_body_window = 8000
+strong_ids = "doi,isbn,issn,arxiv,git_sha"
+
+# ============================================================ cognição
+[mechanisms.cognitive_priority]
+title = "Prioridade cognitiva decomposta (o que estudar/validar agora)"
+decision = "ordenar itens de conhecimento por prioridade de atenção dentro de um objetivo declarado"
+implementation_refs = [
+  "backend/src/llmwiki/cognitive/scoring.py",
+]
+inductive_biases = [
+  "cada componente é um PROXY observável: foco declarado, distância no grafo, lacuna de profundidade, grau de conexão, agenda espaçada, calor de acesso, custo estimado",
+  "monotonicidade por construção: subir user_focus (mantido o resto) nunca reduz o score (propriedade testada)",
+  "valor de informação separado de interesse pessoal por princípio (§9.2)",
+]
+assumptions = [
+  "os pesos por família (cognitivo, estrutural, agenda, operacional) refletem as preferências vigentes — ajustáveis só pela linhagem de configuração",
+  "grau no grafo até 6 vizinhos satura dependency_unlock (view.degree/6 com teto 1.0)",
+]
+validity_scope = [
+  "itens projetados de um FocusGoal ativo com política cognitiva versionada",
+]
+known_failure_modes = [
+  "proxies enviesados: heat mede acesso (não compreensão); custo em minutos é estimativa grossa",
+  "expected_information_gain NÃO é ganho de informação esperado formal: é o produto knowledge_gap × dependency_unlock — proxy heurístico de 'validar aqui reduz incerteza e destrava dependentes'",
+  "pesos mal calibrados invertem prioridades sem sinal de erro (não há ground truth de prioridade)",
+]
+guarantee_kind = "property_tested"
+guarantee_relative_to = "monotonicidade e decomposição explicada, testadas na suíte; NÃO otimalidade da ordenação"
+universal_guarantee = false
+fallback = ["request_human_review"]
+adaptive = false
+feedback_signal = ""
+composite = true
+composite_components = [
+  "user_focus", "goal_alignment", "knowledge_gap", "dependency_unlock",
+  "review_urgency", "accessibility_heat", "cost_penalty",
+  "expected_information_gain",
+]
+evidence = ["property_test", "human_feedback"]
+misinterpretations = [
+  "expected_information_gain é PROXY heurístico (gap × conectividade), não informação esperada em sentido formal — o nome externo é preservado por compatibilidade; dívida registrada no ADR-38",
+  "score alto não significa 'mais importante no absoluto' — significa prioridade sob a política e o objetivo declarados",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.cognitive_priority.parameters]
+dependency_unlock_saturation = 6.0
+cost_penalty_saturation_min = 30.0
+
+[mechanisms.adaptive_strategy_selection]
+title = "Seleção adaptativa da estratégia de explicação (segundo Hedge)"
+decision = "escolher COMO explicar a resposta (direta, analogia-primeiro, exemplo-primeiro, teoria-primeiro, decomposição)"
+implementation_refs = [
+  "backend/src/llmwiki/usecases/ask_memory.py",
+  "backend/src/llmwiki/usecases/record_outcome.py",
+]
+inductive_biases = [
+  "estratégias com histórico de desfechos úteis tendem a continuar úteis para a mesma pessoa",
+  "perfil DECLARADO vence o observado (profile.preferred_strategy fixa; 'auto' sorteia ∝ peso)",
+  "roleta proporcional preserva exploração: estratégia boa aparece mais, nenhuma é silenciada",
+]
+assumptions = [
+  "o desfecho da consulta reflete (em parte) a adequação da estratégia de explicação, não só a qualidade do retrieval",
+  "as preferências de explicação da pessoa são relativamente estáveis entre sessões",
+]
+validity_scope = [
+  "consultas /ask com estratégia registrada em ask_context e desfecho registrado",
+]
+known_failure_modes = [
+  "atribuição de crédito confundida: um dead_end por retrieval ruim pune a estratégia de explicação usada",
+  "feedback escasso: pesos próximos de 1.0 tornam a roleta ~uniforme (exploração pura)",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "seleção proporcional a pesos multiplicativos sobre desfechos observados; SEM bound formal de arrependimento no regime bandit implementado (só a estratégia usada é atualizada, sem correção de amostragem)"
+universal_guarantee = false
+fallback = ["deterministic_fallback"]
+adaptive = true
+feedback_signal = "ask_outcomes via ask_context.strategy (RecordOutcome._update_strategy_credit; mesmo hedge com clamp)"
+evidence = ["human_feedback"]
+misinterpretations = [
+  "não é diagnóstico de estilo de aprendizagem (VARK foi rejeitado, ADR-19): é preferência revelada por desfecho, revogável",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.adaptive_strategy_selection.parameters]
+strategies = "direta,analogia-primeiro,exemplo-primeiro,teoria-primeiro,decomposicao"
+
+[mechanisms.metacog_observation_mining]
+title = "Mineração metacognitiva de hipóteses (monitoramento → controle gateado)"
+decision = "propor HIPÓTESES sobre o uso da memória (estratégia melhor, correlação carga×erro, excesso de confiança) — nunca rótulos, nunca auto-aplicar"
+implementation_refs = [
+  "backend/src/llmwiki/usecases/metacognition.py",
+  "backend/src/llmwiki/kernel/calibration.py",
+]
+inductive_biases = [
+  "padrões determinísticos (SQL + aritmética, sem LLM) sobre ask_context × ask_outcomes × estado declarado carregam sinal sobre o convívio",
+  "observação isolada não vira padrão: mínimo cognitive.min_support ocorrências, e todo texto carrega n e taxa",
+  "monitoramento separado de controle (Nelson & Narens): o sistema OBSERVA; só o humano APLICA",
+]
+assumptions = [
+  "as taxas comparadas (estratégia vs média global; carga alta vs baixa) são estáveis o bastante para hipóteses com n pequeno",
+  "a confiança gravada (1 − uncertainty do retrieval) é um proxy aceitável para o eixo de calibração — herda as limitações do contrato retrieval_uncertainty",
+]
+validity_scope = [
+  "histórico local de consultas julgadas do próprio usuário (nunca comparação entre pessoas)",
+]
+known_failure_modes = [
+  "n pequeno + múltiplas comparações: hipóteses espúrias passam o corte de 15 pontos percentuais",
+  "correlação lida como causa (o texto SEMPRE frasea como correlação — mas o leitor pode ignorar)",
+  "viés de desfecho: só consultas julgadas entram; quem não julga não gera sinal",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "cortes declarados (Δ≥0.15 nas taxas; overconfidence≥0.2; suporte mínimo) com gate humano obrigatório antes de qualquer efeito"
+universal_guarantee = false
+fallback = ["request_human_review", "no_decision"]
+adaptive = false
+feedback_signal = ""
+evidence = ["deterministic_check", "human_feedback"]
+misinterpretations = [
+  "hipóteses NÃO são diagnóstico psicológico nem inferência de emoção (rejeitado por ADR-19/31)",
+  "aceitar uma observação aplica o ajuste PELA LINHAGEM de config (TuneConfig source=metacog, com rollback) — nada muda sem consentimento",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.metacog_observation_mining.parameters]
+min_support_config_key = "cognitive.min_support"
+min_support_default = 5
+strategy_rate_delta = 0.15
+load_bad_rate_delta = 0.15
+overconfidence_threshold = 0.2

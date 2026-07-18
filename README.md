@@ -1,4 +1,4 @@
-# LLM Wiki — v1.5
+# LLM Wiki — v1.6
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -156,7 +156,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   roxas pontilhadas entre os articuladores — clicar no "?" captura a
   pergunta-ponte como `question` sem sair do grafo.
 
-## Trilha de endurecimento (v1.2 → v1.5)
+## Trilha de endurecimento (v1.2 → v1.6)
 
 - **v1.2** — lint de atribuição de citação no corpus
   (`policy.quotation_attribution`); máquina de estados de jobs
@@ -175,6 +175,18 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   (contrato preso a `test_architecture_toml.py`), índice de docs roteado
   por especialidade, e correção A-06 (jitter de retry por hash estável).
   Ver ADR-37.
+- **v1.6** — **Epistemic Contract Registry + Generalization Envelope**
+  (ADR-38): [`epistemics.toml`](epistemics.toml) registra, por mecanismo
+  heurístico (RRF+Hedge, incerteza, abstenção, reconciliação, prioridade
+  cognitiva, seleção de estratégia, metacognição), a decisão, os vieses
+  indutivos, os pressupostos, a garantia RELATIVA (universal é proibida
+  pelo lint), failure modes e fallback — com parâmetros CRUZADOS com as
+  constantes reais do código pela suíte. Cada eval grava um
+  **Generalization Envelope** (dataset+sha256, amostra, categorias — em
+  `runtime.db`, schema 7): onde o mecanismo foi e NÃO foi avaliado.
+  `llmwiki epistemics lint|list|show|evaluations` · `GET
+  /cockpit/epistemics*` · seção no painel Qualidade — uma única fonte.
+  Doc: [`docs/11-epistemic-contracts.md`](docs/11-epistemic-contracts.md).
 
 ## Coordenação dos dados — fundamentos (kernel/)
 
