@@ -205,6 +205,10 @@ class RestoreBackup(UseCase):
         with zipfile.ZipFile(self._archive) as zf:
             members = [m for m in zf.namelist() if m != "manifest.json"]
             zf.extractall(home, members)
+        # ADR-39: bancos trocados por baixo ⇒ o fast-path de connect()
+        # é invalidado — o próximo open repassa schema+migração inteiros
+        from ..runtime.db import reset_initialized
+        reset_initialized()
         from .rebuild_index import RebuildIndex
         rebuilt = RebuildIndex(self._settings).execute()
         self._notify("backup.restored",

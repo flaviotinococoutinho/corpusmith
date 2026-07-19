@@ -18,7 +18,8 @@ TRANSPORT = {"fastapi", "uvicorn", "sse_starlette", "socket",
              "httpx", "requests", "urllib"}
 PURE_PACKAGES = ("kernel", "normalize", "cognitive", "epistemic")
 DOMAIN_PACKAGES = ("okf", "harness", "usecases", "facades",
-                   "retrieval", "runtime", "cognitive", "epistemic")
+                   "retrieval", "runtime", "cognitive", "epistemic",
+                   "compute")
 
 
 def _absolute_imports(path: Path) -> set[str]:

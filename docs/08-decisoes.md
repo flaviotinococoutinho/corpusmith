@@ -617,3 +617,77 @@ ignorar a tabela; nenhum dado existente alterado.
 fallback com badge "não avaliado" honesto; sem golden set distribuído
 (QA-1) tudo aparece `unevaluated` — o que é o retrato correto.
 36 testes novos; 284 no total.
+
+### ADR-39 — Compute plane híbrido Python+Rust, medido antes de migrado (v1.7)
+**Contexto**: os hot paths CPU-bound (PPR, Brandes, SimHash em lote) e o
+ETL do índice escalam mal em Python puro; a auditoria pedia hard-kill
+real (REL-2b) e o incremental lia TODOS os bytes do bundle a cada
+execução. Princípio adotado: **Rust calcula sinais e projeções; Python
+decide o significado** — nenhuma decisão de domínio (ADD/UPDATE/
+SUPERSEDE, prioridade, abstenção, privacidade, escrita/commit) sai do
+Python.
+**Fase 0 — medir primeiro (tudo REAL, nada estimado)**:
+- instrumentação por estágio (`runtime/stages.py`; declaração completa
+  em `benchmarks/METRICS.md`) em /ask, rebuild_index e consolidação;
+- harness estendido: `llmwiki bench ask|index|graph|consolidate|compare|
+  generate-fixture` (fixtures determinísticas por semente; JSON schema 1;
+  baseline versionada em `benchmarks/baseline.json`).
+**Correções Python ANTES de culpar a linguagem (§19, medidas)**:
+- `connect()` separa inicialização (1×/processo) de abertura comum —
+  a checagem SchemaTooNew continua em TODA abertura (invariante);
+  restore/arquivo recriado re-inicializam (`reset_initialized`);
+- incremental do índice usa DELTA DO GIT (prev HEAD→HEAD + sujos):
+  1 página alterada lê **130 bytes** (antes ~190 KB — tudo) e o modo
+  full×incremental é EXPLICADO no relatório (`delta`);
+- `_first_chunks` sem N+1 (IN + MIN(ord), ordem preservada); 1 conexão
+  runtime.db por /ask (eram 3); top-k por heap.
+**Porta ComputeKernel** (`compute/`, domínio sem transporte):
+`PythonComputeKernel` é a REFERÊNCIA e fallback (sempre presente);
+`RustComputeKernel` via PyO3 (`llmwiki_native`, abi3-py311, GIL liberado,
+SoA — nunca list[dict] gigante); seleção `compute.backend`
+auto|python|rust com fallback OBSERVÁVEL (motivo registrado; rust
+exigido + allow_fallback=false ⇒ erro explícito). Cache de grafo por
+geração (snapshot imutável, swap atômico, hit/miss/build expostos).
+**Workspace `native/`** (Cargo): braincore-types (protocolo v1, erros
+fechados) · braincore-graph (interning u32, CSR offsets/targets/weights,
+PPR com nó virtual p/ seeds fora do grafo — equivalência provada,
+union-find, Brandes) · braincore-sketch (SimHash 64 blake2b
+digest_size=8, 9 bandas round(i·64/9), pares candidatos, paridade
+BIT-A-BIT com kernel/sketch.py) · braincore-text/etl (Fases 3/4:
+tipos+plano fechado, zero lógica canônica) · llmwiki-native-python
+(bindings) · llmwiki-native-worker (manifesto v1 campos fechados,
+eventos NDJSON, report.json, exit codes estáveis; NUNCA escreve bundle
+nem troca index.db — swap é decisão do Python, Fase 4).
+**Isolamento de processo (REL-2b, atrás de `compute.process_isolation`,
+default false)**: jobs pesados rodam em `python -m llmwiki.jobs_proc`
+com hard timeout REAL (kill no prazo), cancelamento REAL
+(terminate→grace 2s→kill) e crash ⇒ `WorkerCrashed(OSError)` =
+transitório na fila (lease/at-least-once). Governor herdado no filho
+(REL-1 vale isolado). Thread continua o default documentado — porta de
+entrada pequena.
+**Resultados MEDIDOS (benchmarks/baseline.json; semente fixa)**:
+PPR 5000 nós/20k arestas: 183.7ms→1.9ms (**97.7×**); Brandes:
+88.1s→1.9s (**45.3×**); SimHash 440 docs: 800ms→13.5ms (**59.1×**);
+pares candidatos idênticos entre backends (asserção no bench).
+**Equivalência**: 11 testes diferenciais (exato: simhash/bandas/pares/
+componentes/interning; |Δ|≤1e-8 + mesmo top-k: PPR/Brandes; fim-a-fim:
+/ask devolve as MESMAS evidências nos dois backends) + property tests
+Hypothesis (2 achados REAIS corrigidos: `\w` do crate regex não cobre
+No ('²') e `is_alphabetic` cobre a mais Other_Alphabetic — resolvido com
+categorias L*∪N*∪'_' exatas do CPython) + limite DECLARADO: pontos de
+código de Unicode > runtime (Kawi U+11F02) ficam fora da garantia
+(contrato native_sketch_kernel).
+**Governança**: 6 contratos novos em epistemics.toml (registro 1.1.0) —
+native_graph_kernel, native_sketch_kernel, graph_cache, worker_isolation
+(implementados) e native_text_extraction, native_index_builder
+(PLANEJADOS, guarantee none, sem overclaim); `doctor` valida a camada
+nativa (extensão, protocolo, smoke PPR, worker presente, tmp, fallback);
+CI ganha job `native` (cargo test + wheel + worker).
+**Rejeitado**: broker externo, microserviço, thread como hard timeout,
+FFI por item, Rust como segunda fonte de verdade, NCD em Rust nesta
+rodada (zlib nível 6 do Python é o comparável exato; miniz divergiria —
+fica no Python até benchmark justificar), rename de campos externos.
+**Rollback**: desinstalar a wheel ⇒ fallback Python automático e
+observável; `compute.process_isolation=false` (default) volta ao
+comportamento em thread; tabela nenhuma foi adicionada (schema
+inalterado nesta rodada).

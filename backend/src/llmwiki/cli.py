@@ -187,6 +187,12 @@ def cmd_backup(s: Settings, args) -> int:
     return 0
 
 
+def cmd_bench(s: Settings, args) -> int:
+    """Delega ao harness versionado (llmwiki.bench) — mesma fonte."""
+    from .bench import main as bench_main
+    return bench_main(args.rest)
+
+
 def cmd_epistemics(s: Settings, args) -> int:
     """epistemics lint|list|show <id>|evaluations <id> — a MESMA
     implementação do painel e dos testes (harness.epistemics + facade)."""
@@ -248,6 +254,10 @@ def main(argv: list[str] | None = None) -> int:
     backup.add_argument("--dry-run", action="store_true", dest="dry_run")
     backup.add_argument("--force", action="store_true")
     backup.set_defaults(fn=cmd_backup)
+    bench = sub.add_parser(
+        "bench", help="benchmarks reprodutíveis (ADR-39; ver benchmarks/)")
+    bench.add_argument("rest", nargs="*", default=[])
+    bench.set_defaults(fn=cmd_bench)
     epistemics = sub.add_parser(
         "epistemics", help="contratos epistemológicos (epistemics.toml)")
     epistemics.add_argument("op", choices=["lint", "list", "show",

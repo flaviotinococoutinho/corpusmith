@@ -1,0 +1,30 @@
+{
+ "schema": 1,
+ "kind": "ask",
+ "product_version": "1.6.6",
+ "n_pages": 150,
+ "asks": 12,
+ "backend": "rust",
+ "total_ms": {
+  "n": 12,
+  "p50": 51.232,
+  "p95": 241.552,
+  "mean": 68.317083
+ },
+ "stage_mean_ms": {
+  "ask.compose_ms": 60.964,
+  "ask.descend_ms": 0.177,
+  "ask.fts_ms": 1.235,
+  "ask.fusion_ms": 0.06,
+  "ask.normalize_ms": 0.106,
+  "ask.record_usage_ms": 3.392,
+  "ask.total_ms": 68.317
+ },
+ "graph_cache": {
+  "hits": 0,
+  "misses": 0,
+  "builds": 0,
+  "invalidations": 1,
+  "entries": {}
+ }
+}

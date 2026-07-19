@@ -22,3 +22,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker compose config -q
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: cargo test --workspace --manifest-path native/Cargo.toml
+      - run: pip install maturin && maturin build --release -m native/crates/llmwiki-native-python/Cargo.toml -o native/target/wheels
+      - run: cargo build --release --manifest-path native/Cargo.toml -p llmwiki-native-worker

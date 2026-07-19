@@ -106,8 +106,17 @@ class Worker(threading.Thread):
                                      daemon=True)
             watch.start()
             try:
+                from .procjobs import run_in_subprocess, should_isolate
                 with self.slots.hold(job["type"]):
-                    result = handler(self.s, job["payload"], ctx)
+                    if should_isolate(self.s, job["type"]):
+                        # REL-2b (ADR-39): processo isolado ⇒ hard kill
+                        # e timeout REAIS para jobs pesados
+                        result = run_in_subprocess(
+                            self.s, {**job, "trace_id": trace_id}, ctx,
+                            timeout=JOB_TIMEOUTS.get(job["type"],
+                                                     DEFAULT_TIMEOUT))
+                    else:
+                        result = handler(self.s, job["payload"], ctx)
                 done.set()
                 if self.queue.cancel_requested(job["id"]):
                     # cooperativo: honrado no boundary (handlers longos já

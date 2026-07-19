@@ -260,7 +260,8 @@ def test_cli_lint_exit_codes(settings, capsys):
     from llmwiki.cli import cmd_epistemics
     ns = argparse.Namespace(op="lint", mechanism=None)
     assert cmd_epistemics(settings, ns) == 0
-    assert "7 mecanismo(s)" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "mecanismo(s), 0 finding(s)" in out
     # registro quebrado ⇒ ok=False (exit 1 no comando)
     broken = lint(path=settings.home / "nao_existe.toml")
     assert broken["ok"] is False

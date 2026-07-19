@@ -1,0 +1,43 @@
+{
+ "schema": 1,
+ "product_version": "1.7.0",
+ "captured_on": {
+  "python": "3.11.15",
+  "platform": "Linux-6.18.5-x86_64-with-glibc2.39",
+  "note": "números absolutos variam por máquina; as RAZÕES (speedups) são o que o ADR-39 alega"
+ },
+ "graph_5000n_20000e": {
+  "python_ppr_p50_ms": 183.657118,
+  "rust_ppr_p50_ms": 1.879331,
+  "python_brandes_p50_ms": 88058.854034,
+  "rust_brandes_p50_ms": 1943.942468,
+  "speedup": {
+   "ppr": 97.7,
+   "brandes": 45.3
+  }
+ },
+ "consolidate_440docs": {
+  "python_sketch_p50_ms": 800.164169,
+  "rust_sketch_p50_ms": 13.533008,
+  "candidate_pairs_equal": true,
+  "speedup": {
+   "sketch": 59.1,
+   "candidates": 16.0
+  }
+ },
+ "ask_150pages_12asks": {
+  "backend": "rust",
+  "total_ms": {
+   "n": 12,
+   "p50": 51.232,
+   "p95": 241.552,
+   "mean": 68.317083
+  }
+ },
+ "index_git_delta": {
+  "note": "medido em teste dedicado: incremental de 1 página lê 130 bytes (antes: ~190KB, todos os bytes do bundle); noop lê 0 bytes",
+  "full_reindex_150p_ms": 278.4,
+  "incremental_1p_ms": 56.0,
+  "noop_ms": 33.5
+ }
+}
