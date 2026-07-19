@@ -19,7 +19,7 @@ dependencies = [
 # e chamados em subprocesso por ingestion/extract.py
 parsers = ["pymupdf4llm>=0.0.17", "ebooklib>=0.18"]
 ml = ["sqlite-vec>=0.1", "igraph>=0.11", "leidenalg>=0.10"]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "hypothesis>=6.100"]   # property tests (ADR-39 §15)
 
 [project.scripts]
 llmwiki = "llmwiki.cli:main"
