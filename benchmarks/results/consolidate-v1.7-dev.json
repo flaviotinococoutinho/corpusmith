@@ -1,0 +1,43 @@
+{
+ "schema": 1,
+ "kind": "consolidate",
+ "product_version": "1.6.6",
+ "documents": 440,
+ "rounds": 3,
+ "backends": {
+  "python": {
+   "sketch_ms": {
+    "n": 3,
+    "p50": 800.164169,
+    "p95": 802.422278,
+    "mean": 797.850047
+   },
+   "candidates_ms": {
+    "n": 3,
+    "p50": 6.409783,
+    "p95": 7.163142,
+    "mean": 6.610445
+   },
+   "candidate_pairs": 40
+  },
+  "rust": {
+   "sketch_ms": {
+    "n": 3,
+    "p50": 13.533008,
+    "p95": 19.673587,
+    "mean": 15.554486
+   },
+   "candidates_ms": {
+    "n": 3,
+    "p50": 0.400517,
+    "p95": 0.555897,
+    "mean": 0.445752
+   },
+   "candidate_pairs": 40
+  }
+ },
+ "speedup": {
+  "sketch": 59.1,
+  "candidates": 16.0
+ }
+}

@@ -46,6 +46,15 @@ class EvidenceStreams:
         if hits:
             self._streams.append((name, hits))
 
+    @property
+    def pages_considered(self) -> int:
+        """Cardinalidade PRÉ-fusão (instrumentação ADR-39)."""
+        return len({h["page"] for _, hits in self._streams for h in hits})
+
+    @property
+    def chunks_considered(self) -> int:
+        return sum(len(hits) for _, hits in self._streams)
+
     def fuse(self, *, overlay: dict[str, str] | None = None,
              as_of: str | None = None, limit: int = 8) -> FusedEvidence:
         scores: dict[int, float] = {}

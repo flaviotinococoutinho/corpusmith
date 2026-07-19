@@ -54,7 +54,7 @@ desatualizado — corrija-o. Um selo ✅ sem teste é um bug de documentação.
 | Fila | retry backoff + jitter estável | ✅ | `runtime/queue.py::_stable_jitter`, `test_jobs_reliability.py` |
 | Fila | lease atômico SQL `RETURNING` | 🎯 | §8.2, A-04 |
 | Fila | timeout cooperativo + watchdog | ✅ | `runtime/worker.py`, `test_jobs_reliability.py` |
-| Fila | hard-kill de thread CPU-bound (subprocesso) | 🎯 | §8.4, A-09 |
+| Fila | hard-kill de thread CPU-bound (subprocesso) | ⚠️ | v1.7 (ADR-39): real atrás de `compute.process_isolation`; default thread |
 | API | Idempotency-Key / ETag / If-Match | 🎯 | §9.2, A-08 |
 | API | OpenAPI → tipos TypeScript | 🎯 | §10.1, A-10 |
 | Operação | `doctor` (INV-001/002/003 + repair) | ✅ | `usecases/diagnose.py`, `test_doctor.py` |
@@ -782,7 +782,7 @@ Estado de cada risco levantado na validação do baseline `1.4.0`:
 | A-06 | jitter não determinístico (`hash()`) | P2 | ✅ **corrigido** | §8.3, `_stable_jitter` |
 | A-07 | estado e evento podem divergir | P1 | 🎯 | §7.3 |
 | A-08 | idempotência de comandos HTTP | P1 | 🎯 | §9.2 |
-| A-09 | sem hard timeout para thread CPU-bound | P1 | 🎯 | §8.4 |
+| A-09 | sem hard timeout para thread CPU-bound | P1 | ⚠️ **v1.7** | §8.4; `procjobs` (flag) |
 | A-10 | divergência de contrato Python/TypeScript | P1 | 🎯 | §10.1 |
 
 **Backlog que permanece prioritário** (ver [`09-backlog.md`](09-backlog.md)):

@@ -53,9 +53,10 @@ def test_uncertainty_parameters_match_code():
 
 
 def test_abstention_parameters_match_code():
+    import re
     from llmwiki.usecases import ask_memory
     p = _params("abstention")
-    src = inspect.getsource(ask_memory)
+    src = re.sub(r"\s+", " ", inspect.getsource(ask_memory))
     key, default = p["threshold_config_key"], float(p["threshold_default"])
     assert f'self._settings.get("{key}", {default})' in src
 

@@ -22,6 +22,7 @@ Toda mudança MUST passar por (rode na raiz do repo; atalho: `just verify`):
 cd backend && .venv/bin/python -m pytest tests -q   # 345 testes
 cd desktop && npx tsc --noEmit                        # typecheck do cockpit
 docker compose config -q                              # compose válido
+cargo test --workspace --manifest-path native/Cargo.toml  # kernels nativos (se Rust instalado)
 ```
 
 Integridade em runtime (não são testes, são ferramentas de operação):
@@ -30,6 +31,7 @@ Integridade em runtime (não são testes, são ferramentas de operação):
 cd backend && .venv/bin/python -m llmwiki.cli doctor          # invariantes INV-*
 cd backend && .venv/bin/python -m llmwiki.cli backup create   # backup verificável
 cd backend && .venv/bin/python -m llmwiki.cli epistemics lint # contratos epistêmicos
+cd backend && .venv/bin/python -m llmwiki.cli bench compare   # speedups python×rust MEDIDOS
 ```
 
 ## 3. Mapa de camadas (gradiente de mutabilidade)
@@ -37,6 +39,8 @@ cd backend && .venv/bin/python -m llmwiki.cli epistemics lint # contratos epist�
 ```
 kernel/ normalize/ cognitive/ epistemic/  ← núcleo PURO: stdlib, zero I/O (asserção de teste)
 okf/ harness/ retrieval/        ← domínio canônico
+compute/                        ← porta ComputeKernel (python ref + rust via PyO3; ADR-39)
+native/ (Cargo)                 ← compute plane Rust: sinais/projeções — NUNCA decide domínio
 usecases/                       ← aplicação: 1 classe = 1 operação = execute()
 facades/                        ← orquestração (Memory·Compiler·Curation·Cognition)
 jobs/ api/ cli/ daemon/ models/ desktop/   ← adapters (a única camada que fala com o mundo)
@@ -88,6 +92,7 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | experiência cognitiva | `cognitive.db` | relatórios |
 | referência do mundo | `reference.db` | gazetteer (cache) |
 | contratos epistêmicos | `epistemics.toml` (raiz) | CLI/API/painel (mesma fonte); envelopes em `runtime.db` |
+| claims de performance | `benchmarks/baseline.json` (+METRICS.md) | ADRs citam DAQUI — ganho sem medição registrada é proibido |
 
 `index.db` NUNCA participa da transação canônica; converge para
 `bundle_head`. Detalhe: [`docs/06-referencia.md`](docs/06-referencia.md).

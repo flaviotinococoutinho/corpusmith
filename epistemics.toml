@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.0.0"
+version = "1.1.0"
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -346,3 +346,214 @@ min_support_default = 5
 strategy_rate_delta = 0.15
 load_bad_rate_delta = 0.15
 overconfidence_threshold = 0.2
+
+# ================================================== compute plane (v1.7)
+[mechanisms.native_graph_kernel]
+title = "Graph Kernel nativo (CSR + PPR + Brandes + componentes em Rust)"
+decision = "calcular SINAIS de grafo (rankings PPR, centralidade, componentes) — o significado (quais páginas viram evidência) é decidido pelo Python"
+implementation_refs = [
+  "native/crates/braincore-graph/src/lib.rs",
+  "backend/src/llmwiki/compute/rust_kernel.py",
+  "backend/src/llmwiki/compute/python_kernel.py",
+]
+inductive_biases = [
+  "a mesma matemática da referência Python (damping, dangling, normalização) produz os mesmos sinais — só mais rápido",
+  "identidade interna u32 via interning: strings nunca são identidade de aresta dentro do kernel",
+]
+assumptions = [
+  "a extensão instalada fala o protocolo 1 (verificado no load; incompatível ⇒ fallback explícito)",
+  "a ordem de soma em ponto flutuante difere entre backends dentro de |Δ| ≤ 1e-8 (tolerância declarada e testada)",
+]
+validity_scope = [
+  "grafos do index.db local (dezenas de milhares de nós); seeds dentro OU fora do grafo (massa externa agregada em nó virtual — equivalência provada por teste)",
+]
+known_failure_modes = [
+  "extensão ausente/incompatível: fallback Python com motivo registrado (nunca silencioso)",
+  "divergência numérica além da tolerância se a matemática de um lado mudar sem o teste diferencial acompanhar",
+]
+guarantee_kind = "property_tested"
+guarantee_relative_to = "igualdade com a referência Python: exata para componentes/interning; |Δ| ≤ 1e-8 e mesmo conjunto top-k para PPR/Brandes (test_compute_differential)"
+universal_guarantee = false
+fallback = ["deterministic_fallback"]
+adaptive = false
+feedback_signal = ""
+evidence = ["property_test", "deterministic_check"]
+misinterpretations = [
+  "Rust não melhora a qualidade epistemológica do retrieval — melhora LATÊNCIA; correção e performance são eixos separados",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.native_graph_kernel.parameters]
+ppr_abs_tolerance = 1e-8
+protocol_version = 1
+
+[mechanisms.native_sketch_kernel]
+title = "Sketch Kernel nativo (SimHash 64 + bandas LSH + candidatos em Rust)"
+decision = "calcular sketches e pares candidatos de near-duplicata em lote — quem converge/consolida é decidido pelo Python"
+implementation_refs = [
+  "native/crates/braincore-sketch/src/lib.rs",
+  "backend/src/llmwiki/compute/rust_kernel.py",
+]
+inductive_biases = [
+  "paridade BIT-A-BIT com kernel/sketch.py: mesmo \\w do CPython (categorias Unicode L*∪N*∪'_'), mesmo blake2b(digest_size=8), mesmas 9 bandas round(i·64/9)",
+]
+assumptions = [
+  "os textos usam caracteres ATRIBUÍDOS na versão Unicode do CPython em uso",
+]
+validity_scope = [
+  "corpus do inbox local; caracteres atribuídos no Unicode do runtime (CPython 3.11 = Unicode 14)",
+]
+known_failure_modes = [
+  "LIMITE DE EQUIVALÊNCIA (achado por property test): pontos de código atribuídos só em Unicode > runtime (ex.: Kawi U+11F02, Unicode 15) tokenizam diferente entre as tabelas do CPython e as do crate — sketch pode divergir nesses caracteres raros",
+]
+guarantee_kind = "property_tested"
+guarantee_relative_to = "igualdade EXATA com kernel/sketch.py (simhash, hamming, bandas, pares candidatos) no domínio de caracteres atribuídos — Hypothesis + diferencial"
+universal_guarantee = false
+fallback = ["deterministic_fallback"]
+adaptive = false
+feedback_signal = ""
+evidence = ["property_test", "deterministic_check"]
+misinterpretations = [
+  "hamming baixo entre sketches indica near-duplicata textual, não equivalência semântica",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.native_sketch_kernel.parameters]
+bands = 9
+max_hamming_exact = 8
+
+[mechanisms.graph_cache]
+title = "Cache de grafo por geração (snapshot imutável)"
+decision = "reutilizar o snapshot do grafo entre consultas enquanto (bundle_head, index_generation) não mudar"
+implementation_refs = [
+  "backend/src/llmwiki/compute/graph_cache.py",
+]
+inductive_biases = [
+  "o grafo só muda quando a geração do índice muda — reconstruí-lo a cada pergunta é trabalho repetido",
+]
+assumptions = [
+  "INV-002 vale: toda mudança relevante do índice atualiza bundle_head/index_generation (a chave de invalidação herda essa garantia)",
+]
+validity_scope = [
+  "processo do daemon; um snapshot vigente por backend",
+]
+known_failure_modes = [
+  "memória proporcional ao grafo (snapshot vivo por backend)",
+  "se a geração NÃO mudar quando deveria (violação de INV-002), o cache serve grafo velho — o doctor detecta a violação upstream",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = ""
+universal_guarantee = false
+fallback = ["deterministic_fallback"]
+adaptive = false
+feedback_signal = ""
+evidence = ["property_test", "deterministic_check"]
+misinterpretations = [
+  "hit de cache não significa índice atualizado — significa MESMA geração do último build",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+
+[mechanisms.worker_isolation]
+title = "Isolamento de jobs pesados por processo (hard kill real)"
+decision = "executar classes pesadas fora do processo da API, com timeout e cancelamento que MATAM o processo (não apenas sinalizam)"
+implementation_refs = [
+  "backend/src/llmwiki/runtime/procjobs.py",
+  "backend/src/llmwiki/jobs_proc.py",
+  "native/crates/llmwiki-native-worker/src/main.rs",
+]
+inductive_biases = [
+  "thread não dá hard-kill para CPU-bound síncrono (limitação registrada no ADR-36) — processo dá",
+  "at-least-once + idempotência: crash do worker devolve o job à fila via lease, nunca perda silenciosa",
+]
+assumptions = [
+  "handlers são idempotentes (invariante INV-OPS-002 já exigido pela fila)",
+  "o manifesto v1 cobre o que o filho precisa (campos desconhecidos são REJEITADOS)",
+]
+validity_scope = [
+  "jobs das classes isoláveis atrás de compute.process_isolation (default false nesta entrega — porta de entrada pequena)",
+]
+known_failure_modes = [
+  "overhead de spawn por job (~dezenas de ms) — irrelevante para jobs de minutos, ruim para jobs de ms (por isso classes leves nunca isolam)",
+  "resultado completo perdido se o processo morre após terminar o trabalho e antes do evento result — o replay idempotente cobre",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = ""
+universal_guarantee = false
+fallback = ["deterministic_fallback"]
+adaptive = false
+feedback_signal = ""
+evidence = ["property_test", "deterministic_check"]
+misinterpretations = [
+  "isolamento não torna o handler mais correto — torna a FALHA dele contível e o cancelamento real",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.worker_isolation.parameters]
+protocol_version = 1
+grace_seconds = 2.0
+
+[mechanisms.native_text_extraction]
+title = "Extração de texto nativa (Fase 3 — PLANEJADA, sem implementação)"
+decision = "NENHUMA nesta entrega: chunking/links/masking/Aho-Corasick continuam no Python de referência (normalize/)"
+implementation_refs = [
+  "native/crates/braincore-text/src/lib.rs",
+]
+inductive_biases = [
+  "plano fechado (PHASE3_PLAN no crate): chunking → links → masking → aho-corasick → extratores; entrada condicionada a hotspot MEDIDO na Fase 0 e byte-identidade diferencial",
+]
+assumptions = [
+  "Rust jamais reescreve conteúdo canônico (regra da arquitetura, não desta fase)",
+]
+validity_scope = [
+  "planejado — nenhum contexto avaliado; o crate contém tipos e plano, zero lógica de extração",
+]
+known_failure_modes = []
+guarantee_kind = "none"
+guarantee_relative_to = ""
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+evidence = ["deterministic_check"]
+misinterpretations = [
+  "a existência do crate não significa extração nativa — o status é PLANEJADO (ver ADR-39 Fase 3)",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+
+[mechanisms.native_index_builder]
+title = "Native Index Builder (Fase 4 — PLANEJADA, sem implementação)"
+decision = "NENHUMA nesta entrega: o rebuild continua no Python; o protocolo (manifesto v1, index.db.next, swap decidido pelo Python) está especificado em braincore-etl"
+implementation_refs = [
+  "native/crates/braincore-etl/src/lib.rs",
+  "native/crates/llmwiki-native-worker/src/main.rs",
+]
+inductive_biases = [
+  "o worker constrói index.db.next e DEVOLVE artefato; validação (schema, quick_check, geração, HEAD) e swap atômico são SEMPRE do Python — o worker nunca substitui index.db sozinho",
+]
+assumptions = [
+  "entrada condicionada: Graph e Sketch kernels validados (feito) + hotspot de indexação medido justificando a fase",
+]
+validity_scope = [
+  "planejado — nenhum contexto avaliado; hoje só o manifesto/report do protocolo existe (com testes de recusa de campos desconhecidos)",
+]
+known_failure_modes = []
+guarantee_kind = "none"
+guarantee_relative_to = ""
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+evidence = ["deterministic_check"]
+misinterpretations = [
+  "o worker selfcheck/graph_metrics existente NÃO constrói índice — Fase 4 é alvo com porta declarada",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false

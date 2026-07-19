@@ -6,7 +6,15 @@ EXISTS), então qualquer consumidor pode conectar sem cerimônia.
 """
 from __future__ import annotations
 import sqlite3
+import threading
 from pathlib import Path
+
+# §19 (ADR-39): inicialização (schema idempotente + migrações + carimbo)
+# roda UMA vez por (processo, arquivo); aberturas seguintes só aplicam
+# PRAGMAs. Corta o custo fixo de toda conexão nos hot paths sem mudar a
+# semântica: o primeiro connect() de cada banco continua fazendo tudo.
+_INITIALIZED: set[str] = set()
+_INIT_LOCK = threading.Lock()
 
 _SQL_DIR = Path(__file__).resolve().parent.parent.parent.parent / "db"
 
@@ -34,19 +42,25 @@ SCHEMA_VERSIONS = {
 def connect(path: Path | str) -> sqlite3.Connection:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    existed = path.exists()          # arquivo apagado ⇒ re-inicializa
     conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA synchronous=NORMAL")
     conn.execute("PRAGMA foreign_keys=ON")
     schema = _SCHEMAS.get(path.name)
+    key = str(path.resolve())
+    if schema and not existed:
+        with _INIT_LOCK:
+            _INITIALIZED.discard(key)  # recriado do zero: reinicializa
     if schema:
         conn.execute("CREATE TABLE IF NOT EXISTS _meta("
                      "key TEXT PRIMARY KEY, value TEXT)")
         # REJEITA banco de versão FUTURA antes de escrever nada (v1.4):
         # abrir um DB de um produto mais novo e recarimbá-lo para baixo
-        # corromperia dados que este código não entende. O restore já
-        # protegia via manifesto; agora TODO acesso direto protege.
+        # corromperia dados que este código não entende. Esta checagem
+        # roda em TODA abertura (um SELECT indexado — barato); só a
+        # inicialização pesada abaixo é 1×/processo (§19, ADR-39).
         stamped = conn.execute("SELECT value FROM _meta WHERE "
                                "key='schema_version'").fetchone()
         wanted = SCHEMA_VERSIONS[path.name]
@@ -55,6 +69,8 @@ def connect(path: Path | str) -> sqlite3.Connection:
             raise SchemaTooNewError(
                 f"{path.name}: schema v{stamped['value']} é MAIS NOVO que "
                 f"este produto suporta (v{wanted}) — atualize o llmwiki")
+        if existed and key in _INITIALIZED:
+            return conn                # abertura comum: PRAGMAs + guarda
         conn.executescript((_SQL_DIR / schema).read_text())
         _migrate(conn, path.name)
         # ledger de migração (v1.4): registra from→to quando a versão
@@ -75,7 +91,16 @@ def connect(path: Path | str) -> sqlite3.Connection:
             except sqlite3.OperationalError:
                 pass                    # advisory: outra conexão carimba
         conn.commit()
+        with _INIT_LOCK:
+            _INITIALIZED.add(key)
     return conn
+
+
+def reset_initialized() -> None:
+    """Volta ao caminho de inicialização completa (testes/restore: um
+    banco restaurado por cima PRECISA repassar por schema+migração)."""
+    with _INIT_LOCK:
+        _INITIALIZED.clear()
 
 
 class SchemaTooNewError(RuntimeError):

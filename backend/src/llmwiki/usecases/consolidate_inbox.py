@@ -50,11 +50,15 @@ class _Signature:
 
     NEAR_DUPLICATE_HAMMING = 8
 
-    def __init__(self, relative: str, text: str, gazetteer):
+    def __init__(self, relative: str, text: str, gazetteer,
+                 sketch: int | None = None):
         report = analyze(text[:100_000], gaz=gazetteer)
         self.relative = relative
         self.text = text
-        self.sketch = simhash(text[:100_000])
+        # ADR-39: o sketch pode vir do ComputeKernel (lote/backend); o
+        # default local preserva o comportamento standalone
+        self.sketch = sketch if sketch is not None \
+            else simhash(text[:100_000])
         self.strong_ids = {m.canonical for m in report.matches
                            if m.kind == "identifier"
                            and m.subkind in STRONG_IDS
@@ -162,8 +166,17 @@ class ConsolidateInbox(UseCase):
         self._pairwise_max = int(settings.get("consolidate.pairwise_max", 32))
 
     def execute(self) -> dict:
-        pending = self._pending_signatures()
-        clusters = self._cluster(pending)
+        from ..compute import get_kernel
+        from ..runtime.stages import StageProfile
+        kernel = get_kernel(self._settings)
+        profile = StageProfile("consolidate",
+                               backend=kernel.backend_info().name)
+        with profile.stage("sketch"):
+            pending = self._pending_signatures(kernel)
+        profile.count("documents", len(pending))
+        profile.count("raw_pairs", len(pending) * (len(pending) - 1) // 2)
+        clusters = self._cluster(pending, profile)
+        profile.count("clusters", len(clusters))
         pages = []
         for cluster in clusters:
             result = _ConsolidatedPage(self._settings, cluster,
@@ -174,16 +187,17 @@ class ConsolidateInbox(UseCase):
         return {"pending": len(pending), "clusters": len(clusters),
                 "pages": pages,
                 "left": sorted(s.relative for s in pending
-                               if s.relative not in consolidated)}
+                               if s.relative not in consolidated),
+                "profile": profile.close()}
 
-    def _pending_signatures(self) -> list[_Signature]:
+    def _pending_signatures(self, kernel=None) -> list[_Signature]:
         kb = self._settings.path("knowledge")
         gazetteer = load_gazetteer(BundleReader(kb / "bundle"))
         rt = connect(self._settings.app_support / "runtime.db")
         cache = {r["source"]: r["sha"] for r in
                  rt.execute("SELECT source, sha FROM compile_cache")}
         rt.close()
-        out: list[_Signature] = []
+        raw: list[tuple[str, str]] = []
         for path in sorted((kb / "raw").rglob("*")):
             if path.suffix.lower() not in SOURCE_SUFFIXES:
                 continue
@@ -192,12 +206,18 @@ class ConsolidateInbox(UseCase):
             if cache.get(relative) == sha:
                 continue                             # já consolidada/compilada
             try:
-                out.append(_Signature(relative, extract(path), gazetteer))
+                raw.append((relative, extract(path)))
             except ExtractError:
                 continue                             # parser ausente: fica
-        return out
+        # ADR-39: SimHash em LOTE pelo ComputeKernel (Rust quando ativo)
+        sketches = kernel.simhash_batch(
+            [text[:100_000] for _, text in raw]) if kernel and raw else None
+        return [_Signature(relative, text, gazetteer,
+                           sketch=sketches[i] if sketches else None)
+                for i, (relative, text) in enumerate(raw)]
 
-    def _cluster(self, pending: list[_Signature]) -> list[list[_Signature]]:
+    def _cluster(self, pending: list[_Signature],
+                 profile=None) -> list[list[_Signature]]:
         parent = list(range(len(pending)))
 
         def find(i: int) -> int:
@@ -206,15 +226,20 @@ class ConsolidateInbox(UseCase):
                 i = parent[i]
             return i
 
-        for i, j in self._candidate_pairs(pending):
-            if pending[i].converges_with(pending[j], self._min_shared):
-                parent[find(i)] = find(j)
-        groups: dict[int, list[_Signature]] = {}
-        for i, signature in enumerate(pending):
-            groups.setdefault(find(i), []).append(signature)
+        candidates = list(self._candidate_pairs(pending, profile))
+        if profile:
+            profile.count("candidate_pairs", len(candidates))
+        from contextlib import nullcontext
+        with (profile.stage("cluster") if profile else nullcontext()):
+            for i, j in candidates:
+                if pending[i].converges_with(pending[j], self._min_shared):
+                    parent[find(i)] = find(j)
+            groups: dict[int, list[_Signature]] = {}
+            for i, signature in enumerate(pending):
+                groups.setdefault(find(i), []).append(signature)
         return [g for g in groups.values() if len(g) >= self._min_cluster]
 
-    def _candidate_pairs(self, pending: list[_Signature]):
+    def _candidate_pairs(self, pending: list[_Signature], profile=None):
         """Seleção adaptativa de algoritmo (v0.16): a estrutura segue o
         tamanho do dado. Inbox pequeno → todos os pares (constante baixa,
         zero overhead de índice). Inbox grande → índice invertido por id
@@ -222,21 +247,26 @@ class ConsolidateInbox(UseCase):
         hamming ≤ 8 por casa de pombos). A geração é EXATA: todo par que
         `converges_with` aceitaria compartilha ao menos um balde — o que
         muda é só o custo de ACHÁ-los (O(n²) → O(n + candidatos))."""
+        from contextlib import nullcontext
         n = len(pending)
         if n <= self._pairwise_max:
             return ((i, j) for i in range(n) for j in range(i + 1, n))
         buckets: dict = {}
-        for i, signature in enumerate(pending):
-            for strong in signature.strong_ids:
-                buckets.setdefault(("id", strong), []).append(i)
-            for entity in signature.entities:
-                buckets.setdefault(("ent", entity), []).append(i)
-            for band in bands(signature.sketch,
-                              count=_Signature.NEAR_DUPLICATE_HAMMING + 1):
-                buckets.setdefault(("lsh", band), []).append(i)
+        with (profile.stage("band_index") if profile else nullcontext()):
+            for i, signature in enumerate(pending):
+                for strong in signature.strong_ids:
+                    buckets.setdefault(("id", strong), []).append(i)
+                for entity in signature.entities:
+                    buckets.setdefault(("ent", entity), []).append(i)
+                for band in bands(signature.sketch,
+                                  count=_Signature.NEAR_DUPLICATE_HAMMING
+                                  + 1):
+                    buckets.setdefault(("lsh", band), []).append(i)
         pairs: set[tuple[int, int]] = set()
-        for members in buckets.values():
-            for a in range(len(members)):
-                for b in range(a + 1, len(members)):
-                    pairs.add((members[a], members[b]))
+        with (profile.stage("candidate_generation") if profile
+              else nullcontext()):
+            for members in buckets.values():
+                for a in range(len(members)):
+                    for b in range(a + 1, len(members)):
+                        pairs.add((members[a], members[b]))
         return sorted(pairs)

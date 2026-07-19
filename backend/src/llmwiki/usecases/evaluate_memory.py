@@ -118,16 +118,17 @@ class EvaluateMemory(UseCase):
         return run_ids
 
     # ------------------------------- Generalization Envelope (v1.6)
-    def _covered_mechanisms(self) -> list:
-        """Contratos que declaram esta avaliação como fonte de evidência.
-        Registro ausente/inválido ⇒ nenhum envelope (falha graciosa)."""
+    def _covered_mechanisms(self) -> tuple[list, str]:
+        """Contratos que declaram esta avaliação como fonte de evidência
+        (+ versão do registro para o envelope). Registro ausente/inválido
+        ⇒ nenhum envelope (falha graciosa)."""
         try:
             from ..harness.epistemics import load_registry
             registry, _ = load_registry()
         except Exception:
-            return []
-        return [c for c in registry.contracts
-                if "eval_memory" in c.evaluated_by]
+            return [], "?"
+        return ([c for c in registry.contracts
+                 if "eval_memory" in c.evaluated_by], registry.version)
 
     def _bundle_head(self) -> str:
         try:
@@ -147,7 +148,7 @@ class EvaluateMemory(UseCase):
     def _persist_envelopes(self, gold_text: str, stats: dict,
                            as_ofs: list[str], run_ids: list[int],
                            rank_metrics: dict | None = None) -> list[dict]:
-        contracts = self._covered_mechanisms()
+        contracts, registry_version = self._covered_mechanisms()
         if not contracts:
             return []
         sample = sum(t for t, _ in stats.values())
@@ -166,7 +167,7 @@ class EvaluateMemory(UseCase):
         for contract in contracts:
             envelope = EvaluationEnvelope(
                 mechanism_id=contract.mechanism_id,
-                contract_version="1.0.0",
+                contract_version=registry_version,
                 policy_version=policy,
                 product_version=__version__,
                 bundle_head=self._bundle_head(),

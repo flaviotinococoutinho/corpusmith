@@ -352,7 +352,17 @@ CLI ganha (v0.14): `llmwiki cold` · `llmwiki freeze <page> [--force]` ·
 `llmwiki recycle <page>`; `ask` exibe incerteza alta e memórias frias
 compatíveis na abstenção. CLI (v1.6):
 `llmwiki epistemics lint|list|show <id>|evaluations <id>` — contratos
-epistemológicos (ADR-38; lint sai 1 com erros, mesma fonte do painel). Painel novo: 🧠 Memória (4 camadas + base
+epistemológicos (ADR-38; lint sai 1 com erros, mesma fonte do painel).
+CLI (v1.7, ADR-39): `llmwiki bench core|ask|index|graph|consolidate|
+compare|generate-fixture` — harness reprodutível (fixtures por semente;
+JSON schema 1; baseline versionada em `benchmarks/baseline.json`).
+Config do compute plane (`settings.get`, defaults no código):
+`compute.backend` ∈ auto|python|rust (auto = rust se disponível, motivo
+do fallback registrado) · `compute.allow_fallback` (true) ·
+`compute.process_isolation` (false — liga o subprocesso com hard-kill
+para jobs pesados, REL-2b). Perfis de estágio (`ask.*`, `index.*`,
+`consolidate.*`) viajam no RESULTADO das operações — declaração completa
+em `benchmarks/METRICS.md`. Painel novo: 🧠 Memória (4 camadas + base
 fria). Processos: jobs falhos têm ↻ reexecutar (payload na listagem).
 Removido: retrieval/fusion.py (substituído por streams desde a v0.9).
 

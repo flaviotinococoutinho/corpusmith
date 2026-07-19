@@ -56,7 +56,7 @@ inferência emocional/diagnóstico/perfil auto-reescrito (ADR-19/31).
 |---|---|---|---|
 | ~~REL-1~~ (v1.6.1) | P0 | compile_source criava ModelRouter SEM governor ⇒ furava orçamento e ledger (idem consolidate/leiden/ask enfileirado) | `JobContext.gov` → adapters → facades → usecases; `test_rel1_governor.py` (fiação worker→router + ledger) |
 | ~~DATA-1~~ (v1.4) | P0 | sem verificação/repair de invariantes em runtime | `llmwiki doctor`: INV-001/002/003 + config×history; repair=rebuild |
-| REL-2 | P1 | ~~heartbeat/timeout/cancel cooperativo (v1.4)~~; resta hard-kill de thread síncrona (REL-2b: isolamento de processo) | isolamento de processo p/ hard-kill |
+| ~~REL-2~~ (v1.7) | P1 | ~~heartbeat/timeout/cancel cooperativo (v1.4)~~; ~~hard-kill (v1.7: subprocesso com kill real, atrás de compute.process_isolation)~~ | `runtime/procjobs.py` + `jobs_proc`; `test_worker_isolation.py` (9 testes: timeout mata, cancel mata, kill-9 ⇒ transitório) |
 | ~~REL-3~~ (v1.4) | P1 | recuperação de órfãos só preguiçosa | sweep no boot do daemon; teste |
 | ~~QA-1~~ (v1.6.3) | P1 | golden_eval.jsonl não era distribuído; eval era no-op out-of-the-box; sem Recall@K/MRR | `llmwiki seed` → `seed_golden_eval` (7 páginas + 12 casos, 5 categorias, 12/12 local); recall@5 + MRR por caso e média no envelope; `test_qa1_eval_seed.py` |
 | ~~QA-3~~ (v1.6.2) | P1 | /ask não validava [n]→evidência (só header, só api:) | `_invalid_citations` em ask_memory (local: E api:); citação fabricada degrada p/ extrativo; `test_qa3_citations.py` |

@@ -8,11 +8,13 @@ import hashlib
 import json
 import re
 import time
+from pathlib import Path
 from ..okf.authorities import load_gazetteer
 from ..okf.bundle import BundleReader
 from ..okf.links import parse_links, is_internal, resolve
 from ..normalize import analyze
 from ..runtime.db import connect
+from ..runtime.stages import StageProfile
 from ..settings import Settings
 
 CHUNK_CHARS = 1200
@@ -101,12 +103,45 @@ def _gazetteer_fingerprint(gaz) -> str:
 INDEX_GENERATION = f"g2:chunk={CHUNK_CHARS}"   # bump ⇒ full rebuild (INV-002)
 
 
+def _git_changed_since(kb: Path, previous_head: str) -> set[str] | None:
+    """Delta via Git (§11, ADR-39): páginas .md do bundle alteradas entre
+    `previous_head` e HEAD + sujas/untracked (edição manual sem commit).
+    None ⇒ delta indisponível (sem head anterior, head desconhecido,
+    repo ilegível) — o chamador cai no full-hash e EXPLICA no relatório."""
+    try:
+        from git import Repo
+        repo = Repo(kb)
+        previous = repo.commit(previous_head)
+        changed: set[str] = set()
+        if previous.hexsha != repo.head.commit.hexsha:
+            for diff in previous.diff(repo.head.commit):
+                for path in (diff.a_path, diff.b_path):
+                    if path:
+                        changed.add(path)
+        for diff in repo.index.diff(None):        # working tree sujo
+            for path in (diff.a_path, diff.b_path):
+                if path:
+                    changed.add(path)
+        changed.update(repo.untracked_files)
+        prefix = "bundle/"
+        return {p[len(prefix):] for p in changed
+                if p.startswith(prefix) and p.endswith(".md")}
+    except Exception:
+        return None
+
+
 def rebuild_index(s: Settings, *, full: bool = False) -> dict:
     """Reconstrução INCREMENTAL por default (v0.13, espírito LSM):
     só páginas com sha alterado são reindexadas; removidas são purgadas
     (nada de entradas-fantasma). Mudança no gazetteer/authority_records
     muda a DETECÇÃO de entidades de todas as páginas ⇒ fingerprint força
-    reconstrução completa automaticamente."""
+    reconstrução completa automaticamente.
+
+    v1.7 (ADR-39 §11): o incremental usa o DELTA DO GIT (prev HEAD →
+    HEAD + sujos) e só hasheia/lê os arquivos alterados — antes, cada
+    incremento lia TODOS os bytes do bundle para recalcular SHA. Sem
+    head anterior/known, cai no full-hash com o motivo no relatório."""
+    profile = StageProfile("index")
     kb = s.path("knowledge")
     bundle = kb / "bundle"
     reader = BundleReader(bundle)
@@ -124,10 +159,24 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
                              "WHERE key='index_generation'").fetchone()
     if generation is None or generation["value"] != INDEX_GENERATION:
         full = True
+    previous_head_row = idx.execute("SELECT value FROM index_meta "
+                                    "WHERE key='bundle_head'").fetchone()
+    previous_head = previous_head_row["value"] if previous_head_row else ""
 
-    current = {rel: hashlib.sha256((bundle / rel).read_bytes()).hexdigest()
-               for rel in reader.raw_md_files()}
+    with profile.stage("scan"):
+        files = list(reader.raw_md_files())
+    bytes_read = 0
+
+    def _sha(rel: str) -> str:
+        nonlocal bytes_read
+        data = (bundle / rel).read_bytes()
+        bytes_read += len(data)
+        return hashlib.sha256(data).hexdigest()
+
+    delta_mode = "full"
     if full:
+        with profile.stage("hash"):
+            current = {rel: _sha(rel) for rel in files}
         for table in ("chunks", "graph_edges", "page_entities",
                       "page_levels", "page_index_state"):
             idx.execute(f"DELETE FROM {table}")
@@ -135,18 +184,39 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
     else:
         state = {r["page"]: r["sha"] for r in
                  idx.execute("SELECT page, sha FROM page_index_state")}
-        changed = {rel for rel, sha in current.items()
-                   if state.get(rel) != sha}
-        removed = set(state) - set(current)
+        present = set(files)
+        with profile.stage("git_delta"):
+            git_changed = _git_changed_since(kb, previous_head) \
+                if previous_head else None
+        if git_changed is None:
+            delta_mode = "full-hash (sem HEAD anterior utilizável)"
+            with profile.stage("hash"):
+                current = {rel: _sha(rel) for rel in files}
+            changed = {rel for rel, sha in current.items()
+                       if state.get(rel) != sha}
+        else:
+            delta_mode = "git"
+            # candidatos: delta do git ∪ arquivos que o estado não conhece
+            candidates = (git_changed & present) | (present - set(state))
+            with profile.stage("hash"):
+                current = {rel: _sha(rel) for rel in sorted(candidates)}
+            changed = {rel for rel, sha in current.items()
+                       if state.get(rel) != sha}
+        removed = set(state) - present
         for page in changed | removed:
             _purge_page(idx, page)
 
+    counts_before = {t: idx.execute(f"SELECT COUNT(*) c FROM {t}"
+                                    ).fetchone()["c"]
+                     for t in ("chunks", "page_entities", "graph_edges")}
     for rel in sorted(changed):
         try:
-            document = reader.load(rel)
+            with profile.stage("read"):
+                document = reader.load(rel)
         except Exception:
             continue                      # malformada: lint acusa, índice pula
-        _index_page(idx, document, gaz)
+        with profile.stage("page_process"):
+            _index_page(idx, document, gaz)
         idx.execute("INSERT OR REPLACE INTO page_index_state(page, sha) "
                     "VALUES (?,?)", (rel, current[rel]))
     idx.execute("INSERT OR REPLACE INTO index_meta(key, value) "
@@ -156,13 +226,25 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
                 "VALUES ('index_generation', ?)", (INDEX_GENERATION,))
     idx.execute("INSERT OR REPLACE INTO index_meta(key, value) "
                 "VALUES ('bundle_head', ?)", (_kb_head(bundle) or '',))
-    idx.commit()
+    with profile.stage("sqlite_write"):
+        idx.commit()
     pages = idx.execute("SELECT COUNT(*) c FROM page_index_state"
                         ).fetchone()["c"]
     chunks = idx.execute("SELECT COUNT(*) c FROM chunks").fetchone()["c"]
+    counts_after = {t: idx.execute(f"SELECT COUNT(*) c FROM {t}"
+                                   ).fetchone()["c"]
+                    for t in ("chunks", "page_entities", "graph_edges")}
     in_links = {r["dst"]: r["n"] for r in idx.execute(
         "SELECT dst, COUNT(*) n FROM graph_edges GROUP BY dst")}
     idx.close()
+    profile.count("pages_total", len(files))
+    profile.count("pages_changed", len(changed))
+    profile.count("bytes_read", bytes_read)
+    for table, label in (("chunks", "chunks_created"),
+                         ("page_entities", "entities_created"),
+                         ("graph_edges", "edges_created")):
+        profile.count(label, counts_after[table] - counts_before[table])
+    profile.note("delta", delta_mode)
 
     # cites → page_heat (alimenta o reflect, §8)
     rt = connect(s.app_support / "runtime.db")
@@ -176,7 +258,9 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
     rt.close()
     return {"pages": pages, "chunks": chunks,
             "mode": "full" if full else "incremental",
-            "reindexed": len(changed), "removed": len(removed)}
+            "delta": delta_mode,
+            "reindexed": len(changed), "removed": len(removed),
+            "profile": profile.close()}
 
 
 # stopwords pt/en: OR sobre elas casa qualquer página e mata a ABSTENÇÃO

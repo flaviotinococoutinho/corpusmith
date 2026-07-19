@@ -1,4 +1,4 @@
-# LLM Wiki — v1.6
+# LLM Wiki — v1.7
 
 Knowledge base **OKF local-first** com daemon de compilação/consulta e
 **Cockpit de Memória Agêntica** no Electron.
@@ -156,7 +156,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   roxas pontilhadas entre os articuladores — clicar no "?" captura a
   pergunta-ponte como `question` sem sair do grafo.
 
-## Trilha de endurecimento (v1.2 → v1.6)
+## Trilha de endurecimento (v1.2 → v1.7)
 
 - **v1.2** — lint de atribuição de citação no corpus
   (`policy.quotation_attribution`); máquina de estados de jobs
@@ -216,6 +216,18 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   `llmwiki epistemics lint|list|show|evaluations` · `GET
   /cockpit/epistemics*` · seção no painel Qualidade — uma única fonte.
   Doc: [`docs/11-epistemic-contracts.md`](docs/11-epistemic-contracts.md).
+
+- **v1.7** — **compute plane híbrido Python+Rust** (ADR-39): porta
+  `ComputeKernel` (referência Python SEMPRE presente; Rust via PyO3
+  acelera PPR/Brandes/SimHash com speedups MEDIDOS de 97×/45×/59× —
+  `benchmarks/baseline.json`); cache de grafo por geração; incremental
+  do índice por DELTA DO GIT (1 página = 130 bytes lidos, antes tudo);
+  isolamento de jobs pesados por processo com hard-kill REAL (REL-2b,
+  flag `compute.process_isolation`); 6 contratos epistemológicos novos;
+  `llmwiki bench ask|graph|consolidate|compare`; testes diferenciais
+  (bit-idênticos p/ sketch; |Δ|≤1e-8 p/ PPR/Brandes) + Hypothesis (2
+  divergências Unicode reais achadas e corrigidas). Rust calcula
+  sinais; Python decide o significado — o produto funciona sem Rust.
 
 ## Coordenação dos dados — fundamentos (kernel/)
 

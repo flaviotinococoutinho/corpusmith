@@ -16,11 +16,26 @@ Invariantes verificados:
   página inexistente é sinalizado (não removido — é dado do usuário).
 """
 from __future__ import annotations
+from pathlib import Path
 from .base import UseCase
 from ..okf.authorities import _kb_head
 from ..okf.bundle import BundleReader
 from ..runtime.db import connect
 from ..settings import Settings
+
+
+class _SmokeConn:
+    """Grafo mínimo em memória para o smoke da camada nativa (doctor)."""
+
+    def execute(self, sql, *args):
+        if "graph_edges" in sql:
+            return [("a", "b", "extracted"), ("b", "c", "inferred")]
+
+        class _R:
+            @staticmethod
+            def fetchall():
+                return []
+        return _R()
 
 REPAIRABLE = {"INV-001", "INV-002", "INV-003"}   # tudo cai em rebuild_index
 
@@ -54,10 +69,48 @@ class DiagnoseSystem(UseCase):
                 + remaining
         return {"ok": not findings, "findings": findings,
                 "repaired": repaired,
+                "native": self._check_native(),
                 "counts": {"error": sum(f["severity"] == "error"
                                         for f in findings),
                            "warn": sum(f["severity"] == "warn"
                                        for f in findings)}}
+
+    def _check_native(self) -> dict:
+        """ADR-39 §22: estado da camada nativa — INFORMATIVO (a ausência
+        NÃO é erro: o fallback Python é comportamento suportado; vira
+        problema só se compute.backend=rust sem allow_fallback)."""
+        from ..compute import get_kernel, selection_report
+        from ..compute.graph_cache import graph_cache_stats
+        report: dict = {"fallback_available": True}
+        try:
+            kernel = get_kernel(self._settings, refresh=True)
+            info = kernel.backend_info()
+            report["effective_backend"] = info.name
+            report["selection"] = selection_report()
+            if info.name == "rust":
+                # smoke: PPR mínimo prova extensão + protocolo + GIL
+                graph = kernel.load_graph(
+                    index_path="", connection=_SmokeConn())
+                ranked = kernel.personalized_pagerank(
+                    graph, {"a": 1.0}, top_k=2)
+                report["smoke_ppr_ok"] = bool(ranked)
+                report["native_version"] = info.version
+                report["native_build"] = info.build
+        except Exception as e:                       # noqa: BLE001
+            report["effective_backend"] = "python"
+            report["error"] = f"{type(e).__name__}: {e}"
+        worker = Path(__file__).resolve().parents[4] / "native" \
+            / "target" / "release" / "llmwiki-native-worker"
+        report["native_worker_present"] = worker.is_file()
+        import tempfile
+        try:
+            with tempfile.NamedTemporaryFile(
+                    dir=self._settings.app_support, delete=True):
+                report["tmp_dir_writable"] = True
+        except OSError:
+            report["tmp_dir_writable"] = False
+        report["graph_cache"] = graph_cache_stats()
+        return report
 
     # ------------------------------------------------------------- checks
     def _bundle_pages(self) -> set[str]:
