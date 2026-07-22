@@ -69,6 +69,7 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 |---|---|
 | [08-decisoes.md](08-decisoes.md) | ADRs: conceitos adotados, adaptados e rejeitados com razão registrada (CLS, ACT-R, AGM, DTT, CRDTs, WFST…) e portas de reentrada |
 | [09-backlog.md](09-backlog.md) | Backlog priorizado (P0–P3) e estado de fechamento por frente |
+| [13-plano-experiencia-memoria.md](13-plano-experiencia-memoria.md) | **Plano avançado** de experiência de memória/curadoria/classificação — auditoria de consistência + receitas mineradas de projetos externos + roadmap em 4 fases |
 
 ## Guia rápido de roteamento (para não misturar especialidades)
 
@@ -79,6 +80,7 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 - É **quanto/quão rápido/quão durável** (CAP, SLO, escala, segurança)? → `10` §5–17.
 - É **uma constante/regra/endpoint** que preciso consultar? → `06`.
 - É **uma decisão tomada ou o que ainda falta**? → `08`, `09`.
+- É **para onde levar a experiência de memória/curadoria/classificação**? → `13`.
 - É **como instalar/verificar o ambiente**? → `12` + `scripts/install.sh`.
 
 ## Como manter esta documentação
