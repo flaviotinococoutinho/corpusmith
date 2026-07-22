@@ -69,6 +69,15 @@ inferência emocional/diagnóstico/perfil auto-reescrito (ADR-19/31).
 | UX-5 | P2 | analogias/~~métricas~~/curation-projection sem UI | métricas ✅ (v1.6.6): recall@5/MRR/taxa no `/cockpit/eval`+`/cockpit/quality` e no painel Qualidade (fonte: envelope mais recente). RESTAM analogias e curation-projection: superfícies mínimas ou remoção do anúncio |
 | ~~A-06~~ (v1.5) | P2 | jitter de retry usava `hash()` do Python (randomizado por processo) | `_stable_jitter` blake2b; teste `test_retry_jitter_is_process_stable` |
 
+## Plano de experiência (docs/13) — origem das frentes UX abertas
+UX-1 (fila única), UX-2 (níveis), UX-3 (onboarding) e UX-5 (analogias/
+curation-projection) ganham fundamento e sequência em
+[`13-plano-experiencia-memoria.md`](13-plano-experiencia-memoria.md):
+receitas mineradas de projetos externos (langextract, SymRAG,
+all-agentic-architectures, science-skills, crewAI, n8n...) mapeadas a
+mecanismos reais, com plano em 4 fases. Recomendação: Fase A
+(fila única de próxima ação por VoI + grounding por span) primeiro.
+
 ## Achados de engenharia da spec BC-ENG-001 (rastreados em `10` §21)
 Os riscos A-01…A-10 da validação de arquitetura (atomicidade do
 BundleWriter, SUPERSEDE atômico, `StoragePolicy`, lease transacional,
