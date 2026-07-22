@@ -37,7 +37,12 @@ def _chunk(body: str) -> list[str]:
 
 def index_entities(idx, page: str, rep) -> None:
     """Grava o anexo estruturado de UMA página (§6.1c): entidades canônicas
-    + valores (datas/quantidades ficam só aqui, nunca reescritas na prosa)."""
+    + valores (datas/quantidades ficam só aqui, nunca reescritas na prosa).
+
+    v1.8 (grounding, R1): guarda o offset [span_start, span_end) da PRIMEIRA
+    ocorrência de cada (entidade, superfície) no corpo — proveniência
+    verificável a olho, à la langextract. Ocorrências repetidas só
+    incrementam `n` (o span é o representativo)."""
     idx.execute("DELETE FROM page_entities WHERE page=?", (page,))
     for m in rep.matches:
         if m.confidence == "ambiguous":
@@ -48,11 +53,13 @@ def index_entities(idx, page: str, rep) -> None:
         eid = idx.execute("SELECT id FROM entities WHERE kind=? AND canonical=?",
                           (m.subkind, m.canonical)).fetchone()["id"]
         idx.execute("INSERT INTO page_entities(page, entity_id, surface, n, "
-                    "confidence, data) VALUES (?,?,?,1,?,?) "
+                    "confidence, data, span_start, span_end) "
+                    "VALUES (?,?,?,1,?,?,?,?) "
                     "ON CONFLICT(page, entity_id, surface) "
                     "DO UPDATE SET n = n + 1",
                     (page, eid, m.surface, m.confidence,
-                     json.dumps(m.data) if m.data else None))
+                     json.dumps(m.data) if m.data else None,
+                     m.start, m.end))
 
 
 def index_levels(idx, page: str, body: str, meta) -> None:
@@ -100,7 +107,7 @@ def _gazetteer_fingerprint(gaz) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
-INDEX_GENERATION = f"g2:chunk={CHUNK_CHARS}"   # bump ⇒ full rebuild (INV-002)
+INDEX_GENERATION = f"g3:chunk={CHUNK_CHARS}:espan"  # bump ⇒ full rebuild (INV-002)
 
 
 def _git_changed_since(kb: Path, previous_head: str) -> set[str] | None:

@@ -48,6 +48,13 @@ class CurationFacade:
     def reflect_candidates(self) -> dict:
         return usage_candidates(self._settings)
 
+    # -------------------------------- fila única de próxima ação (R3, v1.8)
+    def next_actions(self, *, limit: int = 40) -> dict:
+        """A fila "Próxima ação": unifica revisões, lacunas, inbox, pontes
+        frágeis e contradições numa só lista ranqueada por VoI/custo."""
+        from ..usecases.next_actions import NextActions
+        return NextActions(self._settings, limit=limit).execute()
+
     # ---------------------------------------------- base fria (v0.12)
     def freeze(self, page_path: str, *, force: bool = False,
                reason: str = "") -> dict:

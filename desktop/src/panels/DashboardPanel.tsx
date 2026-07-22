@@ -1,6 +1,60 @@
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";   // singleton: export const client = new DaemonClient()
 
+// R3 (v1.8): action.type → aba onde a ação se realiza. Um clique leva o
+// curador à superfície certa; o deep-link à página fica para uma fase
+// seguinte (ADR-40). A fila é a ÚNICA chamada-para-ação (UX-1).
+const ACTION_TAB: Record<string, string> = {
+  answer: "ask", compile: "inbox", link: "graph",
+  "resolve-contradiction": "quality", resolve: "wiki",
+  review: "wiki", read: "wiki",
+};
+const navigate = (tab: string) =>
+  window.dispatchEvent(new CustomEvent("bc:navigate", { detail: tab }));
+
+function NextActionsQueue() {
+  const [q, setQ] = useState<any>(null);
+  useEffect(() => { client.nextActions().then(setQ).catch(() => setQ(null)); },
+            []);
+  if (!q) return null;
+  if (!q.actions.length)
+    return <section><h2 className="font-medium mb-2">Próxima ação</h2>
+      <p className="text-sm text-neutral-500">Nada pendente 🎉</p></section>;
+  return (
+    <section>
+      <div className="flex items-baseline justify-between mb-2">
+        <h2 className="font-medium">Próxima ação</h2>
+        <span className="text-xs text-neutral-400">
+          {q.total} item(ns){q.truncated ? ` · top ${q.actions.length}` : ""} ·
+          ranqueado por valor/custo</span>
+      </div>
+      <ol className="space-y-1 text-sm">
+        {q.actions.map((a: any, i: number) => (
+          <li key={i}
+              className="flex items-center gap-3 border rounded px-3 py-2
+                         hover:bg-neutral-50">
+            <button className="flex-1 text-left"
+                    title={`ir para ${ACTION_TAB[a.action.type] ?? "wiki"}`}
+                    onClick={() => navigate(ACTION_TAB[a.action.type] ?? "wiki")}>
+              <div className="flex items-center gap-2">
+                <span className="px-1.5 py-0.5 rounded text-[11px]
+                                 bg-neutral-100 text-neutral-600 shrink-0">
+                  {a.origin}</span>
+                <span className="font-medium truncate">{a.title}</span>
+              </div>
+              <div className="text-xs text-neutral-500 mt-0.5">{a.reason}</div>
+            </button>
+            <div className="text-right text-xs tabular-nums shrink-0">
+              <div title="valor de informação">VoI {a.value.toFixed(2)}</div>
+              <div className="text-neutral-400"
+                   title="custo estimado">~{a.cost_min} min</div>
+            </div>
+          </li>))}
+      </ol>
+    </section>
+  );
+}
+
 function BarList({ data, unit }: { data: [string, number][]; unit?: string }) {
   const max = Math.max(1, ...data.map(([, n]) => n));
   return (
@@ -84,13 +138,7 @@ export function DashboardPanel() {
               </div>)}
           </div>
         </section>)}
-      <section>
-        <h2 className="font-medium mb-2">Ações recomendadas</h2>
-        <ol className="list-decimal ml-5 space-y-1 text-sm">
-          {d.recommended_actions.map((a: string) => <li key={a}>{a}</li>)}
-          {!d.recommended_actions.length && <li>Nada pendente 🎉</li>}
-        </ol>
-      </section>
+      <NextActionsQueue />
       {d.stale.length > 0 && (
         <section>
           <h2 className="font-medium mb-2">Stale para revisar</h2>

@@ -107,6 +107,8 @@ export class DaemonClient {
   graph = () => this.get<any>("/cockpit/graph");
   insights = () => this.get<any>("/cockpit/insights");
   gaps = () => this.get<any>("/cockpit/gaps");   // v1.1: lacunas estruturais
+  nextActions = (limit = 40) =>                  // R3 (v1.8): fila única
+    this.get<any>(`/cockpit/next-actions?limit=${limit}`);
   dictionary = () => this.get<any>("/cockpit/dictionary");
   traces = () => this.get<any>("/cockpit/traces");
   trace = (askId: string) =>

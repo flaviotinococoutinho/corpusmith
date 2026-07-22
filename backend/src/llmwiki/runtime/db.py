@@ -32,7 +32,7 @@ _SCHEMAS = {
 # CREATE IF NOT EXISTS + _migrate idempotente ao abrir o banco restaurado).
 SCHEMA_VERSIONS = {
     "runtime.db": 7,     # v0.7 base … v0.17 pipelines, v1.6 envelopes
-    "index.db": 5,       # chunks bi-temporais, overlay, bridges, incremental
+    "index.db": 6,       # + span_start/end no anexo (grounding, v1.8)
     "cold.db": 1,
     "cognitive.db": 2,   # v0.19 base + v0.20 experiências/analogias
     "reference.db": 1,
@@ -125,6 +125,11 @@ def _migrate(conn: sqlite3.Connection, name: str) -> None:
         if "superseded" not in chunk_cols:      # INV-003 (v1.3)
             conn.execute("ALTER TABLE chunks ADD COLUMN "
                          "superseded INTEGER NOT NULL DEFAULT 0")
+        pe_cols = _columns(conn, "page_entities")   # grounding por span (v1.8)
+        for col in ("span_start", "span_end"):
+            if col not in pe_cols:
+                conn.execute(f"ALTER TABLE page_entities ADD COLUMN {col} "
+                             "INTEGER")
     if name == "runtime.db":
         if "first_seen" not in _columns(conn, "page_heat"):
             conn.execute("ALTER TABLE page_heat ADD COLUMN first_seen REAL")

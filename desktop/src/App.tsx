@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DashboardPanel } from "./panels/DashboardPanel";
 import { InboxPanel } from "./panels/InboxPanel";
 import { ExplorerPanel } from "./panels/ExplorerPanel";
@@ -30,6 +30,16 @@ const TABS = {
 
 export default function App() {
   const [tab, setTab] = useState<keyof typeof TABS>("dashboard");
+  // R3 (v1.8): a fila "Próxima ação" navega por evento — um clique leva à
+  // aba onde a ação se realiza, sem acoplar o Dashboard ao switch de abas.
+  useEffect(() => {
+    const go = (e: Event) => {
+      const target = (e as CustomEvent).detail;
+      if (target in TABS) setTab(target as keyof typeof TABS);
+    };
+    window.addEventListener("bc:navigate", go);
+    return () => window.removeEventListener("bc:navigate", go);
+  }, []);
   const Panel = TABS[tab][1];
   return (
     <div className="flex flex-col h-screen">

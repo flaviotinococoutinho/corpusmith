@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS page_entities(
   confidence TEXT DEFAULT 'extracted'
     CHECK(confidence IN ('extracted','inferred','ambiguous')),
   data TEXT,                       -- JSON: {"iso": "...", "si": {...}} quando houver
+  span_start INTEGER,              -- offset da 1ª ocorrência no corpo (grounding v1.8)
+  span_end INTEGER,
   PRIMARY KEY(page, entity_id, surface));
 CREATE INDEX IF NOT EXISTS idx_pe_entity ON page_entities(entity_id);
 
