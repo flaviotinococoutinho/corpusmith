@@ -91,6 +91,17 @@ recomputado por request). Consequência medida: a fila da v1.8 ranqueia no
 topo itens irresolvíveis dentro do app. Plano em 8 fases por complexidade
 DECRESCENTE. Recomendação: Fase 1 (o ato de curadoria) — vira ADR-41.
 
+O **plano de execução** correspondente está em
+[`15-plano-execucao.md`](15-plano-execucao.md): pacotes PR a PR, ordem
+revisada e **10 lacunas de PROCESSO** que o `14` não cobre porque auditou o
+produto. A mais grave: **a CI não executa o gate que o `AGENTS.md` §2
+declara** — `epistemics lint` e `doctor` nunca rodam automaticamente, então
+dez DoDs prometem "gate completo" sobre algo que nenhum PR verifica. Daí o
+**PR-0** (gate executável, ~3 pontos) antes da Fase 1, e a **F0 ampliada**
+(daemon + `GET /system/doctor`) que passa de opcional a pré-requisito da
+Fase 2. `F2-PR2` e `F3` exigem **RFC**, não só ADR (heurística no caminho
+de escrita, `AGENTS.md` §8).
+
 ## Achados de engenharia da spec BC-ENG-001 (rastreados em `10` §21)
 Os riscos A-01…A-10 da validação de arquitetura (atomicidade do
 BundleWriter, SUPERSEDE atômico, `StoragePolicy`, lease transacional,
