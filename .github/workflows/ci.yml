@@ -10,6 +10,37 @@ jobs:
       - run: git config --global user.email ci@llmwiki && git config --global user.name CI
       - run: pip install -e "backend[dev]"
       - run: python -m pytest backend/tests -q
+  # PR-0: o resto do gate do AGENTS.md §2 — antes daqui `epistemics lint` e
+  # `doctor` eram normativos e nunca executados (docs/15 §2, G-1/G-3).
+  # Tudo sobre HOME sintético e determinístico: sem rede, sem modelo local.
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: git config --global user.email ci@llmwiki && git config --global user.name CI
+      - run: pip install -e "backend[dev]"
+      - name: contratos epistêmicos (INV-EPI-001)
+        run: cd backend && python -m llmwiki.cli epistemics lint
+      - name: HOME sintético para as ferramentas de operação
+        run: python -c "from pathlib import Path; from llmwiki.bench import synthetic_bundle; synthetic_bundle(Path.home()/'llmwiki-ci', 40)"
+      - name: invariantes INV-* reparáveis
+        run: cd backend && LLMWIKI_HOME=$HOME/llmwiki-ci python -m llmwiki.cli okf index && LLMWIKI_HOME=$HOME/llmwiki-ci python -m llmwiki.cli doctor
+      - name: backup verificável (manifesto + sha256)
+        run: cd backend && LLMWIKI_HOME=$HOME/llmwiki-ci python -m llmwiki.cli backup create && LLMWIKI_HOME=$HOME/llmwiki-ci python -m llmwiki.cli backup verify
+  # PR-0 (G-2): sem esta perna o ramo Leiden de PRODUÇÃO (igraph/leidenalg)
+  # nunca é executado — só o fallback de componentes. Verde-por-skip sobre o
+  # algoritmo que de fato roda não é verde.
+  backend-ml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: git config --global user.email ci@llmwiki && git config --global user.name CI
+      - run: pip install -e "backend[dev,ml]"
+      - run: python -m pytest backend/tests -q -m ml
   desktop:
     runs-on: ubuntu-latest
     steps:

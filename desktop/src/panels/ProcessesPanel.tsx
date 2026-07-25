@@ -1,6 +1,7 @@
 // ProcessesPanel (Parte V §9.2): fila de jobs + feed de eventos ao vivo.
 import { useEffect, useRef, useState } from "react";
 import { client } from "../lib/client";
+import { DaemonUnavailable } from "./DaemonUnavailable";
 
 const STATE_ICON: Record<string, string> = {
   queued: "⏳", leased: "▶️", done: "✅", failed: "❌",
@@ -27,6 +28,7 @@ export function ProcessesPanel() {
     client.pipelineRuns().then(r => setRuns(r.runs)).catch(() => {});
   };
 
+  const [erro, setErro] = useState<unknown>(null);
   useEffect(() => {
     client.connect().then(() => {
       load();
@@ -38,10 +40,11 @@ export function ProcessesPanel() {
         if (String(e.type).startsWith("job.") ||
             String(e.type).startsWith("pipeline.")) load();
       });
-    });
+    }).catch(setErro);              // F0: falha do daemon vira estado visível
     return () => esRef.current?.close();
   }, []);
 
+  if (erro) return <DaemonUnavailable error={erro} onRetry={load} />;
   return (
     <div className="flex h-full text-sm">
       <div className="flex-1 p-4 overflow-auto">

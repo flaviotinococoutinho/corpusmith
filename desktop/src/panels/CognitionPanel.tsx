@@ -4,6 +4,7 @@
 // gate humano (aceitar aplica pela linhagem de configuração).
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";
+import { DaemonUnavailable } from "./DaemonUnavailable";
 
 function Card({ title, children }: { title: string; children: any }) {
   return (
@@ -32,10 +33,12 @@ export function CognitionPanel() {
     client.cognition().then(setView);
     client.observations().then(r => setObs(r.observations));
   };
-  useEffect(() => { client.connect().then(load); }, []);
+  const [erro, setErro] = useState<unknown>(null);
+  useEffect(() => { client.connect().then(load).catch(setErro); }, []);
 
   const planNow = () => client.attention(minutes).then(setPlan);
 
+  if (erro) return <DaemonUnavailable error={erro} onRetry={load} />;
   if (!view) return <div className="p-6">Carregando cognição…</div>;
   const cal = view.calibration;
   return (

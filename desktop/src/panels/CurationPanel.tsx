@@ -3,6 +3,7 @@
 // IA (pesos Hedge, flags) · exportador inteligente.
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";
+import { DaemonUnavailable } from "./DaemonUnavailable";
 
 function Card({ title, children }: { title: string; children: any }) {
   return (
@@ -32,7 +33,8 @@ export function CurationPanel() {
     client.configHistory().then(r => setHist(r.history)).catch(() => {});
     client.configPresets().then(r => setPresets(r.presets)).catch(() => {});
   };
-  useEffect(() => { client.connect().then(load); }, []);
+  const [erro, setErro] = useState<unknown>(null);
+  useEffect(() => { client.connect().then(load).catch(setErro); }, []);
 
   const tune = (section: string, key: string, value: any) =>
     client.configSet({ [section]: { [key]: value } })
@@ -43,6 +45,7 @@ export function CurationPanel() {
       .then(() => client.configHistory()
         .then(r => setHist(r.history)).catch(() => {}));
 
+  if (erro) return <DaemonUnavailable error={erro} onRetry={load} />;
   if (!config) return <div className="p-6">Carregando curadoria…</div>;
   return (
     <div className="p-4 grid grid-cols-2 gap-3 text-sm">

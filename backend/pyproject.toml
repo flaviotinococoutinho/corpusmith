@@ -1,6 +1,6 @@
 [project]
 name = "llmwiki"
-version = "1.7.0"
+version = "1.8.0"
 description = "LLM Wiki — knowledge base OKF local-first com cockpit de memória agêntica"
 requires-python = ">=3.11"
 dependencies = [
@@ -33,3 +33,8 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# PR-0: o extra [ml] traz igraph/leidenalg — o ramo de particionamento de
+# PRODUÇÃO. Sem esta perna na CI, só o fallback de componentes é exercitado.
+markers = [
+  "ml: exige o extra [ml] (igraph/leidenalg) — perna backend-ml da CI",
+]

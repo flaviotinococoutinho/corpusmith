@@ -4,6 +4,7 @@
 // Progressive disclosure: uma etapa por vez; wayfinding pelos _links.
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";
+import { DaemonUnavailable } from "./DaemonUnavailable";
 
 function Card({ title, children }: { title: string; children: any }) {
   return (
@@ -42,7 +43,8 @@ export function FocusPanel() {
     client.pages().then(r =>
       setPages(r.pages.map((p: any) => p.path))).catch(() => {});
   };
-  useEffect(() => { client.connect().then(load); }, []);
+  const [erro, setErro] = useState<unknown>(null);
+  useEffect(() => { client.connect().then(load).catch(setErro); }, []);
 
   const project = (goal_id: string, extra: any = {}) =>
     client.project({ goal_id, ...extra })
@@ -65,6 +67,7 @@ export function FocusPanel() {
     }).catch(() => setNotice("🚫 tentativa recusada"));
   };
 
+  if (erro) return <DaemonUnavailable error={erro} onRetry={load} />;
   return (
     <div className="p-4 grid grid-cols-2 gap-3 text-sm">
       {notice && <p className="col-span-2 text-xs border rounded p-2

@@ -18,6 +18,7 @@ import time
 from .base import UseCase
 from .cognitive_state import STRATEGIES, current_state, delivery_budget
 from ..compute import get_kernel
+from ..kernel.grounding import ground_spans
 from ..kernel.identity import factory as id_factory, parse as parse_id
 from ..kernel.information import surprisal
 from ..models.router import ModelRouter, ModelUnavailable
@@ -180,9 +181,15 @@ class AskMemory(UseCase):
 
             with profile.stage("record_usage"):
                 self._record_usage(rt, ask_id, fused)
+            # R1 (grounding v1.8): localiza no trecho as superfícies das
+            # entidades da pergunta — o "por que este trecho" à vista, sem
+            # LLM (determinístico; à la langextract). Vazio ⇒ sem highlight.
+            surfaces = {m.surface for m in question.matches
+                        if m.kind in ("entity", "standard", "identifier")}
             evidence = [{"page": h["page"], "resource": h.get("resource"),
                          "body": h["text"], "stale": bool(h.get("stale")),
-                         "superseded": bool(h.get("superseded"))}
+                         "superseded": bool(h.get("superseded")),
+                         "spans": ground_spans(h["text"], surfaces)}
                         for h in fused.hits]
             with profile.stage("compose"):
                 answer, via, blocked = self._compose(evidence)

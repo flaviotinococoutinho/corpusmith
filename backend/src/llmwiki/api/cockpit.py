@@ -318,6 +318,13 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
     def insights():
         return observatory.insights(s)
 
+    @app.get("/cockpit/next-actions", dependencies=[Depends(auth)])
+    def next_actions(limit: int = 40):
+        """Fila única "Próxima ação" (R3, v1.8): revisões, lacunas, inbox,
+        pontes frágeis e contradições ranqueadas por VoI/custo — cada item
+        com origem, valor e custo. PROPÕE; o humano decide."""
+        return curation.next_actions(limit=limit)
+
     @app.get("/cockpit/gaps", dependencies=[Depends(auth)])
     def structural_gaps(limit: int = 8):
         """Lacunas estruturais (v1.1, InfraNodus próprio): blocos que

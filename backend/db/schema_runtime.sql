@@ -159,3 +159,21 @@ CREATE TABLE IF NOT EXISTS evaluation_envelopes(
   created_at REAL DEFAULT (unixepoch('subsec')));
 CREATE INDEX IF NOT EXISTS idx_envelopes_mechanism
   ON evaluation_envelopes(mechanism_id, created_at);
+
+-- atos de curadoria HUMANA (F1-PR1, ADR-41) — ÍNDICE de atos, não verdade
+-- paralela: a autoridade do que aconteceu é o Git + log.md, por isso cada
+-- linha guarda o commit. `undoes`/`undone_by` já nascem aqui para a fase
+-- não precisar de uma segunda migração quando o undo entrar (F1-PR2).
+CREATE TABLE IF NOT EXISTS curation_acts(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  act TEXT NOT NULL,
+  params TEXT NOT NULL DEFAULT '{}',   -- json: parâmetros do ato
+  commit_sha TEXT,
+  pages TEXT NOT NULL DEFAULT '[]',    -- json array de rel_paths
+  created_at REAL DEFAULT (unixepoch('subsec')),
+  undoes INTEGER REFERENCES curation_acts(id),      -- este ato desfaz…
+  undone_by INTEGER REFERENCES curation_acts(id),   -- …e foi desfeito por
+  origin_kind TEXT,                    -- D-G: de onde veio (fila, finding…)
+  origin_key TEXT);
+CREATE INDEX IF NOT EXISTS idx_curation_acts_created
+  ON curation_acts(created_at);

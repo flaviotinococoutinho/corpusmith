@@ -691,3 +691,136 @@ fica no Python até benchmark justificar), rename de campos externos.
 observável; `compute.process_isolation=false` (default) volta ao
 comportamento em thread; tabela nenhuma foi adicionada (schema
 inalterado nesta rodada).
+
+### ADR-40 — Fase A do plano de experiência: sinal visível (v1.8)
+**Contexto**: o núcleo já computa muito mais sinal do que a interface
+mostra (VoI, Hedge, BLA, entropia, intermediação, pontes frágeis,
+contradições candidatas), e a experiência expõe uma fração disso em 12
+abas planas com chamadas-para-ação espalhadas (tensões C-1 e C-2 da
+auditoria em `docs/13`; UX-1/UX-3 abertos). Início da **Fase A** do
+plano — as receitas **R3** (fila única de próxima ação, de n8n + VoI
+interno) e **R1** (grounding por span, de langextract). Regra da fase:
+*expor o que já existe, sem cálculo novo e sem decidir pelo humano.*
+**Decisão** — duas projeções PURAS e reconstruíveis, zero heurística
+nova de guarantee própria:
+- **R3 · fila única "Próxima ação"** (`usecases/next_actions.py`):
+  unifica num só lugar, ranqueado por densidade **valor/custo** (o mesmo
+  VoI por minuto da mochila de atenção, só que sem orçamento — a fila
+  inteira ordenada), as fontes que já existiam dispersas: revisões
+  espaçadas vencidas (ACT-R), lacunas do Harness (perguntas/contestadas/
+  stale), inbox a consolidar, **pontes frágeis** do grafo (persistência
+  0-dim já persistida em `graph_bridges`) e **contradições candidatas**
+  (AGM, a MESMA `check_corpus` do painel Qualidade — fonte única). Cada
+  item traz origem, valor, custo e a ação de um clique. As três fontes
+  de atenção viraram funções de módulo em `plan_attention.py`
+  (`review_items`/`gap_items`/`inbox_items`) para reuso sem duplicar
+  cálculo; `PlanAttention` continua montando a mochila com orçamento. A
+  fila **substitui** (não soma) o texto livre "Ações recomendadas" do
+  Dashboard — requisito do UX-1, não um 13º lugar.
+- **R1 · grounding por span** (`kernel/grounding.py`, 4º-nível puro):
+  `ground_spans(body, surfaces)` localiza no trecho as superfícies das
+  entidades da pergunta e devolve offsets `[start,end)` — proveniência
+  *verificável a olho*, determinística, à la langextract mas **sem LLM
+  como autoridade** (fold sem acento preservando comprimento 1:1;
+  fronteira de palavra; sem sobreposição; teto). A evidência do `/ask`
+  ganha `spans`; o anexo `page_entities` ganha `span_start/span_end`
+  (offset da 1ª ocorrência gravado em `index_entities`).
+**Migração**: index.db 5→6 **aditiva** (`ALTER TABLE page_entities ADD
+COLUMN span_start/span_end`, idempotente) + bump de `INDEX_GENERATION`
+(g2→g3) que força um rebuild completo pela convergência do INV-002 — o
+índice é projeção reconstruível, nenhum dado canônico muda. Rollback =
+ignorar as colunas.
+**Contrato epistêmico**: **nenhum novo** (DoD da fase). R3 é
+composição/projeção do VoI já contratado (`cognitive_priority`,
+ADR-38) — não introduz garantia; os pesos de ponte (0.7, cresce com o
+bloco menor) e contradição (0.85) são priores transparentes com
+justificativa no módulo, não um mecanismo com bound a declarar. R1
+reforça a proveniência do sanduíche determinístico. Um contrato formal
+`next_action_ranking` fica registrado como porta para quando/se a fila
+ganhar aprendizado de feedback.
+**Navegação**: a fila roteia por evento (`window` `bc:navigate`) para a
+aba onde a ação se realiza — o Dashboard não acopla ao switch de abas; o
+deep-link à página específica fica para uma fase seguinte.
+**Alternativas rejeitadas**: extração-por-LLM como fonte de schema do
+langextract (o produto usa gazetteer determinístico — grounding sim,
+autoridade-por-LLM não); reprojetar spans a cada mudança de bundle (o
+offset é ancorado no índice, que o INV-002 já reconstrói); a fila como
+mais uma aba concorrente (ela substitui a chamada-para-ação, não soma);
+memórias frias como fonte cega da fila (a reidratação já é automática na
+compilação — listá-las todas seria ruído contra o objetivo de reduzir
+superfícies).
+**Invariantes preservados**: canônico ≠ projeção (fila e spans são
+PROJEÇÕES reconstruíveis); LLM/heurística cercada (fila e grounding vêm
+de sinal determinístico; a decisão de curadoria continua humana);
+byte-identidade do canônico intacta; garantia relativa (nenhuma
+universal introduzida); pureza do novo `kernel/grounding.py` (só re +
+unicodedata). DoD verde: pytest+tsc+compose+epistemics lint; Recall@K do
+golden inalterado (retrieval intocado). 13 testes novos; 389 no total.
+
+### ADR-41 — O ato de curadoria humana sobre o canônico (v1.8.1, F1)
+**Contexto**: a auditoria de viabilidade (`docs/14`) achou que o produto
+**detecta** quase tudo e **materializa** quase nada: existia UM caminho de
+escrita (`okf/writer.py:40-58`) e ele só era dirigido por use cases de
+MÁQUINA. `_supersede()` — o único lugar que grava `superseded_by` — era
+método PROTEGIDO de `MachinePageUseCase`, alcançável só quando a compilação
+decidia SUPERSEDE. Nenhuma operação humana de suceder, invalidar, fundir,
+editar, linkar ou desfazer existia; `GitStore` expunha só commit/head (sem
+undo). Consequência medida: a fila da v1.8 punha no topo itens
+**irresolvíveis dentro do app** — e o próprio finding
+`policy.contradiction_candidate` instrui "resolva com supersede/invalid_at
+ou funda as páginas".
+**Decisão**: criar o eixo HUMANO de escrita como Template Method irmão —
+`CurationAct` (`usecases/curate/base.py`), deliberadamente **não** subclasse
+de `MachinePageUseCase`, porque o esqueleto de máquina passa o corpo por
+`normalize_machine_body` e prosa humana não é reescrita (v0.8 §1.2). O
+esqueleto é FECHADO (asserção irmã do INV-ARCH-006):
+`_plan()` → preview PURO (diff unificado, findings PREVISTOS rodando o
+MESMO `HarnessRunner.run(mode='write')` sem escrever, páginas tocadas,
+dependentes TMS) → `_apply()` → UMA chamada ao `BundleWriter` com
+`log_kind` explícito → registro em `curation_acts` → `rebuild_index`.
+`execute(dry_run)` segue como único método público.
+- **Atos**: `SupersedePage` e `InvalidatePage` (os demais — Edit, Link,
+  Merge, Undo — herdam o esqueleto nos PRs seguintes: cada um é um arquivo
+  em `usecases/curate/` mais uma entrada no registro fechado `ACTS`);
+- **Compartilhamento sem acoplamento**: as transformações
+  (`superseded_meta`, `invalidated_meta`, `merge_meta`, `unified_diff`)
+  moram em `kernel/curation.py` — PURO — e os DOIS eixos importam de lá;
+  `usecases/base.py` passou a usá-las. O eixo máquina **não** conhece o
+  eixo humano (seria ciclo e inverteria o gradiente de mutabilidade);
+- **Superfícies**: `CurationActsFacade` em arquivo próprio (a
+  `CurationFacade` já tem ~20 métodos e a fase acrescenta sete atos);
+  `api/curation.py` montado à parte (`api/cockpit.py` já tem 640 linhas e é
+  tocado por quase todo pacote da fase); `llmwiki curate <ato>
+  chave=valor [--dry-run]`. `dry_run` é OBRIGATÓRIO no corpo — sem default
+  silencioso;
+- **G-7 (transversal)**: handler único de `HarnessRejection` → **422** com
+  os findings nomeados. Antes a exceção subia crua também de
+  `/cockpit/promote` e `/cockpit/tags` e virava 500 — o produto parecia
+  quebrado quando estava protegendo o canônico.
+**Migração**: runtime.db 7→8 aditiva (`curation_acts`, CREATE IF NOT
+EXISTS). Nasce já com `undoes`/`undone_by` (para o undo do F1-PR2 não pedir
+segunda migração) e `origin_kind`/`origin_key` (para F3/F6 amarrarem
+veredito e miss ao ato) — dívida antecipada de propósito, D-G do `docs/15`.
+**Pré-condição paga**: `test_architecture.py` varria `usecases/*.py` com
+`glob` e `pkgutil.iter_modules` — nenhum dos dois desce em subpacote, então
+`curate/` nasceria FORA de INV-ARCH-003 e INV-ARCH-005. Trocado por `rglob`
+e `walk_packages` ANTES de escrever qualquer ato (D-F).
+**Alternativas rejeitadas**: `CurationAct` herdando de `MachinePageUseCase`
+(traria a normalização de corpo para a prosa humana); `_supersede`
+continuar em `base.py` e o eixo humano importá-lo (inverteria o gradiente);
+atos empilhados em `CurationFacade`/`api/cockpit.py` (seis PRs disputando
+dois arquivos); `dry_run` com default; escrever o ato só em `index.db` (é
+projeção — o próximo rebuild apagaria o julgamento humano).
+**Invariantes**: gate de escrita inescapável (todo ato passa pelo
+`BundleWriter`); invalidar-nunca-apagar (a página segue legível, com corpo
+intacto — testado byte a byte); canônico ≠ projeção (`curation_acts` é
+ÍNDICE, cada linha guarda o `commit`; a autoridade é Git + `log.md`); CQS
+(preview não tem efeito: HEAD imóvel e trilha vazia, asserção explícita);
+1 método público por use case.
+**Dívida declarada**: `superseded_meta` carimba `invalid_at` com o tempo de
+ESCRITA — comportamento PRESERVADO do `_supersede` original, não
+introduzido aqui. É o P-9 do `docs/14`, e o parâmetro `when` já está aberto
+para a Fase 4 corrigir sem tocar nos atos.
+**Consequências**: o item de maior valor da fila (contradição, VoI 0.85)
+deixa de ser beco sem saída por CLI e HTTP; a interface do ato chega no
+F1-PR6. 14 testes novos; 423 no total.

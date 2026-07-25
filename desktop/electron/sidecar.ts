@@ -39,18 +39,64 @@ export async function daemonAlive(): Promise<boolean> {
   }
 }
 
-export async function startSidecar(resourcesPath: string): Promise<void> {
-  if (child || (await daemonAlive())) return;   // daemon externo já sobe o app
+/** Motivo pelo qual o sidecar não subiu — `null` = subiu (ou já havia um
+ *  daemon externo). F0: antes disto a falha era um `return` MUDO, e o app
+ *  ficava com todas as abas em "Carregando…" sem dizer por quê. É a razão
+ *  nº 1 pela qual quem não é o autor nunca chega a ver o produto. */
+export type SidecarFailure =
+  | { reason: "no-venv"; detail: string }
+  | { reason: "spawn-failed"; detail: string }
+  | { reason: "exited"; detail: string };
+
+let lastFailure: SidecarFailure | null = null;
+
+export function sidecarFailure(): SidecarFailure | null {
+  return lastFailure;
+}
+
+export async function startSidecar(
+  resourcesPath: string,
+  onFailure?: (f: SidecarFailure) => void,
+): Promise<SidecarFailure | null> {
+  const fail = (f: SidecarFailure): SidecarFailure => {
+    lastFailure = f;
+    onFailure?.(f);
+    return f;
+  };
+  if (child || (await daemonAlive())) {         // daemon externo já sobe o app
+    lastFailure = null;
+    return null;
+  }
   const packaged = path.join(resourcesPath, "backend", "llmwiki-server");
+  let bin: string;
+  let args: string[];
   if (existsSync(packaged)) {
-    child = spawn(packaged, [], { stdio: "ignore" });
+    bin = packaged;
+    args = [];
   } else {
     const venv = path.join(__dirname, "..", "..", "backend", ".venv",
                            "bin", "python");
-    if (!existsSync(venv)) return;              // modo read-only sem daemon
-    child = spawn(venv, ["-m", "llmwiki.daemon"], { stdio: "ignore" });
+    if (!existsSync(venv)) {
+      return fail({ reason: "no-venv", detail: venv });
+    }
+    bin = venv;
+    args = ["-m", "llmwiki.daemon"];
   }
-  child.on("exit", () => { child = null; });
+  try {
+    child = spawn(bin, args, { stdio: "ignore" });
+  } catch (e) {
+    return fail({ reason: "spawn-failed", detail: String(e) });
+  }
+  child.on("error", e =>
+    fail({ reason: "spawn-failed", detail: String(e) }));
+  child.on("exit", (code, signal) => {
+    child = null;
+    if (code !== 0) {
+      fail({ reason: "exited", detail: `código ${code ?? signal}` });
+    }
+  });
+  lastFailure = null;
+  return null;
 }
 
 export function stopSidecar(): void {

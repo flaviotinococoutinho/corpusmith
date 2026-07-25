@@ -8,9 +8,18 @@ export interface Handshake {
   token: string;
 }
 
+export interface SidecarFailure {
+  reason: "no-venv" | "spawn-failed" | "exited";
+  detail: string;
+}
+
 declare global {
   interface Window {
-    llmwiki?: { handshake(): Promise<Handshake | null> };
+    llmwiki?: {
+      handshake(): Promise<Handshake | null>;
+      // F0: opcional — versões antigas do preload não expõem
+      sidecarFailure?(): Promise<SidecarFailure | null>;
+    };
   }
 }
 
@@ -37,6 +46,14 @@ export class DaemonClient {
       }
     })();
     return this.connecting;
+  }
+
+  /** F0: descarta handshake e promessa em cache para um retry REAL.
+   *  Sem isto, um daemon que subiu depois da falha (ou que reiniciou com
+   *  token novo) continuaria inalcançável até o app ser reaberto. */
+  reset(): void {
+    this.info = null;
+    this.connecting = null;
   }
 
   base(): string {
@@ -71,6 +88,10 @@ export class DaemonClient {
     }
     return es;
   }
+
+  // ---------------------------------------------- doctor (F0, v1.8.1)
+  doctor = () => this.get<any>("/system/doctor");
+  doctorRepair = () => this.post<any>("/system/doctor/repair", {});
 
   // ------------------------------------------- cockpit (v0.7 §7.1)
   dashboard = () => this.get<any>("/cockpit/dashboard");
@@ -107,6 +128,8 @@ export class DaemonClient {
   graph = () => this.get<any>("/cockpit/graph");
   insights = () => this.get<any>("/cockpit/insights");
   gaps = () => this.get<any>("/cockpit/gaps");   // v1.1: lacunas estruturais
+  nextActions = (limit = 40) =>                  // R3 (v1.8): fila única
+    this.get<any>(`/cockpit/next-actions?limit=${limit}`);
   dictionary = () => this.get<any>("/cockpit/dictionary");
   traces = () => this.get<any>("/cockpit/traces");
   trace = (askId: string) =>

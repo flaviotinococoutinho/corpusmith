@@ -307,6 +307,67 @@ def _bench_root() -> Path:
     return Path(__file__).resolve().parents[3] / "benchmarks"
 
 
+# ---------------------------------------------------------------- PR-0 (v1.8.1)
+# `benchmarks/baseline.json` é a autoridade DECLARADA de performance
+# (AGENTS.md §6: "ganho sem medição registrada é proibido") e até aqui
+# nada a lia — `compare` só imprimia. Confrontar as RAZÕES (nunca os
+# absolutos, que variam por máquina) é o que torna a autoridade executável.
+# Os nomes divergem porque o baseline carimba a DIMENSÃO medida no cenário.
+_BASELINE_SCENARIO = {"graph": "graph_5000n_20000e",
+                      "consolidate": "consolidate_440docs"}
+
+# Frouxa DE PROPÓSITO: pega colapso de razão (Rust deixou de ser usado,
+# algoritmo mudou de classe) sem acusar troca de máquina. Por isso
+# `bench compare --against` NÃO entra no gate por PR ([gate].ci_enforced) —
+# é guarda de mesma-máquina/nightly, com --tolerance 0.1 quando estrito.
+DEFAULT_TOLERANCE = 0.5
+
+
+def compare_against(result: dict, baseline_path: Path, *,
+                    tolerance: float = DEFAULT_TOLERANCE) -> dict:
+    """Confronta os speedups medidos em `result` com os do baseline.
+
+    Regressão = razão medida abaixo de `baseline × (1 − tolerance)`. Só
+    compara chaves presentes nos DOIS lados: sem a extensão nativa não há
+    razão a comparar, e o veredito sai `comparable: false` com o motivo —
+    silêncio verde seria pior que falha.
+
+    Sobre a tolerância default FROUXA (ver DEFAULT_TOLERANCE): razão é
+    quociente de duas medições, e o denominador aqui pode ser ~2 ms (PPR
+    em Rust), onde diferença de CPU domina. Medido: numa máquina diferente
+    da que gerou o baseline, `graph.ppr` caiu 30% porque o Python ficou 15%
+    mais RÁPIDO e o Rust 21% mais lento — nenhuma linha de código mudou.
+    Para gate estrito use a MESMA máquina e `--tolerance 0.1`.
+    """
+    baseline = json.loads(Path(baseline_path).read_text())
+    ratios: list[dict] = []
+    for scenario, key in _BASELINE_SCENARIO.items():
+        measured = (result.get(scenario) or {}).get("speedup") or {}
+        declared = (baseline.get(key) or {}).get("speedup") or {}
+        for name in sorted(set(measured) & set(declared)):
+            floor = declared[name] * (1.0 - tolerance)
+            ratios.append({
+                "metric": f"{scenario}.{name}",
+                "baseline": declared[name],
+                "measured": measured[name],
+                "floor": round(floor, 2),
+                "delta_pct": round(100 * (measured[name] / declared[name] - 1),
+                                   1),
+                "regressed": measured[name] < floor})
+    regressions = [r["metric"] for r in ratios if r["regressed"]]
+    return {"comparable": bool(ratios),
+            "reason": None if ratios else
+                      "nenhuma razão comparável — extensão nativa ausente "
+                      "(speedup não medido); o baseline segue intocado",
+            "baseline_path": str(baseline_path),
+            "baseline_product_version": baseline.get("product_version"),
+            "product_version": result.get("product_version"),
+            "stale_baseline": (baseline.get("product_version")
+                               != result.get("product_version")),
+            "tolerance": tolerance, "ratios": ratios,
+            "regressions": regressions}
+
+
 def main(argv: list[str] | None = None) -> int:
     import argparse
     import tempfile
@@ -343,6 +404,14 @@ def main(argv: list[str] | None = None) -> int:
     cmp_p = sub.add_parser("compare", help="graph+consolidate nos dois "
                                            "backends + speedups")
     cmp_p.add_argument("--json", default=None)
+    cmp_p.add_argument("--against", default=None,
+                       help="confronta as razões com um baseline "
+                            "(ex.: benchmarks/baseline.json); sai != 0 em "
+                            "regressão")
+    cmp_p.add_argument("--tolerance", type=float, default=DEFAULT_TOLERANCE,
+                       help="queda tolerada na razão (default frouxo por "
+                            "causa de variância entre máquinas; use 0.1 "
+                            "para gate estrito na MESMA máquina)")
 
     fix_p = sub.add_parser("generate-fixture",
                            help="materializa fixture determinística")
@@ -382,10 +451,17 @@ def main(argv: list[str] | None = None) -> int:
                                       rounds=args.rounds,
                                       backends=backends))
     if args.verb == "compare":
-        return emit({"schema": 1, "kind": "compare",
-                     "product_version": __version__,
-                     "graph": bench_graph(),
-                     "consolidate": bench_consolidate()})
+        result = {"schema": 1, "kind": "compare",
+                  "product_version": __version__,
+                  "graph": bench_graph(),
+                  "consolidate": bench_consolidate()}
+        if args.against:
+            result["comparison"] = compare_against(
+                result, Path(args.against), tolerance=args.tolerance)
+        emit(result)
+        # regressão de RAZÃO falha o gate; ausência de razão não (a
+        # camada nativa é opcional por contrato — ADR-39)
+        return 1 if result.get("comparison", {}).get("regressions") else 0
     if args.verb == "generate-fixture":
         home = _bench_root() / "fixtures" / args.name / "home"
         if home.exists():

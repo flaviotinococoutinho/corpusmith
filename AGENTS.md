@@ -19,7 +19,7 @@ Panorama de produto: [`docs/01-conceitos.md`](docs/01-conceitos.md).
 Toda mudança MUST passar por (rode na raiz do repo; atalho: `just verify`):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # 345 testes
+cd backend && .venv/bin/python -m pytest tests -q   # suíte completa
 cd desktop && npx tsc --noEmit                        # typecheck do cockpit
 docker compose config -q                              # compose válido
 cargo test --workspace --manifest-path native/Cargo.toml  # kernels nativos (se Rust instalado)
@@ -33,6 +33,15 @@ cd backend && .venv/bin/python -m llmwiki.cli backup create   # backup verificá
 cd backend && .venv/bin/python -m llmwiki.cli epistemics lint # contratos epistêmicos
 cd backend && .venv/bin/python -m llmwiki.cli bench compare   # speedups python×rust MEDIDOS
 ```
+
+**O gate é IMPOSTO, não só declarado** (PR-0): `architecture.toml [gate]` é
+a fonte única de quais destes comandos a CI e o `just verify` MUST executar,
+e `backend/tests/test_pr0_gate.py` cruza as três coisas — se a CI parar de
+rodar `epistemics lint` ou `doctor`, a suíte quebra. `bench compare
+--against benchmarks/baseline.json` fica FORA do gate por PR de propósito:
+razão de speedup varia entre máquinas (medido: −30% em `graph.ppr` só por
+trocar de máquina), então ele é guarda de mesma-máquina/nightly, com
+`--tolerance 0.1` quando estrito.
 
 ## 3. Mapa de camadas (gradiente de mutabilidade)
 

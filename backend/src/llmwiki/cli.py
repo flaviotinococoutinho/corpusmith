@@ -166,6 +166,40 @@ def cmd_doctor(s: Settings, args) -> int:
     return 0 if result["ok"] else 2
 
 
+def cmd_curate(s: Settings, args) -> int:
+    """curate <ato> [chave=valor ...] [--dry-run] — o ato humano no CLI.
+
+    F1-PR1: até aqui suceder ou invalidar uma página só era possível
+    editando o YAML à mão. `--dry-run` mostra diff, findings previstos e
+    dependentes TMS sem tocar em nada."""
+    import json as _json
+    from .facades.curation_acts import CurationActsFacade
+    from .harness.runner import HarnessRejection
+    facade = CurationActsFacade(s)
+    params: dict = {}
+    for item in args.params:
+        chave, _, valor = item.partition("=")
+        if not _:
+            print(f"parâmetro sem '=': {item}")
+            return 2
+        params[chave] = valor
+    try:
+        if args.dry_run:
+            result = facade.preview(args.act, params)
+        else:
+            result = facade.act(args.act, params)
+    except KeyError as e:
+        print(f"ato desconhecido: {e}; disponíveis: {facade.kinds()}")
+        return 2
+    except HarnessRejection as e:
+        print(_json.dumps({"rejeitado": str(e),
+                           "findings": [f.__dict__ for f in e.findings]},
+                          indent=1, ensure_ascii=False))
+        return 1
+    print(_json.dumps(result, indent=1, ensure_ascii=False, default=str))
+    return 0
+
+
 def cmd_backup(s: Settings, args) -> int:
     """backup create|verify|list|restore [--dry-run] [--force] [path]"""
     from .usecases.backup_restore import (CreateBackup, RestoreBackup,
@@ -174,7 +208,19 @@ def cmd_backup(s: Settings, args) -> int:
     if args.op == "create":
         print(_json.dumps(CreateBackup(s, args.path).execute(), indent=1))
     elif args.op == "verify":
-        result = verify_backup(args.path)
+        # sem caminho ⇒ verifica o backup MAIS RECENTE (PR-0: `verify` sem
+        # argumento estourava TypeError; o DoD do AGENTS.md §9 exige erro
+        # com código estável, e "verificar o último" é o uso real no gate)
+        archive = args.path
+        if archive is None:
+            existentes = [b for b in list_backups(s) if "error" not in b]
+            if not existentes:
+                print(_json.dumps({"ok": False,
+                                   "error": "nenhum backup encontrado"},
+                                  indent=1))
+                return 1
+            archive = existentes[-1]["path"]
+        result = verify_backup(archive)
         print(_json.dumps(result, indent=1))
         return 0 if result["ok"] else 1
     elif args.op == "list":
@@ -254,6 +300,13 @@ def main(argv: list[str] | None = None) -> int:
     backup.add_argument("--dry-run", action="store_true", dest="dry_run")
     backup.add_argument("--force", action="store_true")
     backup.set_defaults(fn=cmd_backup)
+    curate = sub.add_parser(
+        "curate", help="atos de curadoria humana (supersede/invalidate)")
+    curate.add_argument("act")
+    curate.add_argument("params", nargs="*", default=[],
+                        metavar="chave=valor")
+    curate.add_argument("--dry-run", action="store_true", dest="dry_run")
+    curate.set_defaults(fn=cmd_curate)
     bench = sub.add_parser(
         "bench", help="benchmarks reprodutíveis (ADR-39; ver benchmarks/)")
     bench.add_argument("rest", nargs="*", default=[])
