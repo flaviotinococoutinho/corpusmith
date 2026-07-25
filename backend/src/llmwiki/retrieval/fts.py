@@ -107,7 +107,7 @@ def _gazetteer_fingerprint(gaz) -> str:
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
-INDEX_GENERATION = f"g3:chunk={CHUNK_CHARS}:espan"  # bump ⇒ full rebuild (INV-002)
+INDEX_GENERATION = f"g4:chunk={CHUNK_CHARS}:espan:mdtitle"  # bump ⇒ full rebuild
 
 
 def _git_changed_since(kb: Path, previous_head: str) -> set[str] | None:
