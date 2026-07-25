@@ -17,6 +17,18 @@ import difflib
 from datetime import datetime, timezone
 
 
+class UndoNotExpressible(RuntimeError):
+    """O estado anterior existe no histórico mas NÃO é alcançável por
+    escrita para a frente (F1-PR2).
+
+    Mora no kernel, e não no use case, por uma razão de camada: a API
+    precisa traduzi-la em 409 e não pode importar `usecases/`
+    (INV-ARCH-004). Como é um conceito puro de curadoria — "este estado
+    não é expressável pelo caminho de escrita" — o kernel é o lugar em que
+    todas as camadas podem vê-la sem ninguém pular a facade.
+    """
+
+
 def superseded_meta(meta: dict, successor: str,
                     when: datetime | None = None) -> dict:
     """Metadados da página ANTIGA numa sucessão: aponta para a sucessora e

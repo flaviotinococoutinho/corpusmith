@@ -16,11 +16,13 @@ from __future__ import annotations
 from .base import CurationAct, CurationPreview
 from .invalidate import InvalidatePage
 from .supersede import SupersedePage
+from .undo import UndoCurationAct, UndoNotExpressible
 
 ACTS: dict[str, type[CurationAct]] = {
     "supersede": SupersedePage,
     "invalidate": InvalidatePage,
+    "undo": UndoCurationAct,
 }
 
 __all__ = ["ACTS", "CurationAct", "CurationPreview", "InvalidatePage",
-           "SupersedePage"]
+           "SupersedePage", "UndoCurationAct", "UndoNotExpressible"]

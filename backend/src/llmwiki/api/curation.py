@@ -12,6 +12,7 @@ from __future__ import annotations
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from ..facades.curation_acts import CurationActsFacade
+from ..kernel.curation import UndoNotExpressible
 from ..settings import Settings
 
 
@@ -42,6 +43,11 @@ def mount_curation(app: FastAPI, s: Settings, bus, auth) -> None:
             return facade.act(
                 body.act, body.params,
                 notify=lambda t, d: bus.emit("curation", t, d))
+        except UndoNotExpressible as e:
+            # 409: o estado anterior existe, mas não é alcançável por
+            # escrita para a frente — recusar nomeando o motivo é mais
+            # honesto que escolher em silêncio qual invariante cede
+            raise HTTPException(409, str(e))
         except KeyError as e:
             raise HTTPException(404, str(e))
         except ValueError as e:

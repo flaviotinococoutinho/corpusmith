@@ -824,3 +824,49 @@ para a Fase 4 corrigir sem tocar nos atos.
 **Consequências**: o item de maior valor da fila (contradição, VoI 0.85)
 deixa de ser beco sem saída por CLI e HTTP; a interface do ato chega no
 F1-PR6. 14 testes novos; 423 no total.
+
+#### ADR-41.1 — O undo é escrita PARA A FRENTE (F1-PR2)
+**Contexto**: sem desfazer, experimentar curadoria é irreversível — e os
+atos que tocam corpo (edit, link, merge) seriam apostas. O rito óbvio
+(`git revert` no worktree, depois o gate) está ERRADO aqui:
+`BundleWriter.write` roda o Harness e **só então** escreve, então reverter
+antes colocaria bytes no disco fora do gate, e recuperar de uma rejeição
+exigiria `checkout`/`reset` — as operações que invalidar-nunca-apagar
+proíbe. Agrava que `GitStore.commit` faz `add(A=True)` sobre o kb inteiro:
+um revert rejeitado e não limpo entraria no PRÓXIMO commit de qualquer ato.
+**Decisão**: o undo **não reverte**. Lê o conteúdo no commit PAI do ato
+(`GitStore.read_at`/`parent_of`, somente leitura — nada toca o worktree),
+monta `OKFDocument`s e passa pelo `write()` normal. O desfazer vira
+**escrita para a frente**: gateada como qualquer outra, com commit novo, e
+o commit desfeito seguindo alcançável. O undo é ele mesmo um ATO NOVO
+(`undoes`), e o original é MARCADO (`undone_by`), nunca apagado.
+**Limite DECLARADO**: desfazer uma CRIAÇÃO não é expressável — "estado
+anterior = ausente" só seria alcançável removendo, e `BundleWriter.remove`
+não roda o Harness. Em vez de escolher em silêncio qual invariante cede, o
+ato **recusa** com motivo nomeado (409) e aponta a saída legítima (suceder
+ou invalidar a página criada). Nenhum ato da Fase 1 cria página; o PR que
+criar o primeiro é que decide.
+**Achados da revisão adversarial** (feita antes do commit, porque undo é a
+operação que pode destruir dado):
+1. `commit_sha` inexistente — cenário REAL, porque `RestoreBackup` restaura
+   o `runtime.db` e a trilha é projeção enquanto o Git é autoridade —
+   vazava `ValueError: SHA … could not be resolved` do GitPython e virava
+   400 com mensagem interna. Corrigido: guarda `has_commit` ⇒
+   `UndoNotExpressible` (409) dizendo que trilha e histórico divergiram e
+   que **nada será tocado**;
+2. a trilha gravava em DUAS transações (INSERT no esqueleto, os dois
+   UPDATEs no undo): havia janela em que a trilha afirmava um undo sem os
+   vínculos que o explicam. Corrigido com o hook `_record_extra(conn,
+   act_id)`, que roda na MESMA transação — com teste que injeta falha após
+   o INSERT e exige que nada sobre;
+3. recusa saindo como traceback no CLI (mesma classe do `TypeError` de
+   `backup verify` corrigido no PR-0). Corrigido: mensagem limpa e código
+   de saída estável (§9).
+**Verificado num HOME real**: sha256 do arquivo IDÊNTICO antes do supersede
+e depois do undo; histórico com os 4 commits, nada reescrito; segundo undo
+recusado; `doctor` verde.
+**Consequência declarada**: o commit acontece antes do registro na trilha.
+Se o processo morrer entre os dois, o canônico mudou e a trilha não sabe —
+recuperável, porque o Git é a autoridade e o commit carrega a mensagem do
+ato; e um segundo undo restauraria o mesmo conteúdo (idempotente, sem perda).
+14 testes novos; 437 no total.
