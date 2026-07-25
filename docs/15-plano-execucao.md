@@ -102,8 +102,8 @@ Divergências do `14` marcadas com ⚠ e justificadas.
 
 | # | Pacote | pt | Nota |
 |---|---|:--:|---|
-| 1 | **F0 ampliada** (P-13 + `GET /system/doctor` com facade) | 3 | ⚠ O `14` trata a F0 como exceção opcional; ela é **pré-requisito da F2**: a F2-PR1 entrega o INV-004 e a F2-PR4 promete badge de frescor *com ação* — sem porta HTTP, o invariante nasce invisível na única superfície que a fase existe para melhorar (G-3). Também torna os 10 PRs seguintes depuráveis |
-| 2 | **PR-0 · gate executável** | 3 | ⚠ Novo. Sem ele, dez DoDs são inverificáveis e quatro migrações sobem sem prova de upgrade |
+| 1 | ✅ **F0 ampliada** (P-13 + `GET /system/doctor` com facade) — **ENTREGUE** | 3 | ⚠ O `14` trata a F0 como exceção opcional; ela é **pré-requisito da F2**: a F2-PR1 entrega o INV-004 e a F2-PR4 promete badge de frescor *com ação* — sem porta HTTP, o invariante nasce invisível na única superfície que a fase existe para melhorar (G-3). Também torna os 10 PRs seguintes depuráveis |
+| 2 | ✅ **PR-0 · gate executável** — **ENTREGUE** | 3 | ⚠ Novo. Sem ele, dez DoDs são inverificáveis e quatro migrações sobem sem prova de upgrade |
 | 3 | **F1-PR1** · `CurationAct` + Supersede/Invalidate ponta a ponta (preview, `curation_acts`, 422, CLI) | 8 | Fatia **vertical**: o custo da fase está no esqueleto, não nos atos. Emendas: rotas em `api/curation.py` via `mount_curation` (precedente em `api/system.py:241`) e transformação de frontmatter em `kernel/curation.py` — **não** em `curate/base.py`, senão o eixo máquina importa o eixo humano |
 | 4 | **F1-PR2** · `UndoCurationAct` (revert registrado como ato novo) | 5 | Segundo de propósito: torna reversível tudo o que vem depois. **Rito reformulado** — ver D-C |
 | 5 | **F1-PR4** · `LinkPages`/`UnlinkPages` | 5 | ⚠ Antecipado (era 4º). É o ato de maior densidade valor/custo da fila e o único ato de corpo cujo valor não depende de UI que a fase não constrói. **Traz a decisão do `MD_LINK` para dentro da F1** — ver D-A |
@@ -272,10 +272,31 @@ mecanismos de padrão com contrato (0 → 1 crescendo) · rotas de escrita que
 devolvem 422 em vez de 500 (0 → todas) · idade do `baseline.json` (1
 versão atrasada → 0).
 
-## 8. Próximo passo
+## 8. Estado da execução
 
-**F0 ampliada → PR-0 → F1-PR1.** As duas primeiras somam ~6 pontos e não
-entregam funcionalidade nenhuma ao usuário final — entregam a capacidade de
-**verificar** as onze seguintes. O `14` pedia começar pelo mais complexo; a
-única emenda que este documento faz a isso é: *o instrumento antes da obra,
-porque sem ele dez DoDs são declarações sem prova.*
+**PR-0 e F0 estão ENTREGUES** (commits `18d8d20` e `d108d2f`). O que mudou
+de fato, além do que os DoDs prometiam:
+
+- o gate passou de **4/8 comandos executados pela CI para 8/8**, com
+  `architecture.toml [gate]` como fonte única cruzada por teste;
+- a perna `[ml]` revelou que o ramo Leiden de produção **passa** — instalei
+  o extra e rodei: os 3 testes novos passam e a suíte inteira segue verde
+  com `igraph`/`leidenalg` presentes, então nada dependia do fallback;
+- `bench compare --against` produziu o primeiro achado real: `graph.ppr` a
+  −30,2%. **Não é regressão de código** — nesta máquina o Python ficou 15%
+  mais rápido e o Rust 21% mais lento, sobre um denominador de ~2 ms. Daí a
+  tolerância default frouxa e a decisão de manter `bench` **fora** do gate
+  por PR (guarda de mesma-máquina). O baseline **continua em 1.7.0**:
+  bumpá-lo sem remedir na máquina de referência seria alegar medição que
+  não houve (`AGENTS.md` §6);
+- duas derivas corrigidas de passagem: `backup verify` sem argumento
+  estourava `TypeError` (agora verifica o mais recente, com erro de código
+  estável) e `daemon.started` emitia `version: "0.7.0"` fixo.
+
+**Próximo passo: F1-PR1** — `CurationAct` + Supersede/Invalidate ponta a
+ponta, com as duas emendas da §3: rotas em `api/curation.py` via
+`mount_curation` e a transformação de frontmatter em `kernel/curation.py`
+(nunca em `curate/base.py`, senão o eixo máquina importa o eixo humano).
+Antes de escrever qualquer ato, o PR precisa consertar a varredura de
+`test_architecture.py` (`glob` → `rglob`), senão o subpacote `curate/` nasce
+fora de dois invariantes declarados (D-F). Vira **ADR-41**.
