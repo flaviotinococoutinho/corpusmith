@@ -75,8 +75,21 @@ curation-projection) ganham fundamento e sequência em
 [`13-plano-experiencia-memoria.md`](13-plano-experiencia-memoria.md):
 receitas mineradas de projetos externos (langextract, SymRAG,
 all-agentic-architectures, science-skills, crewAI, n8n...) mapeadas a
-mecanismos reais, com plano em 4 fases. Recomendação: Fase A
-(fila única de próxima ação por VoI + grounding por span) primeiro.
+mecanismos reais, com plano em 4 fases. Fase A (fila única de próxima
+ação por VoI + grounding por span) ENTREGUE na v1.8 (ADR-40).
+
+## Plano de viabilidade (docs/14) — o que falta para um terceiro usar
+A auditoria de viabilidade em
+[`14-plano-viabilidade.md`](14-plano-viabilidade.md) (6 auditorias +
+refutação adversarial; 28 de 30 lacunas sobreviveram, consolidadas em 14
+problemas) conclui que faltam **dois modelos**, não features: o **ato de
+curadoria humana** sobre o canônico (nenhuma operação de suceder,
+invalidar, fundir, editar, linkar ou desfazer existe — `_supersede` é
+método protegido de `MachinePageUseCase`) e a **camada de padrões como
+objeto** (tema sem identidade estável, projeção sem carimbo, Brandes
+recomputado por request). Consequência medida: a fila da v1.8 ranqueia no
+topo itens irresolvíveis dentro do app. Plano em 8 fases por complexidade
+DECRESCENTE. Recomendação: Fase 1 (o ato de curadoria) — vira ADR-41.
 
 ## Achados de engenharia da spec BC-ENG-001 (rastreados em `10` §21)
 Os riscos A-01…A-10 da validação de arquitetura (atomicidade do
