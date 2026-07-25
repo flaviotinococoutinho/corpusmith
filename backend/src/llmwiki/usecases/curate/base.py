@@ -130,13 +130,24 @@ class CurationAct(UseCase):
         return Findings(Finding(**f) for f in preview.findings)
 
     def _record(self, preview: CurationPreview, commit: str | None) -> int:
+        """UMA transação: a trilha nunca fica pela metade. Atos que
+        precisam gravar mais (o undo liga `undoes`/`undone_by`) usam o
+        hook `_record_extra`, que roda na MESMA conexão antes do commit —
+        senão haveria uma janela em que a trilha afirma um ato sem os
+        vínculos que o explicam."""
         rt = connect(self._settings.app_support / "runtime.db")
-        cur = rt.execute(
-            "INSERT INTO curation_acts(act, params, commit_sha, pages) "
-            "VALUES (?,?,?,?)",
-            (self.ACT, json.dumps(self._params(), default=str), commit,
-             json.dumps(preview.pages)))
-        rt.commit()
-        act_id = cur.lastrowid
-        rt.close()
+        try:
+            cur = rt.execute(
+                "INSERT INTO curation_acts(act, params, commit_sha, pages) "
+                "VALUES (?,?,?,?)",
+                (self.ACT, json.dumps(self._params(), default=str), commit,
+                 json.dumps(preview.pages)))
+            act_id = cur.lastrowid
+            self._record_extra(rt, act_id)
+            rt.commit()
+        finally:
+            rt.close()
         return act_id
+
+    def _record_extra(self, conn, act_id: int) -> None:
+        """Hook: gravações adicionais na MESMA transação da trilha."""

@@ -175,6 +175,7 @@ def cmd_curate(s: Settings, args) -> int:
     import json as _json
     from .facades.curation_acts import CurationActsFacade
     from .harness.runner import HarnessRejection
+    from .kernel.curation import UndoNotExpressible
     facade = CurationActsFacade(s)
     params: dict = {}
     for item in args.params:
@@ -182,20 +183,29 @@ def cmd_curate(s: Settings, args) -> int:
         if not _:
             print(f"parâmetro sem '=': {item}")
             return 2
-        params[chave] = valor
+        params[chave] = int(valor) if chave == "act_id" else valor
     try:
         if args.dry_run:
             result = facade.preview(args.act, params)
         else:
             result = facade.act(args.act, params)
     except KeyError as e:
-        print(f"ato desconhecido: {e}; disponíveis: {facade.kinds()}")
+        print(f"ato desconhecido ou inexistente: {e}; "
+              f"atos disponíveis: {facade.kinds()}")
         return 2
     except HarnessRejection as e:
         print(_json.dumps({"rejeitado": str(e),
                            "findings": [f.__dict__ for f in e.findings]},
                           indent=1, ensure_ascii=False))
         return 1
+    except UndoNotExpressible as e:
+        # estado anterior não alcançável por escrita para a frente — recusa
+        # NOMEADA, não traceback (AGENTS §9: erro com código estável)
+        print(f"⛔ não é possível desfazer: {e}")
+        return 3
+    except (ValueError, FileNotFoundError) as e:
+        print(f"⛔ {e}")
+        return 2
     print(_json.dumps(result, indent=1, ensure_ascii=False, default=str))
     return 0
 
