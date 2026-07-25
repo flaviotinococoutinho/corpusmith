@@ -104,7 +104,7 @@ Divergências do `14` marcadas com ⚠ e justificadas.
 |---|---|:--:|---|
 | 1 | ✅ **F0 ampliada** (P-13 + `GET /system/doctor` com facade) — **ENTREGUE** | 3 | ⚠ O `14` trata a F0 como exceção opcional; ela é **pré-requisito da F2**: a F2-PR1 entrega o INV-004 e a F2-PR4 promete badge de frescor *com ação* — sem porta HTTP, o invariante nasce invisível na única superfície que a fase existe para melhorar (G-3). Também torna os 10 PRs seguintes depuráveis |
 | 2 | ✅ **PR-0 · gate executável** — **ENTREGUE** | 3 | ⚠ Novo. Sem ele, dez DoDs são inverificáveis e quatro migrações sobem sem prova de upgrade |
-| 3 | **F1-PR1** · `CurationAct` + Supersede/Invalidate ponta a ponta (preview, `curation_acts`, 422, CLI) | 8 | Fatia **vertical**: o custo da fase está no esqueleto, não nos atos. Emendas: rotas em `api/curation.py` via `mount_curation` (precedente em `api/system.py:241`) e transformação de frontmatter em `kernel/curation.py` — **não** em `curate/base.py`, senão o eixo máquina importa o eixo humano |
+| 3 | ✅ **F1-PR1** · `CurationAct` + Supersede/Invalidate ponta a ponta (preview, `curation_acts`, 422, CLI) — **ENTREGUE** (ADR-41) | 8 | Fatia **vertical**: o custo da fase está no esqueleto, não nos atos. Emendas aplicadas: rotas em `api/curation.py` via `mount_curation` e transformação de frontmatter em `kernel/curation.py` — **não** em `curate/base.py`, senão o eixo máquina importa o eixo humano |
 | 4 | **F1-PR2** · `UndoCurationAct` (revert registrado como ato novo) | 5 | Segundo de propósito: torna reversível tudo o que vem depois. **Rito reformulado** — ver D-C |
 | 5 | **F1-PR4** · `LinkPages`/`UnlinkPages` | 5 | ⚠ Antecipado (era 4º). É o ato de maior densidade valor/custo da fila e o único ato de corpo cujo valor não depende de UI que a fase não constrói. **Traz a decisão do `MD_LINK` para dentro da F1** — ver D-A |
 | 6 | **F1-PR6** · deep-link da fila + `CurationDialog` | 6 | ⚠ Antecipado (era 6º). Com PR1+PR2+PR4, os **dois** itens do topo da fila já têm ato com preview: converte quatro PRs de infraestrutura em algo perceptível meses antes |
@@ -293,10 +293,20 @@ de fato, além do que os DoDs prometiam:
   estourava `TypeError` (agora verifica o mais recente, com erro de código
   estável) e `daemon.started` emitia `version: "0.7.0"` fixo.
 
-**Próximo passo: F1-PR1** — `CurationAct` + Supersede/Invalidate ponta a
-ponta, com as duas emendas da §3: rotas em `api/curation.py` via
-`mount_curation` e a transformação de frontmatter em `kernel/curation.py`
-(nunca em `curate/base.py`, senão o eixo máquina importa o eixo humano).
-Antes de escrever qualquer ato, o PR precisa consertar a varredura de
-`test_architecture.py` (`glob` → `rglob`), senão o subpacote `curate/` nasce
-fora de dois invariantes declarados (D-F). Vira **ADR-41**.
+**F1-PR1 também está ENTREGUE** (`7a07f96`, ADR-41). O modelo existe: o
+esqueleto `CurationAct` com preview puro, `SupersedePage`/`InvalidatePage`,
+`curation_acts`, o 422 transversal e o CLI. A pré-condição D-F foi paga
+antes de qualquer ato (`glob`→`rglob`, `iter_modules`→`walk_packages`), e as
+duas emendas de acoplamento da §3 foram aplicadas. Verificado num HOME real:
+dry-run não move o HEAD, o apply faz exatamente 1 commit, a página antiga
+segue legível e o doctor sai 0.
+
+**Próximo passo: F1-PR2** — `UndoCurationAct`, com o rito **reformulado**
+por D-C: nada de `git revert` no worktree antes do gate (os bytes entrariam
+antes do Harness e recuperar de uma rejeição exigiria `checkout`/`reset`, a
+operação que o `14` proíbe). O undo lê os blobs do commit pai, monta
+`OKFDocument`s e passa pelo `write()` normal — **escrita para frente**,
+registrada como ato NOVO. A aresta a declarar no DoD: desfazer a *criação*
+de uma página só é expressável por `BundleWriter.remove`, que não roda o
+Harness — "gate inescapável" e "um commit" não podem valer juntos nesse
+caso, e o PR precisa dizer qual cede.
