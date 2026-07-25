@@ -80,6 +80,21 @@ authority = "referência do mundo"
 rebuildable = "parcial (via seed/import)"
 schema_version = 1
 
+# --- IMPOSIÇÃO do gate (PR-0, v1.8.1) ---
+# Antes daqui o gate tinha QUATRO inventários divergentes (AGENTS.md §2 com
+# 8 comandos, justfile com 3, ci.yml com 4, e [commands] abaixo) e nada os
+# cruzava — então dez DoDs podiam dizer "gate completo" sobre algo que a CI
+# nunca executava. `test_pr0_gate.py` cruza estas listas com
+# .github/workflows/ci.yml e com a receita `verify` do justfile: o gate
+# passa a ter UMA fonte, o mesmo tratamento que architecture.toml e
+# epistemics.toml já recebem. Tokens, não linhas de comando: a CI escreve
+# `pytest backend/tests` e o justfile `cd backend && … pytest tests`.
+[gate]
+ci_enforced = ["pytest", "tsc --noEmit", "docker compose config",
+               "cargo test", "epistemics lint", "doctor", "backup"]
+verify_enforced = ["pytest", "tsc --noEmit", "docker compose config",
+                   "epistemics lint"]
+
 # --- comandos de verificação (o gate único da spec §14.4). ---
 [commands]
 backend_tests = "cd backend && .venv/bin/python -m pytest tests -q"

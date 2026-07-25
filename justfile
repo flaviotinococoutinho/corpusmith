@@ -17,11 +17,13 @@ bootstrap PY="python3":
 install:
     scripts/install.sh --with-tests --with-smoke
 
-# gate único do AGENTS.md §2: testes + typecheck do cockpit + compose
+# gate único do AGENTS.md §2 (imposto por architecture.toml [gate] e
+# cruzado por test_pr0_gate.py — o gate tem UMA fonte, não quatro)
 verify:
     cd backend && .venv/bin/python -m pytest tests -q
     cd desktop && npx tsc --noEmit
     docker compose config -q
+    cd backend && .venv/bin/python -m llmwiki.cli epistemics lint
 
 # baixa modelos locais (Ollama)
 models:

@@ -174,7 +174,19 @@ def cmd_backup(s: Settings, args) -> int:
     if args.op == "create":
         print(_json.dumps(CreateBackup(s, args.path).execute(), indent=1))
     elif args.op == "verify":
-        result = verify_backup(args.path)
+        # sem caminho ⇒ verifica o backup MAIS RECENTE (PR-0: `verify` sem
+        # argumento estourava TypeError; o DoD do AGENTS.md §9 exige erro
+        # com código estável, e "verificar o último" é o uso real no gate)
+        archive = args.path
+        if archive is None:
+            existentes = [b for b in list_backups(s) if "error" not in b]
+            if not existentes:
+                print(_json.dumps({"ok": False,
+                                   "error": "nenhum backup encontrado"},
+                                  indent=1))
+                return 1
+            archive = existentes[-1]["path"]
+        result = verify_backup(archive)
         print(_json.dumps(result, indent=1))
         return 0 if result["ok"] else 1
     elif args.op == "list":
