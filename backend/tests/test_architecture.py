@@ -78,7 +78,9 @@ def test_memory_domain_does_not_depend_on_cognitive_domain():
 def test_usecases_do_not_reach_outward():
     """usecases importam domain/infra — nunca facades, api, jobs ou
     framework HTTP (Dependency Rule)."""
-    for module in (SRC / "usecases").glob("*.py"):
+    # rglob, não glob (F1-PR1): `usecases/curate/` é um SUBPACOTE e
+    # escaparia em silêncio de INV-ARCH-003 se a varredura fosse plana
+    for module in (SRC / "usecases").rglob("*.py"):
         absolute = _absolute_imports(module)
         relative = _relative_imports(module)
         assert "fastapi" not in absolute, f"{module}: use case importou fastapi"
@@ -102,8 +104,12 @@ def test_every_usecase_has_single_public_method():
     import llmwiki.usecases as usecases_pkg
     import importlib
     import pkgutil
-    for info in pkgutil.iter_modules(usecases_pkg.__path__):
-        module = importlib.import_module(f"llmwiki.usecases.{info.name}")
+    # walk_packages, não iter_modules (F1-PR1): iter_modules NÃO desce em
+    # subpacotes, então um ato em `usecases/curate/supersede.py` ficaria
+    # fora de INV-ARCH-005 — exatamente a camada que este PR inaugura
+    for info in pkgutil.walk_packages(usecases_pkg.__path__,
+                                      prefix="llmwiki.usecases."):
+        module = importlib.import_module(info.name)
         for name, cls in inspect.getmembers(module, inspect.isclass):
             if not issubclass(cls, base.UseCase) or cls is base.UseCase:
                 continue

@@ -58,7 +58,7 @@ machine_page_template_closed = true               # subclasses não sobrescrevem
 name = "runtime.db"
 authority = "operacional"
 rebuildable = false
-schema_version = 7          # v1.6: + evaluation_envelopes (ADR-38)
+schema_version = 8          # v1.8.1: + curation_acts (ato humano, ADR-41)
 [[database]]
 name = "index.db"
 authority = "nenhuma (projeção)"

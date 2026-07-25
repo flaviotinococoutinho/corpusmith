@@ -13,9 +13,11 @@ import sys
 import threading
 import time
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 from ..facades import MemoryFacade
+from ..harness.runner import HarnessRejection
 from ..kernel.identity import factory as id_factory, parse as parse_id
 from ..runtime.db import connect
 from ..runtime.events import EventBus
@@ -84,6 +86,19 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
         raise HTTPException(401, "token inválido")
 
     from fastapi import Depends
+
+    # Rejeição de POLÍTICA não é falha do servidor (F1-PR1 / G-7): antes
+    # daqui `HarnessRejection` subia crua de /cockpit/promote e /cockpit/tags
+    # e virava 500 — o produto parecia quebrado quando estava, na verdade,
+    # protegendo o canônico. 422 com os findings nomeados é a resposta certa,
+    # e vale para TODA superfície de escrita de uma vez.
+    @app.exception_handler(HarnessRejection)
+    def _harness_rejected(_request: Request, exc: HarnessRejection):
+        return JSONResponse(
+            status_code=422,
+            content={"error": "harness_rejection",
+                     "message": str(exc),
+                     "findings": [f.__dict__ for f in exc.findings]})
 
     @app.get("/")
     def root():
@@ -264,4 +279,6 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
     mount_cockpit(app, s, queue, gov, bus, auth)
     from .cognitive import mount_cognitive
     mount_cognitive(app, s, bus, auth)
+    from .curation import mount_curation          # F1-PR1: atos humanos
+    mount_curation(app, s, bus, auth)
     return app

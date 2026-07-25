@@ -235,22 +235,28 @@ def test_epistemic_domain_is_pure():
             assert not names & forbidden, f"{module}: {names & forbidden}"
 
 
-def test_runtime_migration_to_v7_is_idempotent(settings):
+def test_runtime_migration_is_idempotent(settings):
+    """Idempotência da migração do runtime.db + presença das tabelas que
+    cada versão introduziu. Sem número cravado (era `== 7`): a versão sobe
+    a cada fase e o pino fazia o teste falhar por deriva, não por defeito —
+    a MESMA classe de problema que o PR-0 atacou no gate."""
+    esperada = SCHEMA_VERSIONS["runtime.db"]
     path = settings.app_support / "runtime.db"
     first = connect(path)
     tables = {r["name"] for r in first.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}
-    assert "evaluation_envelopes" in tables
+    assert "evaluation_envelopes" in tables      # v1.6 (ADR-38)
+    assert "curation_acts" in tables             # v1.8.1 (ADR-41)
     stamped = first.execute("SELECT value FROM _meta WHERE "
                             "key='schema_version'").fetchone()["value"]
-    assert int(stamped) == SCHEMA_VERSIONS["runtime.db"] == 7
+    assert int(stamped) == esperada
     first.close()
     second = connect(path)                       # reconexão: sem erro, sem
     again = second.execute("SELECT value FROM _meta WHERE "  # re-migração
                            "key='schema_version'").fetchone()["value"]
-    assert int(again) == 7
+    assert int(again) == esperada
     ledger = second.execute("SELECT COUNT(*) c FROM schema_migrations "
-                            "WHERE to_version=7").fetchone()["c"]
+                            "WHERE to_version=?", (esperada,)).fetchone()["c"]
     assert ledger == 1
     second.close()
 

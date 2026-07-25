@@ -140,11 +140,16 @@ class MachinePageUseCase(UseCase):
 
     def _supersede(self, old_path: str, new_path: str) -> None:
         """Invalidar, nunca apagar (zep): a antiga aponta para a nova.
-        TMS (v0.10): notifica os dependentes da antiga para revisão."""
+        TMS (v0.10): notifica os dependentes da antiga para revisão.
+
+        A transformação em si mora em `kernel/curation.py` (F1-PR1): os
+        DOIS eixos de escrita — este, de máquina, e o humano em
+        `usecases/curate/` — usam a MESMA definição de sucessão, sem que
+        um precise importar o outro."""
+        from ..kernel.curation import superseded_meta
         old = self._writer.reader.load(old_path)
-        meta = old.meta.model_dump(exclude_none=True)
-        meta.update(superseded_by=new_path,
-                    invalid_at=datetime.now(timezone.utc))
+        meta = superseded_meta(old.meta.model_dump(exclude_none=True),
+                               new_path)
         self._writer.write(
             [OKFDocument(rel_path=old_path, body=old.body,
                          meta=OKFFrontMatter(**meta))],
