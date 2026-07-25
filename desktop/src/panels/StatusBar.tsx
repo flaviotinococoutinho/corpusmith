@@ -28,7 +28,9 @@ export function StatusBar() {
     const offE = live.onEvent(setTick);
     const probe = () =>
       client.healthFull().then(setHealth).catch(() => setHealth(null));
-    client.connect().then(probe);
+    // F0: sem o .catch, um daemon ausente gerava rejeição não tratada e a
+    // barra continuava exibindo o último estado conhecido
+    client.connect().then(probe).catch(() => setHealth(null));
     const timer = setInterval(probe, 30_000);
     return () => { offS(); offE(); clearInterval(timer); };
   }, []);

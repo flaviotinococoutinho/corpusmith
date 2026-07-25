@@ -2,6 +2,7 @@
 // o mapa vivo de ONDE cada conhecimento mora e como transita entre camadas.
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";
+import { DaemonUnavailable } from "./DaemonUnavailable";
 
 function Column({ title, hint, children }:
   { title: string; hint: string; children: any }) {
@@ -21,7 +22,9 @@ export function MemoryPanel() {
     client.memory().then(setM);
     client.cold().then(setCold).catch(() => setCold(null));
   };
-  useEffect(() => { client.connect().then(load); }, []);
+  const [erro, setErro] = useState<unknown>(null);
+  useEffect(() => { client.connect().then(load).catch(setErro); }, []);
+  if (erro) return <DaemonUnavailable error={erro} onRetry={load} />;
   if (!m) return <div className="p-6">Carregando camadas…</div>;
   return (
     <div className="p-4 h-full flex flex-col gap-3">

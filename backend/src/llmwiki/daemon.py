@@ -6,6 +6,7 @@ lido pelo Electron/CLI). Bootstrap do knowledge base é idempotente.
 from __future__ import annotations
 import logging
 import uvicorn
+from . import __version__
 from .api.system import build_app, issue_token
 from .okf.bootstrap import ensure_bundle
 from .runtime.db import connect
@@ -14,6 +15,7 @@ from .runtime.governor import Governor
 from .runtime.queue import JobQueue
 from .runtime.scheduler import Scheduler
 from .runtime.slots import Slots
+from .jobs import REGISTRY
 from .runtime.worker import Worker
 from .settings import Settings
 
@@ -44,8 +46,11 @@ def main() -> None:
     scheduler.start()
 
     token = issue_token(s)
-    app = build_app(s, queue, gov, bus, token)
-    bus.emit("system", "daemon.started", {"version": "0.7.0"})
+    # F0: o daemon é o único que conhece os dois lados (jobs importa
+    # facades, então nem api nem facade podem importar jobs de volta)
+    app = build_app(s, queue, gov, bus, token,
+                    known_jobs=set(REGISTRY))
+    bus.emit("system", "daemon.started", {"version": __version__})
     log.info("llmwiki daemon em http://%s:%s",
              s.server.get("host"), s.server.get("port"))
     try:

@@ -2,6 +2,7 @@
 // tracing de consultas — cada item com a ação de curadoria mais provável.
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";
+import { DaemonUnavailable } from "./DaemonUnavailable";
 
 function Section({ title, children }: { title: string; children: any }) {
   return (
@@ -46,7 +47,9 @@ export function InsightsPanel() {
     client.traces().then(r => setTraces(r.traces));
     client.gaps().then(setGaps).catch(() => {});
   };
-  useEffect(() => { client.connect().then(load); }, []);
+  const [erro, setErro] = useState<unknown>(null);
+  useEffect(() => { client.connect().then(load).catch(setErro); }, []);
+  if (erro) return <DaemonUnavailable error={erro} onRetry={load} />;
   if (!ins) return <div className="p-6">Calculando indicadores…</div>;
   const g = ins.gaps, t = ins.topology;
   return (

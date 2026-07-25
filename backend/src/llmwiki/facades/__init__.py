@@ -9,6 +9,7 @@ from .cognition import CognitionFacade
 from .compiler import CompilerFacade
 from .curation import CurationFacade
 from .memory import MemoryFacade
+from .system import SystemFacade
 
 __all__ = ["CognitionFacade", "CompilerFacade", "CurationFacade",
-           "MemoryFacade"]
+           "MemoryFacade", "SystemFacade"]

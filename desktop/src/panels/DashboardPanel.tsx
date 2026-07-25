@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";   // singleton: export const client = new DaemonClient()
+import { DaemonUnavailable } from "./DaemonUnavailable";
 
 // R3 (v1.8): action.type → aba onde a ação se realiza. Um clique leva o
 // curador à superfície certa; o deep-link à página fica para uma fase
@@ -14,9 +15,26 @@ const navigate = (tab: string) =>
 
 function NextActionsQueue() {
   const [q, setQ] = useState<any>(null);
-  useEffect(() => { client.nextActions().then(setQ).catch(() => setQ(null)); },
-            []);
-  if (!q) return null;
+  // F0/P-11: antes, pendente E erro caíam no MESMO `null` ⇒ a única
+  // chamada-para-ação do produto desaparecia em silêncio enquanto o
+  // backend varre o bundle (16-40 s a 2.000 páginas). Agora há três
+  // estados distintos: carregando, falhou, vazia.
+  const [falhou, setFalhou] = useState(false);
+  const carregar = () => {
+    setFalhou(false);
+    client.nextActions().then(setQ).catch(() => setFalhou(true));
+  };
+  useEffect(carregar, []);
+  if (falhou)
+    return <section><h2 className="font-medium mb-2">Próxima ação</h2>
+      <p className="text-sm text-neutral-500">
+        não foi possível montar a fila{" "}
+        <button className="underline" onClick={carregar}>tentar de novo</button>
+      </p></section>;
+  if (!q)
+    return <section><h2 className="font-medium mb-2">Próxima ação</h2>
+      <p className="text-sm text-neutral-400 animate-pulse">
+        calculando valor e custo…</p></section>;
   if (!q.actions.length)
     return <section><h2 className="font-medium mb-2">Próxima ação</h2>
       <p className="text-sm text-neutral-500">Nada pendente 🎉</p></section>;
@@ -79,6 +97,7 @@ export function DashboardPanel() {
   const [stats, setStats] = useState<any>(null);
   const [cold, setCold] = useState<any>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [erro, setErro] = useState<unknown>(null);
   const loadCold = () => client.cold().then(setCold).catch(() => setCold(null));
   useEffect(() => {
     client.connect().then(() => {
@@ -86,8 +105,8 @@ export function DashboardPanel() {
       client.reflectCand().then(setCand).catch(() => setCand(null));
       client.stats().then(setStats).catch(() => setStats(null));
       loadCold();
-    });
-  }, []);
+    }).catch(setErro);          // F0: sem isto o painel ficava em
+  }, []);                       // "Carregando…" como estado TERMINAL
   const freeze = (path: string) =>
     client.freeze(path)
       .then(r => { setNotice(`🧊 congelada: ${r.page}`); loadCold(); })
@@ -95,6 +114,8 @@ export function DashboardPanel() {
   const recycle = (path: string) =>
     client.recycle(path)
       .then(r => { setNotice(`♻️ reciclada: ${r.page}`); loadCold(); });
+  if (erro) return <DaemonUnavailable error={erro}
+                     onRetry={() => client.dashboard().then(setD)} />;
   if (!d) return <div className="p-6">Carregando estado da memória…</div>;
   return (
     <div className="p-6 space-y-6 max-w-3xl">

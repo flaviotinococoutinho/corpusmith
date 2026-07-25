@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
-import { daemonAlive, readHandshake, startSidecar, stopSidecar } from "./sidecar";
+import { daemonAlive, readHandshake, sidecarFailure, startSidecar,
+         stopSidecar } from "./sidecar";
 
 let win: BrowserWindow | null = null;
 
@@ -24,6 +25,10 @@ async function createWindow(): Promise<void> {
 
 ipcMain.handle("llmwiki:handshake", async () =>
   (await daemonAlive()) ? readHandshake() : null);
+
+// F0: a UI passa a poder PERGUNTAR por que o sidecar não subiu, em vez de
+// ficar em "Carregando…" para sempre (a falha era um `return` mudo).
+ipcMain.handle("llmwiki:sidecarFailure", async () => sidecarFailure());
 
 app.whenReady().then(async () => {
   await startSidecar(process.resourcesPath);

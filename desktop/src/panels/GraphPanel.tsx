@@ -8,6 +8,7 @@
 // pergunta-ponte como question.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { client } from "../lib/client";
+import { DaemonUnavailable } from "./DaemonUnavailable";
 
 const PALETTE = ["#6366f1", "#059669", "#d97706", "#dc2626", "#0891b2",
                  "#7c3aed", "#be185d", "#4d7c0f", "#b45309", "#334155"];
@@ -38,6 +39,7 @@ export function GraphPanel() {
   const nodesRef = useRef<Node[]>([]);
   const running = useRef(false);
 
+  const [erro, setErro] = useState<unknown>(null);
   useEffect(() => {
     client.connect().then(() => {
       client.graph().then((g) => {
@@ -51,7 +53,7 @@ export function GraphPanel() {
         setData(g);
       });
       client.gaps().then(g => setGaps(g.gaps)).catch(() => {});
-    });
+    }).catch(setErro);              // F0: falha do daemon vira estado visível
   }, []);
 
   // simulação: roda ~240 ticks e congela (re-renderiza a cada 4)
@@ -106,6 +108,8 @@ export function GraphPanel() {
     return m;
   }, [tick, data]);
 
+  if (erro) return <DaemonUnavailable error={erro}
+                     onRetry={() => client.graph()} />;
   if (!data) return <div className="p-6">Carregando grafo…</div>;
   const nodes = nodesRef.current;
   return (

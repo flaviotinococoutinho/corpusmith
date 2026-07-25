@@ -63,7 +63,12 @@ def issue_token(s: Settings) -> str:
 
 
 def build_app(s: Settings, queue: JobQueue, gov: Governor,
-              bus: EventBus, token: str | None = None) -> FastAPI:
+              bus: EventBus, token: str | None = None,
+              known_jobs: set[str] | None = None) -> FastAPI:
+    """`known_jobs` (F0): o conjunto de tipos de job válidos, INJETADO pelo
+    daemon — a camada HTTP não pode importar `jobs/` (test_architecture:
+    api fala só com facades) e a facade também não (jobs importa facades).
+    Sem ele, a checagem de pipelines do doctor fica desligada."""
     app = FastAPI(title="llmwiki", version=VERSION)
     token = token or issue_token(s)
     # identidade da INSTÂNCIA (v0.16): um snowflake por boot do daemon —
@@ -111,6 +116,23 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
     def health():
         return {"ok": True, "version": VERSION, "instance": instance_id,
                 "_links": links(self="/health", full="/health/full")}
+
+    # ---------- doctor (F0): os invariantes INV-* ganham porta HTTP ----------
+    # Até aqui DiagnoseSystem só era alcançável por `llmwiki doctor`: o app
+    # não tinha como mostrar um índice órfão nem oferecer reparo. GET é puro
+    # (CQS); o reparo é POST porque escreve — e só age no que o próprio
+    # DiagnoseSystem declara reparável (rebuild da PROJEÇÃO, nunca o canônico).
+    @app.get("/system/doctor", dependencies=[Depends(auth)])
+    def doctor():
+        from ..facades import SystemFacade
+        return SystemFacade(s, known_jobs).doctor()
+
+    @app.post("/system/doctor/repair", dependencies=[Depends(auth)])
+    def doctor_repair():
+        from ..facades import SystemFacade
+        return SystemFacade(s, known_jobs).doctor(
+            repair=True,
+            notify=lambda t, d: bus.emit("system", t, d))
 
     @app.get("/health/full", dependencies=[Depends(auth)])
     def health_full():
