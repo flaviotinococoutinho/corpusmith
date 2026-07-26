@@ -66,6 +66,22 @@ export function CurationDialog(
 
   const params = { ...offer.params, ...extras };
   const faltando = offer.needs.filter(n => !extras[n]);
+  const longo = (nome: string) => (offer.multiline ?? []).includes(nome);
+
+  // Valor inicial dos campos longos (F1-PR3): o corpo ATUAL da página. Sem
+  // isso o textarea abriria vazio e aplicar SUBSTITUIRIA a página que o
+  // usuário quis corrigir. Qual página e qual campo vêm da oferta, não de
+  // um `if (act === "edit")` aqui.
+  useEffect(() => {
+    const fontes = Object.entries(offer.prefill ?? {});
+    if (!fontes.length) return;
+    let vivo = true;
+    Promise.all(fontes.map(([nome, de]) =>
+      client.page(de.page).then(pg => [nome, pg[de.field]] as const)))
+      .then(pares => { if (vivo) setExtras(a => ({ ...a, ...Object.fromEntries(pares) })); })
+      .catch(e => { if (vivo) setErro(e); });
+    return () => { vivo = false; };
+  }, [offer]);
 
   const previsar = () => {
     if (faltando.length) return;
@@ -75,7 +91,13 @@ export function CurationDialog(
       .catch(e => { setPreview(null); setErro(e); })
       .finally(() => setOcupado(false));
   };
-  useEffect(previsar, [JSON.stringify(params)]);
+  // Debounce: o preview roda o Harness sobre a página inteira, e num campo
+  // longo cada tecla dispararia um. Nos campos curtos o atraso é
+  // imperceptível — e o `clearTimeout` garante um preview por pausa.
+  useEffect(() => {
+    const t = setTimeout(previsar, 350);
+    return () => clearTimeout(t);
+  }, [JSON.stringify(params)]);
 
   const aplicar = () => {
     setOcupado(true); setErro(null);
@@ -108,6 +130,13 @@ export function CurationDialog(
                 {offer.options[nome].map(o =>
                   <option key={o} value={o}>{o}</option>)}
               </select>
+            ) : longo(nome) ? (
+              <textarea className="block w-full border rounded px-2 py-1 mt-1
+                                   font-mono text-xs h-64"
+                        spellCheck={false}
+                        value={extras[nome]}
+                        onChange={e => setExtras(
+                          { ...extras, [nome]: e.target.value })} />
             ) : (
               <input className="block w-full border rounded px-2 py-1 mt-1"
                      value={extras[nome]}
@@ -129,7 +158,9 @@ export function CurationDialog(
           <>
             {faltando.length > 0 && (
               <p className="text-sm text-neutral-500">
-                escolha {faltando.join(", ")} para ver o que vai mudar</p>)}
+                {faltando.some(longo) ? "carregando o conteúdo atual…"
+                  : `escolha ${faltando.join(", ")} para ver o que vai mudar`}
+              </p>)}
             {ocupado && <p className="text-sm text-neutral-400 animate-pulse">
               calculando…</p>}
             {erro && (

@@ -28,12 +28,26 @@ export interface Finding {
   meta?: Record<string, unknown>;
 }
 
+export interface PageDetail {
+  path: string;
+  body: string;                  // o `prefill` do ato de edição lê DAQUI
+  meta: Record<string, unknown>;
+  git: string[];
+  related?: unknown[];
+}
+
 export interface CurationActOffer {
   act: string;
   params: Record<string, string>;
   needs: string[];
   label: string;
   options?: Record<string, string[]>;
+  // F1-PR3: campos longos (o corpo da página) e de onde vem o valor
+  // inicial. Quem declara é a oferta, no backend — a alternativa era o
+  // .tsx conhecer o nome do ato, e é justamente isso que os testes de
+  // contrato existem para evitar.
+  multiline?: string[];
+  prefill?: Record<string, { page: string; field: "body" }>;
 }
 
 export interface CurationPreview {
@@ -189,7 +203,8 @@ export class DaemonClient {
   dashboard = () => this.get<any>("/cockpit/dashboard");
   inbox = () => this.get<any>("/cockpit/inbox");
   pages = () => this.get<any>("/cockpit/pages");
-  page = (path: string) => this.get<any>(`/cockpit/page?path=${encodeURIComponent(path)}`);
+  page = (path: string) =>
+    this.get<PageDetail>(`/cockpit/page?path=${encodeURIComponent(path)}`);
   markStale = (path: string) => this.post("/cockpit/page/stale", { path });
   promote = (body: unknown) => this.post("/cockpit/promote", body);
   memory = () => this.get<any>("/cockpit/memory");
