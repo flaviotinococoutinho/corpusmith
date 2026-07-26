@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.1.0"
+version = "1.2.0"   # F2-PR1: + pattern_layer_snapshot
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -553,6 +553,50 @@ feedback_signal = ""
 evidence = ["deterministic_check"]
 misinterpretations = [
   "o worker selfcheck/graph_metrics existente NÃO constrói índice — Fase 4 é alvo com porta declarada",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+
+# ============================================ camada de padrões (F2-PR1)
+[mechanisms.pattern_layer_snapshot]
+title = "Snapshot da camada de padrões: partição repetível, datada e com backend declarado"
+decision = "atribui cada página a uma comunidade e elege as pontes frágeis; NÃO decide nome de tema (isso é o theme_id da F2-PR2) e NÃO invalida nada"
+implementation_refs = [
+  "backend/src/llmwiki/usecases/detect_communities.py",
+  "backend/db/schema_index.sql",
+]
+inductive_biases = [
+  "modularidade (Leiden) como critério de comunidade — supõe que tema é região densamente conectada, o que penaliza tema legítimo esparso",
+  "super-hub acima do p99 de grau é excluído do particionamento e atribuído pós-hoc pela maioria da vizinhança",
+  "co-menção de identificador forte em 2..30 páginas vale meia aresta inferred; acima de 30 é descartada como hub",
+  "a numeração da comunidade é DERIVADA do menor membro — rótulo estável, sem semântica (a semântica é do theme_id)",
+]
+assumptions = [
+  "o grafo vem de index.db (projeção reconstruível); páginas derivadas (communities/) são excluídas para o mapa não realimentar o grafo que o gerou",
+  "repetibilidade exige ordem canônica de aresta E seed: medido num anel de 24 nós, seed sozinho deu 6 partições distintas em 8 execuções; e sem seed, 4 processos com PYTHONHASHSEED=random divergiram",
+]
+validity_scope = [
+  "avaliado em topologias sintéticas (anel de 24 nós, 4 blocos densos em cadeia) e bundles de até 1200 páginas: grafo em 45 ms, partição em 61 ms, 58 MB de RSS",
+]
+known_failure_modes = [
+  "sem o extra [ml] o particionamento cai em COMPONENTES CONEXOS e continua sendo chamado de comunidade — o campo `backend` do snapshot existe para o doctor dizer isso em voz alta",
+  "mapa mais velho que o HEAD do bundle: reportado como INV-004 warn, nunca corrigido em silêncio",
+  "comunidade de 1 membro não recebe sumário (o mapa a conhece, a página não existe)",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "o MESMO index.db e o MESMO backend: mesma partição, rótulo a rótulo. Nenhuma garantia de que a partição seja a 'certa', nem de estabilidade entre backends (leiden e components produzem mapas diferentes por construção)"
+universal_guarantee = false
+# o fallback de componentes conexos é determinístico e DECLARADO no
+# snapshot (campo `backend`) — não é abstenção nem degradação silenciosa
+fallback = ["deterministic_fallback"]
+adaptive = false
+feedback_signal = ""
+evidence = ["deterministic_check"]
+misinterpretations = [
+  "carimbo NÃO é histórico: uma linha só, sobrescrita a cada execução — a série temporal do tema é entrega da F2-PR2",
+  "o rótulo inteiro da comunidade não é identidade de tema; comparar rótulos entre bundles diferentes não significa nada",
+  "INV-004 warn não é corrupção: mapa velho é servível com aviso, e é isso que torna o mapa usável numa máquina pequena",
 ]
 high_impact = false
 abstention_supported = false

@@ -1175,3 +1175,107 @@ com o `8b-instruct` marcado `ausente`; `complete()` real devolvendo
 total na base deste PR** (o F1-PR5 entrou em paralelo; no merge das duas
 linhas a suíte fecha em **567**, medido: 553 + 14. O delta de 14 é a
 medição deste PR; o total é propriedade da árvore, não da mudança).
+
+### ADR-43 — O mapa de padrões passa a ser repetível e datado (v1.9.1, F2-PR1)
+**Nota de numeração**: esta ADR é a **43** e não a 42 que o `docs/15` §4
+reservava para a Fase 2 — o número 42 foi publicado pelo PR da escada de
+modelo local, que saiu em paralelo. Renumerar ADR já publicada seria pior
+que aceitar um buraco na sequência reservada.
+**Contexto**: `DetectCommunities` produzia um mapa que ninguém sabia de
+quando era, que não era repetível, e cujo produtor era invisível. O `docs/15`
+listava a Fase 2 como "não é uma feature em quatro pedaços — é um objeto que
+nasce de baixo para cima", e a base é esta: sem repetibilidade, o casamento
+de partições da F2-PR2 compara ruído com ruído.
+**A repetibilidade tem duas pernas, e qual perna faz o quê foi estabelecido
+por EXECUÇÃO.** A primeira versão dos testes usava quatro blocos densos e
+passava **com e sem** a canonicalização — blocos densos são inequívocos, o
+Leiden os acha em qualquer ordem de vértice, e o teste era teatro. Num ANEL
+de 24 nós (muitos cortes quase-empatados), 8 execuções:
+
+| ordem de inserção das arestas | seed | partições distintas |
+|---|---|---|
+| variável | não | 8 |
+| variável | sim | **6** |
+| canônica | não | 1 |
+| canônica | sim | 1 |
+
+- **ordem canônica** (`sorted()` no `_partition` e no
+  `_leiden_or_components`) é o que mata a variação: a numeração de vértice do
+  `igraph` vem da ordem de inserção. **`seed` sozinho não resolve**;
+- **`seed`** é o que sobrevive a `PYTHONHASHSEED=random`, que é a condição
+  real (o daemon não fixa hash): medido em 4 processos, sem seed o de hash
+  aleatório divergiu dos outros três; com seed, os quatro idênticos.
+
+A **numeração da comunidade** virou derivada do menor membro: medido, em três
+execuções sobre o mesmo bundle o agrupamento se manteve e o rótulo inteiro
+trocou nas três — `communities` mudava sem o conhecimento ter mudado. O
+rótulo não ganha semântica com isso (D-K: a semântica é do `theme_id`), ele
+ganha **estabilidade**.
+**Um ORDER BY que entrou e SAIU.** Acrescentei `ORDER BY` nas duas queries do
+grafo achando que era o que canonizava a ordem, e removi depois de provar que
+não: a PK de `graph_edges` é `(src, dst, kind)` com dois `kind` possíveis,
+então um par recebe no máximo duas contribuições daquele laço e soma de dois
+floats é comutativa; as do laço de co-menção são todas iguais (0.25). O teste
+continuava verde com e sem o `ORDER BY`, ou seja era código infalsificável —
+custo sem ganho medido, que o `AGENTS.md` proíbe. O raciocínio ficou no
+comentário para ninguém repetir o caminho.
+**Outra medição que NÃO virou mudança**: o laço de co-menção parecia um N+1
+(uma query por entidade) e num banco sintético levou **76 s** para 10 000
+entidades. Com o índice `idx_pe_entity`, que o schema real tem, o N+1
+**empata** com uma varredura única (1,0×) — os 76 s eram artefato da minha
+tabela sintética sem índice. Registrado porque a tentação de "otimizar" isso
+vai voltar.
+**Datação** (`graph_snapshot`, index 6→7 aditiva, uma linha sobrescrita):
+`bundle_head`, `computed_at`, `backend`, `seed`, contagens. **O carimbo vem
+DEPOIS dos sumários**, e essa ordem é a correção de um defeito medido:
+`_write_summaries` escreve páginas `communities/` pelo writer e cada escrita
+é um COMMIT, então carimbar antes gravava o HEAD anterior aos próprios
+sumários — o mapa nascia "velho" e o INV-004 disparava para sempre, um alarme
+sem saída porque recomputar reproduzia a divergência.
+**O campo `backend` é o que muda a experiência numa máquina pequena.** Sem o
+extra `[ml]` compilado, o particionamento cai em **componentes conexos** e o
+produto continua chamando o resultado de "comunidade". Isso era invisível: o
+`doctor` agora expõe `graph.backend`, e quem abre um Mac de 8 GB onde o
+`igraph` não compilou passa a saber que seus "temas" são componentes conexos.
+**INV-004, e por que é WARN e não ERROR**: mapa velho não é corrupção — é
+mapa velho, e o produto tem de poder **servi-lo com aviso** em vez de
+recomputar. Essa distinção é o que torna o mapa usável onde recomputar a cada
+abertura não é opção. Duas divergências: `bundle_head` ≠ HEAD, e ponte com
+endpoint aposentado. Mapa **ausente** não é finding — instalação nova não tem
+mapa velho, tem mapa nenhum, e acusar isso viraria ruído em todo `doctor`.
+**Poda de ponte órfã**: supersedida continua no índice
+(invalidar-nunca-apagar), então não cai pela construção do grafo. E a fila do
+cockpit põe ponte frágil entre os itens de maior densidade valor/custo:
+oferecer "reforce este fio" apontando para página aposentada gasta a atenção
+que a fila existe para economizar.
+**D-E e D-I pagas**: `communities/` fora da construção do grafo (senão cada
+rodada altera o grafo da seguinte, e o DoD da F2-PR2 diz que passará a
+reindexar); `INSERT` de ponte com colunas **nomeadas** (provado por execução:
+com uma coluna nova na tabela, a gravação continua funcionando). **G-2 já
+estava paga** pelo PR-0 — a perna `backend-ml` existe e `test_ml_leiden.py`
+prova que o ramo de produção é tomado; este PR usa esse instrumento em vez de
+recriá-lo.
+**G-5 paga**: o job `leiden` estava no REGISTRY e **nunca era enfileirado**.
+Semanal (não diário) e prioridade 7 (baixa): o mapa cede a vez para tudo que
+o usuário pediu, e o INV-004 diz quando vale a pena disparar antes da hora.
+Sem o agendamento, o INV-004 seria alarme sem saída.
+**Registro epistêmico**: `[mechanisms.pattern_layer_snapshot]` nasce aqui
+(registro 1.1.0 → 1.2.0) e **cresce** nos PRs seguintes, em vez de um segundo
+mecanismo mentindo sobre o primeiro. A garantia é RELATIVA e declarada:
+mesmo `index.db` e mesmo backend ⇒ mesma partição rótulo a rótulo; nenhuma
+garantia de que a partição seja a "certa", nem de estabilidade entre
+backends. O lint recusou três termos fora do vocabulário fechado
+(`deterministic_repeatability`, `components`, `synthetic_topology`) — é para
+isso que ele existe.
+**Invariantes**: canônico ≠ projeção (`graph_snapshot` é projeção, some no
+`rebuild`) · INV-002 intocado · o doctor nunca muta o bundle · nenhum
+comportamento novo no caminho de escrita (logo ADR, não RFC).
+**Verificado num HOME real**: 4 comunidades e 3 pontes por `leiden`; mapa
+idêntico em 4 execuções; um commit novo faz o INV-004 acusar `warn` com os
+dois shas; supersedir endpoint de ponte faz o doctor acusar ponte órfã;
+recomputar limpa os dois.
+15 testes novos; **582 no total** na árvore com o ADR-42 mergeado (4 na
+perna `ml`, 1 deles novo). Medido também com `igraph`/`leidenalg` bloqueados
+no import — a condição do job `backend` e da máquina onde o extra `[ml]` não
+compilou: 578 passed, 2 skipped, zero falhas, com o carimbo, o rótulo
+canônico e a repetibilidade valendo no backend `components`.

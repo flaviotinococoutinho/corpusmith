@@ -11,6 +11,8 @@ Invariantes verificados:
   de indexação vigentes — senão está servindo chunks obsoletos;
 - INV-003: página supersedida no bundle está marcada no índice (senão
   vaza para a recuperação padrão);
+- INV-004: o mapa de padrões (comunidades/pontes) corresponde ao HEAD do
+  bundle, e nenhuma ponte aponta para página aposentada (F2-PR1);
 - PIPE:   todo estágio de pipeline referencia um job existente;
 - COG:    estado cognitivo (acessibilidade/agenda) que referencia
   página inexistente é sinalizado (não removido — é dado do usuário).
@@ -53,7 +55,8 @@ class DiagnoseSystem(UseCase):
                     + self._check_index_freshness()
                     + self._check_superseded()
                     + self._check_pipelines()
-                    + self._check_cognitive_orphans())
+                    + self._check_cognitive_orphans()
+                    + self._check_graph_snapshot())
         repaired = None
         if self._repair and any(f["inv"] in REPAIRABLE for f in findings):
             from ..retrieval.fts import rebuild_index
@@ -70,6 +73,7 @@ class DiagnoseSystem(UseCase):
         return {"ok": not findings, "findings": findings,
                 "repaired": repaired,
                 "native": self._check_native(),
+                "graph": self._graph_report(),
                 "counts": {"error": sum(f["severity"] == "error"
                                         for f in findings),
                            "warn": sum(f["severity"] == "warn"
@@ -111,6 +115,73 @@ class DiagnoseSystem(UseCase):
             report["tmp_dir_writable"] = False
         report["graph_cache"] = graph_cache_stats()
         return report
+
+    def _graph_report(self) -> dict:
+        """Estado do mapa de padrões — INFORMATIVO, ao lado do `native`.
+
+        `backend` é o campo que decide se o usuário confia no mapa: numa
+        máquina em que o extra `[ml]` não compilou, o produto cai no
+        fallback de componentes conexos e chama o resultado de
+        "comunidade". Antes do carimbo (F2-PR1) isso era invisível."""
+        idx = connect(self._settings.app_support / "index.db")
+        try:
+            row = idx.execute("SELECT * FROM graph_snapshot WHERE id=1"
+                              ).fetchone()
+        except Exception:
+            return {"computed": False}
+        finally:
+            idx.close()
+        if row is None:
+            return {"computed": False}
+        return {"computed": True, **{k: row[k] for k in row.keys()
+                                     if k != "id"}}
+
+    def _check_graph_snapshot(self) -> list[dict]:
+        """INV-004: mapa de padrões coerente com o canônico.
+
+        Duas divergências, as duas WARN e não ERROR — mapa velho não é
+        corrupção, é mapa velho, e o produto tem de poder SERVI-LO com
+        aviso em vez de recomputar. Essa distinção é o que torna o mapa
+        usável numa máquina pequena, onde recomputar do zero a cada
+        abertura não é opção.
+
+        Mapa AUSENTE não é finding: instalação nova não tem mapa velho,
+        tem mapa nenhum, e acusar isso viraria ruído em todo `doctor`
+        recém-instalado."""
+        estado = self._graph_report()
+        if not estado.get("computed"):
+            return []
+        out: list[dict] = []
+        # `_kb_head` resolve `.git` a partir do PAI do caminho dado —
+        # o mesmo argumento que o INV-002 usa (`kb/bundle`)
+        head = _kb_head(self._settings.path("knowledge") / "bundle")
+        if estado.get("bundle_head") and head \
+                and estado["bundle_head"] != head:
+            out.append({
+                "inv": "INV-004", "severity": "warn",
+                "detail": f"mapa de padrões computado em "
+                          f"{estado['bundle_head'][:8]}, HEAD em "
+                          f"{head[:8]} — comunidades e pontes podem não "
+                          f"refletir o bundle atual (rode o job `leiden`)"})
+        idx = connect(self._settings.app_support / "index.db")
+        try:
+            orfas = idx.execute(
+                "SELECT COUNT(*) c FROM graph_bridges WHERE src IN "
+                "(SELECT DISTINCT page FROM chunks WHERE superseded=1) "
+                "OR dst IN "
+                "(SELECT DISTINCT page FROM chunks WHERE superseded=1)"
+            ).fetchone()["c"]
+        except Exception:
+            orfas = 0
+        finally:
+            idx.close()
+        if orfas:
+            out.append({
+                "inv": "INV-004", "severity": "warn",
+                "detail": f"{orfas} ponte(s) frágil(is) apontando para "
+                          "página aposentada — a fila ofereceria reforçar "
+                          "um fio para lugar nenhum"})
+        return out
 
     # ------------------------------------------------------------- checks
     def _bundle_pages(self) -> set[str]:

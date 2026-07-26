@@ -110,7 +110,7 @@ Divergências do `14` marcadas com ⚠ e justificadas.
 | 6 | ✅ **F1-PR6** · deep-link da fila + `CurationDialog` — **ENTREGUE** (ADR-41.3) | 6 | ⚠ Antecipado (era 6º). Com PR1+PR2+PR4, os **dois** itens do topo da fila já têm ato com preview: converte quatro PRs de infraestrutura em algo perceptível meses antes |
 | 7 | ✅ **F1-PR3** · `EditPage` — **ENTREGUE** (ADR-41.4) | 5 | ⚠ Atrasado (era 3º). Nenhum DoD da fase inclui campo de edição de corpo — o `CurationDialog` é diff+confirmar. Ou entra **depois** do PR6 levando a superfície de edição no escopo, ou o valor prometido é reescrito para **"editável por CLI/HTTP"**. Um DoD que promete app e entrega terminal é a forma mais barata de perder a confiança que a fase existe para construir. **Resolvido pela 1ª saída**: o PR levou a superfície (`textarea` pré-preenchido, declarado pela oferta) — ver ADR-41.4 |
 | 8 | ✅ **F1-PR5** · `MergePages` — **ENTREGUE** (ADR-41.5) | 6 | Último da fase: escolher a vencedora é decisão humana sem UI, e o preview depende de `check_corpus` — ver D-D. **D-D resolvida por uma terceira saída**: o preview é O(páginas do ato), não O(bundle) |
-| 9 | **F2-PR1** · seed, carimbo, poda, INV-004, job semanal | 6 | Duas emendas **obrigatórias**: exigir a perna `[ml]` no mesmo PR (G-2) e **excluir `communities/`** da construção do grafo (D-E) |
+| 9 | ✅ **F2-PR1** · seed, carimbo, poda, INV-004, job semanal — **ENTREGUE** (ADR-**43**, não 42 — ver nota) | 6 | Duas emendas **obrigatórias**: exigir a perna `[ml]` no mesmo PR (G-2 — **já paga pelo PR-0**, o PR usou o instrumento em vez de recriá-lo) e **excluir `communities/`** da construção do grafo (D-E) |
 | 10 | **F2-PR2** · `theme_id` por casamento de partições | 8 | **RFC** (§1.1). Único PR da F2 que escreve no canônico |
 | 11 | **F2-PR3 + F2-PR4 como UM merge** | 10 | ⚠ Divirjo da decomposição em quatro. O próprio PR3 admite que "os dois devem sair na mesma semana", porque sozinho mostra `betweenness: null` e o grafo perde o tamanho por influência. Um pacote que só não é regressão se outro sair junto é **um commit, não um PR** |
 | 12 | **F3 → F4 → F5 → F6 → F7** | — | Daí em diante a ordem do `14` se sustenta. F3 exige **RFC** (§1.1); F5 herda a dívida do `MD_LINK` já resolvida na F1 |
@@ -138,7 +138,11 @@ colunas do undo para a fase não precisar de segunda migração.
 | ✅ **PR3** | `EditPage` — primeira escrita humana de corpo, **sem** `normalize_machine_body` — **ENTREGUE** | edição que viola política ⇒ 422 e bundle intacto; e o preview deixa de **subdeclarar** (diff contra os bytes crus, reformatação nomeada na nota) | A correção mais comum passa a acontecer no produto — CLI, HTTP **e app**: a oferta declara `multiline`/`prefill` e o `CurationDialog` abre `textarea` com o corpo atual (a 1ª das duas saídas da nota do §3) |
 | ✅ **PR5** | `MergePages` — união declarada, perdedora **supersedida** — **ENTREGUE** | merge preserva tags/`valid_at` e não perde byte no HEAD; região absorvida **antes** de `# Citations` (senão desarma `policy.citation_invalid` — medido) | Duas versões da mesma verdade param de conviver sem ninguém perder informação. **Emenda ao DoD**: `source_sha256`/`source`/`resource` NÃO são herdados — descrevem a fonte da origem, e a proveniência do texto absorvido fica na página de origem, linkada da região (por referência, não por cópia) |
 
-### Fase 2 — A camada de padrões como objeto (RFC + ADR-42)
+### Fase 2 — A camada de padrões como objeto (RFC + ADR-43)
+
+> **Numeração**: o `ADR-42` foi publicado por outro PR (escada de modelo
+> local) que saiu em paralelo. A Fase 2 usa **ADR-43** em diante — renumerar
+> ADR já publicada seria pior que um buraco na sequência reservada.
 
 Estratégia: **não é uma feature em quatro pedaços — é um objeto que nasce
 em três camadas de baixo para cima**, e a ordem é forçada por dependência
@@ -151,7 +155,7 @@ seguintes — evita um segundo mecanismo mentindo sobre o primeiro.
 
 | PR | Entrega | Migração | Valor isolado |
 |---|---|---|---|
-| **PR1** | `seed` no Leiden · `bundle_head`/`computed_at` · poda de pontes órfãs · **INV-004** no doctor · job `leiden` no Scheduler · perna `[ml]` na CI | index 6→7 aditiva | O mapa passa a dizer **de quando é**; o doctor acusa mapa velho e ponte apontando para página congelada |
+| ✅ **PR1** | `seed` no Leiden · `bundle_head`/`computed_at` · poda de pontes órfãs · **INV-004** no doctor · job `leiden` no Scheduler · perna `[ml]` na CI — **ENTREGUE** | index 6→7 aditiva | O mapa passa a dizer **de quando é** e **quem o produziu** (`backend`: numa máquina sem `[ml]` compilado, "comunidade" era componente conexo em silêncio); o doctor acusa mapa velho (warn — mapa velho é servível) e ponte apontando para página aposentada |
 | **PR2** | `theme_id` por casamento de partições (`themes`/`theme_epochs`, evento `born│grew│shrank│merged│split│died`) · `rel_path` derivado do `theme_id` · `_reconcile` UPDATE/SUPERSEDE · **o LLM volta a só rotular** | index 7→8 aditiva | `communities/` **para de apodrecer**: hoje cada rodada deposita um arquivo com o nome que o LLM inventou |
 | **PR3+4** | Brandes **fora do request** via `ComputeKernel` · `graph_centrality` · um snapshot compartilhado por `graph`/`insights`/`gaps` · `limit` + subgrafo · badge de frescor com ação · história do tema | index 8→9 aditiva | O produto deixa de ter data de morte: 84,3 s → **< 2 s** medido e citado no PR |
 

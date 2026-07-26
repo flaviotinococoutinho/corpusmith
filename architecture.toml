@@ -63,7 +63,7 @@ schema_version = 8          # v1.8.1: + curation_acts (ato humano, ADR-41)
 name = "index.db"
 authority = "nenhuma (projeção)"
 rebuildable = true
-schema_version = 6          # v1.8: + span_start/end no anexo (grounding)
+schema_version = 7          # F2-PR1: + graph_snapshot (carimbo do mapa)
 [[database]]
 name = "cold.db"
 authority = "memória fria"
