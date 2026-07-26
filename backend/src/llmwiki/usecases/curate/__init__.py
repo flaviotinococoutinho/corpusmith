@@ -15,14 +15,18 @@ graça, herdados do esqueleto.
 from __future__ import annotations
 from .base import CurationAct, CurationPreview
 from .invalidate import InvalidatePage
+from .link import LinkPages, UnlinkPages
 from .supersede import SupersedePage
 from .undo import UndoCurationAct, UndoNotExpressible
 
 ACTS: dict[str, type[CurationAct]] = {
     "supersede": SupersedePage,
     "invalidate": InvalidatePage,
+    "link": LinkPages,
+    "unlink": UnlinkPages,
     "undo": UndoCurationAct,
 }
 
 __all__ = ["ACTS", "CurationAct", "CurationPreview", "InvalidatePage",
-           "SupersedePage", "UndoCurationAct", "UndoNotExpressible"]
+           "LinkPages", "SupersedePage", "UndoCurationAct",
+           "UndoNotExpressible", "UnlinkPages"]

@@ -17,7 +17,16 @@ def protected_spans(text: str) -> list[tuple[int, int]]:
         spans.append(m.span())
     for m in re.finditer(r"^>.*$", text, re.M):
         spans.append(m.span())
-    for m in re.finditer(r"\]\([^)\s]*\)", text):      # só o alvo (…) do link
+    # SEGUNDA cópia do padrão de link (a primeira é okf/links.py:MD_LINK) —
+    # aqui ela protege o ALVO e o TÍTULO de qualquer detector/reescrita.
+    # F1-PR4: sem conhecer o atributo de título, esta linha devolvia span
+    # NENHUM para `[x](/p.md#k8s "rel:refines")`, e `rewrite()` corrompia o
+    # alvo no canônico (medido: `#k8s` virava `#Kubernetes`). O `*` no alvo
+    # é DELIBERADO e diferente do MD_LINK: aqui queremos proteger até o
+    # alvo vazio `[x]()`, que não é aresta mas também não pode ser mexido.
+    # Coerência com o MD_LINK é garantida pelo teste PIN comportamental.
+    for m in re.finditer(
+            r'\]\([^)\s]*(?:[ \t]+"(?:[^"\\\n]|\\.)*"[ \t]*)?\)', text):
         spans.append((m.start() + 2, m.end() - 1))
     c = _CITATIONS_H.search(text)
     if c:
