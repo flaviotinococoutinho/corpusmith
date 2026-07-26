@@ -146,8 +146,14 @@ def test_rotulo_e_canonico_pelo_menor_membro(base):
 @pytest.mark.ml
 def test_o_seed_chega_ao_leiden_de_verdade(base, monkeypatch):
     """Guarda contra a regressão mais fácil deste PR: alguém remove o
-    `seed=` e a suíte continua verde porque a topologia do teste é fácil."""
-    import leidenalg
+    `seed=` e a suíte continua verde porque a topologia do teste é fácil.
+
+    `importorskip` DENTRO do teste, não no módulo: a marca `ml` só filtra
+    quando se passa `-m ml`, e a perna `backend` da CI roda a suíte inteira
+    sem o extra. O `test_ml_leiden.py` faz o guard no topo porque lá TODO o
+    arquivo exige o extra; aqui a maioria dos testes vale nos dois backends,
+    e é justamente no fallback que o carimbo precisa dizer a verdade."""
+    leidenalg = pytest.importorskip("leidenalg", reason="requer extra [ml]")
     visto = {}
     original = leidenalg.find_partition
 
