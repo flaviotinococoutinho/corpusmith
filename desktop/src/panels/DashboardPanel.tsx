@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";   // singleton: export const client = new DaemonClient()
 import { DaemonUnavailable } from "./DaemonUnavailable";
+import { CurationDialog } from "./CurationDialog";
+import type { CurationActOffer, NextActionItem, NextActionsQueue }
+  from "../lib/daemonClient";
 
 // R3 (v1.8): action.type → aba onde a ação se realiza. Um clique leva o
 // curador à superfície certa; o deep-link à página fica para uma fase
@@ -13,8 +16,12 @@ const ACTION_TAB: Record<string, string> = {
 const navigate = (tab: string) =>
   window.dispatchEvent(new CustomEvent("bc:navigate", { detail: tab }));
 
-function NextActionsQueue() {
-  const [q, setQ] = useState<any>(null);
+function NextActionsQueue({ onApplied }: { onApplied(): void }) {
+  const [q, setQ] = useState<NextActionsQueue | null>(null);
+  // F1-PR6: o clique abre o ATO quando o item declara ofertas; quando não
+  // declara (question/inbox/review/stale/contested), continua navegando —
+  // trocar tudo por dialog regrediria 5 dos 7 kinds para "sem destino".
+  const [aberto, setAberto] = useState<CurationActOffer | null>(null);
   // F0/P-11: antes, pendente E erro caíam no MESMO `null` ⇒ a única
   // chamada-para-ação do produto desaparecia em silêncio enquanto o
   // backend varre o bundle (16-40 s a 2.000 páginas). Agora há três
@@ -47,13 +54,16 @@ function NextActionsQueue() {
           ranqueado por valor/custo</span>
       </div>
       <ol className="space-y-1 text-sm">
-        {q.actions.map((a: any, i: number) => (
+        {q.actions.map((a: NextActionItem, i: number) => (
           <li key={i}
               className="flex items-center gap-3 border rounded px-3 py-2
                          hover:bg-neutral-50">
             <button className="flex-1 text-left"
-                    title={`ir para ${ACTION_TAB[a.action.type] ?? "wiki"}`}
-                    onClick={() => navigate(ACTION_TAB[a.action.type] ?? "wiki")}>
+                    title={a.acts.length ? a.acts[0].label
+                      : `ir para ${ACTION_TAB[a.action.type] ?? "wiki"}`}
+                    onClick={() => a.acts.length
+                      ? setAberto(a.acts[0])
+                      : navigate(ACTION_TAB[a.action.type] ?? "wiki")}>
               <div className="flex items-center gap-2">
                 <span className="px-1.5 py-0.5 rounded text-[11px]
                                  bg-neutral-100 text-neutral-600 shrink-0">
@@ -62,6 +72,11 @@ function NextActionsQueue() {
               </div>
               <div className="text-xs text-neutral-500 mt-0.5">{a.reason}</div>
             </button>
+            {a.acts.slice(1).map((o, j) => (
+              <button key={j} className="border rounded px-1.5 py-0.5
+                                         text-[11px] shrink-0"
+                      title={o.label}
+                      onClick={() => setAberto(o)}>{o.act}</button>))}
             <div className="text-right text-xs tabular-nums shrink-0">
               <div title="valor de informação">VoI {a.value.toFixed(2)}</div>
               <div className="text-neutral-400"
@@ -69,6 +84,9 @@ function NextActionsQueue() {
             </div>
           </li>))}
       </ol>
+      {aberto && (
+        <CurationDialog offer={aberto} onClose={() => setAberto(null)}
+                        onApplied={() => { carregar(); onApplied(); }} />)}
     </section>
   );
 }
@@ -159,7 +177,8 @@ export function DashboardPanel() {
               </div>)}
           </div>
         </section>)}
-      <NextActionsQueue />
+      <NextActionsQueue
+        onApplied={() => client.dashboard().then(setD)} />
       {d.stale.length > 0 && (
         <section>
           <h2 className="font-medium mb-2">Stale para revisar</h2>
