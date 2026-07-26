@@ -112,14 +112,32 @@ class CurationAct(UseCase):
         descartando o resultado em vez de escrever."""
         runner = HarnessRunner(self._writer.reader, self._writer.git)
         findings = runner.run(docs, mode="write")
-        diffs = {}
+        diffs, reformatadas = {}, []
+        bundle = self._writer.bundle
         for doc in docs:
-            try:
-                antes = self._writer.reader.load(doc.rel_path).dumps()
-            except Exception:
-                antes = ""                       # página nova
-            diffs[doc.rel_path] = unified_diff(antes, doc.dumps(),
-                                               doc.rel_path)
+            # bytes CRUS do disco como "antes" (F1-PR3). Usar
+            # `reader.load().dumps()` SUBDECLARAVA: a escrita reordena as
+            # chaves do frontmatter, injeta `tags: []` e normaliza o fim do
+            # arquivo, então uma página editada à mão mudava MAIS do que o
+            # preview mostrava. Medido: ordem própria de chave + ausência de
+            # `tags` ⇒ `dumps()` != bytes no disco.
+            caminho = bundle / doc.rel_path
+            antes = caminho.read_text() if caminho.is_file() else ""
+            depois = doc.dumps()
+            diffs[doc.rel_path] = unified_diff(antes, depois, doc.rel_path)
+            if antes:
+                try:
+                    canonico = self._writer.reader.load(doc.rel_path).dumps()
+                except Exception:
+                    canonico = antes
+                if canonico != antes:
+                    reformatadas.append(doc.rel_path)
+        if reformatadas:
+            note = (note + ("; " if note else "")
+                    + "esta escrita também NORMALIZA o formato de "
+                    + ", ".join(reformatadas)
+                    + " (ordem das chaves do frontmatter, campos com default, "
+                      "fim do arquivo) — o diff mostra isso junto")
         return CurationPreview(act=act, pages=[d.rel_path for d in docs],
                                diffs=diffs,
                                findings=[f.__dict__ for f in findings],

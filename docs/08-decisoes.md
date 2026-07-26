@@ -870,3 +870,144 @@ Se o processo morrer entre os dois, o canônico mudou e a trilha não sabe —
 recuperável, porque o Git é a autoridade e o commit carrega a mensagem do
 ato; e um segundo undo restauraria o mesmo conteúdo (idempotente, sem perda).
 14 testes novos; 437 no total.
+
+#### ADR-41.2 — A relação vai ao canônico por REGIÃO, não por link (F1-PR4)
+**Contexto**: `bridge_items` já entregava `action.type='link'` com `src` e
+`dst`, e esse item — o de maior densidade valor/custo da fila — levava ao
+painel Grafo, que não tem afordância de aresta. Faltava o ato. O problema
+difícil não é escrever o link: é o `unlink` distinguir o link que o ATO pôs
+do que o HUMANO escreveu na prosa. Remover o do humano seria reescrever
+prosa (v0.8 §1.2).
+**Decisão**: proveniência por **região sentinelada**
+(`<!-- llmwiki:relacionados -->` … `<!-- /llmwiki:relacionados -->`, em
+`okf/relations.py`). Tudo entre as sentinelas é território do ato; tudo
+fora é do autor, e o ato **não olha**. Quando isso significa que a aresta
+SOBREVIVE ao unlink (porque a prosa também cita o alvo), o preview
+**declara** — contrato explícito em vez de um "não funcionou" silencioso.
+A gramática da entrada é `- ` + `MD_LINK.fullmatch`: **nenhum regex novo**
+de link nasce aqui.
+**Três armadilhas medidas no design, cada uma virou teste**:
+1. **sentinela apagada à mão engole prosa** — com regex guloso, 2 aberturas
+   e 1 fechamento casam da primeira abertura ao único fechamento e a
+   re-renderização APAGA a prosa do meio; cenário banal num produto que
+   convida a editar o `.md`. A guarda é sobre a **contagem de sentinelas**,
+   não sobre blocos casados: qualquer estado que não seja 0 ou 1 par
+   completo recusa com motivo nomeado;
+2. **sentinela dentro de cerca de código** — a primeira vítima seria a
+   página que documenta esta feature. Descartadas via `protected_spans`;
+3. **entrada puramente numérica** desarmaria `policy.citation_invalid`, o
+   que legitimaria citação fabricada. `entry_text` nunca é só número.
+**D-A resolvida (a decisão do `MD_LINK`)**: o parser passou a ler o
+atributo de título (`[t](/p.md "rel:refines")`) com **grupos nomeados
+obrigatórios** — capturar o `!` de imagem renumera posicionais. A análise
+inicial concluiu "aditivo, seguro" e estava **cega para a segunda cópia do
+padrão** em `normalize/masking.py`, que protege o alvo do link dos
+detectores. Corrigir só `links.py` teria HABILITADO corrupção do canônico:
+verificado por execução que `rewrite()` transformava `/p.md#k8s` em
+`/p.md#Kubernetes` — e o Harness **não** pegaria, porque valida o corpo já
+montado. As duas cópias não podem compartilhar código (`normalize/` é puro
+e não importa `okf/`), então um teste PIN **comportamental** costura as
+duas. `safe_link_text()` nasceu porque `md_link` com `]` no título emitia
+um NÃO-link.
+**Invariantes**: prosa humana nunca reescrita · gate inescapável ·
+canônico ≠ projeção (a relação vai ao canônico; a aresta é projeção do
+`rebuild`) · CQS · 1 método público. link→unlink devolve o arquivo byte a
+byte, e o undo de um link funciona pelo mesmo rito, sem caso especial.
+56 testes novos (42 de link + 14 do ato); 493 no total.
+
+#### ADR-41.3 — O clique da fila abre o ATO, com preview (F1-PR6)
+**Contexto**: o clique era uma **projeção destrutiva** — lia
+`a.action.type`, jogava fora `src`/`dst`/`pages`/`identifier` e virava nome
+de aba. Para o item `bridge` o payload já trazia `{src, dst}`, que **é** a
+assinatura de `LinkPages`: o PR não precisou inventar dado, só parar de
+descartar.
+**Decisão**: `acts_for(item)` como **função de módulo separada** em
+`next_actions.py` (a Fase 3 reescreve ranking e fontes deste arquivo, então
+substitui uma função em vez do módulo — colisão mapeada em `docs/15` §6). O
+enriquecimento entra em **uma linha antes do sort**, com teste de guarda de
+que a ordenação não muda. `params` é o que já se sabe; `needs` é o que o
+humano ainda escolhe. `CurationDialog` genérico: preview → diff colorido →
+aplicar; botão DESABILITADO quando `blocked`, e o dialog **não fecha
+sozinho**, porque a resposta traz o sha do commit — única prova visível de
+que o ato virou história no Git.
+**O que NÃO se oferece, e por quê** (em todos os casos os parâmetros
+fechariam — a recusa é **semântica**): `unlink` para ponte destruiria
+justamente o fio que o item pede para reforçar; `invalidate` para
+stale/contested afirmaria que o fato EXPIROU NO MUNDO, coisa que "precisa
+de revisão" e "deu beco" nunca declararam — poria uma mentira datada a um
+clique do gate; `supersede` com uma página só levantaria `ValueError` já no
+plano (`page == successor`), então a guarda `len(pages) >= 2` evita um botão
+que sempre falha. Kinds sem ato saem com lista **vazia**, declarada.
+**Contrato de que o dialog depende**: preview bloqueado é **200 com
+`blocked: true`** (no dry-run o `return` precede o `raise`); o mesmo corpo
+com `dry_run: false` é **422** nomeado.
+**Garantia honesta, declarada por escrito**: não existe runner de teste de
+UI no desktop (só `tsc --noEmit` no gate) e o `docs/15` rejeitou
+teste-por-grep em `.tsx` ("passa a verde com um comentário e falha com um
+rename"). A garantia tem duas pernas: **tipagem** no `daemonClient` (virou
+gate — renomear `acts` quebra o `tsc` em 4 lugares) e **contrato no
+backend** (20 testes, o mais forte provando por `inspect.signature` que
+`params ∪ needs` constroem o ato, para as assinaturas não migrarem para o
+`.tsx`). O que isso **não** prova: que o `onClick` foi religado.
+20 testes novos; 513 no total.
+
+#### ADR-41.4 — `EditPage`: a primeira escrita HUMANA de corpo (F1-PR3)
+**Contexto**: é o mais consequente dos dois atos que faltavam. Fecha a
+falha da **"1ª correção"** da tabela de viabilidade do `docs/14`: o painel
+Wiki era somente-leitura com um botão ("marcar stale"), não existia use
+case, endpoint nem CLI de edição, e corrigir uma página exigia **sair do
+produto** — onde o `doctor` nem detecta a divergência, porque INV-002
+compara `bundle_head` com o HEAD do Git e edição não commitada não move o
+HEAD. É também o ato que resolve `contested`: uma página que "deu beco" não
+expirou no mundo (não é `invalidate`) nem tem sucessora (não é
+`supersede`) — o que ela precisa é ter o corpo corrigido.
+**Decisão**: `EditPage(page, body=None, meta_patch=None)` herdando o
+esqueleto — mais um arquivo em `usecases/curate/` e uma entrada em `ACTS`,
+sem schema, sem endpoint e sem CLI novos. **A prosa vai COMO ESCRITA**:
+`normalize_machine_body` é o eixo de MÁQUINA (v0.8 §1.2) e um ato humano
+que a chamasse reescreveria o texto do autor — testado com grafia
+idiossincrática que o gazetteer canonizaria (`postgres` minúsculo
+sobrevive). O `meta_patch` **mescla**.
+**Três recusas, com motivo nomeado**: edição vazia (`nada a editar`);
+renomear por patch (`rel_path`/`path` — a identidade OKF **é** o caminho da
+página, e renomear criaria duas verdades sobre a mesma coisa); **remover**
+campo de frontmatter (apagar declaração é gesto diferente de corrigir, e o
+gate acusaria `policy.metadata_shrink` de qualquer modo).
+**O achado deste PR — o preview SUBDECLARAVA**. `_preview_write` usava
+`reader.load().dumps()` como "antes". Medido: numa página editada à mão
+(ordem própria de chave, sem `tags`), `dumps()` reordena o frontmatter,
+injeta o campo com default e normaliza o fim do arquivo — então o usuário
+via **só a mudança que pediu** e o disco mudava mais. Nos atos anteriores
+isso passava porque suceder/invalidar só carimbam frontmatter de página já
+canônica; com edição de corpo humano, é a página editada à mão que é o caso
+típico. Corrigido: o diff é contra os **bytes CRUS do disco**, e quando a
+forma canônica difere deles a nota **nomeia a reformatação**. Vale para
+todos os atos, não só para este.
+**Mudança de comportamento declarada**: `contested` e `stale` deixam de sair
+com lista vazia e passam a oferecer `edit` — dois testes do F1-PR6 foram
+**atualizados** (não contornados), preservando o ponto semântico de que
+`invalidate` continua recusado para os dois. Corrigir o corpo não afirma
+nada sobre o mundo.
+**A superfície entrou no escopo** — a nota do `docs/15` dava duas saídas
+(entrar depois do PR6 levando a superfície, ou reescrever o valor para
+"editável por CLI/HTTP") e esta é a primeira. O `CurationDialog` já roteava
+qualquer ato de `ACTS`, mas renderizava um `<input>` de UMA LINHA por
+`needs`, e o `needs` do `edit` é o texto inteiro da página: aplicar teria
+SUBSTITUÍDO a página que o usuário quis corrigir. A oferta passou a
+**declarar** `multiline` e `prefill` (de qual página e qual campo vem o
+valor inicial), e o dialog renderiza `textarea` pré-preenchido com o corpo
+ATUAL, lido do `GET /cockpit/page` que a oferta aponta. Quem declara é o
+backend, não um `if (act === "edit")` no `.tsx` — mesma razão dos testes de
+contrato do ADR-41.3. O preview ficou com **debounce** de 350 ms: sem ele,
+cada tecla num campo longo dispararia um `HarnessRunner` sobre a página
+inteira. `PageDetail` deixou de ser `any` no cliente, então o `prefill`
+indexando `body` é verificado pelo `tsc` (provado: renomear o campo quebra
+o typecheck; renomear `multiline` quebra em outro ponto).
+**Verificado num HOME real**: página com erro de digitação, dry-run
+mostrando **as duas** coisas (a correção pedida e a reformatação), apply
+produzindo o canônico corrigido, `curate undo` trazendo o erro de volta
+pelo mesmo rito, `doctor` verde. E a cadeia que o dialog percorre provada
+ponta a ponta pelos endpoints reais: oferta → `GET /cockpit/page` →
+reenvio do corpo intocado dando **diff vazio** (aplicar sem digitar é NOOP)
+→ preview da correção → apply → undo.
+18 testes novos; 531 no total.

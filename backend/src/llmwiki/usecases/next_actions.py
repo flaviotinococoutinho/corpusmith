@@ -62,11 +62,13 @@ _ACTION_TYPE = {
 # o .tsx, onde nenhum teste de backend as alcança.
 #
 # Silêncio deliberado: kinds sem ato saem com lista VAZIA em vez de uma
-# oferta que falharia. `stale` e `contested` são os casos tentadores —
-# os parâmetros de `invalidate` fecham, mas invalidar afirma que o fato
-# EXPIROU NO MUNDO, coisa que "precisa de revisão" (stale) e "deu beco"
-# (contested) nunca afirmaram. O ato certo para eles é o EditPage do
-# F1-PR3. Oferecer aqui seria pôr uma mentira datada a um clique do gate.
+# oferta que falharia — `question`, `inbox` e `review` continuam navegando.
+# E o que se RECUSA a oferecer é decisão semântica, não técnica (em todos
+# os casos os parâmetros fechariam): `invalidate` para stale/contested
+# afirmaria que o fato EXPIROU NO MUNDO, coisa que "precisa de revisão" e
+# "deu beco" nunca declararam; `unlink` para ponte destruiria justamente o
+# fio que o item pede para reforçar. Desde o F1-PR3, stale e contested
+# oferecem `edit` — corrigir o corpo não afirma nada sobre o mundo.
 def acts_for(item: dict) -> list[dict]:
     """Ofertas de ato para um item da fila (lista vazia = só navegação)."""
     kind = item.get("kind")
@@ -98,6 +100,22 @@ def acts_for(item: dict) -> list[dict]:
                 "label": "Suceder uma das páginas em conflito",
                 "options": {"page": [p for p in pages if p != alvo]}})
         return ofertas
+    if kind in ("contested", "stale"):
+        # F1-PR3: o ato que estes kinds pediam existe agora. Corrigir o
+        # corpo NÃO afirma nada sobre o mundo — é o gesto certo para "deu
+        # beco" e para "precisa de revisão", ao contrário de `invalidate`,
+        # que segue fora por afirmar expiração que nenhum dos dois declara.
+        alvo = item.get("target")
+        if alvo:
+            # `body` não é um campo curto como `page`: é o texto inteiro. A
+            # oferta DECLARA isso (`multiline`) e de onde o valor inicial
+            # vem (`prefill`), em vez de a interface saber o nome do ato —
+            # sem prefill, o campo abriria vazio e aplicar APAGARIA a
+            # página que o usuário quis corrigir.
+            return [{"act": "edit", "params": {"page": alvo},
+                     "needs": ["body"], "multiline": ["body"],
+                     "prefill": {"body": {"page": alvo, "field": "body"}},
+                     "label": "Corrigir o corpo da página"}]
     return []
 
 

@@ -108,16 +108,27 @@ def test_params_ofertados_constroem_o_ato_de_verdade():
 
 
 # ================================= o que NÃO se oferece, e por quê
-@pytest.mark.parametrize("kind", ["review", "question", "contested",
-                                  "stale", "inbox"])
+@pytest.mark.parametrize("kind", ["review", "question", "inbox"])
 def test_kinds_sem_ato_declaram_lista_vazia(kind):
-    """Declarado, não escondido: estes continuam navegando por aba.
-    `stale`/`contested` são os tentadores — os params de `invalidate`
-    fecham, mas invalidar afirma que o fato EXPIROU NO MUNDO, e nem
-    "precisa de revisão" nem "deu beco" afirmaram isso."""
+    """Declarado, não escondido: estes continuam navegando por aba."""
     assert acts_for({"kind": kind, "target": "concepts/x.md",
                      "action": {"type": "read",
                                 "target": "concepts/x.md"}}) == []
+
+
+@pytest.mark.parametrize("kind", ["contested", "stale"])
+def test_stale_e_contested_oferecem_edit_e_nunca_invalidate(kind):
+    """A recusa que IMPORTA aqui é semântica e permanece: `invalidate`
+    afirma que o fato EXPIROU NO MUNDO, e nem "precisa de revisão" (stale)
+    nem "deu beco" (contested) afirmaram isso — os parâmetros fechariam.
+    Desde o F1-PR3 estes kinds oferecem `edit`: corrigir o corpo não
+    afirma nada sobre o mundo."""
+    ofertas = acts_for({"kind": kind, "target": "concepts/x.md",
+                        "action": {"type": "resolve",
+                                   "target": "concepts/x.md"}})
+    atos = {o["act"] for o in ofertas}
+    assert atos == {"edit"}
+    assert "invalidate" not in atos
 
 
 def test_ponte_nao_oferece_unlink():
