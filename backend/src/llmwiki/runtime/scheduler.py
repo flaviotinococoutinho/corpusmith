@@ -2,6 +2,20 @@
 
 - revisão semanal (segunda-feira) — dedupe por semana ISO
 - varredura de embeddings pendentes (diária)
+- mapa de padrões (semanal) — F2-PR1
+
+O `leiden` estava no REGISTRY de jobs e **nunca era enfileirado** (G-5 do
+`docs/15`): quem quisesse o mapa atualizado tinha de saber que existe um
+job e disparar à mão. Com o carimbo do F2-PR1, um mapa que ninguém recomputa
+passa a ser um mapa que o doctor acusa de velho para sempre — o INV-004 sem
+o agendamento seria um alarme sem saída.
+
+**Semanal, não diário, e por medição.** O particionamento é a operação mais
+cara fora do request, e o mapa de temas muda em escala de semanas, não de
+horas: recomputar toda noite numa máquina pequena gasta a janela em que o
+usuário poderia estar usando o produto. A urgência real é coberta por outro
+caminho: quem quiser o mapa agora dispara o job (o INV-004 diz quando vale
+a pena).
 """
 from __future__ import annotations
 import threading
@@ -32,6 +46,10 @@ class Scheduler(threading.Thread):
                                    dedupe_key=f"review:{week}")
                 self.queue.enqueue("metacog", {}, priority=5,
                                    dedupe_key=f"metacog:{week}")
+                # F2-PR1: prioridade BAIXA de propósito — o mapa de padrões
+                # cede a vez para tudo que o usuário pediu
+                self.queue.enqueue("leiden", {}, priority=7,
+                                   dedupe_key=f"leiden:{week}")
             today = time.strftime("%Y-%m-%d")
             self.queue.enqueue("embed", {}, priority=3,
                                dedupe_key=f"embed:{today}")

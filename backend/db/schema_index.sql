@@ -89,3 +89,25 @@ CREATE TABLE IF NOT EXISTS page_overlay(
   page TEXT PRIMARY KEY,
   status TEXT CHECK(status IN ('preferred','tentative','contested')),
   useful INTEGER DEFAULT 0, dead INTEGER DEFAULT 0, updated REAL);
+
+-- ============================ v1.9.1 · F2-PR1 (ADR-43) ============================
+-- CARIMBO do snapshot da camada de padrões: o mapa passa a dizer DE QUANDO é e
+-- COMO foi produzido. Uma linha só (`id=1`), sobrescrita a cada execução —
+-- projeção 100% derivada, como todo o index.db (INV-002).
+--
+-- `backend` importa mais do que parece numa máquina onde o extra [ml] não
+-- compilou: hoje o produto cai no fallback de componentes conexos EM SILÊNCIO e
+-- chama o resultado de "comunidade". Registrar quem produziu o mapa é o que
+-- permite o doctor dizer isso em voz alta (INV-004).
+CREATE TABLE IF NOT EXISTS graph_snapshot(
+  id            INTEGER PRIMARY KEY CHECK(id = 1),
+  bundle_head   TEXT NOT NULL,      -- HEAD do Git quando o mapa foi computado
+  computed_at   REAL NOT NULL,      -- epoch UTC
+  backend       TEXT NOT NULL       -- 'leiden' | 'components'
+                CHECK(backend IN ('leiden','components')),
+  seed          INTEGER,            -- NULL só no fallback (não é aleatório)
+  nodes         INTEGER NOT NULL,
+  edges         INTEGER NOT NULL,
+  communities   INTEGER NOT NULL,
+  bridges       INTEGER NOT NULL,
+  hubs_excluded INTEGER NOT NULL);
