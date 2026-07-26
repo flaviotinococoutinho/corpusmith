@@ -1279,3 +1279,72 @@ perna `ml`, 1 deles novo). Medido também com `igraph`/`leidenalg` bloqueados
 no import — a condição do job `backend` e da máquina onde o extra `[ml]` não
 compilou: 578 passed, 2 skipped, zero falhas, com o carimbo, o rótulo
 canônico e a repetibilidade valendo no backend `components`.
+
+### ADR-44 — Brandes fora do request, pelo kernel que já existia (v1.9.2, F2-PR3+4)
+**Contexto**: o `docs/14` dizia que o produto tem "data de morte", e o número
+está no `benchmarks/baseline.json`: Brandes em Python custa **88 058 ms** a
+5000 nós contra **1 944 ms** em Rust (45×). Duas coisas somavam nisso, as duas
+**medidas antes de escrever**:
+
+| páginas | arestas | `graph_data` | quanto era Brandes | `gaps` |
+|---|---|---|---|---|
+| 100 | 909 | 25 ms | 52 % | 25 ms |
+| 300 | 2 729 | 157 ms | 76 % | 152 ms |
+| 600 | 5 459 | 610 ms | 82 % | 589 ms |
+| 1 200 | 10 919 | **2 571 ms** | **95 %** | 2 610 ms |
+
+E o achado que reposicionou o diagnóstico: **o caminho quente ignorava o
+`ComputeKernel`**. O kernel selecionava `rust` e o `observatory` chamava o
+`betweenness_centrality` PURO em Python direto — a camada nativa estava paga
+(ADR-39) e não estava sendo usada onde mais doía.
+**Decisão**: a intermediação vira **projeção persistida** (`graph_centrality`,
+index 7→8 aditiva), computada pelo job `leiden` **através do kernel**. Quem
+constrói o grafo é quem mede quem articula. O request lê uma tabela.
+**Resultado medido**: `graph_data` a 1200 páginas passa de **2571 ms para
+139 ms** (18,5×); `gaps`, de 2610 ms para 164 ms. O job leva 18,5 s, uma vez,
+semanal e com prioridade 7.
+**A garantia que sustenta o ganho** não é o tempo — é que os valores
+persistidos são **idênticos** aos que o request calculava, com teste que
+compara todos contra o kernel puro. "18× mais rápido" sem isso poderia ser só
+"passou a responder outra coisa". Para tanto, o kernel lê `graph_edges` da
+MESMA conexão e aplica o MESMO `EDGE_WEIGHT`. Alimentá-lo com o `adjacency` do
+leiden era o caminho tentador e estava errado por duas razões: ele carrega
+arestas de co-menção que a centralidade nunca teve, e `load_edges` mapeia o
+terceiro campo por `EDGE_WEIGHT`, então **peso já acumulado viraria 0.5 para
+tudo**, em silêncio.
+**Degradação declarada**: centralidade não medida ⇒ `betweenness` 0.0 e
+`centrality.computed: false`. A chave nunca sai do payload (D-J: há teste de
+shape que depende dela), a interface serve **grau** em vez de inventar
+influência, e o badge de frescor **oferece o job**. Falha do kernel não
+derruba o job: a centralidade é enfeite do mapa, não o mapa (ADR-39 §22 —
+ausência de camada nativa é comportamento suportado), então sai `none` e o
+mapa sai inteiro.
+**Migração com armadilha paga**: `graph_snapshot` nasceu na v7 sem
+`centrality_backend`, e `CREATE TABLE IF NOT EXISTS` **não** acrescenta coluna
+a tabela existente — sem o `ALTER` no `_migrate`, o carimbo falharia na
+PRIMEIRA escrita de qualquer `index.db` v7. Há teste que recria a tabela no
+formato v7 e prova o upgrade.
+**O que o `docs/15` pedia e NÃO entrou, por medição**: "um snapshot
+compartilhado por `graph`/`insights`/`gaps`". A premissa era o Brandes de
+84,3 s; com ele fora, a montagem inteira custa 139 ms, e os três são requests
+HTTP **separados** — compartilhar exigiria cache por geração, que compraria
+~100 ms ao preço de servir `page_heat` velho. Cheguei a escrever o parâmetro
+`graph=` em `structural_gaps` (medido: 164 → 42 ms) e o **removi por não ter
+chamador**: mesma disciplina que tirou o `ORDER BY` do ADR-43. Quando um
+endpoint precisar dos dois, ele volta junto com o caso de uso.
+**Também não entrou**: "história do tema", que depende do `theme_id` do
+F2-PR2 — e o PR2 exige **RFC** (`AGENTS.md` §8: heurística no caminho de
+escrita). Entregar história de tema sem identidade de tema seria série
+temporal de um rótulo que muda de significado.
+**`limit` é do TRANSPORTE, não do cálculo**: `total_nodes`/`total_edges`/
+`truncated` continuam falando do grafo inteiro, senão o recorte viraria
+mentira sobre o tamanho da rede. Ordenação por heat, grau e `page` — o
+terceiro critério existe para o recorte não "piscar" entre execuções.
+**A tipagem do badge virou gate**, e não era: `GraphPanel` guardava o payload
+em `useState<any>`, então renomear `centrality.computed` no backend não
+quebrava nada. Com o estado tipado, quebra em dois pontos — verificado por
+execução.
+**Invariantes**: canônico ≠ projeção (`graph_centrality` sai no rebuild) ·
+INV-002 e INV-004 intocados · nenhuma escrita no bundle · CQS.
+11 testes novos; **593 no total** (4 na perna `ml`), e 589+2 skip com
+`igraph`/`leidenalg` bloqueados no import.

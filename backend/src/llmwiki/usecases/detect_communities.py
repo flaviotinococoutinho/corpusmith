@@ -119,6 +119,7 @@ class DetectCommunities(UseCase):
         idx = connect(self._settings.app_support / "index.db")
         adjacency = self._weighted_graph(idx)
         bridges = self._store_bridges(idx, adjacency)
+        centrality_backend = self._store_centrality(idx, adjacency)
         communities, backend, hubs = self._partition(adjacency)
         idx.execute("DELETE FROM communities")
         idx.executemany("INSERT INTO communities(page,community) VALUES (?,?)",
@@ -134,15 +135,66 @@ class DetectCommunities(UseCase):
         # nascia "velho" e o INV-004 disparava para sempre — um alarme sem
         # saída, porque recomputar reproduzia a divergência.
         self._stamp(idx, backend=backend, nodes=len(adjacency), edges=edges,
-                    communities=len(distinct), bridges=bridges, hubs=hubs)
+                    communities=len(distinct), bridges=bridges, hubs=hubs,
+                    centrality_backend=centrality_backend)
         idx.close()
         return {"communities": len(distinct), "pages": len(communities),
                 "summaries": summaries, "backend": backend,
-                "bridges": bridges}
+                "bridges": bridges, "centrality_backend": centrality_backend}
+
+    # -------------------------------------------------- centralidade (PR3+4)
+    def _store_centrality(self, idx, adjacency) -> str:
+        """Brandes FORA do request, pelo `ComputeKernel`.
+
+        Duas correções num gesto, as duas medidas:
+
+        1. **fora do request**. Brandes era 95% do custo de `/cockpit/graph` a
+           1200 páginas (2571 ms de 2571; a 100 páginas era 52%), cresce
+           ~O(n²) e o baseline registra 88 s a 5000 nós. E `structural_gaps`
+           chamava `graph_data`, então abrir Grafo e Insights pagava DUAS
+           vezes. Agora o request lê uma tabela;
+        2. **pelo kernel**. O `ComputeKernel` seleciona `rust` quando existe —
+           e o `observatory` chamava o `betweenness_centrality` PURO em Python
+           direto, ignorando o kernel selecionado. O baseline mede 88 058 ms
+           (python) contra 1 944 ms (rust) a 5000 nós: 45×. A camada nativa
+           estava paga e não estava sendo usada no caminho quente.
+
+        Devolve o nome do backend que mediu, para o carimbo declarar. Falha do
+        kernel NÃO derruba o job: a centralidade é um enfeite do mapa, não o
+        mapa — devolve `none` e a interface serve grau (ADR-39 §22: ausência
+        de camada nativa é comportamento suportado, não erro).
+        """
+        idx.execute("DELETE FROM graph_centrality")
+        if not adjacency:
+            idx.commit()
+            return "none"
+        try:
+            from ..compute import get_kernel
+            kernel = get_kernel(self._settings)
+            nome = kernel.backend_info().name
+            # O kernel lê `graph_edges` da MESMA conexão e aplica o MESMO
+            # `EDGE_WEIGHT` que o `observatory` aplicava — então os valores
+            # persistidos são idênticos aos que o request calculava, e este PR
+            # é mudança de ONDE e de QUAL kernel, não de QUANTO. Alimentar o
+            # `adjacency` do leiden aqui seria tentador e estaria errado por
+            # duas razões: ele carrega arestas de co-menção que a
+            # centralidade nunca teve, e `load_edges` mapeia o terceiro campo
+            # por `EDGE_WEIGHT`, então peso já acumulado viraria 0.5 para tudo.
+            grafo = kernel.load_graph(index_path="", connection=idx)
+            centralidade = kernel.betweenness(grafo)
+        except Exception:                            # noqa: BLE001
+            idx.commit()
+            return "none"
+        idx.executemany(
+            "INSERT INTO graph_centrality(page, betweenness) VALUES (?,?)",
+            sorted((p, float(v)) for p, v in centralidade.items()))
+        idx.commit()
+        return nome if nome in ("python", "rust") else "none"
 
     # -------------------------------------------------------------- carimbo
     def _stamp(self, idx, *, backend: str, nodes: int, edges: int,
-               communities: int, bridges: int, hubs: int) -> None:
+               communities: int, bridges: int, hubs: int,
+               centrality_backend: str = "none") -> None:
         """`graph_snapshot`: de quando é o mapa, e quem o produziu.
 
         Uma linha só, sobrescrita — o histórico do tema é entrega da F2-PR2,
@@ -155,11 +207,11 @@ class DetectCommunities(UseCase):
         idx.execute("DELETE FROM graph_snapshot")
         idx.execute(
             "INSERT INTO graph_snapshot(id, bundle_head, computed_at, backend,"
-            " seed, nodes, edges, communities, bridges, hubs_excluded) "
-            "VALUES (1,?,?,?,?,?,?,?,?,?)",
+            " seed, nodes, edges, communities, bridges, hubs_excluded,"
+            " centrality_backend) VALUES (1,?,?,?,?,?,?,?,?,?,?)",
             (head, time.time(), backend,
              LEIDEN_SEED if backend == "leiden" else None,
-             nodes, edges, communities, bridges, hubs))
+             nodes, edges, communities, bridges, hubs, centrality_backend))
         idx.commit()
 
     # -------------------------------------------------------------- grafo

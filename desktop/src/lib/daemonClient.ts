@@ -28,6 +28,29 @@ export interface Finding {
   meta?: Record<string, unknown>;
 }
 
+// F2-PR3+4: o grafo declara DE QUANDO é a intermediação e QUEM a mediu.
+// `computed: false` = ainda não medida — a interface serve grau em vez de
+// inventar influência, e o badge oferece o job que a mede.
+export interface GraphCentrality {
+  computed: boolean;
+  backend: "none" | "python" | "rust";
+  computed_at: number | null;
+  bundle_head: string | null;
+  pages: number;
+}
+
+export interface GraphData {
+  nodes: Array<Record<string, unknown> & {
+    page: string; degree: number; betweenness: number; community: number;
+  }>;
+  edges: Array<{ src: string; dst: string; confidence: string;
+                 bridge?: boolean }>;
+  centrality: GraphCentrality;
+  total_nodes: number;
+  total_edges: number;
+  truncated: boolean;
+}
+
 export interface PageDetail {
   path: string;
   body: string;                  // o `prefill` do ato de edição lê DAQUI
@@ -232,7 +255,8 @@ export class DaemonClient {
   recycle = (path: string) => this.post<any>("/cockpit/recycle", { path });
   cold = () => this.get<any>("/cockpit/cold");
   // ------------------------------------------------ Fase 5 (v0.15)
-  graph = () => this.get<any>("/cockpit/graph");
+  graph = (limit = 0) =>
+    this.get<GraphData>(`/cockpit/graph${limit ? `?limit=${limit}` : ""}`);
   insights = () => this.get<any>("/cockpit/insights");
   gaps = () => this.get<any>("/cockpit/gaps");   // v1.1: lacunas estruturais
   nextActions = (limit = 40) =>                  // R3 (v1.8): fila única

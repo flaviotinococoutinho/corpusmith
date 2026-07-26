@@ -8,6 +8,7 @@
 // pergunta-ponte como question.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { client } from "../lib/client";
+import type { GraphData } from "../lib/daemonClient";
 import { DaemonUnavailable } from "./DaemonUnavailable";
 
 const PALETTE = ["#6366f1", "#059669", "#d97706", "#dc2626", "#0891b2",
@@ -30,11 +31,14 @@ function colorOf(node: any, mode: string): string {
 }
 
 export function GraphPanel() {
-  const [data, setData] = useState<any>(null);
+  // F2-PR3+4: `any` aqui tornava o badge de frescor INVISÍVEL ao `tsc`
+  // — renomear `centrality.computed` no backend não quebrava nada.
+  const [data, setData] = useState<GraphData | null>(null);
   const [mode, setMode] = useState("type");
   const [selected, setSelected] = useState<any>(null);
   const [gaps, setGaps] = useState<any[]>([]);
   const [notice, setNotice] = useState("");
+  const [medindo, setMedindo] = useState(false);
   const [tick, setTick] = useState(0);
   const nodesRef = useRef<Node[]>([]);
   const running = useRef(false);
@@ -117,6 +121,39 @@ export function GraphPanel() {
       <div className="flex-1 flex flex-col min-w-0">
         <div className="p-2 border-b flex items-center gap-3 text-xs">
           <span className="font-semibold text-sm">🕸 Grafo</span>
+          {/* F2-PR3+4: badge de frescor COM AÇÃO. Antes, um grafo cuja
+              intermediação nunca foi medida mostrava `betweenness: 0` para
+              tudo e parecia uma rede sem articuladores — indistinguível de
+              "ainda não calculei". O job que mede está a um clique, e o
+              badge diz por qual kernel (numa máquina onde o extra nativo não
+              existe, o mesmo cálculo é ~45× mais lento). */}
+          {data.centrality && !data.centrality.computed && (
+            <span className="flex items-center gap-1 text-amber-700">
+              ⏳ articulação não medida — o tamanho mostra grau
+              <button className="border rounded px-1.5 py-0.5
+                                 disabled:opacity-40"
+                      disabled={medindo}
+                      onClick={() => {
+                        setMedindo(true);
+                        client.enqueue("leiden")
+                          .then(() => setNotice(
+                            "mapa enfileirado — recarregue quando terminar"))
+                          .catch(e => setNotice(String(e)))
+                          .finally(() => setMedindo(false));
+                      }}>
+                {medindo ? "enfileirando…" : "medir agora"}
+              </button>
+            </span>)}
+          {data.centrality?.computed && (
+            <span className="text-neutral-500"
+                  title={`intermediação de ${data.centrality.pages} páginas, `
+                       + `medida pelo kernel ${data.centrality.backend}`}>
+              articulação por {data.centrality.backend}
+            </span>)}
+          {data.truncated && (
+            <span className="text-neutral-500">
+              mostrando {data.nodes.length} de {data.total_nodes} nós
+            </span>)}
           <label>cor por{" "}
             <select className="border rounded p-1" value={mode}
                     onChange={e => setMode(e.target.value)}>

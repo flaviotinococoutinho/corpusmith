@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.2.0"   # F2-PR1: + pattern_layer_snapshot
+version = "1.3.0"   # F2-PR3+4: centralidade entra no pattern_layer_snapshot
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -564,6 +564,7 @@ title = "Snapshot da camada de padrões: partição repetível, datada e com bac
 decision = "atribui cada página a uma comunidade e elege as pontes frágeis; NÃO decide nome de tema (isso é o theme_id da F2-PR2) e NÃO invalida nada"
 implementation_refs = [
   "backend/src/llmwiki/usecases/detect_communities.py",
+  "backend/src/llmwiki/retrieval/observatory.py",
   "backend/db/schema_index.sql",
 ]
 inductive_biases = [
@@ -578,9 +579,12 @@ assumptions = [
 ]
 validity_scope = [
   "avaliado em topologias sintéticas (anel de 24 nós, 4 blocos densos em cadeia) e bundles de até 1200 páginas: grafo em 45 ms, partição em 61 ms, 58 MB de RSS",
+  "F2-PR3+4: a INTERMEDIAÇÃO passou a ser projeção persistida (graph_centrality) medida pelo ComputeKernel no mesmo job. Medido a 1200 páginas: o request do grafo caiu de 2571 ms para 139 ms (Brandes era 95% dele), e o job leva 18,5 s uma vez",
 ]
 known_failure_modes = [
   "sem o extra [ml] o particionamento cai em COMPONENTES CONEXOS e continua sendo chamado de comunidade — o campo `backend` do snapshot existe para o doctor dizer isso em voz alta",
+  "centralidade NÃO medida (job nunca rodou, ou kernel indisponível): betweenness sai 0.0 com centrality.computed=false — a interface serve GRAU em vez de inventar influência, e o badge oferece o job. Nunca uma estimativa silenciosa",
+  "sem a camada nativa o MESMO Brandes é ~45× mais lento (baseline: 88 058 ms contra 1 944 ms a 5000 nós); o campo centrality_backend do snapshot declara qual kernel mediu",
   "mapa mais velho que o HEAD do bundle: reportado como INV-004 warn, nunca corrigido em silêncio",
   "comunidade de 1 membro não recebe sumário (o mapa a conhece, a página não existe)",
 ]

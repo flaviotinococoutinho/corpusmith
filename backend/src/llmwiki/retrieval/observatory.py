@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 from collections import defaultdict
 from ..kernel.information import shannon_entropy
-from ..kernel.topology import (betweenness_centrality, fragile_bridges,
+from ..kernel.topology import (fragile_bridges,
                                structural_gaps as _structural_gaps)
 from ..okf.bundle import BundleReader
 from ..runtime.db import connect
@@ -33,8 +33,25 @@ def _pages_meta(settings: Settings) -> list[dict]:
 
 
 # ------------------------------------------------------------------- grafo
-def graph_data(settings: Settings) -> dict:
-    """Nós + arestas + pontes para o grafo visual (estilo Obsidian)."""
+def graph_data(settings: Settings, *, limit: int | None = None) -> dict:
+    """Nós + arestas + pontes para o grafo visual (estilo Obsidian).
+
+    **F2-PR3+4**: a intermediação vem de `graph_centrality` (projeção escrita
+    pelo job `leiden`), não de um Brandes no request. Medido antes: Brandes era
+    95% do custo aqui a 1200 páginas (2571 ms de 2571; a 100 páginas, 52%),
+    cresce ~O(n²), e o baseline registra 88 s a 5000 nós — com o kernel Rust
+    fazendo o mesmo em 1,9 s e este caminho ignorando o kernel.
+
+    Quando a centralidade ainda não foi medida, `betweenness` sai **0.0** e
+    `centrality.computed` sai `false`: a interface serve GRAU em vez de
+    inventar influência, e o badge de frescor diz o que rodar. A chave nunca
+    desaparece do payload — há teste de shape que depende dela.
+
+    `limit` recorta o SUBGRAFO dos nós mais quentes (heat, depois grau) com as
+    arestas entre eles. Recorte é do transporte, não do cálculo: as contagens
+    de `total_nodes`/`total_edges` seguem falando do grafo inteiro, senão o
+    limite viraria uma mentira sobre o tamanho da rede.
+    """
     pages = _pages_meta(settings)
     idx = connect(settings.app_support / "index.db")
     edges = [{"src": r["src"], "dst": r["dst"],
@@ -46,6 +63,15 @@ def graph_data(settings: Settings) -> dict:
                  idx.execute("SELECT page, community FROM communities")}
     bridges = {(r["src"], r["dst"]) for r in
                idx.execute("SELECT src, dst FROM graph_bridges")}
+    try:
+        betweenness = {r["page"]: r["betweenness"] for r in
+                       idx.execute("SELECT page, betweenness "
+                                   "FROM graph_centrality")}
+        snap = idx.execute("SELECT centrality_backend, computed_at, "
+                           "bundle_head FROM graph_snapshot WHERE id=1"
+                           ).fetchone()
+    except Exception:                                # índice antigo (< v8)
+        betweenness, snap = {}, None
     idx.close()
     rt = connect(settings.app_support / "runtime.db")
     heat = {r["path"]: r["score"] for r in
@@ -59,25 +85,47 @@ def graph_data(settings: Settings) -> dict:
         linked.add(e["dst"])
         e["bridge"] = (e["src"], e["dst"]) in bridges \
             or (e["dst"], e["src"]) in bridges
-    # intermediação (v1.1): o "tamanho por influência" do grafo — quem
-    # articula, calculado uma vez e reaproveitado pelas lacunas
-    weighted = [(e["src"], e["dst"], EDGE_WEIGHT.get(e["confidence"], 0.5))
-                for e in edges]
-    betweenness = betweenness_centrality(weighted)
     nodes = [{**p, "degree": degree.get(p["page"], 0),
               "heat": round(heat.get(p["page"], 0.0), 3),
               "betweenness": betweenness.get(p["page"], 0.0),
               "community": community.get(p["page"], -1),
               "orphan": p["page"] not in linked}
              for p in pages]
-    return {"nodes": nodes, "edges": edges}
+    centrality = {
+        "computed": bool(betweenness),
+        "backend": (snap["centrality_backend"] if snap else "none"),
+        "computed_at": (snap["computed_at"] if snap else None),
+        "bundle_head": (snap["bundle_head"] if snap else None),
+        "pages": len(betweenness)}
+    total_nodes, total_edges = len(nodes), len(edges)
+    if limit and limit < total_nodes:
+        # os mais quentes primeiro, grau como desempate — e `page` como
+        # terceiro critério, senão o recorte varia entre execuções
+        nodes = sorted(nodes, key=lambda n: (-n["heat"], -n["degree"],
+                                             n["page"]))[:limit]
+        visiveis = {n["page"] for n in nodes}
+        edges = [e for e in edges
+                 if e["src"] in visiveis and e["dst"] in visiveis]
+    return {"nodes": nodes, "edges": edges, "centrality": centrality,
+            "total_nodes": total_nodes, "total_edges": total_edges,
+            "truncated": len(nodes) < total_nodes}
 
 
 # ------------------------------------------ lacunas estruturais (v1.1)
 def structural_gaps(settings: Settings, limit: int = 8) -> dict:
     """Fios AUSENTES do discurso (solução própria inspirada no
     InfraNodus): blocos que quase nunca se conectam, com a pergunta-ponte
-    determinística e os articuladores de cada lado."""
+    determinística e os articuladores de cada lado.
+
+    **Sem snapshot compartilhado, e por medição.** O `docs/15` pedia "um
+    snapshot compartilhado por graph/insights/gaps" como entrega deste
+    pacote, e a premissa era o Brandes de 84,3 s. Com ele fora do request a
+    montagem inteira custa 139 ms a 1200 páginas (era 2571), e os três são
+    requests HTTP SEPARADOS — compartilhar exigiria cache por geração, que
+    compraria ~100 ms ao preço de servir `page_heat` velho. Cheguei a
+    escrever o parâmetro e o removi por não ter chamador: quando um endpoint
+    precisar dos dois, ele volta junto com o caso de uso.
+    """
     graph = graph_data(settings)
     titles = {n["page"]: n["title"] for n in graph["nodes"]}
     betweenness = {n["page"]: n["betweenness"] for n in graph["nodes"]}

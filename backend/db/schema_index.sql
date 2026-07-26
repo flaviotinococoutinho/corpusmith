@@ -110,4 +110,22 @@ CREATE TABLE IF NOT EXISTS graph_snapshot(
   edges         INTEGER NOT NULL,
   communities   INTEGER NOT NULL,
   bridges       INTEGER NOT NULL,
-  hubs_excluded INTEGER NOT NULL);
+  hubs_excluded INTEGER NOT NULL,
+  -- F2-PR3+4: qual kernel mediu a centralidade. `none` = ainda não medida
+  -- (o mapa existe, a centralidade não) — a interface serve grau em vez de
+  -- inventar influência.
+  centrality_backend TEXT NOT NULL DEFAULT 'none'
+                CHECK(centrality_backend IN ('none','python','rust')));
+
+-- ============================ v1.9.2 · F2-PR3+4 (ADR-44) ============================
+-- CENTRALIDADE persistida. Brandes é 95% do custo do request do grafo a 1200
+-- páginas (medido) e cresce ~O(n²): 100 páginas 25 ms, 1200 páginas 2571 ms,
+-- 5000 páginas 88 s no baseline. Calcular no request dá data de morte ao
+-- produto; e `structural_gaps` chamava `graph_data`, então abrir Grafo e
+-- Insights pagava DUAS vezes.
+--
+-- Projeção como todo o index.db: sai no rebuild e é recomputada pelo job
+-- `leiden`, junto do mapa — quem constrói o grafo é quem mede quem articula.
+CREATE TABLE IF NOT EXISTS graph_centrality(
+  page        TEXT PRIMARY KEY,
+  betweenness REAL NOT NULL);

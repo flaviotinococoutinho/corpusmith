@@ -32,7 +32,7 @@ _SCHEMAS = {
 # CREATE IF NOT EXISTS + _migrate idempotente ao abrir o banco restaurado).
 SCHEMA_VERSIONS = {
     "runtime.db": 8,     # + curation_acts (ato humano, F1-PR1)
-    "index.db": 7,       # + graph_snapshot (carimbo do mapa, F2-PR1)
+    "index.db": 8,       # + graph_centrality (Brandes fora do request)
     "cold.db": 1,
     "cognitive.db": 2,   # v0.19 base + v0.20 experiências/analogias
     "reference.db": 1,
@@ -111,6 +111,11 @@ def _columns(conn: sqlite3.Connection, table: str) -> set[str]:
     return {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
 
 
+def _tables(conn: sqlite3.Connection) -> set[str]:
+    return {r["name"] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'")}
+
+
 def _migrate(conn: sqlite3.Connection, name: str) -> None:
     """ALTERs para bancos criados por versões anteriores (CREATE IF NOT
     EXISTS não acrescenta colunas). Idempotente."""
@@ -130,6 +135,15 @@ def _migrate(conn: sqlite3.Connection, name: str) -> None:
             if col not in pe_cols:
                 conn.execute(f"ALTER TABLE page_entities ADD COLUMN {col} "
                              "INTEGER")
+        # F2-PR3+4: `graph_snapshot` nasceu na v7 sem o backend da
+        # centralidade. `CREATE TABLE IF NOT EXISTS` não altera tabela que já
+        # existe, então banco v7 precisa do ALTER — sem isto o snapshot antigo
+        # continua sem a coluna e o carimbo falha na PRIMEIRA escrita.
+        if "graph_snapshot" in _tables(conn) \
+                and "centrality_backend" not in _columns(conn,
+                                                         "graph_snapshot"):
+            conn.execute("ALTER TABLE graph_snapshot ADD COLUMN "
+                         "centrality_backend TEXT NOT NULL DEFAULT 'none'")
     if name == "runtime.db":
         if "first_seen" not in _columns(conn, "page_heat"):
             conn.execute("ALTER TABLE page_heat ADD COLUMN first_seen REAL")
