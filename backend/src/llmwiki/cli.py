@@ -249,6 +249,48 @@ def cmd_bench(s: Settings, args) -> int:
     return bench_main(args.rest)
 
 
+def cmd_models(s: Settings, args) -> int:
+    """models — mostra a resolução do modelo local (ADR-42).
+
+    Torna inspecionável o que antes era invisível: qual entrada da escada
+    ganhou, por que as outras foram recusadas (ausente × não cabe) e qual
+    o orçamento de memória da máquina. `--recommend` imprime só o nome a
+    baixar, para o pull_models.sh consumir.
+    """
+    import json as _json
+    from .models.router import ModelRouter, _total_ram_bytes
+    router = ModelRouter(s)
+    installed = router.installed_models()
+    budget = router.memory_budget_bytes()
+    ladder = []
+    for candidate in router._chat_ladder():
+        name = next((n for n in (candidate, f"{candidate}:latest")
+                     if n in installed), None)
+        if name is None:
+            status, size = "ausente", None
+        elif budget and installed[name] > budget:
+            status, size = "nao_cabe", installed[name]
+        else:
+            status, size = "utilizavel", installed[name]
+        ladder.append({"candidate": candidate, "status": status,
+                       "size_gb": round(size / 1e9, 2) if size else None})
+    resolved = router.resolve_chat()
+    if getattr(args, "recommend", False):
+        # primeiro utilizável; senão o menor candidato que caberia
+        print(resolved or (ladder[-1]["candidate"] if ladder else ""))
+        return 0
+    print(_json.dumps({
+        "resolved_chat": resolved,
+        "embed": s.models["local"].get("embed"),
+        "ram_total_gb": round(_total_ram_bytes() / 1e9, 2),
+        "memory_budget_gb": round(budget / 1e9, 2),
+        "memory_fraction": s.models["local"].get("memory_fraction", 0.6),
+        "ladder": ladder,
+        "installed": {k: round(v / 1e9, 2) for k, v in installed.items()},
+    }, indent=1, ensure_ascii=False))
+    return 0 if resolved else 1
+
+
 def cmd_epistemics(s: Settings, args) -> int:
     """epistemics lint|list|show <id>|evaluations <id> — a MESMA
     implementação do painel e dos testes (harness.epistemics + facade)."""
@@ -321,6 +363,11 @@ def main(argv: list[str] | None = None) -> int:
         "bench", help="benchmarks reprodutíveis (ADR-39; ver benchmarks/)")
     bench.add_argument("rest", nargs="*", default=[])
     bench.set_defaults(fn=cmd_bench)
+    models = sub.add_parser(
+        "models", help="resolução do modelo local (escada, ADR-42)")
+    models.add_argument("--recommend", action="store_true",
+                        help="imprime só o modelo a usar/baixar")
+    models.set_defaults(fn=cmd_models)
     epistemics = sub.add_parser(
         "epistemics", help="contratos epistemológicos (epistemics.toml)")
     epistemics.add_argument("op", choices=["lint", "list", "show",

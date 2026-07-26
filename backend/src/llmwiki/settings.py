@@ -41,9 +41,15 @@ class Settings(BaseModel):
     privacy: dict[str, Any] = {"default": "local_only", "rules": []}
     budget: dict[str, Any] = {"daily_usd": 2.0}
     policy: dict[str, Any] = {"citation_required": True}
+    # `chat` é uma ESCADA de preferência (ADR-42): o roteador escolhe a
+    # primeira entrada instalada que caiba em `memory_fraction` da RAM.
+    # Aceita string também, para config anterior a v1.9.
     models: dict[str, Any] = {
         "local": {"provider": "ollama", "base_url": "http://127.0.0.1:11434",
-                  "chat": "qwen2.5:7b-instruct", "embed": "nomic-embed-text"},
+                  "chat": ["qwen3-vl:8b-instruct", "qwen3-vl:4b-instruct",
+                           "qwen3-vl:4b", "qwen3-vl:2b-instruct",
+                           "qwen2.5:7b-instruct"],
+                  "embed": "nomic-embed-text", "memory_fraction": 0.6},
         "api": {"provider": "anthropic", "chat": "claude-haiku-4-5-20251001"},
     }
     worker: dict[str, Any] = {"heavy_slots": 1, "light_slots": 2,
