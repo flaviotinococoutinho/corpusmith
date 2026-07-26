@@ -21,8 +21,10 @@
 | Python | 3.11 | **3.12.12** | 3.14.6 do Homebrew falhou (§7.1) |
 | Node.js | 20 | 26.3.1 | só para o desktop |
 | git | qualquer recente | 2.54 | precisa de `user.email`/`user.name` (o bundle commita) |
+| RAM | 8 GB | **8 GB** (Mac14,3) | define QUAL modelo local roda (§6); 16 GB+ para o preferido |
 | Docker + Compose | Compose v2 | 29.2 / Compose 5.1.4 | opcional (§4) |
-| Ollama | — | não instalado | **opcional**: sem ele tudo degrada para modo extrativo/abstenção (verificado) |
+| Ollama | — | 0.32.1 | **opcional**: sem modelo utilizável tudo degrada para extrativo/abstenção (verificado) |
+| Rust (cargo) | — | 1.9x | opcional: compute plane nativo (ADR-39); sem ele roda o fallback Python |
 | `just` | — | não usado | opcional: o `justfile` é só açúcar sobre os comandos abaixo |
 
 ## 2. Caminho rápido
@@ -77,10 +79,17 @@ Se `docker compose` (plugin) não existir mas `docker-compose` sim, ver §7.2.
 Gate completo (o mesmo do CI e do `AGENTS.md` §2 — `just verify` roda os três):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # → 289 passed
+cd backend && .venv/bin/python -m pytest tests -q   # → 545 passed
 cd desktop && npx tsc --noEmit                      # → sem erros
 docker compose config -q                            # → sem saída = ok
+cargo test --workspace --manifest-path native/Cargo.toml   # → 8 passed
 ```
+
+A suíte é **hermética**: não conversa com o Ollama da máquina
+(`tests/conftest.py` aponta o roteador para uma porta morta). Isso é
+proposital — antes o resultado dependia de quais modelos o dev tinha
+instalado, e 25 testes ficavam vermelhos numa máquina com Ollama de pé e
+o modelo da config ausente.
 
 Smoke de runtime (não destrutivo — use um HOME descartável):
 
@@ -109,11 +118,67 @@ curl -s -X POST -H "x-llmwiki-auth: $TOKEN" -H "Content-Type: application/json" 
 
 ```bash
 backend/scripts/install_daemon.sh    # launchd agent (com.llmwiki.daemon)
-backend/scripts/pull_models.sh       # ollama pull qwen2.5:7b-instruct + nomic-embed-text
+backend/scripts/pull_models.sh       # baixa o modelo adequado A ESTA máquina
 ```
 
-Sem Ollama o `/ask` **não quebra**: responde extrativo ou se abstém
-(`abstained: true`) — comportamento verificado nesta máquina sem Ollama.
+### 6.1 O modelo de chat é uma ESCADA, não um nome fixo (ADR-42)
+
+`models.local.chat` declara uma **ordem de preferência**. Em tempo de
+execução o roteador escolhe a primeira entrada que esteja **instalada** e
+cujos pesos **caibam** em `memory_fraction` (default `0.6`) da RAM total:
+
+| Candidato | Pesos | Pede |
+|---|---|---|
+| `qwen3-vl:8b-instruct` | 6,14 GB | ~16 GB de RAM |
+| `qwen3-vl:4b-instruct` | 3,30 GB | ~8 GB |
+| `qwen3-vl:4b` | 3,30 GB | ~8 GB (variante *thinking*, ver §6.2) |
+| `qwen3-vl:2b-instruct` | 1,89 GB | máquinas menores |
+| `qwen2.5:7b-instruct` | 4,70 GB | compat com instalações < v1.9 |
+
+Duas regras deliberadas:
+
+- **o roteador nunca baixa modelo sozinho** — uma consulta não pode
+  disparar download de gigabytes; aquisição é ato explícito
+  (`pull_models.sh`);
+- **pedir modelo maior que a RAM não é otimismo, é paginação** — por isso
+  o orçamento veta em vez de tentar.
+
+Inspecione a decisão (e por que cada candidato foi recusado):
+
+```bash
+backend/scripts/llmwiki models
+# → {"resolved_chat": "qwen3-vl:4b", "ram_total_gb": 8.59,
+#    "memory_budget_gb": 5.15,
+#    "ladder": [{"candidate": "qwen3-vl:8b-instruct", "status": "ausente"}, ...]}
+```
+
+Numa máquina de 8 GB o `8b-instruct` é recusado mesmo se estiver baixado
+(`status: "nao_cabe"`) — 6,14 GB de pesos não entram em 5,15 GB de
+orçamento. Exit code 1 significa "nenhum modelo utilizável".
+
+### 6.2 Variantes *thinking* precisam de orçamento de tokens
+
+Medido no `qwen3-vl:4b`: com `num_predict` curto o modelo gasta todo o
+orçamento no campo `thinking` e devolve `response` **vazio** com
+`done_reason: "length"`. Como `reconcile_candidate` pede 32 tokens e
+`detect_communities` 160, isso é alcançável de verdade. O roteador trata
+resposta vazia como `ModelUnavailable` — degrada para o extrativo em vez
+de propagar vazio como se fosse síntese. Prefira as variantes
+`-instruct`, que não gastam orçamento raciocinando.
+
+**Caber em disco não é caber em uso.** Medido na máquina de 8 GB com o
+modelo residente e memória livre em 13%: `num_predict=64` levou **41 s**
+(~1,5 tok/s). Com o orçamento real do `/ask` (1024–1536 tokens) isso
+estoura o timeout de 300 s do roteador, que vira `ModelUnavailable` e
+degrada para o extrativo. Ou seja: o veto por tamanho (§6.1) é condição
+necessária, não suficiente — numa máquina de 8 GB o caminho realista para
+ter síntese local é o `qwen3-vl:2b-instruct` (1,89 GB, sem *thinking*).
+Sintoma correlato: uma chamada dessas **bloqueia o daemon** por dezenas
+de segundos (o `/health` fica sem responder até ela terminar).
+
+Sem modelo utilizável o `/ask` **não quebra**: responde extrativo ou se
+abstém (`abstained: true`) — verificado tanto sem Ollama quanto com
+Ollama de pé e modelo ausente.
 
 ## 7. Solução de problemas (encontrados de verdade)
 
@@ -167,3 +232,38 @@ ou mate o processo) ou mude `server.port` via override de config.
 Não é erro: `abstained: true` com `gaps` é o contrato de abstenção
 (LongMemEval) — a base seedada ainda não tem cobertura para perguntas
 livres. Compile conteúdo (inbox → `compile`) e pergunte de novo.
+
+### 7.8 Ollama de pé, mas o modelo da config não existe
+
+Sintoma (encontrado nesta máquina): jobs `embed` falhando em série e
+`HTTPStatusError: 404 ... /api/embeddings` ou `/api/generate` no log.
+`ollama serve` responde no socket, então a instalação *parecia* sadia —
+mas o modelo pedido nunca foi baixado. Diagnostique com:
+
+```bash
+backend/scripts/llmwiki models            # resolved_chat: null ⇒ nada utilizável
+curl -s http://127.0.0.1:11434/api/tags   # o que existe de fato
+```
+
+**Correção**: `backend/scripts/pull_models.sh` (escolhe pela RAM, §6.1).
+A partir do ADR-42 esse estado degrada em vez de estourar: o roteador só
+considera modelo instalado e converte falha de modelo em
+`ModelUnavailable`. Antes, o `HTTPStatusError` vazava e derrubava o
+`/ask` com 500.
+
+### 7.9 Índice de geração antiga depois de atualizar
+
+Sintoma: `doctor` com `ok: false` e `INV-002 … índice de geração antiga
+(g2:… ≠ g4:…) — rebuild`. Uma versão nova mudou a chave de geração do
+índice. `index.db` é **projeção** reconstruível do bundle (INV-DATA-003),
+então o reparo é seguro:
+
+```bash
+backend/scripts/llmwiki backup create    # opcional, mas barato
+backend/scripts/llmwiki doctor --repair  # → ok: true
+```
+
+Depois de atualizar, **reinicie o daemon** — o processo antigo continua
+com o código velho em memória e pode responder 500 ao ler dados já
+migrados: `launchctl kickstart -k gui/$(id -u)/com.llmwiki.daemon`.
+Confirme com `curl -s .../health` que `version` é a esperada.

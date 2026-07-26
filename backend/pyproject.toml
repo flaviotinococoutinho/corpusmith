@@ -1,6 +1,6 @@
 [project]
 name = "llmwiki"
-version = "1.8.0"
+version = "1.9.0"
 description = "LLM Wiki — knowledge base OKF local-first com cockpit de memória agêntica"
 requires-python = ">=3.11"
 dependencies = [

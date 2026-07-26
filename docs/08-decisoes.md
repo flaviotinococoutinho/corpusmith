@@ -1011,3 +1011,79 @@ ponta a ponta pelos endpoints reais: oferta → `GET /cockpit/page` →
 reenvio do corpo intocado dando **diff vazio** (aplicar sem digitar é NOOP)
 → preview da correção → apply → undo.
 18 testes novos; 531 no total.
+
+### ADR-42 — O modelo local é uma ESCADA resolvida contra a máquina (v1.9)
+**Contexto**: `models.local.chat` era um nome fixo (`qwen2.5:7b-instruct`) e
+`local_available()` significava apenas "o Ollama respondeu no socket". A
+combinação produziu um estado que a instalação não previa e que foi
+**medido numa máquina real** (Mac14,3, 8 GB de RAM, Ollama 0.32.1 com
+`qwen3-vl:4b` instalado e `qwen2.5:7b-instruct` ausente):
+
+- `local_available()` devolvia `True` (o `/api/tags` respondia);
+- `_local()` pedia o modelo ausente e o Ollama devolvia **404**
+  `{"error": "model ... not found"}`;
+- `raise_for_status()` levantava `HTTPStatusError`, e `ask_memory._compose`
+  só capturava `ModelUnavailable` — a exceção de transporte **vazava** e
+  derrubava o `/ask`. `compile_source`, `consolidate_inbox` e
+  `detect_communities` capturavam amplamente e degradavam; o `/ask`, não;
+- consequência em produção: **203 jobs `embed` falhados em série** desde
+  2026-07-24, um a cada 5 minutos, com o mesmo 404 em `/api/embeddings`;
+- consequência no CI local: **25 testes vermelhos**, todos com esse 404. A
+  suíte não era hermética — dependia de quais modelos o dev tinha
+  instalado. Ela passava numa máquina SEM Ollama (o ambiente registrado no
+  `docs/12`) e falhava numa máquina com Ollama e outro conjunto de modelos.
+
+O `docs/12` §6 afirmava "sem Ollama o `/ask` não quebra" — verdade quando
+ele está **ausente**, falso no estado intermediário "de pé com o modelo
+errado", que é o mais provável na prática.
+
+**Decisão**: `models.local.chat` passa a ser uma **escada de preferência**
+(lista ordenada; string continua aceita para config anterior). O roteador
+resolve em tempo de execução a primeira entrada que esteja **instalada** E
+cujos pesos **caibam** em `memory_fraction` (default `0.6`) da RAM total.
+
+- **não baixa nada sozinho**: resolução só LÊ `/api/tags`. Uma consulta
+  jamais dispara download de gigabytes; aquisição é ato explícito
+  (`pull_models.sh`, que escolhe pela RAM). Coberto por teste que proíbe
+  qualquer POST durante a resolução;
+- **orçamento de memória veta**: pedir 6,14 GB de pesos numa máquina de
+  8 GB não é otimismo, é paginação até a inutilidade. Numa máquina de
+  8,59 GB o orçamento é 5,15 GB e o `8b-instruct` é recusado **mesmo se
+  baixado**; resolve para o `4b` (3,30 GB). Em 16 GB+ o preferido ganha;
+- **`local_available()` passa a significar "existe modelo utilizável"**,
+  não "o socket respondeu" — era essa a lacuna que fazia o estado
+  intermediário passar por sadio;
+- **falha de modelo é sempre `ModelUnavailable`**, nunca `HTTPStatusError`:
+  `_local()` e `embed()` embrulham o transporte. O `ask_memory` não mudou —
+  o `except ModelUnavailable` que já existia passou a ser alcançado. Foi a
+  MENOR mudança possível (§8.6) em vez de alargar o `except` do use case;
+- **resposta vazia não é resposta**: medido no `qwen3-vl:4b` (variante
+  *thinking*), com `num_predict` curto o modelo gasta todo o orçamento no
+  campo `thinking` e devolve `response` vazio com `done_reason: "length"`.
+  Como `reconcile_candidate` pede 32 tokens e `detect_communities` 160,
+  isso é alcançável de verdade. Vazio virou `ModelUnavailable` — degrada
+  para o extrativo em vez de propagar vazio como se fosse síntese. A
+  escada prefere as variantes `-instruct`, que não gastam orçamento
+  raciocinando;
+- **a decisão é inspecionável**: `llmwiki models` mostra o resolvido, o
+  orçamento e por que cada candidato foi recusado (`ausente` × `nao_cabe`);
+  exit 1 quando nada é utilizável. `--recommend` alimenta o instalador.
+
+**Suíte hermética**: fixture autouse em `tests/conftest.py` aponta o
+roteador para uma porta morta. A suíte deixa de consultar o Ollama da
+máquina e exercita de forma determinística o caminho de degradação
+documentado. Testes que exercitam o roteador substituem `httpx` e ficam
+imunes ao redirecionamento.
+
+**Migração**: nenhuma de dados. Config antiga com `chat` string continua
+válida (coberto por teste). Instalações que dependiam de
+`qwen2.5:7b-instruct` seguem funcionando — ele é a última entrada da
+escada.
+
+**Verificado nesta máquina**: `llmwiki models` resolvendo `qwen3-vl:4b`
+com o `8b-instruct` marcado `ausente`; `complete()` real devolvendo
+`via: local:qwen3-vl:4b`; o 404 de modelo ausente virando
+`ModelUnavailable` e o `/ask` respondendo extrativo em vez de 500; jobs
+`embed` passando a concluir depois do `nomic-embed-text` baixado
+(`embeddings` de 0 → 7 linhas). 14 testes novos; **545 no total**, sem
+skips.

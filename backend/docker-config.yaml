@@ -3,6 +3,14 @@
 home: /data
 server: {host: 0.0.0.0, port: 8377}
 privacy: {default: local_only, rules: []}
+# `chat` é a escada de preferência do ADR-42: o roteador resolve para a
+# primeira entrada instalada no serviço `ollama` que caiba no orçamento de
+# memória do container. Aquisição continua explícita (pull_models.sh).
 models:
-  local: {provider: ollama, base_url: "http://ollama:11434",
-          chat: "qwen2.5:7b-instruct", embed: "nomic-embed-text"}
+  local:
+    provider: ollama
+    base_url: "http://ollama:11434"
+    chat: [qwen3-vl:8b-instruct, qwen3-vl:4b-instruct, qwen3-vl:4b,
+           qwen3-vl:2b-instruct, qwen2.5:7b-instruct]
+    embed: nomic-embed-text
+    memory_fraction: 0.6

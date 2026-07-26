@@ -356,6 +356,11 @@ epistemológicos (ADR-38; lint sai 1 com erros, mesma fonte do painel).
 CLI (v1.7, ADR-39): `llmwiki bench core|ask|index|graph|consolidate|
 compare|generate-fixture` — harness reprodutível (fixtures por semente;
 JSON schema 1; baseline versionada em `benchmarks/baseline.json`).
+CLI (v1.9, ADR-42): `llmwiki models [--recommend]` — resolução do modelo
+local: qual entrada da escada `models.local.chat` ganhou, o orçamento de
+memória (`memory_fraction` × RAM) e por que cada candidato foi recusado
+(`ausente` × `nao_cabe`). Sai 1 quando nada é utilizável; `--recommend`
+imprime só o nome, para o `pull_models.sh` consumir.
 Config do compute plane (`settings.get`, defaults no código):
 `compute.backend` ∈ auto|python|rust (auto = rust se disponível, motivo
 do fallback registrado) · `compute.allow_fallback` (true) ·

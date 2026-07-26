@@ -45,8 +45,17 @@ models:
   local:
     provider: ollama
     base_url: http://127.0.0.1:11434
-    chat: qwen2.5:7b-instruct
+    # ESCADA de preferência (ADR-42): vence a primeira entrada que esteja
+    # instalada E cujos pesos caibam em memory_fraction da RAM total. O
+    # roteador nunca baixa nada sozinho — use scripts/pull_models.sh.
+    chat:
+      - qwen3-vl:8b-instruct     # preferido (~6.1 GB de pesos; pede 16 GB+)
+      - qwen3-vl:4b-instruct     # ~3.3 GB
+      - qwen3-vl:4b              # ~3.3 GB (variante thinking)
+      - qwen3-vl:2b-instruct     # ~1.9 GB; alcança máquinas de 8 GB
+      - qwen2.5:7b-instruct      # compat com instalações < v1.9
     embed: nomic-embed-text
+    memory_fraction: 0.6
   api:
     provider: anthropic
     chat: claude-haiku-4-5-20251001
