@@ -32,7 +32,7 @@ _SCHEMAS = {
 # CREATE IF NOT EXISTS + _migrate idempotente ao abrir o banco restaurado).
 SCHEMA_VERSIONS = {
     "runtime.db": 8,     # + curation_acts (ato humano, F1-PR1)
-    "index.db": 8,       # + graph_centrality (Brandes fora do request)
+    "index.db": 9,       # + themes/theme_epochs (identidade, RFC-001)
     "cold.db": 1,
     "cognitive.db": 2,   # v0.19 base + v0.20 experiências/analogias
     "reference.db": 1,

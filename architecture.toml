@@ -63,7 +63,7 @@ schema_version = 8          # v1.8.1: + curation_acts (ato humano, ADR-41)
 name = "index.db"
 authority = "nenhuma (projeção)"
 rebuildable = true
-schema_version = 8          # F2-PR3+4: + graph_centrality (Brandes fora do request)
+schema_version = 9          # F2-PR2: + themes/theme_epochs (RFC-001)
 [[database]]
 name = "cold.db"
 authority = "memória fria"

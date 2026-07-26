@@ -1348,3 +1348,85 @@ execução.
 INV-002 e INV-004 intocados · nenhuma escrita no bundle · CQS.
 11 testes novos; **593 no total** (4 na perna `ml`), e 589+2 skip com
 `igraph`/`leidenalg` bloqueados no import.
+
+### ADR-45 — Identidade de tema por casamento de partições (v1.9.3, F2-PR2)
+**Implementa o [RFC-001](16-rfc-theme-id.md)** — o primeiro RFC do projeto
+(o `docs/10` §19 definia o template e o marcava "🎯 a instanciar"). Foi RFC e
+não só ADR porque o `AGENTS.md` §8 exige RFC para **heurística no caminho de
+escrita**, e o casamento decide `UPDATE` vs `SUPERSEDE` de página canônica.
+**O problema é MEDIDO, não previsto.** Um tema de 5 páginas cuja página mais
+conectada troca de `ana` para `elo`, **sem nenhuma página entrar ou sair**:
+
+```
+1. tema nomeado pela mais conectada:   ['ana.md', 'index.md']
+2. `elo` vira a mais conectada:        ['ana.md', 'elo.md', 'index.md']
+```
+
+**Duas páginas canônicas afirmando o mesmo tema, nenhuma supersedida** — o
+produto fabricando a contradição que `policy.contradiction_candidate` existe
+para acusar, uma por rodada do job.
+**Decisão**: `theme_id` opaco atribuído no NASCIMENTO, `rel_path` derivado
+dele (`communities/thm_<id>.md`), e o rótulo legível no frontmatter — onde
+mudar não cria arquivo. É isso que fecha o defeito.
+**A calibração mudou o desenho duas vezes**, e as duas viraram teste:
+
+| perturbação | Jaccard | forma |
+|---|---:|---|
+| 1 página nova (6→7) | 0,86 | 1↔1 |
+| +50 % / −33 % | 0,67 | 1↔1 |
+| **tema dobra (6→12)** | **0,50** | 1↔1 |
+| **tema parte em dois trios** | **0,50** | **1→2** |
+| tema dissolve | 0,17 | 1→0 |
+
+1. **τ = 0,5 seria o pior valor possível** — é exatamente o Jaccard de um
+   crescimento legítimo E de um split. `TAU = 1/3` é o ponto médio da banda
+   vazia medida entre 0,17 e 0,50, a única região em que o limiar não decide
+   por acidente;
+2. **o valor do Jaccard não distingue `split` de `grew`** (0,50 nos dois). Quem
+   distingue é a **forma do casamento bipartido**. Por isso `match()` devolve a
+   forma, e não um número com limiar.
+
+**`merged` foi declarado e NÃO observado**, e isso está no contrato epistêmico
+em vez de escondido. Não consegui produzir uma fusão nem com alfa e beta
+densamente interligados: o Leiden manteve 3 comunidades e Jaccard 1,0 —
+modularidade resiste a fundir cliques densos. E a fusão **assimétrica** (8 e 3
+páginas) lê como `grew` + `died`, porque o menor tem Jaccard 3/11 = 0,27,
+abaixo de τ. Com 27 % de sobreposição, dizer "estes temas se fundiram"
+afirmaria continuidade que o dado não sustenta. O ramo existe porque a forma
+2→1 é bem definida e barata, mas **nenhuma interface o pressupõe**.
+**O LLM volta a só rotular** (RFC §4.4): com o roteador devolvendo rótulo
+absurdo e diferente a cada chamada, `theme_id` e `rel_path` saem idênticos —
+há teste que prova isso, e é a garantia de que a repetibilidade paga pelo
+ADR-43 não é desfeita pelo modelo.
+**Partição idêntica NÃO gera época.** Sem isso, cada execução do job semanal
+registraria uma época por tema e a trilha viraria ruído — a mesma armadilha do
+rótulo que trocava a cada execução (ADR-43).
+**As páginas antigas são ADOTADAS, não abandonadas** (RFC §4.5). Verificado
+que sem isso o PR **entregaria o INV-005 violado no primeiro upgrade**: a
+página no caminho antigo continuava viva ao lado da nova. Agora ela é
+supersedida apontando para o caminho novo, casada pelos membros que ela mesma
+lista; sem tema correspondente, é aposentada com `invalid_at` — nunca removida.
+**Uma escrita por página, e não uma com todas**: uma página antiga malformada
+(editada à mão, sem `source_sha256`) faz o Harness recusar — corretamente. Numa
+escrita única essa recusa bloquearia a adoção de **todas**, e o INV-005
+seguiria violado no bundle inteiro por causa de um arquivo. O gate não é
+enfraquecido: a recusa é isolada e a página segue visível ao `okf lint`.
+**INV-005 nasce com verificador** — invariante sem verificador é promessa. É
+ERROR e não warn: ao contrário de mapa velho (INV-004, servível com aviso),
+duas verdades vivas sobre o mesmo tema não têm leitura correta. E é reparável
+pelo próprio job.
+**Comportamento pré-existente declarado, não corrigido aqui**: o
+`_CommunitySummaryPage` reescreve o sumário a cada execução mesmo com conteúdo
+idêntico, então o HEAD move a cada job. Não foi introduzido neste PR e a
+asserção de idempotência mede a **contagem de adoções**, não o HEAD — dizer o
+contrário seria testar outra coisa.
+**Migração**: index 8→9 aditiva (`themes`, `theme_epochs`); nenhuma coluna nova
+em tabela existente, então nenhum `ALTER` é necessário (a armadilha do ADR-44
+não reaparece).
+**Invariantes**: canônico ≠ projeção (as duas tabelas somem no rebuild) · gate
+inescapável · invalidar-nunca-apagar · repetibilidade do ADR-43 preservada ·
+INV-005 novo.
+24 testes novos; **617 no total** (4 na perna `ml`), e 613+2 skip com
+`igraph`/`leidenalg` bloqueados no import. Registro epistêmico 1.3.0 → 1.4.0
+com `theme_identity_matching` — heurística no caminho de escrita **precisa** de
+contrato declarado, e este é `high_impact = true`.

@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.3.0"   # F2-PR3+4: centralidade entra no pattern_layer_snapshot
+version = "1.4.0"   # F2-PR2: + theme_identity_matching (RFC-001)
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -604,4 +604,49 @@ misinterpretations = [
 ]
 high_impact = false
 abstention_supported = false
+human_review_available = false
+
+# ============================ identidade de tema (F2-PR2, RFC-001)
+[mechanisms.theme_identity_matching]
+title = "Identidade de tema por casamento de partições (Jaccard + forma do casamento)"
+decision = "decide se duas partições descrevem O MESMO tema e qual evento aconteceu; disso decorre UPDATE vs SUPERSEDE de pagina canonica em communities/. NAO decide o rotulo legivel (isso e do LLM e e cosmetico)"
+implementation_refs = [
+  "backend/src/llmwiki/kernel/themes.py",
+  "backend/src/llmwiki/usecases/detect_communities.py",
+  "docs/16-rfc-theme-id.md",
+]
+inductive_biases = [
+  "identidade de tema e continuidade de CONJUNTO DE MEMBROS, nao de rotulo nem de assunto: dois temas com membros iguais e nomes diferentes sao o mesmo tema",
+  "tau = 1/3 vem da banda VAZIA medida entre 0,17 (tema que dissolve) e 0,50 (tema que dobra); tau=0,5 seria o pior valor possivel porque e exatamente o Jaccard de um crescimento legitimo E de um split",
+  "a FORMA do casamento bipartido classifica o evento, nao o valor do Jaccard: split e grew tem o MESMO Jaccard medido (0,50), e o que distingue e uma antiga casar com duas novas",
+  "theme_id e OPACO e atribuido no nascimento: derivado da composicao vigente, mudaria a cada pagina nova e `grew` nunca existiria",
+]
+assumptions = [
+  "a particao de entrada e repetivel (ADR-43): sem isso o casamento compara ruido com ruido",
+  "as duas particoes vem do MESMO backend de particionamento; leiden e components produzem mapas incomparaveis e o casamento recusa",
+]
+validity_scope = [
+  "calibrado em sete perturbacoes sinteticas com os caminhos das paginas preservados: +1 pagina (J=0,86), +50% e -33% (0,67), dobrar (0,50), split em dois trios (0,50), dissolver (0,17), tema novo (antigos em 1,0)",
+  "NAO calibrado em bundle real: o RFC declara recalibracao com dado real como condicao de reentrada",
+]
+known_failure_modes = [
+  "`merged` NAO foi observado na calibracao: modularidade resiste a fundir cliques densos, e fusao assimetrica (8 e 3 paginas) le como grew+died porque o menor cai abaixo de tau. O evento existe no vocabulario porque a forma 2 para 1 e bem definida, mas nenhuma interface deve pressupor que ele e comum",
+  "tema que dissolve espalhando as paginas por varios outros e classificado `died`, nao `split`: com 17% de sobreposicao, afirmar continuidade seria afirmar o que o dado nao sustenta",
+  "backend de particionamento diferente entre execucoes: o casamento recusa e nenhuma epoca e escrita, para nao registrar epocas falsas em massa",
+  "pagina de tema no formato antigo malformada (sem source_sha256) tem a adocao RECUSADA pelo Harness — corretamente; a recusa e isolada por pagina para nao bloquear as outras",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "a MESMA dupla de particoes e o MESMO backend: mesmos eventos, mesmos theme_id. Nenhuma garantia de que o casamento reflita continuidade SEMANTICA — ele afirma continuidade de composicao, e o RFC-001 declara isso como o vies indutivo central"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+evidence = ["deterministic_check"]
+misinterpretations = [
+  "theme_id NAO e um nome: e identificador opaco. O nome legivel esta no frontmatter e pode mudar sem criar pagina",
+  "`grew` nao afirma que o tema ficou mais importante, so que ganhou membros",
+  "ausencia de evento nao e falha do casamento: particao identica nao gera epoca, de proposito, senao a trilha viraria ruido a cada execucao do job",
+]
+high_impact = true
+abstention_supported = true
 human_review_available = false

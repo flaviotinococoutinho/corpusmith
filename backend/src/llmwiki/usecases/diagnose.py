@@ -13,6 +13,9 @@ Invariantes verificados:
   vaza para a recuperação padrão);
 - INV-004: o mapa de padrões (comunidades/pontes) corresponde ao HEAD do
   bundle, e nenhuma ponte aponta para página aposentada (F2-PR1);
+- INV-005: um tema, uma página canônica viva — nenhum par de páginas
+  `communities/` sem `superseded_by` descreve conjuntos de membros com
+  Jaccard >= tau (RFC-001, docs/16);
 - PIPE:   todo estágio de pipeline referencia um job existente;
 - COG:    estado cognitivo (acessibilidade/agenda) que referencia
   página inexistente é sinalizado (não removido — é dado do usuário).
@@ -56,7 +59,8 @@ class DiagnoseSystem(UseCase):
                     + self._check_superseded()
                     + self._check_pipelines()
                     + self._check_cognitive_orphans()
-                    + self._check_graph_snapshot())
+                    + self._check_graph_snapshot()
+                    + self._check_theme_identity())
         repaired = None
         if self._repair and any(f["inv"] in REPAIRABLE for f in findings):
             from ..retrieval.fts import rebuild_index
@@ -181,6 +185,48 @@ class DiagnoseSystem(UseCase):
                 "detail": f"{orfas} ponte(s) frágil(is) apontando para "
                           "página aposentada — a fila ofereceria reforçar "
                           "um fio para lugar nenhum"})
+        return out
+
+    def _check_theme_identity(self) -> list[dict]:
+        """INV-005 (RFC-001 §5): um tema, uma página canônica viva.
+
+        É a negação formal do defeito que motivou o F2-PR2 e que foi MEDIDO:
+        um tema cuja página mais conectada troca produzia duas páginas
+        canônicas vivas descrevendo os mesmos membros, nenhuma supersedida —
+        o produto fabricando a contradição que
+        `policy.contradiction_candidate` existe para acusar.
+
+        ERROR e não warn: ao contrário de mapa velho (INV-004, servível com
+        aviso), duas verdades vivas sobre o mesmo tema não têm leitura
+        correta. E é reparável pelo job `leiden`, que adota o formato antigo.
+        """
+        from ..kernel.themes import TAU, jaccard
+        from ..okf.links import MD_LINK
+        reader = BundleReader(self._settings.path("knowledge") / "bundle")
+        vivas: list[tuple[str, set[str]]] = []
+        for rel in reader.raw_md_files():
+            if not rel.startswith("communities/") or rel.endswith("index.md"):
+                continue
+            try:
+                doc = reader.load(rel)
+            except Exception:
+                continue
+            meta = doc.meta.model_dump(exclude_none=True)
+            if meta.get("superseded_by") or meta.get("invalid_at"):
+                continue
+            vivas.append((rel, {m.group("target").lstrip("/")
+                                for m in MD_LINK.finditer(doc.body)}))
+        out: list[dict] = []
+        for i, (rel_a, mem_a) in enumerate(vivas):
+            for rel_b, mem_b in vivas[i + 1:]:
+                j = jaccard(mem_a, mem_b)
+                if j >= TAU:
+                    out.append({
+                        "inv": "INV-005", "severity": "error",
+                        "detail": f"{rel_a} e {rel_b} descrevem o mesmo tema "
+                                  f"(Jaccard {j:.2f} >= {TAU:.2f}) e as duas "
+                                  f"estão vivas — rode o job `leiden`, que "
+                                  f"supersede o formato antigo"})
         return out
 
     # ------------------------------------------------------------- checks
