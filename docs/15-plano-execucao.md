@@ -109,7 +109,7 @@ Divergências do `14` marcadas com ⚠ e justificadas.
 | 5 | ✅ **F1-PR4** · `LinkPages`/`UnlinkPages` — **ENTREGUE** (ADR-41.2) | 5 | ⚠ Antecipado (era 4º). É o ato de maior densidade valor/custo da fila e o único ato de corpo cujo valor não depende de UI que a fase não constrói. **Traz a decisão do `MD_LINK` para dentro da F1** — ver D-A |
 | 6 | ✅ **F1-PR6** · deep-link da fila + `CurationDialog` — **ENTREGUE** (ADR-41.3) | 6 | ⚠ Antecipado (era 6º). Com PR1+PR2+PR4, os **dois** itens do topo da fila já têm ato com preview: converte quatro PRs de infraestrutura em algo perceptível meses antes |
 | 7 | ✅ **F1-PR3** · `EditPage` — **ENTREGUE** (ADR-41.4) | 5 | ⚠ Atrasado (era 3º). Nenhum DoD da fase inclui campo de edição de corpo — o `CurationDialog` é diff+confirmar. Ou entra **depois** do PR6 levando a superfície de edição no escopo, ou o valor prometido é reescrito para **"editável por CLI/HTTP"**. Um DoD que promete app e entrega terminal é a forma mais barata de perder a confiança que a fase existe para construir. **Resolvido pela 1ª saída**: o PR levou a superfície (`textarea` pré-preenchido, declarado pela oferta) — ver ADR-41.4 |
-| 8 | **F1-PR5** · `MergePages` | 6 | Último da fase: escolher a vencedora é decisão humana sem UI, e o preview depende de `check_corpus` — ver D-D |
+| 8 | ✅ **F1-PR5** · `MergePages` — **ENTREGUE** (ADR-41.5) | 6 | Último da fase: escolher a vencedora é decisão humana sem UI, e o preview depende de `check_corpus` — ver D-D. **D-D resolvida por uma terceira saída**: o preview é O(páginas do ato), não O(bundle) |
 | 9 | **F2-PR1** · seed, carimbo, poda, INV-004, job semanal | 6 | Duas emendas **obrigatórias**: exigir a perna `[ml]` no mesmo PR (G-2) e **excluir `communities/`** da construção do grafo (D-E) |
 | 10 | **F2-PR2** · `theme_id` por casamento de partições | 8 | **RFC** (§1.1). Único PR da F2 que escreve no canônico |
 | 11 | **F2-PR3 + F2-PR4 como UM merge** | 10 | ⚠ Divirjo da decomposição em quatro. O próprio PR3 admite que "os dois devem sair na mesma semana", porque sozinho mostra `betweenness: null` e o grafo perde o tamanho por influência. Um pacote que só não é regressão se outro sair junto é **um commit, não um PR** |
@@ -136,7 +136,7 @@ colunas do undo para a fase não precisar de segunda migração.
 | ✅ **PR4** | `LinkPages`/`UnlinkPages` escrevendo no **canônico** (bloco `## Relacionados` idempotente) + decisão do formato de link | round-trip de `parse_links` com o formato final | A ponte frágil do topo da fila passa a ser reparável, e o reparo **sobrevive ao rebuild** |
 | ✅ **PR6** | `item.acts` no payload + `CurationDialog` — **ENTREGUE** | contrato de shape no backend + tipagem no cliente (**não** grep em `.tsx`) | Os dois itens do topo abrem ato com preview em vez de levar a uma tabela sem botões — a promessa literal do `14` |
 | ✅ **PR3** | `EditPage` — primeira escrita humana de corpo, **sem** `normalize_machine_body` — **ENTREGUE** | edição que viola política ⇒ 422 e bundle intacto; e o preview deixa de **subdeclarar** (diff contra os bytes crus, reformatação nomeada na nota) | A correção mais comum passa a acontecer no produto — CLI, HTTP **e app**: a oferta declara `multiline`/`prefill` e o `CurationDialog` abre `textarea` com o corpo atual (a 1ª das duas saídas da nota do §3) |
-| **PR5** | `MergePages` — união declarada, perdedora **supersedida** | merge preserva tags/sources/`source_sha256`/`valid_at` e não perde byte no HEAD | Duas versões da mesma verdade param de conviver sem ninguém perder informação |
+| ✅ **PR5** | `MergePages` — união declarada, perdedora **supersedida** — **ENTREGUE** | merge preserva tags/`valid_at` e não perde byte no HEAD; região absorvida **antes** de `# Citations` (senão desarma `policy.citation_invalid` — medido) | Duas versões da mesma verdade param de conviver sem ninguém perder informação. **Emenda ao DoD**: `source_sha256`/`source`/`resource` NÃO são herdados — descrevem a fonte da origem, e a proveniência do texto absorvido fica na página de origem, linkada da região (por referência, não por cópia) |
 
 ### Fase 2 — A camada de padrões como objeto (RFC + ADR-42)
 
@@ -190,11 +190,14 @@ seguintes — evita um segundo mecanismo mentindo sobre o primeiro.
   `HarnessRunner.run(mode='write')` compõe `okf_conformance` +
   `local_policy`; `check_corpus` — origem de
   `policy.contradiction_candidate` — só é chamado em `lint_bundle`. Logo o
-  preview **nunca** inclui a contradição que a fila põe em primeiro lugar,
-  e verificá-la exige varrer o bundle inteiro (os 16-40 s do P-11, cuja
-  memoização é Fase 7). ⇒ Ou o preview de merge é lento **por design e
-  declarado**, ou a memoização por `(page, sha)` **antecipa da F7 para a
-  F1**.
+  preview **nunca** inclui a contradição que a fila põe em primeiro lugar.
+  ⇒ **RESOLVIDA no F1-PR5 por uma terceira saída** (ADR-41.5): a premissa
+  estava errada — os 16-40 s são do `lint_bundle` (todos os checks), e o
+  `check_corpus` sozinho sai por **~1,2 ms/doc + ~45 ms de gazetteer**
+  (medido: 300 docs em 357 ms). E a pergunta do preview é sobre AS DUAS
+  PÁGINAS do ato: ele roda o detector nos dois documentos antes e depois, e
+  consulta `page_entities` (projeção já indexada por entidade) para a
+  terceira página. Sem varredura e sem antecipar a memoização da F7.
 - **D-E · O sumário de tema realimenta o grafo que gera o tema.**
   `_CommunitySummaryPage` escreve links para os membros; `rebuild_index`
   converte corpo em arestas; `_weighted_graph` lê `graph_edges` **sem

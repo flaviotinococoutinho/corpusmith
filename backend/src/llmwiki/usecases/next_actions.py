@@ -90,15 +90,27 @@ def acts_for(item: dict) -> list[dict]:
         alvo = item.get("target")
         ofertas = [{"act": "invalidate", "params": {"page": alvo},
                     "needs": [], "label": "Invalidar esta página"}]
-        # supersede exige DUAS páginas distintas; com uma só, `page ==
-        # successor` levantaria ValueError já no plano
+        # supersede e merge exigem DUAS páginas distintas; com uma só,
+        # `page == successor`/`page == into` levantaria ValueError já no plano
         if len({*pages}) >= 2:
+            outras = [p for p in pages if p != alvo]
             ofertas.insert(0, {
                 "act": "supersede",
                 "params": {"successor": alvo},
                 "needs": ["page"],
                 "label": "Suceder uma das páginas em conflito",
-                "options": {"page": [p for p in pages if p != alvo]}})
+                "options": {"page": outras}})
+            # F1-PR5: `merge` vem PRIMEIRO — é a única das três resoluções
+            # que não pede a ninguém para abandonar texto (o corpo da outra
+            # entra integral na região declarada). O próprio finding lista
+            # as duas saídas; esta é a que preserva mais informação, então é
+            # ela que o clique principal do item abre.
+            ofertas.insert(0, {
+                "act": "merge",
+                "params": {"into": alvo},
+                "needs": ["page"],
+                "label": "Fundir uma das páginas nesta",
+                "options": {"page": outras}})
         return ofertas
     if kind in ("contested", "stale"):
         # F1-PR3: o ato que estes kinds pediam existe agora. Corrigir o

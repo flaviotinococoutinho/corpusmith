@@ -52,6 +52,33 @@ def invalidated_meta(meta: dict, when: datetime,
     return out
 
 
+# Chaves que NÃO entram na união de uma fusão (F1-PR5). Todas dizem algo
+# sobre o CICLO DE VIDA ou a IDENTIDADE da página de origem, não sobre o
+# fato que ela afirma — e herdá-las faria a vencedora afirmar o que não se
+# pode verificar:
+#   superseded_by / supersedes  → a vencedora herdaria a sucessão da outra;
+#   invalid_at                  → a vencedora nasceria EXPIRADA (a origem
+#                                 pode estar stale sem estar supersedida);
+#   stale_as_of                 → âncora de commit da origem;
+#   source_sha256 / source / resource → checksum e URI canônica da FONTE da
+#                                 origem. A proveniência do texto absorvido
+#                                 fica na página de origem, que segue no
+#                                 bundle (invalidar-nunca-apagar) e é
+#                                 linkada da região — por REFERÊNCIA, não
+#                                 por cópia. Dois checksums de fontes
+#                                 diferentes num campo escalar seria
+#                                 escolher um em silêncio;
+#   generated_via               → herdar `api:*` sujeitaria a vencedora à
+#                                 política de citação de outra página.
+NOT_MERGEABLE = ("superseded_by", "supersedes", "invalid_at", "stale_as_of",
+                 "source_sha256", "source", "resource", "generated_via")
+
+
+def mergeable_source_meta(source: dict) -> dict:
+    """Frontmatter da origem SEM as chaves de ciclo de vida/identidade."""
+    return {k: v for k, v in source.items() if k not in NOT_MERGEABLE}
+
+
 def merge_meta(target: dict, source: dict) -> dict:
     """União DECLARADA de frontmatter numa fusão (usado pelo MergePages e
     pela fusão de UPDATE): o alvo manda, o que falta vem da fonte, listas
