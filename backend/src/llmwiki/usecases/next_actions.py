@@ -50,6 +50,57 @@ _ACTION_TYPE = {
 }
 
 
+# ---------------------------------------------------------- F1-PR6
+# Ofertas de ATO por item: o que o clique pode ABRIR, com os parâmetros já
+# derivados do que o item carrega. Função de módulo SEPARADA de propósito —
+# a Fase 3 reescreve o ranking e as fontes deste arquivo, e assim substitui
+# uma função em vez do módulo (colisão mapeada em docs/15 §6).
+#
+# `params` é o que já se sabe; `needs` é o que o humano ainda escolhe no
+# dialog. A soma dos dois TEM de construir o ato — há teste por
+# `inspect.signature` provando isso, para as assinaturas não migrarem para
+# o .tsx, onde nenhum teste de backend as alcança.
+#
+# Silêncio deliberado: kinds sem ato saem com lista VAZIA em vez de uma
+# oferta que falharia. `stale` e `contested` são os casos tentadores —
+# os parâmetros de `invalidate` fecham, mas invalidar afirma que o fato
+# EXPIROU NO MUNDO, coisa que "precisa de revisão" (stale) e "deu beco"
+# (contested) nunca afirmaram. O ato certo para eles é o EditPage do
+# F1-PR3. Oferecer aqui seria pôr uma mentira datada a um clique do gate.
+def acts_for(item: dict) -> list[dict]:
+    """Ofertas de ato para um item da fila (lista vazia = só navegação)."""
+    kind = item.get("kind")
+    action = item.get("action") or {}
+    if kind == "bridge":
+        src, dst = action.get("src"), action.get("dst")
+        if not src or not dst or src == dst:
+            return []
+        # a direção do par vem de `a < b` no leiden — lexicográfica, não
+        # semântica. Oferecer os dois sentidos evita escolher em silêncio.
+        return [{"act": "link", "params": {"src": src, "dst": dst},
+                 "needs": [], "label": f"Linkar {_titleize(src)} → "
+                                       f"{_titleize(dst)}"},
+                {"act": "link", "params": {"src": dst, "dst": src},
+                 "needs": [], "label": f"Linkar {_titleize(dst)} → "
+                                       f"{_titleize(src)}"}]
+    if kind == "contradiction":
+        pages = [p for p in (action.get("pages") or []) if p]
+        alvo = item.get("target")
+        ofertas = [{"act": "invalidate", "params": {"page": alvo},
+                    "needs": [], "label": "Invalidar esta página"}]
+        # supersede exige DUAS páginas distintas; com uma só, `page ==
+        # successor` levantaria ValueError já no plano
+        if len({*pages}) >= 2:
+            ofertas.insert(0, {
+                "act": "supersede",
+                "params": {"successor": alvo},
+                "needs": ["page"],
+                "label": "Suceder uma das páginas em conflito",
+                "options": {"page": [p for p in pages if p != alvo]}})
+        return ofertas
+    return []
+
+
 def _titleize(target: str) -> str:
     """Título legível a partir do rel_path (slug → frase) — barato e puro,
     sem reabrir o bundle (mesmo critério dos sumários de comunidade)."""
@@ -129,6 +180,9 @@ class NextActions(UseCase):
                  + [_enrich(i) for i in inbox_items(self._settings)]
                  + bridge_items(self._settings)
                  + contradiction_items(self._settings))
+        # F1-PR6: cada item declara os atos que o clique pode abrir. Uma
+        # linha, antes do sort — a ordenação não muda (teste de guarda).
+        items = [{**i, "acts": acts_for(i)} for i in items]
         items.sort(key=lambda i: i["value"] / max(i["cost_min"], 0.1),
                    reverse=True)
         by_origin: dict[str, int] = {}

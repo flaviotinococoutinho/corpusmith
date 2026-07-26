@@ -13,6 +13,98 @@ export interface SidecarFailure {
   detail: string;
 }
 
+// ---------------------------------------------------- F1-PR6: tipos do payload
+// Até aqui `nextActions()` devolvia `any` e o painel usava `any`, então
+// `tsc --noEmit` (o único gate de frontend do projeto) não provava NADA
+// sobre este shape. Com os tipos declarados, renomear um campo no backend
+// sem atualizar aqui QUEBRA o typecheck — que é a única garantia honesta
+// disponível: não há runner de teste de UI no desktop.
+export interface Finding {
+  severity: "error" | "warn" | "info";
+  rule: string;
+  path: string;
+  message: string;
+  okf_conformance?: boolean;
+  meta?: Record<string, unknown>;
+}
+
+export interface CurationActOffer {
+  act: string;
+  params: Record<string, string>;
+  needs: string[];
+  label: string;
+  options?: Record<string, string[]>;
+}
+
+export interface CurationPreview {
+  act: string;
+  pages: string[];
+  diffs: Record<string, string>;
+  findings: Finding[];
+  dependents: string[];
+  note: string;
+  blocked: boolean;
+}
+
+export interface CurationActResult {
+  dry_run: boolean;
+  applied: boolean;
+  preview: CurationPreview;
+  id?: number;
+  commit?: string;
+  undone_act?: number;
+}
+
+export interface NextActionItem {
+  kind: string;
+  target: string;
+  title: string;
+  origin: string;
+  value: number;
+  cost_min: number;
+  reason: string;
+  action: { type: string } & Record<string, unknown>;
+  acts: CurationActOffer[];
+}
+
+export interface NextActionsQueue {
+  actions: NextActionItem[];
+  total: number;
+  truncated: boolean;
+  by_origin: Record<string, number>;
+}
+
+/** Erro de ato com o CORPO preservado (F1-PR6).
+ *
+ *  `get`/`post` genéricos descartam `r.json()` em `!r.ok` — um 422 virava
+ *  literalmente `Error("/curation/act: 422")`, e os findings nunca
+ *  chegavam à tela, desfazendo o ganho do handler que existe justamente
+ *  para o produto parar de parecer quebrado.
+ *
+ *  Atenção aos DOIS shapes de 422: o do Harness traz
+ *  `{error: "harness_rejection", findings}`; o do Pydantic traz
+ *  `{detail: [...]}`. Discriminar por status é errado — tem de ser pelo
+ *  corpo. */
+export class CurationError extends Error {
+  constructor(
+    readonly status: number,
+    readonly body: any,
+  ) {
+    super(
+      body?.error === "harness_rejection"
+        ? body.message ?? "rejeitado pelo Harness"
+        : typeof body?.detail === "string"
+          ? body.detail
+          : `falha ${status}`,
+    );
+  }
+  get harnessFindings(): Finding[] {
+    return this.body?.error === "harness_rejection"
+      ? (this.body.findings ?? [])
+      : [];
+  }
+}
+
 declare global {
   interface Window {
     llmwiki?: {
@@ -129,7 +221,22 @@ export class DaemonClient {
   insights = () => this.get<any>("/cockpit/insights");
   gaps = () => this.get<any>("/cockpit/gaps");   // v1.1: lacunas estruturais
   nextActions = (limit = 40) =>                  // R3 (v1.8): fila única
-    this.get<any>(`/cockpit/next-actions?limit=${limit}`);
+    this.get<NextActionsQueue>(`/cockpit/next-actions?limit=${limit}`);
+
+  /** Ato de curadoria (F1-PR6). Método PRÓPRIO em vez de usar `post()`:
+   *  precisa preservar o corpo do erro. Aditivo — não toca a assinatura
+   *  de `post()`/`get()`, conforme a regra de colisão do docs/15 §6. */
+  curationAct = async (act: string, params: Record<string, string>,
+                       dryRun: boolean): Promise<CurationActResult> => {
+    await this.connect();
+    const r = await fetch(this.base() + "/curation/act", {
+      method: "POST",
+      headers: { ...this.headers(), "Content-Type": "application/json" },
+      body: JSON.stringify({ act, params, dry_run: dryRun }),
+    });
+    if (!r.ok) throw new CurationError(r.status, await r.json().catch(() => null));
+    return r.json();
+  };
   dictionary = () => this.get<any>("/cockpit/dictionary");
   traces = () => this.get<any>("/cockpit/traces");
   trace = (askId: string) =>
