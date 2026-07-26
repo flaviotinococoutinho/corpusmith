@@ -28,8 +28,8 @@ Decisões que a investigação do PR fixou, cada uma por um defeito MEDIDO:
 """
 from __future__ import annotations
 import re
-from ..normalize.masking import is_protected, protected_spans
 from .links import MD_LINK, md_link, resolve, safe_link_text
+from .regions import RegiaoInconsistente, spans
 
 ABRE = "<!-- llmwiki:relacionados -->"
 FECHA = "<!-- /llmwiki:relacionados -->"
@@ -38,18 +38,10 @@ _ABRE_RE = re.compile(rf"^{re.escape(ABRE)}$", re.M)
 _FECHA_RE = re.compile(rf"^{re.escape(FECHA)}$", re.M)
 _SO_DIGITOS = re.compile(r"^\d+$")
 
-
-class BlocoInconsistente(ValueError):
-    """Sentinelas em estado que o ato não sabe manter sem risco."""
-
-
-def _sentinelas(body: str) -> tuple[list, list]:
-    """Ocorrências FORA de cerca de código, em linha própria."""
-    protegidas = protected_spans(body)
-    def livres(rx):
-        return [m for m in rx.finditer(body)
-                if not is_protected(protegidas, m.start(), m.end())]
-    return livres(_ABRE_RE), livres(_FECHA_RE)
+# A guarda de sentinela vive em `okf/regions.py` desde o F1-PR5, porque o
+# `MergePages` precisa da MESMA regra com N regiões em vez de uma. Este
+# alias preserva o nome que o ato e os testes do PR4 já usam.
+BlocoInconsistente = RegiaoInconsistente
 
 
 def find_block(body: str) -> tuple[int, int] | None:
@@ -57,18 +49,9 @@ def find_block(body: str) -> tuple[int, int] | None:
 
     Recusa qualquer estado que não seja 0 ou 1 par completo: com sentinela
     faltando ou sobrando, re-renderizar engoliria conteúdo do autor."""
-    abre, fecha = _sentinelas(body)
-    if not abre and not fecha:
-        return None
-    if len(abre) != len(fecha) or len(abre) > 1:
-        raise BlocoInconsistente(
-            f"bloco de relações inconsistente: {len(abre)} abertura(s) e "
-            f"{len(fecha)} fechamento(s). Edite a página à mão para deixar "
-            "no máximo um par completo — o ato não mexe em corpo ambíguo.")
-    if abre[0].start() > fecha[0].start():
-        raise BlocoInconsistente(
-            "fechamento do bloco de relações antes da abertura")
-    return abre[0].start(), fecha[0].end()
+    faixas = spans(body, _ABRE_RE, _FECHA_RE,
+                   nome="bloco de relações", maximo=1)
+    return faixas[0] if faixas else None
 
 
 def entries_of(body: str) -> dict[str, str]:

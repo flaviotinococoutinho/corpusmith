@@ -1011,3 +1011,89 @@ ponta a ponta pelos endpoints reais: oferta → `GET /cockpit/page` →
 reenvio do corpo intocado dando **diff vazio** (aplicar sem digitar é NOOP)
 → preview da correção → apply → undo.
 18 testes novos; 531 no total.
+
+#### ADR-41.5 — `MergePages`: a fusão como absorção declarada (F1-PR5)
+**Contexto**: último ato da Fase 1, e o que o Harness pede **por escrito** —
+`policy.contradiction_candidate` diz "resolva com supersede/invalid_at **ou
+funda as páginas**", e só a primeira metade existia desde o F1-PR1. É também
+a única das três resoluções do item de maior valor epistêmico da fila (VoI
+0.85) que não pede a ninguém para abandonar texto.
+**Decisão**: um ato, duas escritas, um commit. A **vencedora** recebe a
+união declarada de frontmatter (`merge_meta`) e o corpo da perdedora
+**integral**, numa região sentinelada; a **perdedora** mantém o corpo
+intocado e ganha `superseded_by`/`invalid_at` pelo MESMO `superseded_meta` do
+supersede. Nenhum byte se perde: as duas seguem no HEAD, e o texto da
+perdedora passa a ser legível de dentro da vencedora — que é o que "as duas
+versões param de conviver" precisa significar para quem lê.
+**Alternativas rejeitadas**: entrelaçar as duas prosas (é o eixo de MÁQUINA
+operando sobre texto humano, v0.8 §1.2); só suceder sem absorver (a
+perdedora ficaria legível apenas no caminho dela — "sem perder informação"
+viraria "uma delas ficou invisível"); fundir renumerando notas de rodapé
+(renumerar citação é forjar proveniência).
+**A guarda de sentinela virou primitiva** (`okf/regions.py`). Relações são
+UM bloco por página; absorções são N, cada uma declarando a origem. Escrever
+a contagem de sentinelas de novo repetiria, no ato de reusá-la, o defeito
+das duas cópias do `MD_LINK` (ADR-41.2). `relations.py` passou a ser o
+primeiro cliente da primitiva, e os 56 testes do PR4 são o PIN dessa
+extração — um deles falhou na hora e apontou uma mudança de mensagem, que é
+contrato com o usuário.
+**Três interações que o suíte verde não cobria** (revisão adversarial antes
+do commit, cada uma virou teste que falha contra a implementação óbvia):
+1. **a região no fim do corpo DESARMA `policy.citation_invalid`** — o achado
+   mais sério. `local_policy` monta o conjunto `listed` com tudo que vem
+   depois do primeiro `# Citations`, então uma região no
+   fim cai **inteira** dentro de `listed` e legitima qualquer `[n]` que o
+   texto absorvido cite sem definir. **Medido**, com o mesmo corpo e a mesma
+   página: região depois de `# Citations` ⇒ **nenhum finding**; região antes
+   ⇒ `policy.citation_invalid` (error). A região entra **antes** da seção, e
+   a busca copia deliberadamente o regex do detector, sem "melhorar" o
+   parsing — o que importa é cair do lado certo da fronteira que **ele** usa;
+2. **o bloco de relações da origem entrando na vencedora** deixaria DOIS
+   pares de sentinela lá, `find_block` passaria a recusar, e a vencedora
+   **nunca mais receberia um link**. O bloco sai da cópia absorvida (é
+   território de ato, não prosa) e as relações seguem na página de origem,
+   que é linkada do cabeçalho da região;
+3. **fundir uma página que já é resultado de fusão** aninharia as regiões
+   (abre, abre, fecha, fecha) e `regions.blocks` recusaria qualquer operação
+   no corpo da vencedora. **Recusa** com a saída legítima na mensagem, em vez
+   de remover a região interna — remover apagaria a prosa que a origem havia
+   absorvido de uma TERCEIRA página. Mesma postura do `UndoNotExpressible`.
+**A união não herda ciclo de vida nem proveniência** (`NOT_MERGEABLE` em
+`kernel/curation.py`). `invalid_at` da origem faria a vencedora nascer
+**expirada** — verificado por execução: sem a guarda, a vencedora sai com
+`invalid_at: 2020-01-01`. E `source_sha256`/`source`/`resource` descrevem a
+FONTE da origem: dois checksums de fontes diferentes num campo escalar seria
+escolher um em silêncio. A proveniência do texto absorvido fica na página de
+origem, que segue no bundle e é linkada da região — **por referência, não
+por cópia**.
+**D-D RESOLVIDA, e por uma terceira saída.** O `docs/15` dava duas ("preview
+lento por design" ou "antecipar a memoização da F7"), partindo de que ver a
+contradição custaria os 16-40 s do P-11. **Medido**: aquele custo é do
+`lint_bundle` (que roda TODOS os checks), não do `check_corpus`, que sai por
+**~1,2 ms/doc + ~45 ms de gazetteer** (300 docs em 357 ms). E a pergunta que
+o preview precisa responder é sobre AS DUAS PÁGINAS do ato, não sobre o
+bundle. Então o preview roda `check_corpus` nos dois documentos **antes** (o
+finding que o ato resolve) e nos dois **depois** (a prova de que sumiu), e
+consulta `page_entities` — projeção já construída, com índice por entidade —
+para saber se o identificador aparece em mais alguma página. **Sem varredura
+e sem memoização**, com teste contando quantos documentos o detector recebe
+(sempre 2).
+**O limite que o preview DECLARA em vez de esconder**: `check_corpus` marca
+o grupo INTEIRO como resolvido quando uma sucessão aparece nele. Fundir A em
+B silencia o alerta também para o par (B, C) — sem que aquela convivência
+tenha sido tratada. É comportamento pré-existente do detector, mas a fusão é
+o gesto que mais facilmente o dispara, então a nota nomeia a terceira página
+e diz que o alerta vai desaparecer para o grupo.
+**A fila oferece `merge` PRIMEIRO** (antes de `supersede` e `invalidate`):
+é a única resolução que preserva todo o texto, então é ela que o clique
+principal do item abre. `merge` exige duas páginas distintas, então a guarda
+`len(pages) >= 2` do ADR-41.3 passou a cobrir os dois atos.
+**Invariantes**: prosa humana nunca reescrita (a região é a única coisa que
+o ato escreve de próprio) · gate de escrita inescapável · invalidar-nunca-
+apagar (undo devolve os DOIS arquivos byte a byte) · canônico ≠ projeção ·
+CQS · 1 método público por use case.
+**Verificado num HOME real**: fila → oferta `merge` com as escolhas prontas
+→ preview declarando a resolução → apply com as duas prosas na vencedora,
+tags unidas (`rag`, `memoria`, `grafo`), perdedora supersedida → a
+contradição sai da fila → undo devolvendo os bytes → `doctor` verde.
+22 testes novos; 553 no total. **Fase 1 completa.**

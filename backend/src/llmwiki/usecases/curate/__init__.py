@@ -17,6 +17,7 @@ from .base import CurationAct, CurationPreview
 from .edit import EditPage
 from .invalidate import InvalidatePage
 from .link import LinkPages, UnlinkPages
+from .merge import MergePages
 from .supersede import SupersedePage
 from .undo import UndoCurationAct, UndoNotExpressible
 
@@ -25,11 +26,11 @@ ACTS: dict[str, type[CurationAct]] = {
     "edit": EditPage,
     "invalidate": InvalidatePage,
     "link": LinkPages,
+    "merge": MergePages,
     "unlink": UnlinkPages,
     "undo": UndoCurationAct,
 }
 
 __all__ = ["ACTS", "CurationAct", "CurationPreview", "EditPage",
-           "InvalidatePage",
-           "LinkPages", "SupersedePage", "UndoCurationAct",
-           "UndoNotExpressible", "UnlinkPages"]
+           "InvalidatePage", "LinkPages", "MergePages", "SupersedePage",
+           "UndoCurationAct", "UndoNotExpressible", "UnlinkPages"]
