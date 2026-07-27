@@ -10,6 +10,7 @@ a paráfrase superficial.
     score = 0.4·rank(FTS título) + 0.3·Jaccard(entidades) + 0.3·(1 − NCD)
 """
 from __future__ import annotations
+import sqlite3
 import json
 from .base import UseCase
 from ..kernel.information import ncd
@@ -23,6 +24,16 @@ STRONG_IDS = ("doi", "isbn", "issn", "arxiv", "git_sha")
 
 
 class ReconcileCandidate(UseCase):
+    """Escada de reconciliação: identificador forte, similaridade, árbitro.
+
+    **Estado medido do degrau de similaridade**: morto em produção desde a
+    v0.9 — ver o comentário em `_by_similarity`. `similarity_error` guarda o
+    motivo quando a consulta falha, para o defeito parar de ser indistinguível
+    de "não havia candidato".
+    """
+
+    similarity_error: str | None = None
+
     def __init__(self, settings: Settings, candidate: OKFDocument,
                  report, router=None):
         self._settings = settings
@@ -87,14 +98,37 @@ class ReconcileCandidate(UseCase):
         title = self._candidate.meta.title or self._candidate.rel_path
         terms = " OR ".join(f'"{w}"' for w in title.split()[:6]
                             if len(w) > 2) or f'"{title}"'
+        # DEFEITO CONHECIDO, e o `except` agora é AUDÍVEL em vez de mudo.
+        #
+        # Verificado por execução em SQLite 3.45.1: `MIN(bm25(chunks_fts))`
+        # levanta `OperationalError: unable to use function bm25 in the
+        # requested context` — SEMPRE, não em caso de borda. O agregado não
+        # pode envolver a função de ranking do FTS5. Com o `except Exception`
+        # cego que estava aqui, `matches` saía vazio em TODA execução desde a
+        # v0.9, e com isso o degrau de similaridade, os limiares HI/LO, o NCD
+        # e o árbitro LLM viraram código morto em produção — sem que nada
+        # acusasse, porque a degradação era indistinguível de "não achei
+        # candidato".
+        #
+        # A correção da SQL é UMA LINHA (`MIN(bm25(...))` -> `bm25(...)`,
+        # sem o GROUP BY) e NÃO é feita aqui de propósito: ela ATIVA o árbitro
+        # LLM no caminho de escrita, e o `AGENTS.md` §8 exige RFC para isso.
+        # Fazer o gesto de uma linha seria introduzir decisão de modelo
+        # generativo sobre o canônico por efeito colateral de um conserto.
+        #
+        # O que muda AQUI é só o silêncio: a falha passa a ser registrada e
+        # contável. O comportamento (degradar para lista vazia) é idêntico.
+        matches = []
         try:
             matches = idx.execute(
                 "SELECT c.page, MIN(bm25(chunks_fts)) r FROM chunks_fts "
                 "JOIN chunks c ON c.id = chunks_fts.rowid "
                 "WHERE chunks_fts MATCH ? GROUP BY c.page "
                 "ORDER BY r LIMIT 8", (terms,)).fetchall()
-        except Exception:
-            matches = []
+        except sqlite3.OperationalError as e:
+            self.similarity_error = f"{type(e).__name__}: {e}"
+        except Exception as e:                           # noqa: BLE001
+            self.similarity_error = f"{type(e).__name__}: {e}"
         candidate_entities = set(self._report.entities_frontmatter(limit=64))
         reader = BundleReader(self._settings.path("knowledge") / "bundle")
         scored: list[tuple[float, str]] = []
