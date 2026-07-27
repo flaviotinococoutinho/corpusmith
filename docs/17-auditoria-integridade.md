@@ -1,26 +1,250 @@
-# 17 · Auditoria de integridade conceitual (julho/2026)
+# Verificação adversarial da auditoria do LLM Wiki — relatório acionável
 
-> **Estado: achados NÃO VERIFICADOS, salvo onde marcado.** A auditoria rodou
-> como workflow de 5 auditores independentes sobre o código real; a fase de
-> verificação adversarial (dois céticos por achado) **falhou** na primeira
-> tentativa por um bug no script de orquestração (`parallel` recebia promises
-> em vez de thunks) e depois por limite de sessão — 84 achados × 2 verificadores
-> eram 174 agentes. A segunda rodada verifica só os 22 de gravidade alta, com
-> um cético cada, obrigado a RODAR código: ler e achar plausível não conta. O que está aqui é o
-> produto bruto dos auditores — alegações com evidência apontada, não achados
-> confirmados. Três foram verificados por execução e estão marcados.
+HEAD auditado: `ebb1dff` (F2-PR1/PR2/PR3+4 dentro). 84 pontos levantados, os de gravidade ALTA submetidos a cético com obrigação de executar código: **18 confirmados por execução, 4 refutados**.
 
-**84 achados** (22 alta · 43 média · 19 baixa) em cinco dimensões: DoD, invariantes, fluxos, contratos epistêmicos e próximos passos.
+---
 
-## Verificados por execução nesta sessão
+## 1. VEREDITO
 
-| achado | veredito | ação |
+**A integridade conceitual do projeto é alta na camada que ele escreve e baixa na camada que ele mede e mostra.** Isso não é elogio dividido pela metade — é um diagnóstico específico, e o mais acionável possível.
+
+O que se sustentou sob pressão adversarial: o caminho canônico de escrita é genuinamente inescapável (`okf/writer.py:43-45` roda o Harness *dentro* de `write`, não por convenção); o núcleo puro é puro de verdade (varredura AST completa: zero `os`, zero `open(`, zero `sqlite3` em `kernel/`, `normalize/`, `cognitive/`, `epistemic/`); os DoDs das fases entregues têm o "teste que falha antes" com o nome exato prometido; e há contratos epistêmicos que declaram resultados negativos descobertos por property test (`native_sketch_kernel`) e recusam renomear dívida (`cognitive_priority` mantém `expected_information_gain` e declara em três lugares que é proxy). Isso é raro e deve ser preservado.
+
+O que quebrou, e quebrou em padrão:
+
+1. **A autoridade declarada não é a autoridade efetiva.** `AGENTS.md` §6 diz que `index.db` "NUNCA participa da transação canônica" e `architecture.toml` lhe dá `authority = "nenhuma (projeção)"`. Medido: o mesmo documento candidato produz `UPDATE` ou `ADD` conforme o estado dessa projeção, com `doctor.ok=True` nos dois casos, e o cético produziu **duas páginas canônicas vivas para o mesmo DOI** pelo mesmo use case. A transação passa pelo Harness; o *conteúdo* dela é função pura de um banco sem autoridade.
+2. **Código que nunca rodou passou por código que funciona.** A consulta de similaridade (`reconcile_candidate.py:91-95`) estoura em **toda** execução desde a v0.9 (`bm25()` dentro de `MIN()`), engolida por `except Exception: matches = []`. A escada de reconciliação — similaridade composta, HI/LO, NCD, árbitro LLM — é código morto em produção, e nenhum teste passa por ali. O mesmo padrão no empacotamento: `just sidecar` não constrói há meses e ninguém percebeu porque nada o executa.
+3. **O gate mede o que é fácil medir.** `epistemics lint` fica verde com um contrato obrigatório apagado; `test_architecture` só enxerga imports relativos; `conftest` derruba o Ollama e com isso cega 100% da suíte para a única FK do `index.db`; nenhum teste cobre `/events`, `/system/doctor` por HTTP, `/jobs/{id}/cancel` ou qualquer superfície de UI.
+4. **O backend termina onde a interface começa.** Sete achados independentes têm a mesma forma: use case completo, endpoint completo, método de cliente às vezes até declarado — e nenhuma tela. `doctor`, `undo`, revisão semanal, cancel/retry de job, cinco tipos de evento SSE, o Stepper do Inbox, a barra de progresso de Processos. Não é backlog de UI: é o produto anunciar capacidade que o usuário não alcança.
+
+**Julgamento:** o projeto não tem crise de arquitetura — tem crise de *fechamento de laço*. Constrói bem e verifica mal aquilo que construiu. As duas correções estruturais que mudam a curva são: (a) fazer a decisão canônica depender de dado com autoridade ou declarar formalmente a pré-condição de frescor da projeção; (b) instalar gates que falhem por **ausência** (contrato ausente, superfície ausente, evento não repassado, binário não construído), porque todo defeito confirmado aqui é uma ausência que passou verde.
+
+Nota de calibração honesta: **nenhum dos 18 confirmados destrói dado do usuário**. Git é backstop real, `raw/` sobrevive, freeze é reversível, o viés declarado é "na dúvida, duplicar". A gravidade está em decisões erradas silenciosas e em promessas não alcançáveis, não em perda.
+
+---
+
+## 2. CONFIRMADOS, por consequência
+
+### Tier 1 — o produto decide errado ou não funciona para terceiros
+
+**C1. `index.db` (projeção sem autoridade) é a autoridade da decisão ADD/UPDATE/SUPERSEDE — e a escada de similaridade é código morto desde a v0.9**
+`backend/src/llmwiki/usecases/reconcile_candidate.py:34,66-74,91-97,121` · `usecases/base.py:82-101`
+
+Observado: mesmo bundle, mesmo candidato, só o estado da projeção muda → índice populado devolve `{op:UPDATE, target:concepts/teoria-da-informacao.md, score:1.0}`; `page_entities`/`chunks` zerados devolve `{op:ADD, target:null, score:0.0}` — **com `doctor.ok=True` e `findings=[]` nos dois estados**. Ponta a ponta por `MachinePageUseCase`: bundle terminou com `concepts/teoria-da-informacao.md` **e** `concepts/teoria-da-informacao-2.md`, mesmo DOI. O caminho para chegar ao estado verde é mundano, não adulteração: `retrieval/fts.py` faz `except Exception: continue` quando `reader.load` falha e **mesmo assim** carimba `index_meta.bundle_head = HEAD` — 0 chunks, doctor verde. Corroboração medida: a consulta de `_by_similarity` levanta `OperationalError: unable to use function bm25 in the requested context` em SQLite 3.45.1, **sempre**; `except Exception: matches = []` está permanentemente ativo.
+Mitigação real: o desvio comum (bundle avança, índice não reconstrói) É pego por INV-002.
+
+Fazer:
+- corrigir a SQL (`MIN(bm25(...))` → `bm25(...)`) e escrever o teste que exercita o degrau de similaridade — hoje **todos** os testes de reconciliação passam por DOI (`test_v08.py:82`, `test_v10.py:156/174`, `test_cold.py:141`);
+- **antes** de corrigir, decidir a política: com a SQL viva, o árbitro LLM e o SUPERSEDE por modelo generativo passam a ser alcançáveis (hoje não são — ver R3). Isso é mudança de comportamento e pede RFC pela própria regra de `docs/15` §1.1 (heurística no caminho de escrita);
+- adicionar pré-condição de frescor em `ReconcileCandidate` (recusar decidir com índice sem cobertura do bundle) ou um INV de **cobertura** bundle→índice — `diagnose.py:237-249` só checa índice→bundle;
+- trocar os dois `except Exception` cegos por captura tipada com log/finding.
+
+**C2. G-8: release e empacotamento sem automação — o binário do sidecar não é construído por ninguém, e a receita manual também não roda mais**
+`docs/15-plano-execucao.md:73` (G-8 → "F0 + PR-0") vs `docs/15:105-106` (ambos ENTREGUE) · `.github/workflows/ci.yml:2` · `desktop/electron-builder.yml:10-12` · `justfile:49-51` · `backend/build.spec:12`
+
+Observado: `grep -rn "tags:|build.spec|electron-builder|pyinstaller" .github/` → exit 1, zero linhas. O job `desktop` roda `tsc --noEmit && vite build` e para **exatamente** antes do `electron-builder` de `package.json:10`. Cético compilou `sidecar.ts` e montou o layout de app instalado: **Cenário A** (o que um terceiro tem hoje) → `{"reason":"no-venv","detail":".../Resources/backend/.venv/bin/python"}`; **Cenário B** (mesmo app, só com o binário presente) → `null`, sobe pelo ramo empacotado. O único elemento faltante é a construção. E a receita manual quebrou: `pyinstaller build.spec` falha com `ValueError: Resource '.../llmwiki-server' is not a valid file!` porque `build.spec:12` faz `EXE(pyz, a.scripts, ...)` **sem `exclude_binaries=True`** (obrigatório em onedir); com esse único token, constrói (3,4 MB). Pior: `collect_dynamic_libs("sqlite_vec")` devolve `[]` com WARNING porque `sqlite-vec` só existe no extra `[ml]` e `just bootstrap` instala `.[dev]` — o binário sairia **sem a extensão nativa vec0, em silêncio**.
+
+Fazer:
+- `exclude_binaries=True` em `build.spec:12` e mover `sqlite-vec` para a dependência que o build usa (ou falhar explicitamente se ausente, em vez de `[]`);
+- job de release no `ci.yml` com trigger de tag: `just sidecar` → `electron-builder` → artefato; e um smoke que assere `resources/backend/llmwiki-server` presente no pacote;
+- acrescentar token de release em `architecture.toml [gate].ci_enforced` — sem ele, `test_ci_executa_todo_o_gate_declarado` estruturalmente nunca poderá acusar isso.
+
+Precisão do enunciado: a metade "deriva de versão" de G-8 **foi paga** (1.9.0 amarrado nos três lugares). O defeito é "G-8 atribuída a dois pacotes ENTREGUES, paga pela metade, sem dono restante", não entrega falsamente declarada.
+
+**C3. Uma linha em `embeddings` quebrava TODO reindex por FOREIGN KEY — CORRIGIDO durante a auditoria; o cego do gate permanece**
+`backend/db/schema_index.sql:39-43` · `runtime/db.py:50` · `retrieval/fts.py` (`_purge_page` e caminho full) · `backend/tests/conftest.py:11-24`
+
+Observado (antes da correção): com 1 linha em `embeddings`, `rebuild_index`, `rebuild_index(full=True)`, `doctor --repair` e o bump de `INDEX_GENERATION` **todos** levantavam `sqlite3.IntegrityError: FOREIGN KEY constraint failed`. E-2-E sem INSERT manual — o job `embed` real populou a tabela e o reindex incremental normal estourou em `fts.py:101`. `ADR-42` (`docs/08:1173-1174`) registra que na máquina do autor `embeddings` foi de 0 → 7 linhas: o estado que dispara a falha é o estado **normal** de qualquer instalação com Ollama vivo. Causa da cegueira medida: sob `conftest`, `embed_job.run()` → `{'embedded': 0, 'skipped': 'ollama offline'}` em 100% da suíte.
+Correção já no HEAD (`ebb1dff`): `fts.py:106` e `:208` fazem `DELETE FROM embeddings` antes de `chunks`; o cético reconfirmou por execução que o cenário não estoura mais.
+
+Fazer:
+- escrever o teste que faltou (job `embed` com transporte stubado → reedição → `rebuild_index`) — hoje `grep -rn embeddings backend/tests/*.py` continua em zero;
+- generalizar: qualquer FK nova no `index.db` precisa de teste que a exercite, ou `ON DELETE CASCADE` no schema;
+- a lição de processo é a que importa: **a hermeticidade que garante determinismo é o que cega o gate.** A CI já tem a perna `backend-ml` justamente para não declarar verde-por-skip no ramo Leiden; falta o simétrico para `embed`.
+- (limpeza histórica: a sonda `test_zz_skeptic_embeddings_fk.py` entrou no commit `3ac2eed`; já não existe no HEAD.)
+
+**C4. `rebuild_index` sem `try/finally`: exceção vaza a conexão com transação aberta e trava `index.db` por 30 s**
+`backend/src/llmwiki/retrieval/fts.py:173` (`idx = connect(...)`) e `:268` (único `idx.close()`, caminho de sucesso) · `runtime/db.py:46` (`timeout=30`)
+
+Observado: injetando exceção no ponto realmente desprotegido (`_index_page`, `fts.py:248`), a conexão sobrevive com `in_transaction=True` segurando o write lock, e a escrita seguinte por conexão nova falha com `OperationalError: database is locked` após **30,11 s**. Reproduzido duas vezes contra o código atual. O próprio módulo já carrega comentário (`fts.py:161-167`) admitindo a dívida como "CONFIRMADA por execução e NÃO paga aqui".
+Correções ao enunciado, importantes: "página que faz `reader.load` estourar fora do try" é **falso** — `reader.load` está dentro do try (`:242-245`). "Envenena pelo resto da vida do processo" é **exagero**: é ciclo de referência (traceback→frame→idx); `gc.collect()` libera (medido: 78 objetos, INSERT OK em 0,00 s). Custo real: até 30 s por escrita até a próxima passada do GC. Leitura não é afetada (WAL): `search()` devolveu 8 hits em 0,00 s com o lock preso.
+
+Fazer: `with closing(connect(...))` ou `try/finally` em `rebuild_index`; corrigir o comentário `fts.py:161-167` que diz "3 s" quando `db.py:46` é `timeout=30`; varrer o resto de `retrieval/` e `jobs/` pelo mesmo padrão de recurso liberado só no caminho feliz.
+
+### Tier 2 — o produto conduz o usuário a agir errado, ou não o deixa agir
+
+**C5. A fila oferece ATO DE ESCRITA sobre página aposentada — a F1 transformou beco sem saída em escrita errada**
+`backend/src/llmwiki/usecases/plan_attention.py:68-91` (`gap_items` itera `iter_concepts` sem filtro) · `okf/bundle.py:23-32` · `usecases/next_actions.py:115-130` (`acts_for`)
+
+Observado ponta a ponta pela API: página marcada `stale`, depois supersedida (`superseded_by` + `invalid_at` no frontmatter) → `GET /cockpit/next-actions` **ainda** devolve o item com `reason: "marcada stale: revisar ou suceder"` (a fila manda suceder uma página já sucedida) e `acts:[{act:"edit"}]` → `POST /curation/act` responde **200, `applied:true`, `findings:[]`**, commit `92cb8e9`, corpo reescrito com `superseded_by` intacto. Consequência medida: `chunks.superseded = 1`, e INV-003 (`streams.py:83`) filtra duro do retrieval — **o texto que o curador acabou de corrigir nunca volta em resposta nenhuma.** Vale igual para `contested` supersedida e para página só invalidada.
+Refutação parcial: a cláusula sobre `contradiction` está **errada** — `harness/local_policy.py:141-147` já descarta o grupo quando qualquer membro tem `superseded_by`/`supersedes`/`invalid_at`; medido `contradiction_items == []`. E `bridge` já teve poda no F2-PR1. O defeito é exclusivamente `gap_items → stale/contested → edit`.
+
+Fazer: filtro de vitalidade em `gap_items` (e recusa em `acts_for`) — e note que **`docs/14` P-3 item (C) escopa o filtro a `review_items`/`bridge_items`, ou seja o caminho confirmado está fora do escopo hoje declarado da F3.** Corrigir o escopo e antecipar. Bônus achado no caminho: `SupersedePage` chamado direto em página já supersedida sobrescreve `superseded_by` sem um único finding, quebrando a cadeia — a fila não leva até lá, mas o CLI leva.
+
+**C6. O caminho de abstenção ESCREVE no bundle e commita no Git — e nenhum contrato tem onde declarar isso**
+`backend/src/llmwiki/usecases/ask_memory.py:88-95` · `usecases/cold_memory.py:246-252` · `epistemics.toml:144-148,152`
+
+Observado, use case e `POST /ask` real: HEAD `77cc757 freeze:` → `024c1f0 recycle:`, commits 3→4, arquivo de volta em disco, `log.md` com `[Recall]`, `cold_memories` 1→0, `abstained` vira False. Uma operação de leitura moveu o HEAD do Git. E é **silenciosa**: das três portas de reciclagem, `base.py:91-92` faz `_notify("page.recycled")`, `cockpit.py:497` faz `bus.emit("memory.recycled")`, e `ask_memory.py:92` não faz **nenhum dos dois**; a resposta não tem chave `recycled`. Achado estrutural que agrava: o dataclass `EpistemicContract` (`epistemic/model.py:99-119`) **não tem nenhum campo** de efeito colateral/escrita — nenhuma regra de lint poderia pegar. Alcance: `memory.auto_recycle` é opt-in (default False) mas o preset de produto `exploracao` (`configure_system.py:63`) o liga, exposto como checkbox em `CurationPanel.tsx:104`.
+Sub-alegação **refutada**: "cold.db corrompida produz 'sem cobertura' em silêncio" é falsa como escrita — `connect()` está em `cold_memory.py:54`, **fora** do `try`; com cold.db lixo, `/ask` levanta `DatabaseError`. O caminho silencioso existe só com banco que abre e `cold_fts` ausente.
+
+Fazer: emitir evento e marcar a resposta (`recycled: [...]`) no mínimo; considerar gate humano dado `high_impact=true`; acrescentar campo de efeito colateral ao modelo de contrato (é a lacuna geradora); e reescrever a sub-alegação antes de pautá-la.
+
+**C7. Doctor tem endpoint, use case e método de cliente — e nenhuma superfície; a StatusBar acusa vermelho sem ato, medindo outra coisa**
+`backend/src/llmwiki/api/system.py:140-150` · `desktop/src/lib/daemonClient.ts:221-223` · `desktop/src/panels/StatusBar.tsx:38-39,52-59` · `desktop/src/panels/DaemonUnavailable.tsx:12`
+
+Observado com o app REAL renderizado (esbuild do projeto + jsdom + React 18) contra daemon real: 12 abas, 52 endpoints distintos chamados, **zero** chamadas a `/system/doctor*`. DOM final não contém "doctor", "reparar", "repair", "INV-" nem "invariante". Corrompi o `index.db` até `quick_check` falhar: badge virou `"stacks!"` com `text-red-600`, `onclick: nao`, `filhos <a>/<button>: 0`. Cliquei em tudo: zero requisições. O ato existe e é de um POST só — `POST /system/doctor/repair` devolveu `ok:true`, `counts {error:0,warn:0}`.
+**Agravante que o achado não previa:** o badge nem reflete o doctor. Na primeira execução mostrava "ok" verde enquanto `GET /system/doctor` do mesmo daemon devolvia `ok=false` com INV-002 severity=error. São dois medidores (quick_check vs INV-*) e o único visível não verifica invariante nenhum.
+Refutação parcial testada: o botão "recomputar comunidades/pontes" limpa INV-002/004/006 por efeito colateral do `leiden`, mas deixa INV-001 vivo (rebuild incremental não purga órfão). "Não tem como reparar" se sustenta para os INV reparáveis.
+
+Fazer: painel (ou seção da StatusBar) que chama `doctor()`, lista findings por INV com severidade, e oferece `doctorRepair()` nos reparáveis; ligar o badge ao doctor, não ao `quick_check`. **Corrigir `docs/17:159` e `docs/17:590`**, que afirmam que a F0 entregou "painel"/"facade e painel" — refutado por execução.
+
+**C8. O ponte SSE só repassa 5 tipos de evento — todo o "filme ao vivo" nunca chega à UI**
+`desktop/src/lib/daemonClient.ts:212-218` · consumidores órfãos em `InboxPanel.tsx:39,41,45-46`, `ProcessesPanel.tsx:38,40-41`, `StatusBar.tsx:12-18`
+
+Observado com daemon real + EventSource real (undici, spec WHATWG): a wire trouxe `["source.ingested","job.started","page.stage","compile.extracting","page.stage","page.stage","page.stage","compile.done","page.stage","job.done"]`; o callback recebeu **`["job.started","compile.done","job.done"]`**. Controle decisivo: mesmo payload emitido nomeado e sem nome — `onmessage` recebeu só o sem nome, `addEventListener` recebeu o nomeado. É a nomeação que filtra, `onmessage` funciona. Pipeline: 6× `pipeline.stage` + 1× `pipeline.done` na wire, nenhum registrado. Código morto confirmado: o Stepper do Inbox (`:152-153`) depende de `compile.extracting`, a barra de progresso (`:99-104`) depende de `page.stage`, 5 dos 10 rótulos da StatusBar são inalcançáveis. O bundle já buildado (`dist/assets/index-BA3cepmb.js`) tem a mesma lista.
+Precisão: "rodar um pipeline não move a tela" é exagero — `job.started`/`job.done` passam, então `ProcessesPanel` recarrega no início e no fim; perde-se só o progresso intermediário.
+
+Fazer: trocar o whitelist por repasse genérico (o servidor já nomeia todo evento em `api/system.py:269-271`); acrescentar um teste de `/events` — hoje `grep -rln "/events|EventSourceResponse|text/event-stream" backend/tests/` é vazio.
+
+**C9. Fila de jobs: `cancel` e `retry` existem no backend e não na UI; `dead_lettered` não tem volta e job travado não tem parada**
+`backend/src/llmwiki/api/system.py:229-242` · `runtime/queue.py:121-142,170-179` · `desktop/src/panels/ProcessesPanel.tsx:6-8,108-112`
+
+Observado: `grep -rn "jobs/" desktop/` (árvore inteira) → **zero**. Worker real, cenário mundano (`compile_source` com fonte ausente → `FileNotFoundError` ⊂ OSError ⇒ transitório ⇒ 3 tentativas) chegou a `dead_lettered` espontaneamente: sem ícone (`STATE_ICON` cobre 4 de 8 estados) e sem ação, porque o botão exige `state === "failed"`. O que o botão faz hoje: `POST /jobs` cria **id novo**, deixa o original em `dead_lettered` e perde o `dedupe_key` ('ocr:scan' → None). `POST /jobs/{id}/retry` (sem consumidor) traz o job a `queued` com `attempts=0`. `POST /jobs/{id}/cancel` num job `leased` devolve `cancel_requested` — única forma de acionar o token cooperativo de `worker.py:49-50`, e ninguém a chama.
+Precisões: a receita de falsificação do próprio achado não reproduz (`ocr.py:12` levanta `RuntimeError` ⇒ não-transitório ⇒ `failed`, que tem botão); e `cancelled` também é inalcançável pelo ↻, então "único" está errado.
+
+Fazer: `cancel`/`retry` no `daemonClient` e no `ProcessesPanel`; `STATE_ICON` cobrindo os 8 estados; trocar o ↻ de `enqueue` por `/retry`; teste HTTP dos dois endpoints (hoje só existem as definições).
+
+**C10. O ato `undo` está completo no backend e é inalcançável pelo app**
+`backend/src/llmwiki/usecases/curate/undo.py:36-143` · `api/curation.py:34-56` · `desktop/src/lib/daemonClient.ts:92` (`undone_act?: number`, tipo sem renderizador) · `panels/CurationDialog.tsx:12` (comentário sobre o 409 num caminho nunca exercido)
+
+Observado por HTTP real: apply `invalidate` (id=1, commit real) → `GET /curation/history` devolve o id → `POST` undo → **bytes idênticos ao original**, história ligada (`id=2 undoes=1` / `id=1 undone_by=2`), segundo undo recusado com 400 nomeado. Funciona ponta a ponta. Mas: `/curation/history` e `/curation/acts` não têm método no cliente; `grep "fetch("` fora do `daemonClient` → zero (não há rota de fuga); `acts_for()` sobre todos os kinds oferece `{edit, invalidate, link, merge, supersede}` — `undo` e `unlink` são **nunca ofertáveis por construção**; e o CLI não lista ids (`llmwiki curate history` → "ato desconhecido"). `docs/15:135` promete literalmente para o PR2: "Arrepender-se passa a existir SEM TERMINAL".
+Precisão menor: `CurationDialog.tsx:151` renderiza `ato #{feito.id}` no instante do apply — o id aparece uma vez e some ao fechar.
+
+Fazer: `history()` no cliente + lista de atos recentes com botão desfazer (o 409 já tem tratamento escrito esperando por ele).
+
+**C11. Revisão semanal: job agendado + endpoint de preview + endpoint de commit, nenhuma tela — e a página é inalcançável até por busca**
+`backend/src/llmwiki/api/cockpit.py:637-646` · `runtime/scheduler.py:45-46` · `daemon.py:45-46` · `daemonClient.ts:235` (definido, nunca chamado) · `App.tsx:16-29` (12 abas, nenhuma de revisão)
+
+Observado E2E: `GET /cockpit/review` devolve o levantamento completo sem escrever; `POST /cockpit/review/commit` devolve job_id com dedupe semanal correto; o job materializa `reviews/2026-W30.md` e commita. **Agravante não previsto:** `okf/bundle.py:20` exclui `reviews/` de `raw_md_files()`, logo a página não aparece em `/cockpit/pages`, não aparece no dashboard, não gera item em `/cockpit/next-actions`, e o `rebuild_index` não a indexa — busca por "Revisao semanal"/"revisao"/"semanal" devolve `[]`. Só se abre sabendo o path exato de cor, e nenhum `.tsx` o constrói. O rito "assistido" acontece sem assistente.
+
+Fazer: decidir explicitamente entre (a) aba/seção de revisão consumindo `review()` + botão que chama `/review/commit`, ou (b) declarar a revisão como artefato de arquivo e remover o endpoint de preview. O estado atual — CQS caro construído para uma tela inexistente — é o pior dos dois.
+
+### Tier 3 — governança epistêmica e gates furados
+
+**C12. O envelope grava `validity_scope` no campo `out_of_scope` — e o painel renderiza isso como "Fora de escopo"**
+`backend/src/llmwiki/usecases/evaluate_memory.py:184` · `desktop/src/panels/QualityPanel.tsx:82-83` · `epistemic/model.py:196` · `docs/11:137`
+
+Observado no SQLite real e no JSON do endpoint: `DB.out_of_scope` **idêntico byte a byte** a `contract.validity_scope`, para os dois mecanismos com envelope. O painel imprime lado a lado "Escopo avaliado: golden_eval.jsonl (n=12; abstain, extract, ...)" e "Fora de escopo: consultas /ask sobre o bundle local; categorias expect_abstain do golden set" — declarando fora de escopo exatamente o regime em que o mecanismo foi medido. **Correção para maior:** só 2 dos 15 mecanismos têm envelope; para os outros 13 o painel cai no fallback `?? detail.validity_scope`, logo o rótulo invertido aparece em **todos os 15 detalhes**. E `known_exclusions` (o único campo com semântica genuína de exclusão) nunca chega à UI: `grep -rn known_exclusions desktop/src` → vazio. `epistemics lint`: 0 findings.
+
+Fazer: correção de uma linha em `evaluate_memory.py:184` (gravar `known_exclusions` ou vazio), corrigir os dois ramos do painel, expor `known_exclusions`, e entregar o item 9 do `docs/11` §2 ("contextos ainda NÃO avaliados") que hoje nenhuma superfície entrega. Teste de semântica de campo — hoje `grep -rn out_of_scope backend/tests` → zero.
+
+**C13. `retrieval_rrf_hedge` declara `online_regret_relative` sobre feedback parcial com clamp que satura em 3 observações**
+`epistemics.toml:58-59` vs `:289-290` · `usecases/record_outcome.py:52-63` e `:83` · `kernel/information.py:69-73`
+
+Observado no pipeline real (`MemoryFacade.record_outcome`, runtime.db real): 6 desfechos `useful` → contribuintes saturam em 2.0 no **3º**; `stream_ausente` (presente em `stream_weights`, ausente de `contributing`) fica em 1.0 nos 6. Trajetórias 1.0→1.284→1.649→2.0 e 1.0→0.779→0.607→0.5 batem exatamente; sem clamp o Hedge continua se movendo (2.117, 2.718, 3.490, 4.482). O bound de Freund & Schapire exige perda de **todos** os experts por rodada; `information.py:71` faz `losses.get(expert, 0.0)` — imputação, não medição. Assimetria estrutural provada: as chamadas de streams (`:63`) e estratégias (`:83`) usam a **mesma função com os mesmos defaults**, trajetórias bit-idênticas, e o contrato de estratégias declara `heuristic` com a justificativa "sem correção de amostragem" — que se aplica literalmente ao de streams. Achado extra: todos os contribuintes recebem o mesmo loss, logo o peso **relativo** entre eles nunca muda (lockstep medido).
+Calibração: impacto prático limitado a 4x de reponderação do RRF (`streams.py:64-67`); o clamp em si é intencional e testado (`test_kernel.py:36-43`). O defeito é o rótulo, não o clamp.
+
+Fazer: rebaixar `guarantee_kind` para `heuristic` com `guarantee_relative_to` honesto (ou implementar importance weighting), e declarar o feedback parcial em `known_failure_modes` — hoje o único item vizinho (`:56`) fala de outra coisa. Regra de lint que exija justificativa quando dois contratos referenciam o mesmo código com `guarantee_kind` divergente.
+
+**C14. `ConsolidateInbox` funde N notas numa página via LLM a partir de 2 entidades compartilhadas, com fecho transitivo — sem contrato**
+`backend/src/llmwiki/usecases/consolidate_inbox.py:51,70-75,163,219-240` · `runtime/scheduler.py:56-57` (diário) · `epistemics.toml` (zero ocorrências de consolidat/CLS/min_shared/cluster)
+
+Observado: nota de padaria e diário de telescópio, compartilhando exatamente 2 entidades (JSON, SQLite), hamming=39 contra limiar 8, zero id forte → `converges_with = True`, um cluster. Fecho transitivo: A(padaria) ∩ C(telescópio) = ∅, hamming 36, `A~C direto = False` — e mesmo assim o union-find põe os três no mesmo cluster via a nota-ponte. E2E: **uma** página `concepts/pao.md`, título derivado do *nome de arquivo* da primeira nota (`_produce:95-96`, interseção vazia), `sources` com as três, prompt começando "As notas a seguir tratam do MESMO tema", texto do modelo virando corpo publicado. Sem gate humano.
+Precisões: SUPERSEDE por este caminho é **duplamente gateado** (router não-nulo E flag `reconcile.llm_arbiter`); o alcançável sem flag é UPDATE. Sobrescrita de página existente diferente **não foi reproduzida** — fica como possibilidade não demonstrada. Nada é destruído (`raw/` + Git). O achado é verbatim `docs/17:148-153`.
+
+Fazer: contrato em `epistemics.toml` (o `native_sketch_kernel` explicitamente se exime: "quem converge/consolida é decidido pelo Python"); declarar o fecho transitivo e o topic drift como failure modes; considerar teto de diâmetro no union-find ou exigir interseção não-vazia do cluster inteiro para permitir a fusão.
+
+**C15. Freeze/esquecimento ACT-R decide remover página da memória quente sem contrato — e `cold_memory.py` está listado como `implementation_ref` de `abstention`, o que simula cobertura**
+`backend/src/llmwiki/usecases/cold_memory.py:150-170,191-192` · `kernel/activation.py:25,27` · `epistemics.toml:131`
+
+Observado: página viva saiu do bundle quente com `recall_p=0.0074`. Mexendo **só** em `memory.max_recall_probability`, mesma página e mesmo `page_heat`, a decisão inverteu de veto para congelamento. `force=True` congelou com `recall_p=1.0000`. Prova por mutação (a parte mais forte): troquei o `implementation_ref` `cold_memory.py` por `settings.py` — arquivo sem qualquer relação — e o lint seguiu **0 findings**; apontando para caminho inexistente, 1 finding. `validate.py:75-79` valida existência de caminho, **nunca** semântica. Segunda mutação: recalibrei as 5 constantes de uma vez → `test_epistemics_toml.py` 8 passed, lint verde; o controle (`reconciliation` HI 0.82→0.99, que **está** sob contrato) quebrou na hora.
+Correções que rebaixam a severidade: **não existe job automático** de freeze (`grep` em `jobs/` → zero; só gesto humano por página via CLI, `POST /cockpit/freeze` e botão); a decisão **está** documentada em ADR-12 e `activation.py:1-21` cita Anderson; freeze é compactação reversível e `test_cold.py` pega parte da recalibração (4 failed sob mutação).
+
+Fazer: contrato `[mechanisms.memory_freeze]` com os 5 parâmetros sob cross-check e a declaração de que P(recall) é proxy de heat de leitura (`page_heat`), não de valor; **remover `cold_memory.py` de `implementation_refs` de `abstention`** (a falsa cobertura é o defeito real); regra de lint que exija que cada ref seja citado por um contrato cujo escopo o inclua. Bônus: `reflect_usage.py:37-39` tem um **segundo** conjunto de limiares (`score < 0.15`, `last_seen < now-90d`) alimentando "Candidatos a congelar" na UI, também fora de contrato.
+
+**C16. INV-ARCH-003 e INV-ARCH-004 só inspecionam imports RELATIVOS, e o scan de `api/` usa `glob` em vez de `rglob`**
+`backend/tests/test_architecture.py:25-33,36-42,86-88,94`
+
+Observado: plantei em `usecases/zz_violacao.py` os imports `from llmwiki.facades.memory import MemoryFacade`, `from llmwiki.api.system import build_app`, `from .. import jobs`, e em `api/zzsub/__init__.py` os imports de `usecases` e `jobs` — símbolos todos reais. **Suíte inteira: 637 passed.** Sonda nos helpers: os dois imports absolutos colapsam em `'llmwiki'`, token que não é comparado com nada; `from .. import jobs` vira `''` porque `node.module` é None; `glob` enxerga 5 módulos em `api/`, `rglob` enxerga 6. **Controle negativo decisivo:** a mesma violação em estilo relativo → `FAILED`. O invariante é do estilo de escrita, não da dependência. `docs/08:804-807` documenta a intenção oposta (glob→rglob feito em `usecases` "ANTES de escrever qualquer ato"); `api/` ficou de fora da mesma correção.
+Escopo honesto: não há violação real hoje (única ocorrência de `llmwiki.` absoluto é `import llmwiki_native`). É lacuna de gate, não breach.
+
+Fazer: resolver imports absolutos para o caminho de módulo completo, tratar `level > 0 and module is None`, e trocar `glob` por `rglob` em `:94` — três linhas.
+
+**C17. G-10 permanece ABERTA: nada gateia `[registry] version` nem completude; 5 contratos declarados obrigatórios estão ausentes**
+`epistemics.toml:23-24` · `backend/tests/test_epistemics_toml.py` (8 testes, nenhum sobre o conjunto) · `epistemic/validate.py:94-103` · `epistemic/parse.py:121-123` · `docs/14:412-416`
+
+Observado por mutação: apaguei o bloco inteiro de `[mechanisms.theme_identity_matching]` (45 linhas — o contrato que o próprio comentário da version anuncia) → `epistemics lint` respondeu **"14 mecanismo(s), 0 finding(s)", exit 0**, e a suíte completa 637 passed. Depois, `version = "banana"` → lint verde. `validate_registry` itera contrato a contrato; não existe regra sobre o conjunto. Nenhum outro instrumento cobre (`grep "mechanisms"` em `scripts/`, `justfile`, `.github/`, `architecture.toml` → zero; `diagnose.py` não menciona "epistemic"). Ausentes: `attention_queue`, `evidence_sufficiency`, `factual_conflict`, `inferred_cooccurrence_edges`, `temporal_partition`.
+Calibração: os 5 pertencem a fases não entregues, então a ausência hoje não é promessa quebrada — o defeito é que esquecê-los na F3/F4/F5 será silencioso, exatamente o mecanismo que `docs/15` §2 usa para justificar G-10. **G-10 está atribuída a F2-PR1, que está marcado ENTREGUE.**
+
+Fazer: `[registry] expected_mechanisms` (ou lista em `architecture.toml`) cruzada por teste; validação de formato/monotonicidade da version; regra de lint `registry_incomplete`. É o gate que teria transformado C14 e C15 em backlog em vez de achado de auditoria.
+
+**C18. A F5 (P-6) vai contar co-menção DUAS vezes — o laço em memória colide com a materialização planejada**
+`backend/src/llmwiki/usecases/detect_communities.py:451-457` (`add_edge` acumula com `+=`), `:471-483` (os dois laços), `:67` (`W`), `:464-465` (a premissa que P-6 invalida) · `docs/14:277-289` (P-6) · `docs/15` §6
+
+Observado: `_weighted_graph[a][b]` = **0.25 antes, 0.75 depois** de uma única linha `graph_edges(a,b,'inferred','inferred')` — soma, não substitui, exatamente o previsto; vale igual com `kind='cooccurrence'`. Partição **muda de verdade** com leidenalg real: varredura de 24 configurações, 8 mudaram; o caso 5 blocos / 3 pontes vai de 2 para 5 comunidades — a garantia do ADR-43 ("mesmo bundle ⇒ mesma partição") continuaria verde sobre um grafo que passou a significar outra coisa. E o ADR-44 quebra: `betweenness` via ComputeKernel é `{}` hoje e passa a `{a: 0.5714, b: 0.5714}`. Detalhe subestimado: materializar como `inferred` puro dá peso 0.5 onde o laço dá 0.25 (teto anti-hub), então a semântica do peso muda mesmo se alguém lembrar de remover o laço.
+Escopo: **não é defeito vivo** — o único INSERT em `graph_edges` (`fts.py:91`) escreve `extracted`/`ambiguous`, nunca `inferred`. É risco de fase futura, corretamente categorizado.
+A citação `411-424` está desatualizada (hoje é `_index_state`). E `retrieval/patterns.py`, a mitigação que `docs/15` §6 manda fazer "já no PR1", **não existe**.
+
+Fazer: acrescentar a colisão de **semântica** (não só de arquivo) à §6 do `docs/15`; o DoD do P-6 precisa dizer explicitamente se remove o laço em memória ou se filtra `confidence='inferred'` na leitura, com teste de peso.
+
+---
+
+## 3. REFUTADOS — não gastar esforço aqui
+
+| # | Alegação | Por que caiu |
 |---|---|---|
-| O job `leiden` deixa o doctor VERMELHO (INV-002 error) a cada execução | **CONFIRMADO** — `ok=True` antes, `ok=False` com INV-002 depois | **corrigido**: o job reindexa no fim; e a exclusão de `communities/` passou a valer também para a centralidade, senão a página de sumário viraria a maior articuladora do grafo |
-| A fila oferece ato de escrita sobre página aposentada | **não reproduzido** — a página supersedida não entrou em `gap_items` no cenário testado. Isso não refuta o achado: pode ser que ela nunca fosse candidata a gap. Precisa de cenário melhor | investigar |
-| `merged` não observado na calibração | **CONFIRMADO** antes de escrever o RFC | declarado no RFC-001 §2.3 e no contrato epistêmico |
-| Uma linha em `embeddings` quebra TODO reindex com `FOREIGN KEY` | **CONFIRMADO duas vezes** — pela reprodução de um cético (`IntegrityError: FOREIGN KEY constraint failed` depois do job `embed` real) e pela própria CI | **corrigido**: `embeddings` é apagada antes de `chunks` nos dois caminhos. Atingia o `doctor --repair`, ou seja o conserto do produto ficava inalcançável assim que existisse um embedding — e o Scheduler enfileira `embed` DIARIAMENTE |
-| `rebuild_index` sem `try/finally`: a conexão vaza e trava o `index.db` | **CONFIRMADO** — `OperationalError: database is locked` após os 3 s de timeout, medido logo depois da falha acima | **aberto, e declarado no código**: pagar exige reindentar o corpo inteiro, mudança que não podia vir junto da correção da FK sem tornar os dois defeitos indistinguíveis |
+| R1 | `theme_identity_matching`: split + absorção simultâneos deixam página canônica zumbi | O mecanismo existe (reproduzido no kernel e E2E), mas as **três** premissas de impacto são falsas por medição: não é silencioso (o doctor acusa **INV-005 error** nomeando o par exato); não se repete a cada execução (auto-cura em uma época — run3 emitiu `merged`/`died`); e a "página zumbi" **não é causada** pela omissão — controle com split PURO, evento disparando corretamente, produz o mesmo zumbi. O dano está em `detect_communities.py:310-333` (tema morto nunca vira `superseded_by`), não em `themes.py:126-142`. Existe defeito real na vizinhança, mas é outro e ninguém o identificou ainda. |
+| R2 | `guarantee_kind = "deterministic"` é a rota de fuga do lint | A mecânica confere, a conclusão não: o rótulo honesto alternativo (`heuristic`) passa o lint **idêntico** (medido: 0 findings) — a lacuna é "só 2 dos 9 kinds exigem `evaluated_by`", e o culpado nomeado está errado. A isenção de `failure_modes_missing` é inerte (os dois contratos declaram 4 e 5 modos). E a determinismo é real: 200 execuções embaralhadas + 4 processos com `PYTHONHASHSEED=random` = **1 saída distinta**. `calibrated_empirical` seria declaração pior (afirmaria envelope inexistente). Resíduo legítimo e barato: TAU=1/3 fora de `[parameters]`, logo sem teste de amarração. |
+| R3 | `reconciliation`: SUPERSEDE/NOOP produzidos exclusivamente pelo árbitro LLM, alcançável em produção | A premissa operativa é **falsa**: com a flag ligada e router stub, o código devolve `{op:ADD, score:0.0}` e **nunca chama o árbitro** — a SQL de `_by_similarity` estoura sempre (o mesmo defeito de C1), logo `_by_local_arbiter` é inalcançável. Contrafactual fecha: corrigindo só `MIN(bm25)` → `bm25`, o SUPERSEDE por LLM acontece de verdade (score 0.7401, `superseded_by` gravado, página fora do retrieval). É defeito **latente a uma linha**, não comportamento em produção. Cuidado: corrigir C1 ativa este caminho. |
+| R4 | O job semanal `leiden` deixa o doctor VERMELHO (INV-002) toda semana | Alegação lida de versão antiga: é o texto bruto de `docs/17:155-161`, pré-correção. `d4dc790` já é ancestral do HEAD e `detect_communities.py:162-163` reindexa antes do `_stamp`. Rodado verbatim: `doctor.ok=True` antes **e** depois, `findings=[]`. Três "evidências" são literalmente falsas no HEAD, incluindo uma linha que hoje diz o **oposto** do citado. A metade que reproduz (4 commits por execução) é comportamento **declarado e deliberadamente não corrigido** em ADR-45 (`docs/08:1418-1421`), e ficou inerte porque o job reindexa. Já coberto por `test_f2_pr2_themes.py:408`. **Ação: corrigir `docs/17:155`, que segue desatualizado e vai gerar este retrabalho de novo.** |
+
+---
+
+## 4. PRÓXIMOS PASSOS — o que muda em `docs/15`
+
+### 4.1 Correções imediatas ao documento (antes de qualquer código)
+
+1. **§2, G-8 → reabrir e reatribuir.** Hoje aponta para "F0 + PR-0", ambos ENTREGUE em §3, e §8 não a declara adiada. Criar **PR-0.1 · release executável** e mover G-8 para lá. Escopo mínimo: `exclude_binaries=True`, `sqlite-vec` no build, job de release com trigger de tag, token de release em `architecture.toml [gate]`.
+2. **§2, G-10 → reabrir.** Atribuída a F2-PR1 (ENTREGUE) e verificada ABERTA por mutação. Reatribuir ao mesmo PR-0.1 ou a um F3-PR0.
+3. **§8 Estado da execução → acrescentar parágrafo de auditoria.** Registrar que F0 entregou porta HTTP do doctor **mas não superfície** (execução do app real: zero chamadas a `/system/doctor*`), e **corrigir `docs/17:159` e `docs/17:590`**, que afirmam painel entregue.
+4. **`docs/17:155-161`** → substituir pelo veredito refutado (R4). O documento contradiz a si mesmo (linha 19 diz corrigido, linha 155 mantém a alegação bruta) e já custou um ciclo de verificação.
+5. **§6 Colisões** → acrescentar linha de **colisão de semântica** para `detect_communities.py` (co-menção dupla, C18) e registrar que `retrieval/patterns.py`, a mitigação prescrita "já no PR1", **nunca foi criada**.
+6. **§7 Como medir** → acrescentar duas métricas de processo que teriam pego 7 dos 18 achados: *endpoints de escrita/consulta com consumidor na UI* (hoje: doctor 0, undo 0, review 0, jobs cancel/retry 0) e *tipos de evento SSE repassados ao cliente* (hoje 5 de ~12).
+
+### 4.2 Novo pacote antes da F3
+
+**F3-PR0 · fechar o laço da decisão canônica** (o único bloco que muda a curva de risco). Pré-requisito da F3 porque o P-7 faz `promote` passar a consultar `ReconcileCandidate` — hoje uma escada com dois degraus mortos.
+
+- corrigir `MIN(bm25)` → `bm25` **com RFC**, pois ativa o árbitro LLM no caminho de escrita (regra de `docs/15` §1.1) e reabre R3 como caminho vivo;
+- pré-condição de frescor / INV de cobertura bundle→índice;
+- `try/finally` no `rebuild_index`;
+- teste do degrau de similaridade (hoje 100% dos testes de reconciliação passam por DOI).
+
+### 4.3 Escopo da F3 a corrigir
+
+- **P-3 item (C), filtro de vitalidade:** o escopo declarado cobre `review_items`/`bridge_items`; o caminho **confirmado por execução** é `gap_items → stale/contested → edit`, que está fora dele. Corrigir o escopo e **antecipar dentro da F3** — a severidade subiu de "a fila mente" para "a fila conduz a escrita que sai do retrieval".
+- Registrar que `contradiction` e `bridge` **já** têm filtro (refutado como lacuna), evitando trabalho duplicado.
+
+### 4.4 Novo pacote de superfície (agrupar, não espalhar)
+
+**F-UI · as superfícies órfãs**, um único PR: doctor com findings e reparo, histórico de atos com desfazer, cancel/retry de job com os 8 estados, repasse genérico de SSE (que ressuscita Stepper e barra de progresso já escritos), e a decisão sobre a revisão semanal. Cinco achados, um arquivo de cliente e cinco painéis — muito mais barato junto do que distribuído por cinco fases. Pré-requisito declarado: um smoke de UI, hoje inexistente (`daemonClient.ts:20-21` admite "não há runner de teste de UI no desktop") — o cético provou com esbuild + jsdom que é viável.
+
+### 4.5 Trilha epistêmica (paralelizável, barata)
+
+Um PR por item, todos independentes: correção de `out_of_scope` (uma linha + painel); rebaixar `retrieval_rrf_hedge` para `heuristic`; contratos de `memory_freeze` e `consolidate_inbox`; remover `cold_memory.py` dos refs de `abstention`; campo de efeito colateral em `EpistemicContract` (a lacuna que impede declarar C6); `rglob` + resolução de import absoluto em `test_architecture.py`.
+
+### 4.6 Regra de processo a adotar
+
+Todo defeito confirmado aqui é uma **ausência** que passou verde: contrato ausente, superfície ausente, evento não repassado, binário não construído, FK não exercitada, dependência offline no teste. O gate atual verifica presença e conformidade — precisa passar a verificar **completude**. Os três instrumentos que teriam pego a maioria: `expected_mechanisms` no registro, cruzamento rotas-do-backend × métodos-do-cliente, e uma perna de CI que não silencie dependências (o precedente `backend-ml` já existe e funciona; falta o simétrico para `embed`).
+
+---
+
+# Anexo A · Os 84 achados brutos dos auditores
+
+> Os 22 de gravidade **alta** foram submetidos ao cético e estão julgados no
+> corpo acima (18 confirmados, 4 refutados). Os de gravidade média e baixa
+> **não** passaram por verificação — continuam sendo alegações com evidência
+> apontada. Cada um traz um "como falsificar": rode aquilo antes de agir.
 
 ## Achados por gravidade
 
