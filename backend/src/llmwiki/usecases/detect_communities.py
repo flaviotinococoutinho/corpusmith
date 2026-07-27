@@ -72,8 +72,9 @@ W = {"extracted": 1.0, "inferred": 0.5, "ambiguous": 0.15}
 LEIDEN_SEED = 20260726
 # `communities/` é PRODUTO do particionamento (D-E do docs/15). Deixá-lo no
 # grafo faz cada rodada alterar o grafo da seguinte: épocas falsas de tema e
-# sumários entrando no p99 de grau. Hoje não morde porque o job não reindexa,
-# mas o DoD da F2-PR2 diz que passará a reindexar.
+# sumários entrando no p99 de grau. Desde o F2-PR2 o job REINDEXA no fim (para
+# não deixar o doctor vermelho com INV-002), então esta exclusão deixou de ser
+# preventiva e passou a ser o que torna o rebuild seguro.
 _DERIVED_PREFIX = "communities/"
 
 
@@ -146,6 +147,20 @@ class DetectCommunities(UseCase):
         # nascia "velho" e o INV-004 disparava para sempre — um alarme sem
         # saída, porque recomputar reproduzia a divergência.
         adotadas = self._adopt_legacy(idx)
+        # REINDEXA antes de carimbar. Sem isto o job deixava o doctor VERMELHO
+        # (INV-002 error) a cada execução — verificado: `ok=True` antes,
+        # `ok=False` com INV-002 depois. A causa é que o job ESCREVE páginas
+        # `communities/` pelo writer, cada uma um commit, e o índice ficava
+        # apontando para o HEAD anterior. Como é semanal, o produto passaria a
+        # semana inteira acusando corrupção que ele mesmo produziu.
+        #
+        # Reindexar aqui só é seguro porque a D-E já foi paga (F2-PR1):
+        # `communities/` está FORA da construção do grafo, então a
+        # realimentação que o `docs/15` previa — cada rodada alterando o grafo
+        # da seguinte — não acontece. Há teste de que a partição continua
+        # idêntica entre execuções COM o rebuild no meio.
+        from ..retrieval.fts import rebuild_index
+        rebuild_index(self._settings)
         self._stamp(idx, backend=backend, nodes=len(adjacency), edges=edges,
                     communities=len(distinct), bridges=bridges, hubs=hubs,
                     centrality_backend=centrality_backend)
@@ -342,15 +357,22 @@ class DetectCommunities(UseCase):
             from ..compute import get_kernel
             kernel = get_kernel(self._settings)
             nome = kernel.backend_info().name
-            # O kernel lê `graph_edges` da MESMA conexão e aplica o MESMO
-            # `EDGE_WEIGHT` que o `observatory` aplicava — então os valores
-            # persistidos são idênticos aos que o request calculava, e este PR
-            # é mudança de ONDE e de QUAL kernel, não de QUANTO. Alimentar o
-            # `adjacency` do leiden aqui seria tentador e estaria errado por
-            # duas razões: ele carrega arestas de co-menção que a
-            # centralidade nunca teve, e `load_edges` mapeia o terceiro campo
-            # por `EDGE_WEIGHT`, então peso já acumulado viraria 0.5 para tudo.
-            grafo = kernel.load_graph(index_path="", connection=idx)
+            # O kernel lê `graph_edges` e aplica o MESMO `EDGE_WEIGHT` que o
+            # `observatory` aplicava — logo os valores são os que o request
+            # calculava, e o PR é mudança de ONDE e de QUAL kernel, não de
+            # QUANTO. Alimentar o `adjacency` do leiden aqui seria tentador e
+            # estaria errado por duas razões: ele carrega arestas de co-menção
+            # que a centralidade nunca teve, e `load_edges` mapeia o terceiro
+            # campo por `EDGE_WEIGHT`, então peso já acumulado viraria 0.5.
+            #
+            # `_SemDerivadas` filtra `communities/` — e a razão é o F2-PR2:
+            # desde que o job REINDEXA no fim, as páginas de tema entram em
+            # `graph_edges`, e uma página de sumário linka TODOS os seus
+            # membros. Sem o filtro ela apareceria como a maior articuladora
+            # do grafo, que é a D-E se manifestando na centralidade em vez de
+            # na partição. A exclusão fica igual nas duas.
+            grafo = kernel.load_graph(index_path="",
+                                      connection=_SemDerivadas(idx))
             centralidade = kernel.betweenness(grafo)
         except Exception:                            # noqa: BLE001
             idx.commit()
@@ -586,3 +608,25 @@ class DetectCommunities(UseCase):
         except (ModelUnavailable, Exception):
             pass
         return label, summary
+
+
+class _SemDerivadas:
+    """Conexão que esconde as arestas de páginas DERIVADAS (F2-PR2).
+
+    O job passou a reindexar (senão deixa o doctor vermelho com INV-002), e
+    com isso as páginas `communities/` entram em `graph_edges`. Uma página de
+    sumário linka todos os seus membros: sem filtro ela vira a maior
+    articuladora do grafo — a D-E aparecendo na centralidade em vez de na
+    partição. Filtrar no SQL, e não depois, mantém os pesos passando pelo
+    `EDGE_WEIGHT` do kernel."""
+
+    def __init__(self, idx):
+        self._idx = idx
+
+    def execute(self, sql, *args):
+        if "graph_edges" in sql:
+            return self._idx.execute(
+                "SELECT src, dst, COALESCE(confidence,'extracted') "
+                "FROM graph_edges WHERE src NOT LIKE 'communities/%' "
+                "AND dst NOT LIKE 'communities/%'")
+        return self._idx.execute(sql, *args)

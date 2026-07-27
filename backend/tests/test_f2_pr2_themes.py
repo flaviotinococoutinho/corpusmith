@@ -403,3 +403,38 @@ def test_inv005_acusa_duas_paginas_vivas_para_um_tema(base, kb):
     DetectCommunities(base).execute()
     assert not [f for f in DiagnoseSystem(base).execute()["findings"]
                 if f["inv"] == "INV-005"]
+
+
+def test_o_job_nao_deixa_o_doctor_vermelho(base):
+    """Achado de auditoria CONFIRMADO por execução e corrigido aqui: o job
+    escreve páginas `communities/` pelo writer, cada uma um commit, e não
+    reindexava — então INV-002 (índice corresponde ao HEAD) disparava como
+    ERROR a cada execução. Sendo semanal, o produto passaria a semana inteira
+    acusando corrupção que ele mesmo produziu.
+
+    Reindexar aqui só é seguro porque a D-E foi paga no F2-PR1:
+    `communities/` está fora da construção do grafo."""
+    from llmwiki.usecases.diagnose import DiagnoseSystem
+    assert DiagnoseSystem(base).execute()["ok"], "cenário já sujo"
+    DetectCommunities(base).execute()
+    rel = DiagnoseSystem(base).execute()
+    erros = [f for f in rel["findings"] if f["severity"] == "error"]
+    assert not erros, f"o job deixou o doctor vermelho: {erros}"
+
+
+def test_reindexar_no_job_nao_realimenta_o_grafo(base):
+    """A guarda que torna o rebuild acima seguro (D-E). Se `communities/`
+    voltasse ao grafo, cada rodada alteraria o grafo da seguinte e a partição
+    mudaria sem o conhecimento mudar."""
+    DetectCommunities(base).execute()
+    idx = connect(base.app_support / "index.db")
+    primeira = {r["page"]: r["community"] for r in
+                idx.execute("SELECT page, community FROM communities")}
+    idx.close()
+    for _ in range(3):
+        DetectCommunities(base).execute()
+    idx = connect(base.app_support / "index.db")
+    ultima = {r["page"]: r["community"] for r in
+              idx.execute("SELECT page, community FROM communities")}
+    idx.close()
+    assert ultima == primeira, "o rebuild no job realimentou o grafo"

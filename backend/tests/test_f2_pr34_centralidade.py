@@ -75,8 +75,12 @@ def test_centralidade_persistida_e_identica_a_que_o_request_calculava(base):
     persistida = {r["page"]: r["betweenness"]
                   for r in idx.execute("SELECT page, betweenness "
                                        "FROM graph_centrality")}
+    # `communities/` fora, como no job: desde o F2-PR2 o job reindexa, e uma
+    # página de sumário linka todos os membros — sem o filtro ela viraria a
+    # maior articuladora do grafo (a D-E na centralidade em vez da partição)
     arestas = [(r[0], r[1], EDGE_WEIGHT.get(r[2], 0.5)) for r in idx.execute(
-        "SELECT src, dst, COALESCE(confidence,'extracted') FROM graph_edges")]
+        "SELECT src, dst, COALESCE(confidence,'extracted') FROM graph_edges "
+        "WHERE src NOT LIKE 'communities/%' AND dst NOT LIKE 'communities/%'")]
     idx.close()
     esperada = betweenness_centrality(arestas)
     assert persistida, "nada foi persistido"
