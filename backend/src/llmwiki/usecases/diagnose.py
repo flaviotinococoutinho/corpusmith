@@ -16,6 +16,10 @@ Invariantes verificados:
 - INV-005: um tema, uma página canônica viva — nenhum par de páginas
   `communities/` sem `superseded_by` descreve conjuntos de membros com
   Jaccard >= tau (RFC-001, docs/16);
+- INV-006: a CADEIA de derivações é coerente — cada derivação declarada em
+  `kernel/checkpoints.py` foi computada do estado atual da sua fonte. UMA
+  regra para todas, incluindo obsolescência TRANSITIVA (derivação coerente
+  com a fonte imediata e ainda assim velha porque a fonte da fonte mudou);
 - PIPE:   todo estágio de pipeline referencia um job existente;
 - COG:    estado cognitivo (acessibilidade/agenda) que referencia
   página inexistente é sinalizado (não removido — é dado do usuário).
@@ -60,7 +64,8 @@ class DiagnoseSystem(UseCase):
                     + self._check_pipelines()
                     + self._check_cognitive_orphans()
                     + self._check_graph_snapshot()
-                    + self._check_theme_identity())
+                    + self._check_theme_identity()
+                    + self._check_checkpoints())
         repaired = None
         if self._repair and any(f["inv"] in REPAIRABLE for f in findings):
             from ..retrieval.fts import rebuild_index
@@ -78,6 +83,7 @@ class DiagnoseSystem(UseCase):
                 "repaired": repaired,
                 "native": self._check_native(),
                 "graph": self._graph_report(),
+                "derivations": self._derivations_report(),
                 "counts": {"error": sum(f["severity"] == "error"
                                         for f in findings),
                            "warn": sum(f["severity"] == "warn"
@@ -119,6 +125,22 @@ class DiagnoseSystem(UseCase):
             report["tmp_dir_writable"] = False
         report["graph_cache"] = graph_cache_stats()
         return report
+
+    def _derivations_report(self) -> dict:
+        """A cadeia inteira, informativa — o mapa de estados entre as fontes
+        que antes só existia espalhado em carimbos incomparáveis."""
+        try:
+            from ..kernel.checkpoints import DERIVATIONS
+            from ..runtime.checkpoints import load, verify
+            cps = load(self._settings)
+            return {v.derivation: {
+                "state": v.state, "reason": v.reason,
+                "source": DERIVATIONS.get(v.derivation),
+                "computed_at": (cps[v.derivation].computed_at
+                                if v.derivation in cps else None)}
+                for v in verify(self._settings)}
+        except Exception:                                # noqa: BLE001
+            return {}
 
     def _graph_report(self) -> dict:
         """Estado do mapa de padrões — INFORMATIVO, ao lado do `native`.
@@ -185,6 +207,38 @@ class DiagnoseSystem(UseCase):
                 "detail": f"{orfas} ponte(s) frágil(is) apontando para "
                           "página aposentada — a fila ofereceria reforçar "
                           "um fio para lugar nenhum"})
+        return out
+
+    def _check_checkpoints(self) -> list[dict]:
+        """INV-006: a cadeia de derivações, verificada por UMA regra.
+
+        Antes disto cada derivação tinha carimbo próprio e invariante próprio
+        — `bundle_head` em quatro lugares, INV-002 para o índice, INV-004 para
+        o mapa, INV-005 para os temas. O custo não é estético: foi essa
+        dispersão que deixou passar o defeito confirmado por execução nesta
+        sessão (o job movia o HEAD e o índice ficava atrás, e nada
+        relacionava as duas coisas).
+
+        WARN, não error: derivação velha é servível com aviso — a mesma razão
+        do INV-004. E `absent` não vira finding: instalação nova não tem
+        derivação velha, tem derivação nenhuma.
+        """
+        try:
+            from ..runtime.checkpoints import verify
+            vereditos = verify(self._settings)
+        except Exception:                                # noqa: BLE001
+            return []
+        out: list[dict] = []
+        for v in vereditos:
+            if v.state in ("fresh", "absent"):
+                continue
+            transitiva = v.state == "stale_upstream"
+            out.append({
+                "inv": "INV-006", "severity": "warn",
+                "detail": (f"derivação `{v.derivation}` "
+                           + ("desatualizada por CADEIA: " if transitiva
+                              else "desatualizada: ")
+                           + v.reason)})
         return out
 
     def _check_theme_identity(self) -> list[dict]:

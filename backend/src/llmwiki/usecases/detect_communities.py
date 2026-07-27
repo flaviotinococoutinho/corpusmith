@@ -164,6 +164,24 @@ class DetectCommunities(UseCase):
         self._stamp(idx, backend=backend, nodes=len(adjacency), edges=edges,
                     communities=len(distinct), bridges=bridges, hubs=hubs,
                     centrality_backend=centrality_backend)
+        # CHECKPOINTS normalizados: as três derivações que este job produz
+        # declaram de qual estado do ÍNDICE vieram — não do bundle. A fonte
+        # imediata de um mapa é o índice, e é essa distinção que permite
+        # detectar o caso que carimbo isolado não pega: mapa coerente com o
+        # índice, índice atrás do bundle.
+        try:
+            from ..runtime.checkpoints import record as _record_cp
+            estado_indice = self._index_state()
+            _record_cp(self._settings, "graph_map", estado_indice,
+                       {"backend": backend, "communities": len(distinct),
+                        "bridges": bridges})
+            _record_cp(self._settings, "centrality", estado_indice,
+                       {"backend": centrality_backend})
+            _record_cp(self._settings, "themes", estado_indice,
+                       {"events": [e.event for e in eventos],
+                        "adopted": adotadas})
+        except Exception:                                # noqa: BLE001
+            pass          # registro de frescor nunca derruba o job
         idx.close()
         return {"communities": len(distinct), "pages": len(communities),
                 "summaries": summaries, "backend": backend,
@@ -382,6 +400,26 @@ class DetectCommunities(UseCase):
             sorted((p, float(v)) for p, v in centralidade.items()))
         idx.commit()
         return nome if nome in ("python", "rust") else "none"
+
+    def _index_state(self) -> str:
+        """Estado do ÍNDICE como a cadeia de checkpoints o vê.
+
+        É o `input_state` que o `rebuild_index` registrou — a saída de uma
+        derivação é a entrada da seguinte. Ler daqui, e não do Git, é o que
+        faz `graph_map` derivar do índice e não do bundle: se alguém mexer no
+        bundle sem reindexar, quem fica obsoleto é o índice, e o mapa herda
+        isso por transitividade em vez de acender um alarme próprio."""
+        try:
+            from ..runtime.checkpoints import load as _load_cp
+            cp = _load_cp(self._settings).get("index")
+            if cp:
+                return cp.input_state
+        except Exception:                                # noqa: BLE001
+            pass
+        try:
+            return GitStore(self._settings.path("knowledge")).head()
+        except Exception:                                # noqa: BLE001
+            return ""
 
     # -------------------------------------------------------------- carimbo
     def _stamp(self, idx, *, backend: str, nodes: int, edges: int,

@@ -1430,3 +1430,60 @@ INV-005 novo.
 `igraph`/`leidenalg` bloqueados no import. Registro epistêmico 1.3.0 → 1.4.0
 com `theme_identity_matching` — heurística no caminho de escrita **precisa** de
 contrato declarado, e este é `high_impact = true`.
+
+### ADR-46 — Checkpoints normalizados: o estado entre as fontes (v1.9.4)
+**Contexto medido, e o custo não é estético.** Cada derivação inventava o
+próprio carimbo de frescor e o próprio invariante: `bundle_head` aparecia em
+**quatro** lugares (`index_meta` chave/valor, `graph_snapshot.bundle_head`,
+`theme_epochs.bundle_head`, schema de runtime), e cada um exigiu um INV
+separado no doctor — INV-002 (índice), INV-004 (mapa), INV-005 (temas). Cada
+derivação nova custava um carimbo **mais** um invariante.
+Foi essa dispersão que deixou passar o defeito confirmado por execução na
+auditoria: o job `leiden` escrevia páginas, movendo o HEAD, e o índice ficava
+atrás — **nada relacionava as duas coisas**. O carimbo do mapa se dizia fresco
+enquanto o do índice apodrecia.
+**Decisão**: uma tabela `checkpoints` (runtime 8→9 aditiva) com uma linha por
+derivação — de qual ESTADO DA FONTE ela foi produzida e quando — e a **cadeia**
+declarada em `kernel/checkpoints.py:DERIVATIONS`:
+
+```
+bundle (autoridade) → index → graph_map  → themes
+                            → centrality
+```
+
+**A cadeia é o ponto, não a tabela.** Ela permite o veredito que carimbo
+isolado não consegue dar por construção: `stale_upstream` — derivação coerente
+com a fonte IMEDIATA e ainda assim servindo dado velho porque a fonte da fonte
+mudou. O mapa comparando-se com o índice acha tudo bem; o índice comparando-se
+com o bundle reclama de si; ninguém enxerga que o mapa está servindo dado de
+duas gerações atrás. É a forma exata do defeito que a auditoria confirmou.
+**Mora em `runtime.db`, não em `index.db`, e a escolha é a substância**: um
+carimbo sobre o índice não pode morrer junto com o índice. `rebuild_index`
+apaga e reconstrói, e um registro que some com aquilo que descreve não
+consegue dizer "a derivação sumiu" — é o limite do `index_meta.bundle_head`
+atual, e há teste que apaga o `index.db` e exige que o checkpoint sobreviva.
+**Três vereditos, e a distinção entre eles é o ganho**: `absent` (nunca
+computada — **não é defeito**: instalação nova não tem derivação velha, tem
+derivação nenhuma), `stale` (a fonte imediata mudou) e `stale_upstream` (a
+cadeia acima se moveu). WARN e nunca ERROR, pela mesma razão do INV-004:
+derivação velha é **servível com aviso**, e é isso que a torna usável numa
+máquina onde recomputar a cada abertura não é opção.
+**INV-006 é UMA regra para toda a cadeia**, em vez de um invariante por
+artefato — e é o que faz a próxima derivação nascer com frescor verificado de
+graça, em vez de com mais um carimbo e mais um alarme. Registro dinâmico é
+recusado: derivação que o produto não declara é derivação cujo frescor
+ninguém garante.
+**Dívida declarada, e é real**: os carimbos antigos **continuam**. Consolidar
+`index_meta.bundle_head` no checkpoint exigiria mexer no INV-002, o invariante
+mais exercitado da suíte, e fazê-lo no mesmo PR que introduz o mecanismo
+juntaria duas mudanças cujos defeitos ficariam indistinguíveis. A duplicação é
+temporária e está aqui por escrito para não virar permanente por esquecimento.
+**Verificado num HOME real**, a cadeia inteira ao longo do ciclo: nada
+derivado (5× `absent`) → rebuild (índice fresco, resto ausente) → job (tudo
+fresco) → **usuário escreve sem reindexar** (índice `stale`, mapa e
+centralidade `stale_upstream`, temas `stale_upstream` por dois saltos) →
+reindexar (mapa e centralidade passam a `stale` direto, temas seguem
+transitivos) → recomputar (tudo fresco).
+`llmwiki checkpoints` lista a cadeia e sai com código 1 quando algo está
+atrás — inspecionável, não só verificável.
+16 testes novos; **635 no total**.

@@ -253,6 +253,20 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
         profile.count(label, counts_after[table] - counts_before[table])
     profile.note("delta", delta_mode)
 
+    # CHECKPOINT normalizado: o índice declara de qual estado do bundle veio.
+    # Duplica `index_meta.bundle_head` de propósito e por ora — aquele morre
+    # junto com o índice e por isso não consegue dizer "a derivação sumiu";
+    # este sobrevive em runtime.db. A consolidação dos dois é dívida declarada
+    # no ADR-46, e fazê-la agora exigiria mexer no INV-002, que é o invariante
+    # mais exercitado da suíte.
+    try:
+        from ..runtime.checkpoints import record as _record_cp
+        _record_cp(s, "index", _kb_head(bundle) or "",
+                   {"pages": len(files), "changed": len(changed),
+                    "mode": delta_mode})
+    except Exception:                                    # noqa: BLE001
+        pass          # registro de frescor nunca derruba a indexação
+
     # cites → page_heat (alimenta o reflect, §8)
     rt = connect(s.app_support / "runtime.db")
     now = time.time()

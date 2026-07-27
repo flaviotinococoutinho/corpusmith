@@ -166,6 +166,33 @@ def cmd_doctor(s: Settings, args) -> int:
     return 0 if result["ok"] else 2
 
 
+def cmd_checkpoints(s: Settings, args) -> int:
+    """A cadeia de derivações e o estado de cada uma.
+
+    Torna inspecionável o que antes era carimbo espalhado: de qual estado da
+    FONTE cada derivação veio, e se a cadeia acima dela se moveu."""
+    import json as _json
+    from .kernel.checkpoints import DERIVATIONS
+    from .runtime.checkpoints import load, verify
+    cps = load(s)
+    linhas = []
+    for v in verify(s):
+        cp = cps.get(v.derivation)
+        linhas.append({
+            "derivation": v.derivation,
+            "source": DERIVATIONS.get(v.derivation) or "(autoridade)",
+            "state": v.state,
+            "reason": v.reason,
+            "input_state": cp.input_state[:12] if cp else None,
+            "computed_at": cp.computed_at if cp else None,
+            "detail": _json.loads(cp.detail) if cp and cp.detail else None})
+    print(_json.dumps({"chain": linhas,
+                       "stale": [x["derivation"] for x in linhas
+                                 if x["state"].startswith("stale")]},
+                      indent=1, default=str))
+    return 1 if any(x["state"].startswith("stale") for x in linhas) else 0
+
+
 def cmd_themes(s: Settings, args) -> int:
     """Temas com identidade e a última época de cada (RFC-001 §9).
 
@@ -379,6 +406,8 @@ def main(argv: list[str] | None = None) -> int:
     doctor = sub.add_parser("doctor", help="verifica/repara invariantes")
     doctor.add_argument("--repair", action="store_true")
     doctor.set_defaults(fn=cmd_doctor)
+    sub.add_parser("checkpoints", help="cadeia de derivações e frescor de cada"
+                   ).set_defaults(fn=cmd_checkpoints)
     sub.add_parser("themes", help="temas com identidade e última época"
                    ).set_defaults(fn=cmd_themes)
     backup = sub.add_parser("backup", help="backup lógico verificável")
