@@ -227,3 +227,63 @@ def test_o_doctor_expoe_a_cadeia_inteira(base):
     assert cadeia["bundle"]["source"] is None
     assert cadeia["themes"]["source"] == "graph_map"
     assert cadeia["index"]["computed_at"]
+
+
+# ============ achado de auditoria CONFIRMADO por execução (embeddings x FK)
+def test_embedding_vivo_nao_quebra_o_reindex(settings, kb):
+    """`embeddings.chunk_id REFERENCES chunks(id)` é a ÚNICA FK do index.db, e
+    `PRAGMA foreign_keys=ON` a torna dura. Apagar `chunks` com um embedding
+    vivo levantava `IntegrityError`.
+
+    Não é hipótese: o job `embed` — que o Scheduler enfileira DIARIAMENTE —
+    popula a tabela, e a partir daí qualquer edição de página quebrava o
+    reindex. Pior, quebrava o `doctor --repair`, que é o caminho de
+    recuperação: o conserto do produto ficava inalcançável.
+
+    Um embedding de chunk inexistente é lixo por definição, então apagá-lo
+    junto é a semântica correta, não um contorno."""
+    import sqlite3
+    doc = OKFDocument(rel_path="concepts/e.md", body="# E\n\ncorpo.",
+                      meta=OKFFrontMatter(type="concept", title="E",
+                                          privacy="local_only",
+                                          generated_via="human:promote"))
+    BundleWriter(kb).write([doc], log_kind="Creation", log_message="m",
+                           commit_message="c")
+    rebuild_index(settings)
+    idx = connect(settings.app_support / "index.db")
+    assert idx.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+    cid = idx.execute("SELECT id FROM chunks LIMIT 1").fetchone()["id"]
+    idx.execute("INSERT INTO embeddings(chunk_id, model, vec) VALUES (?,?,?)",
+                (cid, "nomic-embed-text", b"vetor"))
+    idx.commit()
+    idx.close()
+    # incremental (editar a página) e full (o caminho do doctor --repair)
+    BundleWriter(kb).write(
+        [OKFDocument(rel_path="concepts/e.md", body="# E\n\nCORPO NOVO.",
+                     meta=doc.meta)],
+        log_kind="Update", log_message="m2", commit_message="c2")
+    try:
+        rebuild_index(settings)
+        rebuild_index(settings, full=True)
+    except sqlite3.IntegrityError as e:
+        pytest.fail(f"a FK de embeddings quebrou o reindex: {e}")
+
+
+def test_doctor_repair_sobrevive_a_embedding_vivo(settings, kb):
+    """O caminho de RECUPERAÇÃO tem de funcionar justamente quando há dado —
+    um reparo que só roda em banco vazio não é reparo."""
+    BundleWriter(kb).write(
+        [OKFDocument(rel_path="concepts/e.md", body="# E\n\ncorpo.",
+                     meta=OKFFrontMatter(type="concept", title="E",
+                                         privacy="local_only",
+                                         generated_via="human:promote"))],
+        log_kind="Creation", log_message="m", commit_message="c")
+    rebuild_index(settings)
+    idx = connect(settings.app_support / "index.db")
+    cid = idx.execute("SELECT id FROM chunks LIMIT 1").fetchone()["id"]
+    idx.execute("INSERT INTO embeddings(chunk_id, model, vec) VALUES (?,?,?)",
+                (cid, "nomic-embed-text", b"v"))
+    idx.commit()
+    idx.close()
+    rel = DiagnoseSystem(settings, repair=True).execute()
+    assert not [f for f in rel["findings"] if f["severity"] == "error"], rel

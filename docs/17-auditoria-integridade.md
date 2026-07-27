@@ -2,8 +2,11 @@
 
 > **Estado: achados NÃO VERIFICADOS, salvo onde marcado.** A auditoria rodou
 > como workflow de 5 auditores independentes sobre o código real; a fase de
-> verificação adversarial (dois céticos por achado) **falhou** por um bug no
-> script de orquestração e depois por limite de sessão. O que está aqui é o
+> verificação adversarial (dois céticos por achado) **falhou** na primeira
+> tentativa por um bug no script de orquestração (`parallel` recebia promises
+> em vez de thunks) e depois por limite de sessão — 84 achados × 2 verificadores
+> eram 174 agentes. A segunda rodada verifica só os 22 de gravidade alta, com
+> um cético cada, obrigado a RODAR código: ler e achar plausível não conta. O que está aqui é o
 > produto bruto dos auditores — alegações com evidência apontada, não achados
 > confirmados. Três foram verificados por execução e estão marcados.
 
@@ -16,6 +19,8 @@
 | O job `leiden` deixa o doctor VERMELHO (INV-002 error) a cada execução | **CONFIRMADO** — `ok=True` antes, `ok=False` com INV-002 depois | **corrigido**: o job reindexa no fim; e a exclusão de `communities/` passou a valer também para a centralidade, senão a página de sumário viraria a maior articuladora do grafo |
 | A fila oferece ato de escrita sobre página aposentada | **não reproduzido** — a página supersedida não entrou em `gap_items` no cenário testado. Isso não refuta o achado: pode ser que ela nunca fosse candidata a gap. Precisa de cenário melhor | investigar |
 | `merged` não observado na calibração | **CONFIRMADO** antes de escrever o RFC | declarado no RFC-001 §2.3 e no contrato epistêmico |
+| Uma linha em `embeddings` quebra TODO reindex com `FOREIGN KEY` | **CONFIRMADO duas vezes** — pela reprodução de um cético (`IntegrityError: FOREIGN KEY constraint failed` depois do job `embed` real) e pela própria CI | **corrigido**: `embeddings` é apagada antes de `chunks` nos dois caminhos. Atingia o `doctor --repair`, ou seja o conserto do produto ficava inalcançável assim que existisse um embedding — e o Scheduler enfileira `embed` DIARIAMENTE |
+| `rebuild_index` sem `try/finally`: a conexão vaza e trava o `index.db` | **CONFIRMADO** — `OperationalError: database is locked` após os 3 s de timeout, medido logo depois da falha acima | **aberto, e declarado no código**: pagar exige reindentar o corpo inteiro, mudança que não podia vir junto da correção da FK sem tornar os dois defeitos indistinguíveis |
 
 ## Achados por gravidade
 

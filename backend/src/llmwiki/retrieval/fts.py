@@ -95,6 +95,16 @@ def _index_page(idx, d, gaz) -> None:
 
 
 def _purge_page(idx, page: str) -> None:
+    # `embeddings` PRIMEIRO: é a única FK do index.db
+    # (`embeddings.chunk_id REFERENCES chunks(id)`) e o `PRAGMA
+    # foreign_keys=ON` a torna dura. Apagar `chunks` com um embedding vivo
+    # levanta IntegrityError — CONFIRMADO por execução: rodar o job `embed`
+    # (que o Scheduler enfileira DIARIAMENTE) e depois editar qualquer página
+    # fazia o reindex estourar, e o `doctor --repair` junto, que é o caminho
+    # de recuperação. Um embedding de chunk inexistente é lixo por definição,
+    # então apagar aqui é a semântica correta, não um contorno.
+    idx.execute("DELETE FROM embeddings WHERE chunk_id IN "
+                "(SELECT id FROM chunks WHERE page=?)", (page,))
     for table, column in (("chunks", "page"), ("graph_edges", "src"),
                           ("page_entities", "page"), ("page_levels", "page"),
                           ("page_index_state", "page")):
@@ -148,6 +158,13 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
     HEAD + sujos) e só hasheia/lê os arquivos alterados — antes, cada
     incremento lia TODOS os bytes do bundle para recalcular SHA. Sem
     head anterior/known, cai no full-hash com o motivo no relatório."""
+    # DÍVIDA CONFIRMADA por execução e NÃO paga aqui: o único `idx.close()`
+    # está no caminho de sucesso, então uma exceção no meio deixa a conexão
+    # viva com transação aberta — medido, escrever no `index.db` depois disso
+    # dá `OperationalError: database is locked` após o timeout de 3 s. Pagar
+    # exige reindentar o corpo inteiro em try/finally, mudança grande demais
+    # para vir junto da correção da FK, cujos defeitos ficariam
+    # indistinguíveis. Registrado em docs/17 como achado CONFIRMADO.
     profile = StageProfile("index")
     kb = s.path("knowledge")
     bundle = kb / "bundle"
@@ -184,6 +201,11 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
     if full:
         with profile.stage("hash"):
             current = {rel: _sha(rel) for rel in files}
+        # `embeddings` antes de `chunks` — mesma FK, mesmo motivo do
+        # `_purge_page`. Este é o caminho do `full=True`, ou seja o do
+        # `doctor --repair`: sem isto, o reparo do produto era ele mesmo
+        # inalcançável assim que existisse um embedding.
+        idx.execute("DELETE FROM embeddings")
         for table in ("chunks", "graph_edges", "page_entities",
                       "page_levels", "page_index_state"):
             idx.execute(f"DELETE FROM {table}")
