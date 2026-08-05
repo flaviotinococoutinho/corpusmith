@@ -82,6 +82,23 @@ function EpistemicsSection() {
           <div><b>Fora de escopo:</b> {(detail.evaluations?.[0]?.out_of_scope
             ?? detail.validity_scope ?? []).join(" · ")}</div>
         </div>)}
+      {/* G-10: a tabela acima só mostra o que EXISTE. Um contrato prometido
+          por `docs/14` e nunca escrito era invisível aqui — o painel contava
+          15 mecanismos e o leitor não tinha como saber quantos faltavam. */}
+      {(data.lint?.findings ?? []).some(
+        (f: any) => f.code === "epistemic.mechanism_promised") && (
+        <div className="mt-2 text-xs text-amber-700">
+          <b>Contratos devidos e ainda não escritos:</b>
+          <ul className="list-disc ml-4">
+            {(data.lint.findings ?? [])
+              .filter((f: any) => f.code === "epistemic.mechanism_promised")
+              .map((f: any) => (
+                <li key={f.mechanism_id}>
+                  <span className="font-mono">{f.mechanism_id}</span>
+                  {" — "}{f.message}
+                </li>))}
+          </ul>
+        </div>)}
     </section>
   );
 }

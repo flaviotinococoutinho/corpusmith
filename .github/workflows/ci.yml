@@ -63,3 +63,50 @@ jobs:
       - run: cargo test --workspace --manifest-path native/Cargo.toml
       - run: pip install maturin && maturin build --release -m native/crates/llmwiki-native-python/Cargo.toml -o native/target/wheels
       - run: cargo build --release --manifest-path native/Cargo.toml -p llmwiki-native-worker
+
+  # PR-0.1: o caminho EMPACOTADO passa a ser construído E EXECUTADO pela CI.
+  #
+  # Verificado por execução que ele estava quebrado em QUATRO pontos, e nenhum
+  # deles era visível sem rodar: `build.spec` sem `exclude_binaries` (não
+  # construía), `collect_dynamic_libs` com o padrão default `lib*.so` que não
+  # casa com `vec0.so` (embarcaria sem a extensão vetorial, em silêncio),
+  # ponto de entrada apontando para o módulo e não para um `__main__` de
+  # pacote (ImportError na primeira linha), e recursos resolvidos por
+  # `parents[]` em vez de `_MEIPASS` (FileNotFoundError antes de abrir a
+  # porta). Construir não é o mesmo que funcionar — por isso este job SOBE o
+  # binário e bate no `/health`.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: git config --global user.email ci@llmwiki && git config --global user.name CI
+      # `[ml]` obrigatório: sem sqlite-vec o build.spec FALHA ALTO em vez de
+      # embarcar um binário sem busca vetorial
+      - run: pip install -e "backend[dev,ml]" pyinstaller
+      - run: cd backend && pyinstaller build.spec
+      - name: o binário empacotado SOBE e responde
+        run: |
+          export LLMWIKI_HOME="$RUNNER_TEMP/pkg-home"
+          mkdir -p "$LLMWIKI_HOME"
+          backend/dist/llmwiki-server/llmwiki-server &
+          for i in $(seq 1 40); do
+            J=$(find "$LLMWIKI_HOME" -name daemon.json 2>/dev/null | head -1)
+            [ -n "$J" ] && break; sleep 1
+          done
+          test -n "$J" || { echo "::error::o sidecar empacotado nao abriu a porta"; exit 1; }
+          P=$(python -c "import json;print(json.load(open('$J'))['port'])")
+          T=$(python -c "import json;print(json.load(open('$J'))['token'])")
+          curl -sf -m 10 "http://127.0.0.1:$P/health" -H "x-llmwiki-auth: $T"
+          curl -sf -m 20 "http://127.0.0.1:$P/system/doctor" -H "x-llmwiki-auth: $T" \
+            | python -c "import json,sys; d=json.load(sys.stdin); \
+                         sys.exit(0 if d['counts']['error']==0 else 1)"
+          # o registro epistêmico é lido em RUNTIME e mora na raiz do repo:
+          # fora dos `datas` do build.spec o app instalado responde
+          # `registry_missing` e o painel Qualidade acusa "lint com erros"
+          curl -sf -m 20 "http://127.0.0.1:$P/cockpit/epistemics" -H "x-llmwiki-auth: $T" \
+            | python -c "import json,sys; d=json.load(sys.stdin)['lint']; \
+                         sys.exit(0 if d['ok'] and d['mechanisms'] > 0 else 1)"
+      - name: a extensao vetorial vec0 foi embarcada
+        run: test -f backend/dist/llmwiki-server/_internal/sqlite_vec/vec0.so

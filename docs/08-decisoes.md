@@ -1487,3 +1487,90 @@ transitivos) → recomputar (tudo fresco).
 `llmwiki checkpoints` lista a cadeia e sai com código 1 quando algo está
 atrás — inspecionável, não só verificável.
 16 testes novos; **635 no total**.
+
+### ADR-47 — O caminho empacotado passa a ser executado, não só construído (v1.9.5, PR-0.1)
+**Contexto medido, e o número importa: quatro defeitos, zero visíveis sem
+rodar.** A auditoria (`docs/17`, G-1) verificou que `pyinstaller build.spec`
+*construía* e parou aí. Construir o artefato e executá-lo são perguntas
+diferentes, e a distância entre elas era o produto inteiro: nenhum terceiro
+jamais teve um `llmwiki-server` que subisse. Reproduzidos, em ordem de morte:
+
+1. `EXE(...)` sem `exclude_binaries=True` → `ValueError: Resource
+   '.../llmwiki-server' is not a valid file!`. O `just sidecar` **não
+   construía**; o binário que `sidecar.ts` procura no app empacotado nunca
+   existiu;
+2. `collect_dynamic_libs("sqlite_vec")` com o `search_patterns` default
+   (`['*.dll', '*.dylib', 'lib*.so']`) devolve **`[]`**: a extensão se chama
+   `vec0.so` e não casa com `lib*.so`. O diagnóstico da auditoria — "falta o
+   extra `[ml]`" — estava errado, o pacote estava instalado. Este é o pior dos
+   quatro porque é **silencioso**: um app sem busca vetorial sobe, responde, e
+   responde pior;
+3. ponto de entrada em `daemon.py`, que o PyInstaller roda como `__main__` →
+   `ImportError: attempted relative import with no known parent package`. Um
+   `packaging_entry.py` com import absoluto resolve, e diz por quê;
+4. recursos resolvidos por `Path(__file__).parents[N]` →
+   `FileNotFoundError: .../llmwiki-server/db/schema_runtime.sql`, com o arquivo
+   em `.../_internal/db/`. O daemon morria antes de abrir a porta.
+
+**Decisão em duas partes, e a segunda é a que dura.** `llmwiki/paths.py`
+centraliza a resolução (`_MEIPASS` quando congelado, `source_root` explícito
+na árvore) — quem chama declara de onde contar, em vez de esconder a contagem
+num `parents[4]` que ninguém revalida quando o módulo muda de lugar. E o job
+`package` do CI **sobe o binário** e bate em `/health`, `/system/doctor`
+(`counts.error == 0`) e `/cockpit/epistemics`, além de exigir o `vec0.so` no
+`_internal/`. `pyinstaller build.spec` entra em `[gate].ci_enforced` —
+enquanto o token não existia, `test_ci_executa_todo_o_gate_declarado` era
+estruturalmente incapaz de acusar a ausência.
+
+**Um quinto defeito apareceu porque o binário passou a rodar.** `epistemics.toml`
+mora na raiz do repo e é lido em **runtime** (`/cockpit/epistemics`, painel
+Qualidade). Fora dos `datas`, o app instalado respondia
+`epistemic.registry_missing` — o produto acusando a si mesmo de não saber o que
+afirma saber. E, uma vez embarcado, a checagem de existência dos
+`implementation_refs` passaria a acusar **~15 erros inexistentes**, porque a
+árvore de código não vai no pacote. Em vez de omitir a checagem em silêncio, o
+binário emite `epistemic.refs_uncheckable` (warn) dizendo que a pergunta não é
+respondível ali e onde ela vale — repositório e CI. Ambos reproduzidos no
+binário antes da correção.
+
+**G-10 no mesmo PR, porque é o mesmo modo de falha em outro artefato.**
+`validate_registry` iterava contrato a contrato e não tinha regra sobre o
+CONJUNTO: apagar as 45 linhas de `[mechanisms.theme_identity_matching]` deixava
+o lint responder *"14 mecanismo(s), 0 finding(s)"*, exit 0, suíte verde. Duas
+listas, porque são dois erros distintos: `EXPECTED_MECHANISMS` (o registro de
+hoje — sumiço é **error**, e remover passa a exigir remover o nome no mesmo
+commit) e `PROMISED_MECHANISMS` (os cinco que `docs/14` §5 declara obrigatórios
+e que ainda não existem — **warn**). Vermelho hoje só produziria contrato
+escrito às pressas para calar o gate, ou o gate desligado; warn mantém a dívida
+onde ela será paga. O painel Qualidade passa a listá-la: antes ele contava 15
+mecanismos e o leitor não tinha como saber quantos faltavam.
+
+A outra metade de G-10 — *"nada quebra se esquecerem o bump"* — vira regra de
+parsing: `[registry].version` passa a exigir semver. `version = "banana"`
+passava, e uma version que não ordena não consegue dizer que um registro é mais
+novo que outro. Forçar o bump exigiria histórico e não é mecanizável barato; o
+que é mecanizável, e está feito, é que **mexer no conjunto passe pela linha
+onde a pergunta aparece**: um fingerprint do conjunto de mecanismos fica fixado
+ao lado da version esperada, e mudar o registro sem tocar nesse par reprova.
+
+**G-8 fecha com `release.yml`**: trigger em tag `v*`, runner arm64 (a máquina
+declarada em `docs/15` é um M2; runner Intel mediria outra coisa), conferência
+de que a tag bate com `desktop/package.json` **e** `backend/pyproject.toml`
+antes de construir — a deriva de versão foi corrigida à mão uma vez e voltaria
+na próxima release —, e `--draft`, nunca publicação direta: um `git push
+--tags` acidental não deve produzir release visível, porque release não se
+despublica. O `directories.output` do `electron-builder.yml` precisou ser
+explicitado no mesmo movimento: o default é `dist/`, que aqui é a saída do
+Vite listada em `files` — empacotar para dentro do diretório que se empacota.
+Só apareceu quando algo passou a de fato executar o `electron-builder`.
+
+**Falsificabilidade verificada por mutação, uma a uma**: desligar o ramo
+`frozen` do lint, tirar o `epistemics.toml` dos `datas`, fazer `resource()`
+ignorar o `_MEIPASS` e remover `_completude` — cada uma derruba exatamente o
+teste que a cobre, e só ele. O primeiro teste de `frozen` **passava** com a
+correção desfeita (rodava contra o repositório real, onde os refs existem);
+simular `_REPO_ROOT` foi o que o tornou capaz de reprovar.
+**Invariantes preservados**: local-first (nada no binário exige rede) · AGPL
+fora do pacote (`excludes` de `fitz`/`pymupdf4llm`/`ebooklib`, v0.6 §8) ·
+falhar alto em vez de degradar em silêncio (build.spec aborta sem `vec0`).
+15 testes novos; **646 no total**.

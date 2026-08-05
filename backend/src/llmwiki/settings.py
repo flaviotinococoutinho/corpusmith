@@ -14,7 +14,10 @@ from typing import Any, ClassVar
 import yaml
 from pydantic import BaseModel, ConfigDict
 
-_DEFAULT_CONFIG = Path(__file__).resolve().parent.parent.parent / "config" / "default.yaml"
+from .paths import resource as _resource
+_DEFAULT_CONFIG = _resource(
+    "config", "default.yaml",
+    source_root=Path(__file__).resolve().parents[2])
 
 
 def _deep_merge(base: dict, extra: dict) -> dict:

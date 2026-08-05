@@ -16,7 +16,9 @@ from llmwiki.api.system import build_app
 from llmwiki.epistemic import (EvaluationStatus, RegistryError,
                                envelope_status, parse_registry,
                                validate_registry)
-from llmwiki.harness.epistemics import DEFAULT_PATH, lint, load_registry
+from llmwiki.harness.epistemics import (DEFAULT_PATH, EXPECTED_MECHANISMS,
+                                        PROMISED_MECHANISMS, lint,
+                                        load_registry)
 from llmwiki.runtime.db import SCHEMA_VERSIONS, connect
 from llmwiki.runtime.events import EventBus
 from llmwiki.runtime.governor import Governor
@@ -59,6 +61,99 @@ def test_parse_valid_registry_real_file():
             "metacog_observation_mining"} <= ids
     assert not [f for f in findings if f.severity == "error"]
     assert lint()["ok"] is True
+
+
+# ------------------------------------------- completude do conjunto (G-10)
+def _sem_contrato(mechanism_id: str, tmp_path: Path) -> Path:
+    """Cópia do registro real com UM bloco `[mechanisms.x]` apagado."""
+    fora, dentro = [], False
+    for linha in DEFAULT_PATH.read_text().splitlines(keepends=True):
+        if linha.startswith(f"[mechanisms.{mechanism_id}"):
+            dentro = True
+        elif dentro and linha.startswith("[mechanisms."):
+            dentro = False
+        if not dentro:
+            fora.append(linha)
+    alvo = tmp_path / "mutado.toml"
+    alvo.write_text("".join(fora))
+    return alvo
+
+
+def test_expected_mechanisms_e_exatamente_o_registro_real():
+    """A lista é o espelho do registro, não um subconjunto simpático.
+
+    Se fosse subconjunto, acrescentar mecanismo sem acrescentar o nome
+    passaria — e o gate nasceria desatualizado."""
+    registry, _ = load_registry()
+    assert set(EXPECTED_MECHANISMS) == {c.mechanism_id
+                                        for c in registry.contracts}
+
+
+def test_version_do_registro_precisa_ordenar():
+    """`version = "banana"` passava. Quatro PRs do plano prometem bumpar de
+    `1.1.0` para `1.2.0`; um valor que não ordena não distingue registro novo
+    de registro velho e transforma a promessa em decoração."""
+    with pytest.raises(RegistryError, match="semver"):
+        parse_registry(MINIMAL_OK.replace('version = "1.0.0"',
+                                          'version = "banana"'))
+    parse_registry(MINIMAL_OK)          # o formato válido segue passando
+
+
+def test_version_e_o_conjunto_de_mecanismos_andam_juntos():
+    """Fingerprint do CONJUNTO fixado ao lado da version.
+
+    Não força o bump (isso exigiria histórico), mas garante que mexer no
+    registro passe por esta linha — que é onde a pergunta "isto merece um
+    bump?" fica impossível de não ver. Sem o digest, acrescentar mecanismo
+    exigiria só editar `EXPECTED_MECHANISMS` e a version ficaria para trás
+    em silêncio, que é o achado C18 da auditoria."""
+    registry, _ = load_registry()
+    digest = hashlib.sha256(
+        ",".join(sorted(c.mechanism_id for c in registry.contracts))
+        .encode()).hexdigest()[:12]
+    assert (registry.version, digest) == ("1.4.0", "5604232f4789"), (
+        "o conjunto de mecanismos mudou — bumpe [registry].version em "
+        "epistemics.toml e atualize este par no mesmo commit")
+
+
+def test_apagar_contrato_deixa_o_lint_vermelho(tmp_path):
+    """A mutação que a auditoria usou para provar o buraco: apagar as 45
+    linhas de `theme_identity_matching` respondia "14 mecanismo(s), 0
+    finding(s)", exit 0. Falsificável — sem `_completude`, isto passa."""
+    mutado = lint(_sem_contrato("theme_identity_matching", tmp_path))
+    assert mutado["ok"] is False
+    assert mutado["mechanisms"] == 14
+    erros = [f for f in mutado["findings"] if f["severity"] == "error"]
+    assert [(f["code"], f["mechanism_id"]) for f in erros] == [
+        ("epistemic.mechanism_missing", "theme_identity_matching")]
+
+
+def test_promessa_nao_escrita_e_warn_e_nao_trava_o_gate():
+    """`docs/14` §5 declara seis contratos obrigatórios; cinco não existem.
+    Erro travaria o gate hoje e o incentivo seria escrever contrato às
+    pressas ou desligar a checagem — a dívida fica visível, não fatal."""
+    resultado = lint()
+    prometidos = {f["mechanism_id"] for f in resultado["findings"]
+                  if f["code"] == "epistemic.mechanism_promised"}
+    assert prometidos == {m for m, _ in PROMISED_MECHANISMS}
+    assert all(f["severity"] == "warn" for f in resultado["findings"]
+               if f["code"] == "epistemic.mechanism_promised")
+    assert resultado["ok"] is True
+
+
+def test_promessa_cumprida_para_de_avisar(tmp_path):
+    """Escrever o contrato apaga o aviso — o warn é dívida, não decoração.
+
+    Um aviso que sobrevive à entrega ensina a ignorar a saída do lint."""
+    assert not ({m for m, _ in PROMISED_MECHANISMS}
+                & set(EXPECTED_MECHANISMS)), "prometido e já entregue"
+    escrito = tmp_path / "com_promessa.toml"
+    escrito.write_text(MINIMAL_OK.replace("[mechanisms.m1]",
+                                          "[mechanisms.attention_queue]"))
+    codigos = {(f["code"], f["mechanism_id"])
+               for f in lint(escrito)["findings"]}
+    assert ("epistemic.mechanism_promised", "attention_queue") not in codigos
+    assert ("epistemic.mechanism_promised", "factual_conflict") in codigos
 
 
 def test_incompatible_schema_version_is_clear_error():
@@ -267,7 +362,11 @@ def test_cli_lint_exit_codes(settings, capsys):
     ns = argparse.Namespace(op="lint", mechanism=None)
     assert cmd_epistemics(settings, ns) == 0
     out = capsys.readouterr().out
-    assert "mecanismo(s), 0 finding(s)" in out
+    # exit 0 = nenhum ERRO. Desde o G-10 a saída lista as dívidas conhecidas
+    # (contratos prometidos por docs/14 e ainda não escritos) como `warn` —
+    # visíveis sem travar o gate.
+    assert "15 mecanismo(s)" in out
+    assert "error" not in out
     # registro quebrado ⇒ ok=False (exit 1 no comando)
     broken = lint(path=settings.home / "nao_existe.toml")
     assert broken["ok"] is False

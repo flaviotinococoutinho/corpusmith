@@ -1,0 +1,65 @@
+# PR-0.1 (G-8) — release por tag.
+#
+# G-8 foi reaberta pela auditoria porque `build.spec` e `electron-builder.yml`
+# existiam e **nada os executava**: `ci.yml` disparava só em push/PR, sem
+# trigger de tag, e o `.dmg` que `sidecar.ts` pressupõe nunca foi produzido por
+# automação nenhuma. O job `package` do `ci.yml` já prova que o sidecar sobe;
+# aqui ele é embrulhado no app e publicado.
+#
+# **Rascunho, nunca publicação direta**: `--draft` deixa a decisão de tornar
+# público com quem cortou a tag. Um workflow que publica sozinho transforma um
+# `git push --tags` acidental em release visível, e release não se despublica.
+name: release
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  dmg:
+    # arm64: a máquina-alvo declarada em `docs/15` é um Mac M2. Runner Intel
+    # produziria um `.dmg` que roda sob Rosetta e mede outra coisa.
+    runs-on: macos-14
+    permissions:
+      contents: write            # só para criar o rascunho da release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - uses: actions/setup-node@v4
+        with: {node-version: "20"}
+
+      # A deriva de versão foi achado de auditoria (`desktop/package.json` em
+      # 0.7.0 contra 1.8.0 do produto). Corrigida à mão uma vez, ela volta na
+      # próxima release se ninguém olhar — então a tag CONFERE com as duas
+      # fontes, e discordar aborta antes de construir qualquer coisa.
+      - name: a tag confere com as versões declaradas
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./desktop/package.json').version")
+          PY=$(grep -m1 '^version' backend/pyproject.toml | cut -d'"' -f2)
+          echo "tag=$TAG desktop=$PKG backend=$PY"
+          test "$TAG" = "$PKG" || { echo "::error::tag $TAG ≠ desktop/package.json $PKG"; exit 1; }
+          test "$TAG" = "$PY"  || { echo "::error::tag $TAG ≠ backend/pyproject.toml $PY"; exit 1; }
+
+      - run: pip install -e "backend[dev,ml]" pyinstaller
+      - run: cd backend && pyinstaller build.spec
+      # mesma asserção do job `package`: um binário sem `vec0` sobe, responde,
+      # e responde pior — falhar aqui é mais barato que descobrir instalado
+      - run: test -f backend/dist/llmwiki-server/_internal/sqlite_vec/vec0.dylib
+
+      - run: cd desktop && npm ci && npm run build
+      - run: cd desktop && npx electron-builder --mac --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: llmwiki-macos-arm64
+          path: desktop/release/*.dmg
+          if-no-files-found: error
+
+      - name: rascunho de release com o .dmg
+        env: {GH_TOKEN: "${{ github.token }}"}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --draft \
+            --title "$GITHUB_REF_NAME" \
+            --notes "Build automático. O sidecar empacotado é verificado pelo job \`package\` do CI (sobe, responde \`/health\`, \`/system/doctor\` sem erros e serve o registro epistêmico)." \
+            desktop/release/*.dmg

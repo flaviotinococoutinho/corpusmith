@@ -16,7 +16,12 @@ from pathlib import Path
 _INITIALIZED: set[str] = set()
 _INIT_LOCK = threading.Lock()
 
-_SQL_DIR = Path(__file__).resolve().parent.parent.parent.parent / "db"
+# PR-0.1: dentro do binário empacotado os `datas` ficam sob `_MEIPASS`,
+# não onde a contagem de `parents` aponta. Medido: o daemon empacotado
+# morria em FileNotFoundError antes de abrir a porta.
+from ..paths import resource as _resource
+_SQL_DIR = _resource("db",
+                     source_root=Path(__file__).resolve().parents[3])
 
 _SCHEMAS = {
     "runtime.db": "schema_runtime.sql",
