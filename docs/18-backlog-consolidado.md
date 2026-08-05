@@ -23,8 +23,8 @@ Nada aqui é opinião sobre estilo. Onde não há evidência, está dito.
 
 | # | O quê | Evidência | Consequência |
 |---|---|---|---|
-| **B1** | **A escada de similaridade é código morto desde a v0.9.** `MIN(bm25(chunks_fts))` levanta `OperationalError: unable to use function bm25 in the requested context` em SQLite 3.45.1 — sempre. O `except Exception` cego devolvia lista vazia | 🔴 medido + 🟠 confirmado | Similaridade composta, limiares HI/LO, NCD e árbitro LLM **nunca executam**. Toda reconciliação decide por identificador forte ou cai em ADD. O silêncio já foi corrigido (`similarity_error`); a SQL **não**, porque corrigi-la ativa o árbitro LLM no caminho de escrita e exige **RFC** |
-| **B2** | **`index.db` — projeção declarada sem autoridade — decide ADD/UPDATE/SUPERSEDE.** Mesmo candidato, só o estado da projeção muda → `UPDATE` ou `ADD`, com `doctor.ok=True` nos dois | 🟠 confirmado | O cético produziu **duas páginas canônicas vivas para o mesmo DOI** pelo mesmo use case. Viola `AGENTS.md` §6 e `architecture.toml` (`authority = "nenhuma (projeção)"`) |
+| **B1** ✅ **RESOLVIDO** (F3-PR0, RFC-002 + ADR-48) | **A escada de similaridade é código morto desde a v0.9.** `MIN(bm25(chunks_fts))` levanta `OperationalError: unable to use function bm25 in the requested context` em SQLite 3.45.1 — sempre. O `except Exception` cego devolvia lista vazia | 🔴 medido + 🟠 confirmado | Similaridade composta, limiares HI/LO, NCD e árbitro LLM **nunca executam**. Toda reconciliação decide por identificador forte ou cai em ADD. O silêncio já foi corrigido (`similarity_error`); a SQL **não**, porque corrigi-la ativa o árbitro LLM no caminho de escrita e exige **RFC** |
+| **B2** ✅ **RESOLVIDO** (F3-PR0: pré-condição de frescor + `index_stale` declarado) | **`index.db` — projeção declarada sem autoridade — decide ADD/UPDATE/SUPERSEDE.** Mesmo candidato, só o estado da projeção muda → `UPDATE` ou `ADD`, com `doctor.ok=True` nos dois | 🟠 confirmado | O cético produziu **duas páginas canônicas vivas para o mesmo DOI** pelo mesmo use case. Viola `AGENTS.md` §6 e `architecture.toml` (`authority = "nenhuma (projeção)"`) |
 | **B3** | **`rebuild_index` sem `try/finally`**: exceção no meio vaza a conexão com transação aberta e trava `index.db` por 30 s no processo | 🟠 confirmado | Recuperável, mas o produto parece travado |
 | **B4** | **`out_of_scope` recebe `validity_scope` sem negação** (`evaluate_memory.py:184`), e o painel renderiza como "Fora de escopo" | 🟠 confirmado | Inversão exata do significado: o painel diz que o escopo **avaliado** está fora do escopo. Correção de uma linha |
 | **B5** | `build.spec:12` faz `EXE(...)` sem `exclude_binaries=True` — obrigatório em onedir. `just sidecar` **não constrói mais** | 🟠 confirmado | Nem a receita manual de empacotamento funciona. Com o token, constrói (3,4 MB) |
@@ -77,8 +77,8 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 
 | # | Pacote | pt | Por quê |
 |---|---|:--:|---|
-| **PR-0.1** | **Release executável** — `exclude_binaries=True`, `sqlite-vec` no build, job de release com trigger de tag, token de release em `[gate].ci_enforced`, `expected_mechanisms` no registro | 4 | **G-8 e G-10 reabertas.** Sem o token no gate, `test_ci_executa_todo_o_gate_declarado` **estruturalmente nunca** poderá acusar |
-| **F3-PR0** | **Fechar o laço da decisão canônica** — B1 **com RFC**, pré-condição de frescor ou INV de cobertura bundle→índice, `try/finally` no rebuild, teste do degrau de similaridade | 6 | **Pré-requisito da F3**: o P-7 faz `promote` consultar uma escada com dois degraus mortos |
+| **PR-0.1** ✅ **ENTREGUE** (ADR-47) | **Release executável** — `exclude_binaries=True`, `sqlite-vec` no build, job de release com trigger de tag, token de release em `[gate].ci_enforced`, `expected_mechanisms` no registro | 4 | **G-8 e G-10 reabertas.** Sem o token no gate, `test_ci_executa_todo_o_gate_declarado` **estruturalmente nunca** poderá acusar |
+| **F3-PR0** ✅ **ENTREGUE** | **Fechar o laço da decisão canônica** — B1 **com RFC**, pré-condição de frescor ou INV de cobertura bundle→índice, `try/finally` no rebuild, teste do degrau de similaridade | 6 | **Pré-requisito da F3**: o P-7 faz `promote` consultar uma escada com dois degraus mortos |
 | **F-UI** | **As superfícies órfãs num PR só** — doctor, histórico com undo, cancel/retry, repasse genérico de SSE | 8 | Cinco achados, um arquivo de cliente, cinco painéis. Muito mais barato junto. **Pré-requisito: smoke de UI, hoje inexistente** |
 | **F-EPIST** | Trilha epistêmica, um PR por item | 5 | B4, rebaixar `retrieval_rrf_hedge`, contratos de `memory_freeze` e `consolidate_inbox`, `rglob` no `test_architecture` |
 
@@ -102,7 +102,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 | # | O quê | Consequência |
 |---|---|---|
 | **T7** | `INV-ARCH-003/004` só inspecionam imports **relativos**, e o scan de `api/` usa `glob` em vez de `rglob` | O cético plantou violações que passaram verdes |
-| **T8** | `epistemics lint` fica verde com **contrato obrigatório apagado** (G-10) | Esquecer um contrato na F3/F4/F5 é silencioso |
+| **T8** ✅ **RESOLVIDO** (PR-0.1) | `epistemics lint` fica verde com **contrato obrigatório apagado** (G-10) | Esquecer um contrato na F3/F4/F5 é silencioso |
 | **T9** | O `conftest` derruba o Ollama e com isso cega 100 % da suíte para a única FK do `index.db` | Foi assim que o defeito da FK sobreviveu |
 | **T10** | Nenhum teste cobre `/events`, `/system/doctor` por HTTP, `/jobs/{id}/cancel` nem qualquer superfície de UI | O bloco inteiro do §2 é invisível ao gate |
 | **T11** | `bench compare` está fora do gate por PR (variação entre máquinas), e o baseline segue em `1.7.0` contra produto `1.9.x` | G-4 |
@@ -145,10 +145,14 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 
 ## 8. Ordem sugerida, e por quê
 
-1. **PR-0.1** — sem release executável, nada do que foi construído chega a um
+> **Estado em 2026-08**: os itens 1 e 2 estão **entregues** (ADR-47; RFC-002 +
+> ADR-48). A ordem abaixo fica como registro do raciocínio — e porque os itens
+> 3 a 5 seguem valendo.
+
+1. ✅ **PR-0.1** — sem release executável, nada do que foi construído chega a um
    terceiro. E é o único item cujo custo **cresce** com o tempo (cada PR novo
    aumenta o que não está empacotado);
-2. **F3-PR0** — pré-requisito técnico da F3 e do B1/B2, os dois de maior
+2. ✅ **F3-PR0** — pré-requisito técnico da F3 e do B1/B2, os dois de maior
    consequência. Exige RFC: o casamento entre "corrigir uma linha de SQL" e
    "ativar um árbitro LLM sobre o canônico" é exatamente o que a regra existe
    para impedir;
@@ -159,4 +163,5 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 
 > **O que NÃO fazer**: corrigir o B1 sem RFC. É uma linha, é tentador, e ativa
 > decisão de modelo generativo sobre o canônico por efeito colateral de um
-> conserto.
+> conserto. — *cumprido: `docs/19` (RFC-002) precedeu a correção, e a flag
+> `reconcile.llm_arbiter` continua desligada por default.*

@@ -111,7 +111,7 @@ def test_version_e_o_conjunto_de_mecanismos_andam_juntos():
     digest = hashlib.sha256(
         ",".join(sorted(c.mechanism_id for c in registry.contracts))
         .encode()).hexdigest()[:12]
-    assert (registry.version, digest) == ("1.4.0", "5604232f4789"), (
+    assert (registry.version, digest) == ("1.5.0", "5604232f4789"), (
         "o conjunto de mecanismos mudou — bumpe [registry].version em "
         "epistemics.toml e atualize este par no mesmo commit")
 

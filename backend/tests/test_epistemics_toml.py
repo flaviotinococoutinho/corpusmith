@@ -73,6 +73,11 @@ def test_reconciliation_parameters_match_code():
         in src
     assert f"[:{int(float(p['ncd_body_window']))}]".replace(
         "8000", "8_000") in src
+    # F3-PR0 (RFC-002): os dois limites entraram no contrato porque LIMITAM
+    # RECALL — quantas páginas a escada chega a considerar antes de decidir
+    # ADD. Um teto de busca não declarado é um failure mode invisível.
+    assert int(p["page_limit"]) == reconcile_candidate._PAGE_LIMIT
+    assert int(p["chunk_limit"]) == reconcile_candidate._CHUNK_LIMIT
 
 
 def test_cognitive_priority_components_match_code():

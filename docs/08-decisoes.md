@@ -1574,3 +1574,50 @@ simular `_REPO_ROOT` foi o que o tornou capaz de reprovar.
 fora do pacote (`excludes` de `fitz`/`pymupdf4llm`/`ebooklib`, v0.6 §8) ·
 falhar alto em vez de degradar em silêncio (build.spec aborta sem `vec0`).
 15 testes novos; **646 no total**.
+
+### ADR-48 — A escada de reconciliação volta a ter três degraus (v1.9.6, F3-PR0)
+**Decisão registrada por RFC-002 (`docs/19`)**, porque `AGENTS.md` §8 exige RFC
+para heurística no caminho de escrita — e este conserto de uma linha ativa os
+cortes HI/LO, o NCD e o árbitro LLM sobre a decisão ADD/UPDATE/SUPERSEDE da
+página canônica. Este ADR registra o que ficou decidido; o RFC guarda as
+opções, as medições e as condições de reentrada.
+**O degrau 2 nunca executou.** `MIN(bm25(chunks_fts))` levanta
+`OperationalError: unable to use function bm25 in the requested context` em
+TODA execução desde a v0.9 — e a subquery também, porque a restrição do SQLite
+é da consulta que carrega o `MATCH`, não do aninhamento. Um `except Exception`
+cego engolia, e *"nenhum candidato acima do corte"* saía **idêntico** ao de uma
+busca bem-sucedida e vazia. É a forma exata do defeito que a auditoria nomeou:
+**construir bem e verificar mal aquilo que se construiu**.
+**O ranking sai por chunk e a redução por página é feita em Python**, o que
+corrige um segundo erro que o agregado escondia: sem deduplicar, uma página
+longa ocuparia várias posições do top-N e inflaria o próprio termo
+`1/(1+position)` do escore.
+**A projeção deixa de decidir como se fosse autoridade.** `index.db` é
+reconstruível e a escada o lia como fonte de verdade sobre o que existe:
+índice atrasado esconde a página e o mesmo DOI vira duas páginas canônicas
+vivas (medido). A escada passa a tornar o índice fresco antes de decidir —
+incremental, delta de git — e, quando nem isso resolve, a decisão **declara**
+`index_stale` e o `ADD` cai para `confidence = "ambiguous"`. *Ausência de
+evidência num índice atrasado não é evidência de ausência.*
+**Os cortes NÃO foram recalibrados**, e a medição diz por quê: com corpo
+idêntico, o escore é **0.686** sem entidade curada e **0.976** com ela. O teto
+sem acordo de entidades é ~0.7, abaixo de HI=0.82 — não é fraqueza do degrau, é
+a exigência de que os três sinais concordem antes de sobrescrever canônico.
+Recalibrar sem golden set seria adivinhar, e o contrato passaria a mentir.
+**O `try/finally` do `rebuild_index`** deixa de ser higiene e vira
+pré-requisito: a partir daqui a função roda dentro do caminho de escrita, onde
+a conexão vazada travaria o próprio ato que a provocou (`database is locked`
+após 30 s — medido nas duas direções).
+**O registro epistêmico foi corrigido, não só acrescido** (1.4.0 → 1.5.0): a
+suposição *"cortes calibráveis via bench"* virou *"NÃO calibrados — o degrau não
+executou da v0.9 ao F3-PR0"*. Um contrato que descreve corretamente um caminho
+que nunca rodou é pior que contrato nenhum, porque parece verificação.
+**Falsificabilidade, uma mutação por correção**: repor `MIN(bm25)` derruba 4
+testes; remover a pré-condição derruba 3; remover o `try/finally` derruba 1. A
+primeira versão do teste do `finally` **passava com e sem** a correção —
+conexão vazada sem transação aberta não tranca nada; foi preciso escrever antes
+de estourar para o teste poder reprovar.
+**`backend/tests/test_reconcile_candidate.py` não existia.** A decisão mais
+consequente do produto não tinha teste próprio, e é por isso que um degrau
+inteiro pôde morrer em silêncio por três versões.
+12 testes novos; **657 no total**.

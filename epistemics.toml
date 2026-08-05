@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.4.0"   # F2-PR2: + theme_identity_matching (RFC-001)
+version = "1.5.0"   # F3-PR0: reconciliation revisado (RFC-002) — o degrau de similaridade voltou a executar
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -180,17 +180,20 @@ inductive_biases = [
   "na dúvida, duplicar: duplicação é REVERSÍVEL (consolidação futura resolve); fusão errada é DESTRUTIVA",
 ]
 assumptions = [
-  "os cortes HI=0.82 / LO=0.55 separam mesmo-objeto de objetos-distintos no corpus típico (calibráveis via bench)",
+  "os cortes HI=0.82 / LO=0.55 separam mesmo-objeto de objetos-distintos no corpus típico — NÃO calibrados: o degrau de similaridade não executou da v0.9 ao F3-PR0 (bm25 dentro de agregado estourava em toda execução), então nenhum escore jamais os cruzou. Calibrar exige golden set (RFC-002 §12)",
   "entidades extraídas pelo normalizador representam o conteúdo (Jaccard sobre entidades ruins degrada o sinal)",
 ]
 validity_scope = [
   "candidatos do pipeline de compilação contra o bundle local e a base fria",
   "textos em que zlib captura redundância (NCD com corpos truncados em 8000 chars)",
+  "índice FRESCO em relação ao bundle — quando não é, a escada reindexa antes de decidir e, se ainda assim não ficar fresco, declara index_stale na decisão (RFC-002 §4.2)",
 ]
 known_failure_modes = [
   "zona cinzenta [0.55, 0.82) sem árbitro: cai em ADD — pode duplicar conceito existente (aceito por projeto: precisão > recall)",
   "árbitro LLM local (flag reconcile.llm_arbiter) responde JSON inválido ou fica indisponível: silenciosamente vira ADD",
   "identificador forte FALSO no texto (ex.: DOI citado, não do documento) força UPDATE errado — o único degrau capaz de fusão destrutiva",
+  "index.db é PROJEÇÃO usada como autoridade nos degraus 1 e 2: índice atrasado esconde a página existente e produz ADD — duas páginas canônicas vivas para o mesmo DOI (medido, docs/17 B2). Mitigado pela pré-condição de frescor; o resíduo vai marcado como index_stale",
+  "sem entidade curada no bundle o termo Jaccard vale 0 e o teto do escore é ~0.7 (< HI): corpo idêntico NÃO vira UPDATE, cai na zona cinzenta (medido, RFC-002 §4.3)",
 ]
 guarantee_kind = "heuristic"
 guarantee_relative_to = "escada determinística (identificadores) primeiro; heurística composta calibrada nos cortes HI/LO depois; trilha completa em reconcile_log"
@@ -214,6 +217,8 @@ weight_jaccard = 0.3
 weight_ncd = 0.3
 ncd_body_window = 8000
 strong_ids = "doi,isbn,issn,arxiv,git_sha"
+page_limit = 8
+chunk_limit = 64
 
 # ============================================================ cognição
 [mechanisms.cognitive_priority]
