@@ -95,6 +95,16 @@ def _index_page(idx, d, gaz) -> None:
 
 
 def _purge_page(idx, page: str) -> None:
+    # `embeddings` PRIMEIRO: é a única FK do index.db
+    # (`embeddings.chunk_id REFERENCES chunks(id)`) e o `PRAGMA
+    # foreign_keys=ON` a torna dura. Apagar `chunks` com um embedding vivo
+    # levanta IntegrityError — CONFIRMADO por execução: rodar o job `embed`
+    # (que o Scheduler enfileira DIARIAMENTE) e depois editar qualquer página
+    # fazia o reindex estourar, e o `doctor --repair` junto, que é o caminho
+    # de recuperação. Um embedding de chunk inexistente é lixo por definição,
+    # então apagar aqui é a semântica correta, não um contorno.
+    idx.execute("DELETE FROM embeddings WHERE chunk_id IN "
+                "(SELECT id FROM chunks WHERE page=?)", (page,))
     for table, column in (("chunks", "page"), ("graph_edges", "src"),
                           ("page_entities", "page"), ("page_levels", "page"),
                           ("page_index_state", "page")):
@@ -147,13 +157,30 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
     v1.7 (ADR-39 §11): o incremental usa o DELTA DO GIT (prev HEAD →
     HEAD + sujos) e só hasheia/lê os arquivos alterados — antes, cada
     incremento lia TODOS os bytes do bundle para recalcular SHA. Sem
-    head anterior/known, cai no full-hash com o motivo no relatório."""
+    head anterior/known, cai no full-hash com o motivo no relatório.
+
+    F3-PR0: a conexão é aberta AQUI e fechada no `finally`. Antes o único
+    `close()` estava no caminho de sucesso, e uma exceção no meio deixava a
+    conexão viva com transação aberta — medido: a escrita seguinte no
+    `index.db` respondia `OperationalError: database is locked` depois do
+    timeout de 3 s, com a causa a uma indexação de distância do sintoma. A
+    dívida ficou registrada em `docs/17` por não caber junto da correção da
+    FK; paga aqui porque a pré-condição de frescor do `ReconcileCandidate`
+    passa a chamar esta função **de dentro do caminho de escrita**, onde uma
+    conexão vazada trava o próprio ato que a provocou."""
+    idx = connect(s.app_support / "index.db")
+    try:
+        return _rebuild(s, idx, full=full)
+    finally:
+        idx.close()
+
+
+def _rebuild(s: Settings, idx, *, full: bool) -> dict:
     profile = StageProfile("index")
     kb = s.path("knowledge")
     bundle = kb / "bundle"
     reader = BundleReader(bundle)
     gaz = load_gazetteer(reader)
-    idx = connect(s.app_support / "index.db")
 
     fingerprint = _gazetteer_fingerprint(gaz)
     stored = idx.execute("SELECT value FROM index_meta "
@@ -184,6 +211,11 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
     if full:
         with profile.stage("hash"):
             current = {rel: _sha(rel) for rel in files}
+        # `embeddings` antes de `chunks` — mesma FK, mesmo motivo do
+        # `_purge_page`. Este é o caminho do `full=True`, ou seja o do
+        # `doctor --repair`: sem isto, o reparo do produto era ele mesmo
+        # inalcançável assim que existisse um embedding.
+        idx.execute("DELETE FROM embeddings")
         for table in ("chunks", "graph_edges", "page_entities",
                       "page_levels", "page_index_state"):
             idx.execute(f"DELETE FROM {table}")
@@ -243,7 +275,6 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
                     for t in ("chunks", "page_entities", "graph_edges")}
     in_links = {r["dst"]: r["n"] for r in idx.execute(
         "SELECT dst, COUNT(*) n FROM graph_edges GROUP BY dst")}
-    idx.close()
     profile.count("pages_total", len(files))
     profile.count("pages_changed", len(changed))
     profile.count("bytes_read", bytes_read)
@@ -252,6 +283,20 @@ def rebuild_index(s: Settings, *, full: bool = False) -> dict:
                          ("graph_edges", "edges_created")):
         profile.count(label, counts_after[table] - counts_before[table])
     profile.note("delta", delta_mode)
+
+    # CHECKPOINT normalizado: o índice declara de qual estado do bundle veio.
+    # Duplica `index_meta.bundle_head` de propósito e por ora — aquele morre
+    # junto com o índice e por isso não consegue dizer "a derivação sumiu";
+    # este sobrevive em runtime.db. A consolidação dos dois é dívida declarada
+    # no ADR-46, e fazê-la agora exigiria mexer no INV-002, que é o invariante
+    # mais exercitado da suíte.
+    try:
+        from ..runtime.checkpoints import record as _record_cp
+        _record_cp(s, "index", _kb_head(bundle) or "",
+                   {"pages": len(files), "changed": len(changed),
+                    "mode": delta_mode})
+    except Exception:                                    # noqa: BLE001
+        pass          # registro de frescor nunca derruba a indexação
 
     # cites → page_heat (alimenta o reflect, §8)
     rt = connect(s.app_support / "runtime.db")

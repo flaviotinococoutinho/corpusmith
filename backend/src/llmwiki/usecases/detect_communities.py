@@ -51,10 +51,12 @@ varredura seria refactor sem ganho medido, o que o `AGENTS.md` proíbe.
 from __future__ import annotations
 import hashlib
 import itertools
+import json
 import re
 import time
 import unicodedata
 from collections import defaultdict
+from datetime import datetime, timezone
 from .base import DraftPage, MachinePageUseCase, UseCase
 from ..kernel.topology import fragile_bridges
 from ..models.router import ModelRouter, ModelUnavailable
@@ -70,8 +72,9 @@ W = {"extracted": 1.0, "inferred": 0.5, "ambiguous": 0.15}
 LEIDEN_SEED = 20260726
 # `communities/` é PRODUTO do particionamento (D-E do docs/15). Deixá-lo no
 # grafo faz cada rodada alterar o grafo da seguinte: épocas falsas de tema e
-# sumários entrando no p99 de grau. Hoje não morde porque o job não reindexa,
-# mas o DoD da F2-PR2 diz que passará a reindexar.
+# sumários entrando no p99 de grau. Desde o F2-PR2 o job REINDEXA no fim (para
+# não deixar o doctor vermelho com INV-002), então esta exclusão deixou de ser
+# preventiva e passou a ser o que torna o rebuild seguro.
 _DERIVED_PREFIX = "communities/"
 
 
@@ -85,24 +88,32 @@ class _CommunitySummaryPage(MachinePageUseCase):
     MODULE = "communities"
 
     def __init__(self, settings: Settings, label: str, summary: str,
-                 members: list[tuple[str, str]], fingerprint: str):
+                 members: list[tuple[str, str]], fingerprint: str,
+                 theme: str):
         super().__init__(settings)
         self._label = label
         self._summary = summary
         self._members = members
         self._fingerprint = fingerprint
+        self._theme = theme
 
     def _produce(self) -> DraftPage:
         body = (f"# {self._label}\n\n{self._summary}\n\n## Membros centrais\n"
                 + "\n".join(f"- [{title}](/{page})"
                             for page, title in self._members) + "\n")
+        # F2-PR2 (RFC-001 §4.3): o caminho vem do `theme_id`, NÃO do rótulo.
+        # Medido antes: um tema de 5 páginas cuja página mais conectada troca
+        # produzia DUAS páginas canônicas vivas (`ana.md` e `elo.md`) para o
+        # mesmo tema, nenhuma supersedida. O rótulo legível vai para o
+        # frontmatter e para o corpo — onde mudar não cria arquivo.
         return DraftPage(
-            rel_path=f"communities/{_slug(self._label)}.md",
+            rel_path=f"communities/{self._theme}.md",
             title=self._label, body=body,
             meta={"type": "community_summary",
                   "description": self._summary[:200],
                   "privacy": "local_only",
                   "generated_via": "local:leiden",
+                  "theme_id": self._theme,
                   "source_sha256": self._fingerprint},
             log_message=f"comunidade: {self._label}",
             commit_message=f"leiden: {_slug(self._label)}")
@@ -119,6 +130,7 @@ class DetectCommunities(UseCase):
         idx = connect(self._settings.app_support / "index.db")
         adjacency = self._weighted_graph(idx)
         bridges = self._store_bridges(idx, adjacency)
+        centrality_backend = self._store_centrality(idx, adjacency)
         communities, backend, hubs = self._partition(adjacency)
         idx.execute("DELETE FROM communities")
         idx.executemany("INSERT INTO communities(page,community) VALUES (?,?)",
@@ -126,23 +138,293 @@ class DetectCommunities(UseCase):
         idx.commit()
         distinct = {c for c in communities.values() if c >= 0}
         edges = sum(len(nb) for nb in adjacency.values()) // 2
-        summaries = self._write_summaries(adjacency, communities)
+        eventos = self._match_themes(idx, communities, backend)
+        summaries = self._write_summaries(adjacency, communities, idx)
         # O CARIMBO VEM DEPOIS DOS SUMÁRIOS, e a ordem é a correção de um
         # defeito medido: `_write_summaries` escreve páginas
         # `communities/` pelo writer, e cada escrita é um COMMIT. Carimbar
         # antes gravava o HEAD anterior aos próprios sumários, então o mapa
         # nascia "velho" e o INV-004 disparava para sempre — um alarme sem
         # saída, porque recomputar reproduzia a divergência.
+        adotadas = self._adopt_legacy(idx)
+        # REINDEXA antes de carimbar. Sem isto o job deixava o doctor VERMELHO
+        # (INV-002 error) a cada execução — verificado: `ok=True` antes,
+        # `ok=False` com INV-002 depois. A causa é que o job ESCREVE páginas
+        # `communities/` pelo writer, cada uma um commit, e o índice ficava
+        # apontando para o HEAD anterior. Como é semanal, o produto passaria a
+        # semana inteira acusando corrupção que ele mesmo produziu.
+        #
+        # Reindexar aqui só é seguro porque a D-E já foi paga (F2-PR1):
+        # `communities/` está FORA da construção do grafo, então a
+        # realimentação que o `docs/15` previa — cada rodada alterando o grafo
+        # da seguinte — não acontece. Há teste de que a partição continua
+        # idêntica entre execuções COM o rebuild no meio.
+        from ..retrieval.fts import rebuild_index
+        rebuild_index(self._settings)
         self._stamp(idx, backend=backend, nodes=len(adjacency), edges=edges,
-                    communities=len(distinct), bridges=bridges, hubs=hubs)
+                    communities=len(distinct), bridges=bridges, hubs=hubs,
+                    centrality_backend=centrality_backend)
+        # CHECKPOINTS normalizados: as três derivações que este job produz
+        # declaram de qual estado do ÍNDICE vieram — não do bundle. A fonte
+        # imediata de um mapa é o índice, e é essa distinção que permite
+        # detectar o caso que carimbo isolado não pega: mapa coerente com o
+        # índice, índice atrás do bundle.
+        try:
+            from ..runtime.checkpoints import record as _record_cp
+            estado_indice = self._index_state()
+            _record_cp(self._settings, "graph_map", estado_indice,
+                       {"backend": backend, "communities": len(distinct),
+                        "bridges": bridges})
+            _record_cp(self._settings, "centrality", estado_indice,
+                       {"backend": centrality_backend})
+            _record_cp(self._settings, "themes", estado_indice,
+                       {"events": [e.event for e in eventos],
+                        "adopted": adotadas})
+        except Exception:                                # noqa: BLE001
+            pass          # registro de frescor nunca derruba o job
         idx.close()
         return {"communities": len(distinct), "pages": len(communities),
                 "summaries": summaries, "backend": backend,
-                "bridges": bridges}
+                "bridges": bridges, "centrality_backend": centrality_backend,
+                "theme_events": [e.event for e in eventos],
+                "themes_adopted": adotadas}
+
+    def _adopt_legacy(self, idx) -> int:
+        """Páginas `communities/` escritas ANTES do `theme_id` (RFC-001 §4.5).
+
+        Sem isto, o PR entrega o INV-005 violado no primeiro upgrade: a página
+        no caminho antigo (`communities/ana.md`) continua VIVA ao lado da nova
+        (`communities/thm_....md`), as duas descrevendo o mesmo tema — que é
+        exatamente o defeito medido que este PR existe para fechar, agora com
+        um arquivo a mais.
+
+        Não apaga (invalidar-nunca-apagar): a página antiga é SUPERSEDIDA
+        apontando para o caminho novo do tema que ela descreve, casado pelos
+        membros que ela mesma lista. Se não casa com tema nenhum, é supersedida
+        sem sucessora — o corpo segue legível e no histórico.
+
+        A escrita passa pelo `BundleWriter`, logo pelo gate, como toda escrita.
+        """
+        from ..kernel.curation import superseded_meta
+        from ..kernel.themes import TAU, jaccard
+        from ..okf.document import OKFDocument, OKFFrontMatter
+        from ..okf.links import MD_LINK
+        from ..okf.writer import BundleWriter
+        writer = BundleWriter(self._settings.path("knowledge"))
+        reader = writer.reader
+        vivos = {r["theme_id"]: set(json.loads(r["members"]))
+                 for r in idx.execute("SELECT theme_id, members FROM themes "
+                                      "WHERE died_at IS NULL")}
+        pendentes = []
+        for rel in reader.raw_md_files():
+            if not rel.startswith(_DERIVED_PREFIX) or rel.endswith("/index.md"):
+                continue
+            nome = rel.rsplit("/", 1)[-1]
+            if nome.startswith("thm_"):
+                continue                     # já está no formato novo
+            try:
+                doc = reader.load(rel)
+            except Exception:
+                continue
+            meta = doc.meta.model_dump(exclude_none=True)
+            if meta.get("theme_id") or meta.get("superseded_by") \
+                    or meta.get("invalid_at"):
+                continue                     # já adotada ou já aposentada
+            # os membros que a PRÓPRIA página declara
+            membros = {m.group("target").lstrip("/")
+                       for m in MD_LINK.finditer(doc.body)}
+            melhor, melhor_j = None, 0.0
+            for tid, atuais in sorted(vivos.items()):
+                j = jaccard(membros, atuais)
+                if j > melhor_j:
+                    melhor, melhor_j = tid, j
+            novo = superseded_meta(meta, f"{_DERIVED_PREFIX}{melhor}.md") \
+                if melhor and melhor_j >= TAU else \
+                {**meta, "invalid_at": datetime.now(timezone.utc)}
+            pendentes.append(OKFDocument(rel_path=rel, body=doc.body,
+                                         meta=OKFFrontMatter(**novo)))
+        # UMA escrita por página, e não uma só com todas: uma página antiga
+        # MALFORMADA (editada à mão, sem `source_sha256`) faz o Harness recusar
+        # — corretamente. Numa escrita única, essa recusa bloquearia a adoção
+        # de todas as outras e o INV-005 seguiria violado no bundle inteiro por
+        # causa de um arquivo. O gate não é enfraquecido: a recusa é isolada e
+        # a página problemática simplesmente continua como estava, visível ao
+        # `okf lint`.
+        adotadas = 0
+        for doc in pendentes:
+            try:
+                writer.write([doc], log_kind="Deprecation",
+                             log_message=(f"tema no formato antigo "
+                                          f"supersedido: {doc.rel_path}"),
+                             commit_message=f"themes: adota {doc.rel_path}")
+                adotadas += 1
+            except Exception:                # noqa: BLE001
+                self._notify("themes.adopt_refused", {"page": doc.rel_path})
+        return adotadas
+
+    # ------------------------------------------------ identidade de tema (PR2)
+    def _match_themes(self, idx, communities, backend) -> list:
+        """Casa a época anterior com a nova e registra as épocas (RFC-001).
+
+        Roda ANTES dos sumários porque é ele que decide o `rel_path` de cada
+        página de tema — e depois do particionamento porque precisa da
+        partição nova.
+
+        **Recusa casar partições de backends diferentes** (RFC §8): `leiden` e
+        `components` produzem mapas incomparáveis por construção, e casá-los
+        registraria épocas falsas em massa. Nesse caso o tema mantém a
+        identidade que tinha e nenhuma época é escrita.
+        """
+        from ..kernel.themes import match, theme_id as _tid
+        novas: dict[int, set[str]] = defaultdict(set)
+        for page, cid in communities.items():
+            if cid >= 0 and not page.startswith(_DERIVED_PREFIX):
+                novas[cid].add(page)
+        # comunidade de 1 membro não recebe sumário, logo não é tema
+        particao = [m for _, m in sorted(novas.items()) if len(m) >= 2]
+
+        anterior = {r["theme_id"]: set(json.loads(r["members"]))
+                    for r in idx.execute(
+                        "SELECT theme_id, members FROM themes "
+                        "WHERE died_at IS NULL")}
+        carimbo = idx.execute("SELECT backend FROM graph_snapshot WHERE id=1"
+                              ).fetchone()
+        if anterior and carimbo and carimbo["backend"] != backend:
+            self._temas = {}                 # sem casamento: mantém o que há
+            for tid, membros in anterior.items():
+                self._temas[frozenset(membros)] = tid
+            return []
+        if not particao and not anterior:
+            self._temas = {}
+            return []
+
+        eventos = match(anterior, particao)
+        agora = time.time()
+        head = ""
+        try:
+            head = GitStore(self._settings.path("knowledge")).head()
+        except Exception:
+            pass
+        # mapa membros -> theme_id que o `_write_summaries` consulta
+        self._temas = {frozenset(m): tid for tid, m in anterior.items()}
+        for ev in eventos:
+            chave = frozenset(ev.members)
+            if ev.event == "died":
+                idx.execute("UPDATE themes SET died_at=? WHERE theme_id=?",
+                            (agora, ev.theme_id))
+                self._temas.pop(chave, None)
+            elif ev.event == "split":
+                idx.execute("UPDATE themes SET died_at=? WHERE theme_id=?",
+                            (agora, ev.theme_id))
+                self._temas.pop(chave, None)
+            else:
+                idx.execute(
+                    "INSERT INTO themes(theme_id, community, rel_path, "
+                    "born_at, members) VALUES (?,?,?,?,?) "
+                    "ON CONFLICT(theme_id) DO UPDATE SET members=excluded.members",
+                    (ev.theme_id, None,
+                     f"communities/{ev.theme_id}.md", agora,
+                     json.dumps(sorted(ev.members))))
+                self._temas[chave] = ev.theme_id
+            idx.execute(
+                "INSERT INTO theme_epochs(theme_id, event, at, bundle_head, "
+                "jaccard, members, related) VALUES (?,?,?,?,?,?,?)",
+                (ev.theme_id, ev.event, agora, head, ev.jaccard,
+                 json.dumps(sorted(ev.members)), json.dumps(ev.related)))
+        # temas que continuaram sem evento precisam seguir no mapa
+        for membros in particao:
+            chave = frozenset(membros)
+            if chave not in self._temas:
+                self._temas[chave] = _tid(membros)
+                idx.execute(
+                    "INSERT OR IGNORE INTO themes(theme_id, community, "
+                    "rel_path, born_at, members) VALUES (?,?,?,?,?)",
+                    (self._temas[chave], None,
+                     f"communities/{self._temas[chave]}.md", agora,
+                     json.dumps(sorted(membros))))
+        idx.commit()
+        return eventos
+
+    # -------------------------------------------------- centralidade (PR3+4)
+    def _store_centrality(self, idx, adjacency) -> str:
+        """Brandes FORA do request, pelo `ComputeKernel`.
+
+        Duas correções num gesto, as duas medidas:
+
+        1. **fora do request**. Brandes era 95% do custo de `/cockpit/graph` a
+           1200 páginas (2571 ms de 2571; a 100 páginas era 52%), cresce
+           ~O(n²) e o baseline registra 88 s a 5000 nós. E `structural_gaps`
+           chamava `graph_data`, então abrir Grafo e Insights pagava DUAS
+           vezes. Agora o request lê uma tabela;
+        2. **pelo kernel**. O `ComputeKernel` seleciona `rust` quando existe —
+           e o `observatory` chamava o `betweenness_centrality` PURO em Python
+           direto, ignorando o kernel selecionado. O baseline mede 88 058 ms
+           (python) contra 1 944 ms (rust) a 5000 nós: 45×. A camada nativa
+           estava paga e não estava sendo usada no caminho quente.
+
+        Devolve o nome do backend que mediu, para o carimbo declarar. Falha do
+        kernel NÃO derruba o job: a centralidade é um enfeite do mapa, não o
+        mapa — devolve `none` e a interface serve grau (ADR-39 §22: ausência
+        de camada nativa é comportamento suportado, não erro).
+        """
+        idx.execute("DELETE FROM graph_centrality")
+        if not adjacency:
+            idx.commit()
+            return "none"
+        try:
+            from ..compute import get_kernel
+            kernel = get_kernel(self._settings)
+            nome = kernel.backend_info().name
+            # O kernel lê `graph_edges` e aplica o MESMO `EDGE_WEIGHT` que o
+            # `observatory` aplicava — logo os valores são os que o request
+            # calculava, e o PR é mudança de ONDE e de QUAL kernel, não de
+            # QUANTO. Alimentar o `adjacency` do leiden aqui seria tentador e
+            # estaria errado por duas razões: ele carrega arestas de co-menção
+            # que a centralidade nunca teve, e `load_edges` mapeia o terceiro
+            # campo por `EDGE_WEIGHT`, então peso já acumulado viraria 0.5.
+            #
+            # `_SemDerivadas` filtra `communities/` — e a razão é o F2-PR2:
+            # desde que o job REINDEXA no fim, as páginas de tema entram em
+            # `graph_edges`, e uma página de sumário linka TODOS os seus
+            # membros. Sem o filtro ela apareceria como a maior articuladora
+            # do grafo, que é a D-E se manifestando na centralidade em vez de
+            # na partição. A exclusão fica igual nas duas.
+            grafo = kernel.load_graph(index_path="",
+                                      connection=_SemDerivadas(idx))
+            centralidade = kernel.betweenness(grafo)
+        except Exception:                            # noqa: BLE001
+            idx.commit()
+            return "none"
+        idx.executemany(
+            "INSERT INTO graph_centrality(page, betweenness) VALUES (?,?)",
+            sorted((p, float(v)) for p, v in centralidade.items()))
+        idx.commit()
+        return nome if nome in ("python", "rust") else "none"
+
+    def _index_state(self) -> str:
+        """Estado do ÍNDICE como a cadeia de checkpoints o vê.
+
+        É o `input_state` que o `rebuild_index` registrou — a saída de uma
+        derivação é a entrada da seguinte. Ler daqui, e não do Git, é o que
+        faz `graph_map` derivar do índice e não do bundle: se alguém mexer no
+        bundle sem reindexar, quem fica obsoleto é o índice, e o mapa herda
+        isso por transitividade em vez de acender um alarme próprio."""
+        try:
+            from ..runtime.checkpoints import load as _load_cp
+            cp = _load_cp(self._settings).get("index")
+            if cp:
+                return cp.input_state
+        except Exception:                                # noqa: BLE001
+            pass
+        try:
+            return GitStore(self._settings.path("knowledge")).head()
+        except Exception:                                # noqa: BLE001
+            return ""
 
     # -------------------------------------------------------------- carimbo
     def _stamp(self, idx, *, backend: str, nodes: int, edges: int,
-               communities: int, bridges: int, hubs: int) -> None:
+               communities: int, bridges: int, hubs: int,
+               centrality_backend: str = "none") -> None:
         """`graph_snapshot`: de quando é o mapa, e quem o produziu.
 
         Uma linha só, sobrescrita — o histórico do tema é entrega da F2-PR2,
@@ -155,11 +437,11 @@ class DetectCommunities(UseCase):
         idx.execute("DELETE FROM graph_snapshot")
         idx.execute(
             "INSERT INTO graph_snapshot(id, bundle_head, computed_at, backend,"
-            " seed, nodes, edges, communities, bridges, hubs_excluded) "
-            "VALUES (1,?,?,?,?,?,?,?,?,?)",
+            " seed, nodes, edges, communities, bridges, hubs_excluded,"
+            " centrality_backend) VALUES (1,?,?,?,?,?,?,?,?,?,?)",
             (head, time.time(), backend,
              LEIDEN_SEED if backend == "leiden" else None,
-             nodes, edges, communities, bridges, hubs))
+             nodes, edges, communities, bridges, hubs, centrality_backend))
         idx.commit()
 
     # -------------------------------------------------------------- grafo
@@ -321,7 +603,7 @@ class DetectCommunities(UseCase):
             return communities, "components"
 
     # ----------------------------------------------------------- sumários
-    def _write_summaries(self, adjacency, communities) -> int:
+    def _write_summaries(self, adjacency, communities, idx=None) -> int:
         members_by_community: dict[int, list[str]] = defaultdict(list)
         for page, community in communities.items():
             if community >= 0 and not page.startswith("communities/"):
@@ -337,8 +619,12 @@ class DetectCommunities(UseCase):
             label, summary = self._label(titles)
             fingerprint = hashlib.sha256(
                 "\n".join(sorted(members)).encode()).hexdigest()
+            tema = getattr(self, "_temas", {}).get(frozenset(members))
+            if tema is None:            # sem casamento (backend trocou): id novo
+                from ..kernel.themes import theme_id as _tid
+                tema = _tid(set(members))
             _CommunitySummaryPage(self._settings, label, summary,
-                                  titles, fingerprint).execute()
+                                  titles, fingerprint, tema).execute()
             written += 1
         return written
 
@@ -360,3 +646,25 @@ class DetectCommunities(UseCase):
         except (ModelUnavailable, Exception):
             pass
         return label, summary
+
+
+class _SemDerivadas:
+    """Conexão que esconde as arestas de páginas DERIVADAS (F2-PR2).
+
+    O job passou a reindexar (senão deixa o doctor vermelho com INV-002), e
+    com isso as páginas `communities/` entram em `graph_edges`. Uma página de
+    sumário linka todos os seus membros: sem filtro ela vira a maior
+    articuladora do grafo — a D-E aparecendo na centralidade em vez de na
+    partição. Filtrar no SQL, e não depois, mantém os pesos passando pelo
+    `EDGE_WEIGHT` do kernel."""
+
+    def __init__(self, idx):
+        self._idx = idx
+
+    def execute(self, sql, *args):
+        if "graph_edges" in sql:
+            return self._idx.execute(
+                "SELECT src, dst, COALESCE(confidence,'extracted') "
+                "FROM graph_edges WHERE src NOT LIKE 'communities/%' "
+                "AND dst NOT LIKE 'communities/%'")
+        return self._idx.execute(sql, *args)

@@ -166,6 +166,66 @@ def cmd_doctor(s: Settings, args) -> int:
     return 0 if result["ok"] else 2
 
 
+def cmd_checkpoints(s: Settings, args) -> int:
+    """A cadeia de derivações e o estado de cada uma.
+
+    Torna inspecionável o que antes era carimbo espalhado: de qual estado da
+    FONTE cada derivação veio, e se a cadeia acima dela se moveu."""
+    import json as _json
+    from .kernel.checkpoints import DERIVATIONS
+    from .runtime.checkpoints import load, verify
+    cps = load(s)
+    linhas = []
+    for v in verify(s):
+        cp = cps.get(v.derivation)
+        linhas.append({
+            "derivation": v.derivation,
+            "source": DERIVATIONS.get(v.derivation) or "(autoridade)",
+            "state": v.state,
+            "reason": v.reason,
+            "input_state": cp.input_state[:12] if cp else None,
+            "computed_at": cp.computed_at if cp else None,
+            "detail": _json.loads(cp.detail) if cp and cp.detail else None})
+    print(_json.dumps({"chain": linhas,
+                       "stale": [x["derivation"] for x in linhas
+                                 if x["state"].startswith("stale")]},
+                      indent=1, default=str))
+    return 1 if any(x["state"].startswith("stale") for x in linhas) else 0
+
+
+def cmd_themes(s: Settings, args) -> int:
+    """Temas com identidade e a última época de cada (RFC-001 §9).
+
+    Torna o casamento INSPECIONÁVEL: sem isto, `theme_id`, evento e Jaccard
+    ficariam só na tabela, e uma heurística no caminho de escrita que ninguém
+    pode auditar é pior que nenhuma."""
+    import json as _json
+    from .runtime.db import connect
+    idx = connect(s.app_support / "index.db")
+    try:
+        temas = [dict(r) for r in idx.execute(
+            "SELECT theme_id, rel_path, born_at, died_at, members "
+            "FROM themes ORDER BY died_at IS NOT NULL, born_at")]
+        epocas = {}
+        for r in idx.execute(
+                "SELECT theme_id, event, at, jaccard, related FROM theme_epochs "
+                "ORDER BY id"):
+            epocas[r["theme_id"]] = dict(r)
+    finally:
+        idx.close()
+    for tm in temas:
+        tm["members"] = _json.loads(tm["members"])
+        tm["vivo"] = tm.pop("died_at") is None
+        ultima = epocas.get(tm["theme_id"])
+        if ultima:
+            ultima["related"] = _json.loads(ultima.get("related") or "[]")
+        tm["ultima_epoca"] = ultima
+    print(_json.dumps({"temas": temas, "total": len(temas),
+                       "vivos": sum(1 for x in temas if x["vivo"])},
+                      indent=1, default=str))
+    return 0 if temas else 1
+
+
 def cmd_curate(s: Settings, args) -> int:
     """curate <ato> [chave=valor ...] [--dry-run] — o ato humano no CLI.
 
@@ -346,6 +406,10 @@ def main(argv: list[str] | None = None) -> int:
     doctor = sub.add_parser("doctor", help="verifica/repara invariantes")
     doctor.add_argument("--repair", action="store_true")
     doctor.set_defaults(fn=cmd_doctor)
+    sub.add_parser("checkpoints", help="cadeia de derivações e frescor de cada"
+                   ).set_defaults(fn=cmd_checkpoints)
+    sub.add_parser("themes", help="temas com identidade e última época"
+                   ).set_defaults(fn=cmd_themes)
     backup = sub.add_parser("backup", help="backup lógico verificável")
     backup.add_argument("op", choices=["create", "verify", "list", "restore"])
     backup.add_argument("path", nargs="?", default=None)

@@ -58,12 +58,12 @@ machine_page_template_closed = true               # subclasses não sobrescrevem
 name = "runtime.db"
 authority = "operacional"
 rebuildable = false
-schema_version = 8          # v1.8.1: + curation_acts (ato humano, ADR-41)
+schema_version = 9          # + checkpoints (estado normalizado das derivações)
 [[database]]
 name = "index.db"
 authority = "nenhuma (projeção)"
 rebuildable = true
-schema_version = 7          # F2-PR1: + graph_snapshot (carimbo do mapa)
+schema_version = 9          # F2-PR2: + themes/theme_epochs (RFC-001)
 [[database]]
 name = "cold.db"
 authority = "memória fria"
@@ -90,8 +90,13 @@ schema_version = 1
 # epistemics.toml já recebem. Tokens, não linhas de comando: a CI escreve
 # `pytest backend/tests` e o justfile `cd backend && … pytest tests`.
 [gate]
+# PR-0.1: `pyinstaller build.spec` entra no gate. Sem este token o
+# `test_ci_executa_todo_o_gate_declarado` estruturalmente NUNCA poderia acusar
+# que o caminho empacotado não é construído — e foi assim que ele passou meses
+# quebrado em quatro pontos distintos, nenhum visível sem executar o binário.
 ci_enforced = ["pytest", "tsc --noEmit", "docker compose config",
-               "cargo test", "epistemics lint", "doctor", "backup"]
+               "cargo test", "epistemics lint", "doctor", "backup",
+               "pyinstaller build.spec"]
 verify_enforced = ["pytest", "tsc --noEmit", "docker compose config",
                    "epistemics lint"]
 

@@ -70,9 +70,9 @@ plano ser **verificável** — e a primeira é o risco número 1 de tudo:
 | **G-5** | **O Scheduler é a única automação recorrente e nenhum teste assere o que ele agenda.** Zero ocorrências de `dedupe_key` nos testes. `leiden`, `index_rebuild` e `eval_memory` estão no REGISTRY e **nunca** são enfileirados; `backup` não está nem no REGISTRY | `runtime/scheduler.py:24-40`; `jobs/__init__.py:16-31` (14 jobs, 5 agendados) | **F2-PR1** |
 | **G-6** | **Migração de schema não tem gate de versão nem fixture de banco antigo** — `_migrate` decide por **presença de coluna**, nunca por versão; não há prova do caminho de *upgrade* (só guarda contra versão futura). O plano encadeia **quatro** migrações, três no mesmo banco | `runtime/db.py:114-155`; `test_architecture_toml.py:41-45` só compara números | **PR-0** |
 | **G-7** | **Nada proíbe exceção de domínio vazar como 500** — 24 `HTTPException` e **zero** `add_exception_handler` no `api/`. `HarnessRejection` já carrega `.findings` estruturados e sobe crua de `/cockpit/promote` e `/cockpit/tags`. O DoD §9 exige "erro com código estável" | `api/cockpit.py`; `harness/runner.py:6-12`; `okf/writer.py:44-45` | **F1-PR1** (com teste **transversal**, não só do ato novo) |
-| **G-8** | **Release e empacotamento fora de qualquer automação** — e é o caminho **empacotado** que produz o P-13: `sidecar.ts:44-46` aponta para um binário que a CI **nunca constrói**, então todo terceiro cai no ramo não-empacotado, cujo fallback é o `return` mudo. `desktop/package.json` está em `0.7.0` contra `1.8.0` | `build.spec` e `electron-builder.yml` existem; `ci.yml:2` sem trigger de tag | **F0** + PR-0 |
+| **G-8** ✅ **FECHADA no PR-0.1** (ADR-47): `exclude_binaries=True`, job `package` que **sobe** o binário, `release.yml` com trigger de tag e conferência tag↔versões | **Release e empacotamento fora de qualquer automação** — e é o caminho **empacotado** que produz o P-13: `sidecar.ts:44-46` aponta para um binário que a CI **nunca constrói**, então todo terceiro cai no ramo não-empacotado, cujo fallback é o `return` mudo. `desktop/package.json` está em `0.7.0` contra `1.8.0` | `build.spec` e `electron-builder.yml` existem; `ci.yml:2` sem trigger de tag | **F0** + PR-0 |
 | **G-9** | **A doc do próprio gate não recebe o tratamento que `architecture.toml` recebe** — quatro inventários divergentes do mesmo gate (AGENTS.md 8 comandos, justfile 3, ci.yml 4, `architecture.toml [commands]`), e `AGENTS.md:22` diz **"345 testes"** quando a suíte coleta **389** | contraste: `architecture.toml` está preso por `test_architecture_toml.py`; `AGENTS.md` e `justfile` não têm equivalente | **PR-0** |
-| **G-10** | **`epistemics.toml` não tem gate de versão de registro nem de completude** — quatro PRs prometem `1.1.0 → 1.2.0` e nada quebra se esquecerem; nada lista mecanismos **devidos mas ausentes** (é como "nenhum mecanismo de padrão tem contrato" virou achado de auditoria em vez de item de backlog) | `test_epistemics_toml.py` testa parâmetros, não o conjunto nem `[registry] version` | **F2-PR1** |
+| **G-10** ✅ **FECHADA no PR-0.1** (ADR-47): `EXPECTED_MECHANISMS` (error) + `PROMISED_MECHANISMS` (warn) + `[registry].version` semver com fingerprint do conjunto | **`epistemics.toml` não tem gate de versão de registro nem de completude** — quatro PRs prometem `1.1.0 → 1.2.0` e nada quebra se esquecerem; nada lista mecanismos **devidos mas ausentes** (é como "nenhum mecanismo de padrão tem contrato" virou achado de auditoria em vez de item de backlog) | `test_epistemics_toml.py` testa parâmetros, não o conjunto nem `[registry] version` | **F2-PR1** |
 
 ### PR-0 · O instrumento antes da obra (~3 pontos, **não** estava no `14`)
 
@@ -111,9 +111,34 @@ Divergências do `14` marcadas com ⚠ e justificadas.
 | 7 | ✅ **F1-PR3** · `EditPage` — **ENTREGUE** (ADR-41.4) | 5 | ⚠ Atrasado (era 3º). Nenhum DoD da fase inclui campo de edição de corpo — o `CurationDialog` é diff+confirmar. Ou entra **depois** do PR6 levando a superfície de edição no escopo, ou o valor prometido é reescrito para **"editável por CLI/HTTP"**. Um DoD que promete app e entrega terminal é a forma mais barata de perder a confiança que a fase existe para construir. **Resolvido pela 1ª saída**: o PR levou a superfície (`textarea` pré-preenchido, declarado pela oferta) — ver ADR-41.4 |
 | 8 | ✅ **F1-PR5** · `MergePages` — **ENTREGUE** (ADR-41.5) | 6 | Último da fase: escolher a vencedora é decisão humana sem UI, e o preview depende de `check_corpus` — ver D-D. **D-D resolvida por uma terceira saída**: o preview é O(páginas do ato), não O(bundle) |
 | 9 | ✅ **F2-PR1** · seed, carimbo, poda, INV-004, job semanal — **ENTREGUE** (ADR-**43**, não 42 — ver nota) | 6 | Duas emendas **obrigatórias**: exigir a perna `[ml]` no mesmo PR (G-2 — **já paga pelo PR-0**, o PR usou o instrumento em vez de recriá-lo) e **excluir `communities/`** da construção do grafo (D-E) |
-| 10 | **F2-PR2** · `theme_id` por casamento de partições | 8 | **RFC** (§1.1). Único PR da F2 que escreve no canônico |
-| 11 | **F2-PR3 + F2-PR4 como UM merge** | 10 | ⚠ Divirjo da decomposição em quatro. O próprio PR3 admite que "os dois devem sair na mesma semana", porque sozinho mostra `betweenness: null` e o grafo perde o tamanho por influência. Um pacote que só não é regressão se outro sair junto é **um commit, não um PR** |
+| 10 | ✅ **F2-PR2** · `theme_id` por casamento de partições — **ENTREGUE** ([RFC-001](16-rfc-theme-id.md) + ADR-45) | 8 | **RFC** (§1.1) — o primeiro do projeto; o template do `docs/10` §19 estava marcado "a instanciar". Único PR da F2 que escreve no canônico |
+| 11 | ✅ **F2-PR3 + F2-PR4 como UM merge** — **ENTREGUE** (ADR-44) | 10 | ⚠ Divirjo da decomposição em quatro. O próprio PR3 admite que "os dois devem sair na mesma semana", porque sozinho mostra `betweenness: null` e o grafo perde o tamanho por influência. Um pacote que só não é regressão se outro sair junto é **um commit, não um PR** |
 | 12 | **F3 → F4 → F5 → F6 → F7** | — | Daí em diante a ordem do `14` se sustenta. F3 exige **RFC** (§1.1); F5 herda a dívida do `MD_LINK` já resolvida na F1 |
+
+---
+
+## 3.1 Pacotes novos que a AUDITORIA impôs (`docs/17`)
+
+Verificação adversarial de 2026-07-27: 84 pontos levantados, os 22 de gravidade
+alta submetidos a cético com obrigação de **executar código** — **18
+confirmados, 4 refutados**. O veredito de uma frase: *"o projeto não tem crise
+de arquitetura, tem crise de fechamento de laço — constrói bem e verifica mal
+aquilo que construiu"*. Todo defeito confirmado é uma **ausência que passou
+verde**.
+
+| # | Pacote | pt | Por quê |
+|---|---|:--:|---|
+| **PR-0.1** ✅ **ENTREGUE** (ADR-47, v1.9.5) | **release executável** — `exclude_binaries=True` no `build.spec`, `sqlite-vec` no build, job de release com trigger de tag, token de release em `[gate].ci_enforced`, `expected_mechanisms` no registro epistêmico | 4 | G-8 e G-10 reabertas. Sem o token no gate, `test_ci_executa_todo_o_gate_declarado` **estruturalmente nunca** poderá acusar isso |
+| **F3-PR0** ✅ **ENTREGUE** (RFC-002 `docs/19` + ADR-48, v1.9.6) | **fechar o laço da decisão canônica** — `MIN(bm25)` → `bm25` (**exige RFC**: ativa o árbitro LLM no caminho de escrita), pré-condição de frescor ou INV de cobertura bundle→índice, `try/finally` no `rebuild_index`, teste do degrau de similaridade | 6 | **Pré-requisito da F3**: o P-7 faz `promote` consultar `ReconcileCandidate`, hoje uma escada com **dois degraus mortos** — a SQL de similaridade estoura em toda execução desde a v0.9, engolida por `except Exception` |
+| **F-UI** | **as superfícies órfãs**, num PR só: doctor com findings e reparo, histórico de atos com desfazer, cancel/retry de job, repasse genérico de SSE (que ressuscita Stepper e barra de progresso já escritos) | 8 | Cinco achados confirmados com a MESMA forma: use case completo, endpoint completo, e nenhuma tela. Muito mais barato junto que espalhado por cinco fases. Pré-requisito: smoke de UI, hoje inexistente |
+| **F-EPIST** | trilha epistêmica, um PR por item e todos independentes: `out_of_scope`, rebaixar `retrieval_rrf_hedge` para `heuristic`, contratos de `memory_freeze` e `consolidate_inbox`, `rglob` + import absoluto no `test_architecture` | 5 | Barato e paralelizável |
+
+**Regra de processo adotada**: o gate verifica presença e conformidade; precisa
+passar a verificar **completude**. Três instrumentos que teriam pego a maioria:
+`expected_mechanisms` no registro, cruzamento rotas-do-backend × métodos-do-
+cliente, e uma perna de CI que **não silencie dependências** (o precedente
+`backend-ml` já existe e funciona; falta o simétrico para `embed` — foi o
+`conftest` hermético que cegou 100% da suíte para a FK de `embeddings`).
 
 ---
 
@@ -156,8 +181,8 @@ seguintes — evita um segundo mecanismo mentindo sobre o primeiro.
 | PR | Entrega | Migração | Valor isolado |
 |---|---|---|---|
 | ✅ **PR1** | `seed` no Leiden · `bundle_head`/`computed_at` · poda de pontes órfãs · **INV-004** no doctor · job `leiden` no Scheduler · perna `[ml]` na CI — **ENTREGUE** | index 6→7 aditiva | O mapa passa a dizer **de quando é** e **quem o produziu** (`backend`: numa máquina sem `[ml]` compilado, "comunidade" era componente conexo em silêncio); o doctor acusa mapa velho (warn — mapa velho é servível) e ponte apontando para página aposentada |
-| **PR2** | `theme_id` por casamento de partições (`themes`/`theme_epochs`, evento `born│grew│shrank│merged│split│died`) · `rel_path` derivado do `theme_id` · `_reconcile` UPDATE/SUPERSEDE · **o LLM volta a só rotular** | index 7→8 aditiva | `communities/` **para de apodrecer**: hoje cada rodada deposita um arquivo com o nome que o LLM inventou |
-| **PR3+4** | Brandes **fora do request** via `ComputeKernel` · `graph_centrality` · um snapshot compartilhado por `graph`/`insights`/`gaps` · `limit` + subgrafo · badge de frescor com ação · história do tema | index 8→9 aditiva | O produto deixa de ter data de morte: 84,3 s → **< 2 s** medido e citado no PR |
+| ✅ **PR2** | `theme_id` por casamento de partições (`themes`/`theme_epochs`, vocabulário fechado) · `rel_path` derivado do `theme_id` · adoção das páginas antigas · **o LLM volta a só rotular** · INV-005 no doctor — **ENTREGUE** | index **8→9** aditiva | `communities/` **para de apodrecer** — e o defeito foi MEDIDO antes: um tema cuja página mais conectada troca produzia duas páginas canônicas vivas. τ = 1/3 calibrado contra a banda vazia entre 0,17 e 0,50; `merged` declarado e **não observado** |
+| ✅ **PR3+4** | Brandes **fora do request** via `ComputeKernel` · `graph_centrality` · `limit` + subgrafo · badge de frescor com ação — **ENTREGUE** | index **7→8** aditiva (o PR1 já usou o 7) | O produto deixa de ter data de morte: **2571 ms → 139 ms** a 1200 páginas (18,5×), medido. **Dois itens NÃO entraram, por razão declarada**: o "snapshot compartilhado" perdeu a premissa (com Brandes fora, sobram 139 ms; os três são requests separados e um cache serviria `heat` velho), e a "história do tema" depende do `theme_id` do PR2 — série temporal de um rótulo sem identidade |
 
 ---
 

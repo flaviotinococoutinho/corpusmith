@@ -177,3 +177,24 @@ CREATE TABLE IF NOT EXISTS curation_acts(
   origin_key TEXT);
 CREATE INDEX IF NOT EXISTS idx_curation_acts_created
   ON curation_acts(created_at);
+
+-- ============================ v1.9.4 · checkpoints normalizados ============================
+-- O estado de CADA derivação e de qual estado da FONTE ela veio. Substitui a
+-- proliferação medida: `bundle_head` aparecia em quatro lugares (index_meta,
+-- graph_snapshot, theme_epochs, runtime) e cada um precisou de um invariante
+-- próprio no doctor (INV-002 índice, INV-004 mapa, INV-005 temas).
+--
+-- Mora em runtime.db, e não em index.db, porque um carimbo sobre o índice não
+-- pode morrer junto com o índice: `rebuild_index` apaga e reconstrói, e um
+-- registro que some com o que descreve não consegue dizer "sumiu".
+--
+-- A CADEIA (bundle -> index -> graph_map/centrality -> themes) mora em
+-- kernel/checkpoints.py:DERIVATIONS, não aqui: é regra pura, testável sem
+-- banco, e é ela que permite detectar obsolescência TRANSITIVA — derivação
+-- coerente com a fonte imediata e ainda assim servindo dado velho porque a
+-- fonte da fonte mudou.
+CREATE TABLE IF NOT EXISTS checkpoints(
+  derivation  TEXT PRIMARY KEY,
+  input_state TEXT NOT NULL,     -- estado da FONTE quando foi computada
+  computed_at REAL NOT NULL,
+  detail      TEXT);             -- JSON livre da derivação

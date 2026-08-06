@@ -1279,3 +1279,345 @@ perna `ml`, 1 deles novo). Medido também com `igraph`/`leidenalg` bloqueados
 no import — a condição do job `backend` e da máquina onde o extra `[ml]` não
 compilou: 578 passed, 2 skipped, zero falhas, com o carimbo, o rótulo
 canônico e a repetibilidade valendo no backend `components`.
+
+### ADR-44 — Brandes fora do request, pelo kernel que já existia (v1.9.2, F2-PR3+4)
+**Contexto**: o `docs/14` dizia que o produto tem "data de morte", e o número
+está no `benchmarks/baseline.json`: Brandes em Python custa **88 058 ms** a
+5000 nós contra **1 944 ms** em Rust (45×). Duas coisas somavam nisso, as duas
+**medidas antes de escrever**:
+
+| páginas | arestas | `graph_data` | quanto era Brandes | `gaps` |
+|---|---|---|---|---|
+| 100 | 909 | 25 ms | 52 % | 25 ms |
+| 300 | 2 729 | 157 ms | 76 % | 152 ms |
+| 600 | 5 459 | 610 ms | 82 % | 589 ms |
+| 1 200 | 10 919 | **2 571 ms** | **95 %** | 2 610 ms |
+
+E o achado que reposicionou o diagnóstico: **o caminho quente ignorava o
+`ComputeKernel`**. O kernel selecionava `rust` e o `observatory` chamava o
+`betweenness_centrality` PURO em Python direto — a camada nativa estava paga
+(ADR-39) e não estava sendo usada onde mais doía.
+**Decisão**: a intermediação vira **projeção persistida** (`graph_centrality`,
+index 7→8 aditiva), computada pelo job `leiden` **através do kernel**. Quem
+constrói o grafo é quem mede quem articula. O request lê uma tabela.
+**Resultado medido**: `graph_data` a 1200 páginas passa de **2571 ms para
+139 ms** (18,5×); `gaps`, de 2610 ms para 164 ms. O job leva 18,5 s, uma vez,
+semanal e com prioridade 7.
+**A garantia que sustenta o ganho** não é o tempo — é que os valores
+persistidos são **idênticos** aos que o request calculava, com teste que
+compara todos contra o kernel puro. "18× mais rápido" sem isso poderia ser só
+"passou a responder outra coisa". Para tanto, o kernel lê `graph_edges` da
+MESMA conexão e aplica o MESMO `EDGE_WEIGHT`. Alimentá-lo com o `adjacency` do
+leiden era o caminho tentador e estava errado por duas razões: ele carrega
+arestas de co-menção que a centralidade nunca teve, e `load_edges` mapeia o
+terceiro campo por `EDGE_WEIGHT`, então **peso já acumulado viraria 0.5 para
+tudo**, em silêncio.
+**Degradação declarada**: centralidade não medida ⇒ `betweenness` 0.0 e
+`centrality.computed: false`. A chave nunca sai do payload (D-J: há teste de
+shape que depende dela), a interface serve **grau** em vez de inventar
+influência, e o badge de frescor **oferece o job**. Falha do kernel não
+derruba o job: a centralidade é enfeite do mapa, não o mapa (ADR-39 §22 —
+ausência de camada nativa é comportamento suportado), então sai `none` e o
+mapa sai inteiro.
+**Migração com armadilha paga**: `graph_snapshot` nasceu na v7 sem
+`centrality_backend`, e `CREATE TABLE IF NOT EXISTS` **não** acrescenta coluna
+a tabela existente — sem o `ALTER` no `_migrate`, o carimbo falharia na
+PRIMEIRA escrita de qualquer `index.db` v7. Há teste que recria a tabela no
+formato v7 e prova o upgrade.
+**O que o `docs/15` pedia e NÃO entrou, por medição**: "um snapshot
+compartilhado por `graph`/`insights`/`gaps`". A premissa era o Brandes de
+84,3 s; com ele fora, a montagem inteira custa 139 ms, e os três são requests
+HTTP **separados** — compartilhar exigiria cache por geração, que compraria
+~100 ms ao preço de servir `page_heat` velho. Cheguei a escrever o parâmetro
+`graph=` em `structural_gaps` (medido: 164 → 42 ms) e o **removi por não ter
+chamador**: mesma disciplina que tirou o `ORDER BY` do ADR-43. Quando um
+endpoint precisar dos dois, ele volta junto com o caso de uso.
+**Também não entrou**: "história do tema", que depende do `theme_id` do
+F2-PR2 — e o PR2 exige **RFC** (`AGENTS.md` §8: heurística no caminho de
+escrita). Entregar história de tema sem identidade de tema seria série
+temporal de um rótulo que muda de significado.
+**`limit` é do TRANSPORTE, não do cálculo**: `total_nodes`/`total_edges`/
+`truncated` continuam falando do grafo inteiro, senão o recorte viraria
+mentira sobre o tamanho da rede. Ordenação por heat, grau e `page` — o
+terceiro critério existe para o recorte não "piscar" entre execuções.
+**A tipagem do badge virou gate**, e não era: `GraphPanel` guardava o payload
+em `useState<any>`, então renomear `centrality.computed` no backend não
+quebrava nada. Com o estado tipado, quebra em dois pontos — verificado por
+execução.
+**Invariantes**: canônico ≠ projeção (`graph_centrality` sai no rebuild) ·
+INV-002 e INV-004 intocados · nenhuma escrita no bundle · CQS.
+11 testes novos; **593 no total** (4 na perna `ml`), e 589+2 skip com
+`igraph`/`leidenalg` bloqueados no import.
+
+### ADR-45 — Identidade de tema por casamento de partições (v1.9.3, F2-PR2)
+**Implementa o [RFC-001](16-rfc-theme-id.md)** — o primeiro RFC do projeto
+(o `docs/10` §19 definia o template e o marcava "🎯 a instanciar"). Foi RFC e
+não só ADR porque o `AGENTS.md` §8 exige RFC para **heurística no caminho de
+escrita**, e o casamento decide `UPDATE` vs `SUPERSEDE` de página canônica.
+**O problema é MEDIDO, não previsto.** Um tema de 5 páginas cuja página mais
+conectada troca de `ana` para `elo`, **sem nenhuma página entrar ou sair**:
+
+```
+1. tema nomeado pela mais conectada:   ['ana.md', 'index.md']
+2. `elo` vira a mais conectada:        ['ana.md', 'elo.md', 'index.md']
+```
+
+**Duas páginas canônicas afirmando o mesmo tema, nenhuma supersedida** — o
+produto fabricando a contradição que `policy.contradiction_candidate` existe
+para acusar, uma por rodada do job.
+**Decisão**: `theme_id` opaco atribuído no NASCIMENTO, `rel_path` derivado
+dele (`communities/thm_<id>.md`), e o rótulo legível no frontmatter — onde
+mudar não cria arquivo. É isso que fecha o defeito.
+**A calibração mudou o desenho duas vezes**, e as duas viraram teste:
+
+| perturbação | Jaccard | forma |
+|---|---:|---|
+| 1 página nova (6→7) | 0,86 | 1↔1 |
+| +50 % / −33 % | 0,67 | 1↔1 |
+| **tema dobra (6→12)** | **0,50** | 1↔1 |
+| **tema parte em dois trios** | **0,50** | **1→2** |
+| tema dissolve | 0,17 | 1→0 |
+
+1. **τ = 0,5 seria o pior valor possível** — é exatamente o Jaccard de um
+   crescimento legítimo E de um split. `TAU = 1/3` é o ponto médio da banda
+   vazia medida entre 0,17 e 0,50, a única região em que o limiar não decide
+   por acidente;
+2. **o valor do Jaccard não distingue `split` de `grew`** (0,50 nos dois). Quem
+   distingue é a **forma do casamento bipartido**. Por isso `match()` devolve a
+   forma, e não um número com limiar.
+
+**`merged` foi declarado e NÃO observado**, e isso está no contrato epistêmico
+em vez de escondido. Não consegui produzir uma fusão nem com alfa e beta
+densamente interligados: o Leiden manteve 3 comunidades e Jaccard 1,0 —
+modularidade resiste a fundir cliques densos. E a fusão **assimétrica** (8 e 3
+páginas) lê como `grew` + `died`, porque o menor tem Jaccard 3/11 = 0,27,
+abaixo de τ. Com 27 % de sobreposição, dizer "estes temas se fundiram"
+afirmaria continuidade que o dado não sustenta. O ramo existe porque a forma
+2→1 é bem definida e barata, mas **nenhuma interface o pressupõe**.
+**O LLM volta a só rotular** (RFC §4.4): com o roteador devolvendo rótulo
+absurdo e diferente a cada chamada, `theme_id` e `rel_path` saem idênticos —
+há teste que prova isso, e é a garantia de que a repetibilidade paga pelo
+ADR-43 não é desfeita pelo modelo.
+**Partição idêntica NÃO gera época.** Sem isso, cada execução do job semanal
+registraria uma época por tema e a trilha viraria ruído — a mesma armadilha do
+rótulo que trocava a cada execução (ADR-43).
+**As páginas antigas são ADOTADAS, não abandonadas** (RFC §4.5). Verificado
+que sem isso o PR **entregaria o INV-005 violado no primeiro upgrade**: a
+página no caminho antigo continuava viva ao lado da nova. Agora ela é
+supersedida apontando para o caminho novo, casada pelos membros que ela mesma
+lista; sem tema correspondente, é aposentada com `invalid_at` — nunca removida.
+**Uma escrita por página, e não uma com todas**: uma página antiga malformada
+(editada à mão, sem `source_sha256`) faz o Harness recusar — corretamente. Numa
+escrita única essa recusa bloquearia a adoção de **todas**, e o INV-005
+seguiria violado no bundle inteiro por causa de um arquivo. O gate não é
+enfraquecido: a recusa é isolada e a página segue visível ao `okf lint`.
+**INV-005 nasce com verificador** — invariante sem verificador é promessa. É
+ERROR e não warn: ao contrário de mapa velho (INV-004, servível com aviso),
+duas verdades vivas sobre o mesmo tema não têm leitura correta. E é reparável
+pelo próprio job.
+**Comportamento pré-existente declarado, não corrigido aqui**: o
+`_CommunitySummaryPage` reescreve o sumário a cada execução mesmo com conteúdo
+idêntico, então o HEAD move a cada job. Não foi introduzido neste PR e a
+asserção de idempotência mede a **contagem de adoções**, não o HEAD — dizer o
+contrário seria testar outra coisa.
+**Migração**: index 8→9 aditiva (`themes`, `theme_epochs`); nenhuma coluna nova
+em tabela existente, então nenhum `ALTER` é necessário (a armadilha do ADR-44
+não reaparece).
+**Invariantes**: canônico ≠ projeção (as duas tabelas somem no rebuild) · gate
+inescapável · invalidar-nunca-apagar · repetibilidade do ADR-43 preservada ·
+INV-005 novo.
+24 testes novos; **617 no total** (4 na perna `ml`), e 613+2 skip com
+`igraph`/`leidenalg` bloqueados no import. Registro epistêmico 1.3.0 → 1.4.0
+com `theme_identity_matching` — heurística no caminho de escrita **precisa** de
+contrato declarado, e este é `high_impact = true`.
+
+### ADR-46 — Checkpoints normalizados: o estado entre as fontes (v1.9.4)
+**Contexto medido, e o custo não é estético.** Cada derivação inventava o
+próprio carimbo de frescor e o próprio invariante: `bundle_head` aparecia em
+**quatro** lugares (`index_meta` chave/valor, `graph_snapshot.bundle_head`,
+`theme_epochs.bundle_head`, schema de runtime), e cada um exigiu um INV
+separado no doctor — INV-002 (índice), INV-004 (mapa), INV-005 (temas). Cada
+derivação nova custava um carimbo **mais** um invariante.
+Foi essa dispersão que deixou passar o defeito confirmado por execução na
+auditoria: o job `leiden` escrevia páginas, movendo o HEAD, e o índice ficava
+atrás — **nada relacionava as duas coisas**. O carimbo do mapa se dizia fresco
+enquanto o do índice apodrecia.
+**Decisão**: uma tabela `checkpoints` (runtime 8→9 aditiva) com uma linha por
+derivação — de qual ESTADO DA FONTE ela foi produzida e quando — e a **cadeia**
+declarada em `kernel/checkpoints.py:DERIVATIONS`:
+
+```
+bundle (autoridade) → index → graph_map  → themes
+                            → centrality
+```
+
+**A cadeia é o ponto, não a tabela.** Ela permite o veredito que carimbo
+isolado não consegue dar por construção: `stale_upstream` — derivação coerente
+com a fonte IMEDIATA e ainda assim servindo dado velho porque a fonte da fonte
+mudou. O mapa comparando-se com o índice acha tudo bem; o índice comparando-se
+com o bundle reclama de si; ninguém enxerga que o mapa está servindo dado de
+duas gerações atrás. É a forma exata do defeito que a auditoria confirmou.
+**Mora em `runtime.db`, não em `index.db`, e a escolha é a substância**: um
+carimbo sobre o índice não pode morrer junto com o índice. `rebuild_index`
+apaga e reconstrói, e um registro que some com aquilo que descreve não
+consegue dizer "a derivação sumiu" — é o limite do `index_meta.bundle_head`
+atual, e há teste que apaga o `index.db` e exige que o checkpoint sobreviva.
+**Três vereditos, e a distinção entre eles é o ganho**: `absent` (nunca
+computada — **não é defeito**: instalação nova não tem derivação velha, tem
+derivação nenhuma), `stale` (a fonte imediata mudou) e `stale_upstream` (a
+cadeia acima se moveu). WARN e nunca ERROR, pela mesma razão do INV-004:
+derivação velha é **servível com aviso**, e é isso que a torna usável numa
+máquina onde recomputar a cada abertura não é opção.
+**INV-006 é UMA regra para toda a cadeia**, em vez de um invariante por
+artefato — e é o que faz a próxima derivação nascer com frescor verificado de
+graça, em vez de com mais um carimbo e mais um alarme. Registro dinâmico é
+recusado: derivação que o produto não declara é derivação cujo frescor
+ninguém garante.
+**Dívida declarada, e é real**: os carimbos antigos **continuam**. Consolidar
+`index_meta.bundle_head` no checkpoint exigiria mexer no INV-002, o invariante
+mais exercitado da suíte, e fazê-lo no mesmo PR que introduz o mecanismo
+juntaria duas mudanças cujos defeitos ficariam indistinguíveis. A duplicação é
+temporária e está aqui por escrito para não virar permanente por esquecimento.
+**Verificado num HOME real**, a cadeia inteira ao longo do ciclo: nada
+derivado (5× `absent`) → rebuild (índice fresco, resto ausente) → job (tudo
+fresco) → **usuário escreve sem reindexar** (índice `stale`, mapa e
+centralidade `stale_upstream`, temas `stale_upstream` por dois saltos) →
+reindexar (mapa e centralidade passam a `stale` direto, temas seguem
+transitivos) → recomputar (tudo fresco).
+`llmwiki checkpoints` lista a cadeia e sai com código 1 quando algo está
+atrás — inspecionável, não só verificável.
+16 testes novos; **635 no total**.
+
+### ADR-47 — O caminho empacotado passa a ser executado, não só construído (v1.9.5, PR-0.1)
+**Contexto medido, e o número importa: quatro defeitos, zero visíveis sem
+rodar.** A auditoria (`docs/17`, G-1) verificou que `pyinstaller build.spec`
+*construía* e parou aí. Construir o artefato e executá-lo são perguntas
+diferentes, e a distância entre elas era o produto inteiro: nenhum terceiro
+jamais teve um `llmwiki-server` que subisse. Reproduzidos, em ordem de morte:
+
+1. `EXE(...)` sem `exclude_binaries=True` → `ValueError: Resource
+   '.../llmwiki-server' is not a valid file!`. O `just sidecar` **não
+   construía**; o binário que `sidecar.ts` procura no app empacotado nunca
+   existiu;
+2. `collect_dynamic_libs("sqlite_vec")` com o `search_patterns` default
+   (`['*.dll', '*.dylib', 'lib*.so']`) devolve **`[]`**: a extensão se chama
+   `vec0.so` e não casa com `lib*.so`. O diagnóstico da auditoria — "falta o
+   extra `[ml]`" — estava errado, o pacote estava instalado. Este é o pior dos
+   quatro porque é **silencioso**: um app sem busca vetorial sobe, responde, e
+   responde pior;
+3. ponto de entrada em `daemon.py`, que o PyInstaller roda como `__main__` →
+   `ImportError: attempted relative import with no known parent package`. Um
+   `packaging_entry.py` com import absoluto resolve, e diz por quê;
+4. recursos resolvidos por `Path(__file__).parents[N]` →
+   `FileNotFoundError: .../llmwiki-server/db/schema_runtime.sql`, com o arquivo
+   em `.../_internal/db/`. O daemon morria antes de abrir a porta.
+
+**Decisão em duas partes, e a segunda é a que dura.** `llmwiki/paths.py`
+centraliza a resolução (`_MEIPASS` quando congelado, `source_root` explícito
+na árvore) — quem chama declara de onde contar, em vez de esconder a contagem
+num `parents[4]` que ninguém revalida quando o módulo muda de lugar. E o job
+`package` do CI **sobe o binário** e bate em `/health`, `/system/doctor`
+(`counts.error == 0`) e `/cockpit/epistemics`, além de exigir o `vec0.so` no
+`_internal/`. `pyinstaller build.spec` entra em `[gate].ci_enforced` —
+enquanto o token não existia, `test_ci_executa_todo_o_gate_declarado` era
+estruturalmente incapaz de acusar a ausência.
+
+**Um quinto defeito apareceu porque o binário passou a rodar.** `epistemics.toml`
+mora na raiz do repo e é lido em **runtime** (`/cockpit/epistemics`, painel
+Qualidade). Fora dos `datas`, o app instalado respondia
+`epistemic.registry_missing` — o produto acusando a si mesmo de não saber o que
+afirma saber. E, uma vez embarcado, a checagem de existência dos
+`implementation_refs` passaria a acusar **~15 erros inexistentes**, porque a
+árvore de código não vai no pacote. Em vez de omitir a checagem em silêncio, o
+binário emite `epistemic.refs_uncheckable` (warn) dizendo que a pergunta não é
+respondível ali e onde ela vale — repositório e CI. Ambos reproduzidos no
+binário antes da correção.
+
+**G-10 no mesmo PR, porque é o mesmo modo de falha em outro artefato.**
+`validate_registry` iterava contrato a contrato e não tinha regra sobre o
+CONJUNTO: apagar as 45 linhas de `[mechanisms.theme_identity_matching]` deixava
+o lint responder *"14 mecanismo(s), 0 finding(s)"*, exit 0, suíte verde. Duas
+listas, porque são dois erros distintos: `EXPECTED_MECHANISMS` (o registro de
+hoje — sumiço é **error**, e remover passa a exigir remover o nome no mesmo
+commit) e `PROMISED_MECHANISMS` (os cinco que `docs/14` §5 declara obrigatórios
+e que ainda não existem — **warn**). Vermelho hoje só produziria contrato
+escrito às pressas para calar o gate, ou o gate desligado; warn mantém a dívida
+onde ela será paga. O painel Qualidade passa a listá-la: antes ele contava 15
+mecanismos e o leitor não tinha como saber quantos faltavam.
+
+A outra metade de G-10 — *"nada quebra se esquecerem o bump"* — vira regra de
+parsing: `[registry].version` passa a exigir semver. `version = "banana"`
+passava, e uma version que não ordena não consegue dizer que um registro é mais
+novo que outro. Forçar o bump exigiria histórico e não é mecanizável barato; o
+que é mecanizável, e está feito, é que **mexer no conjunto passe pela linha
+onde a pergunta aparece**: um fingerprint do conjunto de mecanismos fica fixado
+ao lado da version esperada, e mudar o registro sem tocar nesse par reprova.
+
+**G-8 fecha com `release.yml`**: trigger em tag `v*`, runner arm64 (a máquina
+declarada em `docs/15` é um M2; runner Intel mediria outra coisa), conferência
+de que a tag bate com `desktop/package.json` **e** `backend/pyproject.toml`
+antes de construir — a deriva de versão foi corrigida à mão uma vez e voltaria
+na próxima release —, e `--draft`, nunca publicação direta: um `git push
+--tags` acidental não deve produzir release visível, porque release não se
+despublica. O `directories.output` do `electron-builder.yml` precisou ser
+explicitado no mesmo movimento: o default é `dist/`, que aqui é a saída do
+Vite listada em `files` — empacotar para dentro do diretório que se empacota.
+Só apareceu quando algo passou a de fato executar o `electron-builder`.
+
+**Falsificabilidade verificada por mutação, uma a uma**: desligar o ramo
+`frozen` do lint, tirar o `epistemics.toml` dos `datas`, fazer `resource()`
+ignorar o `_MEIPASS` e remover `_completude` — cada uma derruba exatamente o
+teste que a cobre, e só ele. O primeiro teste de `frozen` **passava** com a
+correção desfeita (rodava contra o repositório real, onde os refs existem);
+simular `_REPO_ROOT` foi o que o tornou capaz de reprovar.
+**Invariantes preservados**: local-first (nada no binário exige rede) · AGPL
+fora do pacote (`excludes` de `fitz`/`pymupdf4llm`/`ebooklib`, v0.6 §8) ·
+falhar alto em vez de degradar em silêncio (build.spec aborta sem `vec0`).
+15 testes novos; **646 no total**.
+
+### ADR-48 — A escada de reconciliação volta a ter três degraus (v1.9.6, F3-PR0)
+**Decisão registrada por RFC-002 (`docs/19`)**, porque `AGENTS.md` §8 exige RFC
+para heurística no caminho de escrita — e este conserto de uma linha ativa os
+cortes HI/LO, o NCD e o árbitro LLM sobre a decisão ADD/UPDATE/SUPERSEDE da
+página canônica. Este ADR registra o que ficou decidido; o RFC guarda as
+opções, as medições e as condições de reentrada.
+**O degrau 2 nunca executou.** `MIN(bm25(chunks_fts))` levanta
+`OperationalError: unable to use function bm25 in the requested context` em
+TODA execução desde a v0.9 — e a subquery também, porque a restrição do SQLite
+é da consulta que carrega o `MATCH`, não do aninhamento. Um `except Exception`
+cego engolia, e *"nenhum candidato acima do corte"* saía **idêntico** ao de uma
+busca bem-sucedida e vazia. É a forma exata do defeito que a auditoria nomeou:
+**construir bem e verificar mal aquilo que se construiu**.
+**O ranking sai por chunk e a redução por página é feita em Python**, o que
+corrige um segundo erro que o agregado escondia: sem deduplicar, uma página
+longa ocuparia várias posições do top-N e inflaria o próprio termo
+`1/(1+position)` do escore.
+**A projeção deixa de decidir como se fosse autoridade.** `index.db` é
+reconstruível e a escada o lia como fonte de verdade sobre o que existe:
+índice atrasado esconde a página e o mesmo DOI vira duas páginas canônicas
+vivas (medido). A escada passa a tornar o índice fresco antes de decidir —
+incremental, delta de git — e, quando nem isso resolve, a decisão **declara**
+`index_stale` e o `ADD` cai para `confidence = "ambiguous"`. *Ausência de
+evidência num índice atrasado não é evidência de ausência.*
+**Os cortes NÃO foram recalibrados**, e a medição diz por quê: com corpo
+idêntico, o escore é **0.686** sem entidade curada e **0.976** com ela. O teto
+sem acordo de entidades é ~0.7, abaixo de HI=0.82 — não é fraqueza do degrau, é
+a exigência de que os três sinais concordem antes de sobrescrever canônico.
+Recalibrar sem golden set seria adivinhar, e o contrato passaria a mentir.
+**O `try/finally` do `rebuild_index`** deixa de ser higiene e vira
+pré-requisito: a partir daqui a função roda dentro do caminho de escrita, onde
+a conexão vazada travaria o próprio ato que a provocou (`database is locked`
+após 30 s — medido nas duas direções).
+**O registro epistêmico foi corrigido, não só acrescido** (1.4.0 → 1.5.0): a
+suposição *"cortes calibráveis via bench"* virou *"NÃO calibrados — o degrau não
+executou da v0.9 ao F3-PR0"*. Um contrato que descreve corretamente um caminho
+que nunca rodou é pior que contrato nenhum, porque parece verificação.
+**Falsificabilidade, uma mutação por correção**: repor `MIN(bm25)` derruba 4
+testes; remover a pré-condição derruba 3; remover o `try/finally` derruba 1. A
+primeira versão do teste do `finally` **passava com e sem** a correção —
+conexão vazada sem transação aberta não tranca nada; foi preciso escrever antes
+de estourar para o teste poder reprovar.
+**`backend/tests/test_reconcile_candidate.py` não existia.** A decisão mais
+consequente do produto não tinha teste próprio, e é por isso que um degrau
+inteiro pôde morrer em silêncio por três versões.
+12 testes novos; **657 no total**.

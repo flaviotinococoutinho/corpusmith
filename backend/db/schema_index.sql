@@ -110,4 +110,54 @@ CREATE TABLE IF NOT EXISTS graph_snapshot(
   edges         INTEGER NOT NULL,
   communities   INTEGER NOT NULL,
   bridges       INTEGER NOT NULL,
-  hubs_excluded INTEGER NOT NULL);
+  hubs_excluded INTEGER NOT NULL,
+  -- F2-PR3+4: qual kernel mediu a centralidade. `none` = ainda não medida
+  -- (o mapa existe, a centralidade não) — a interface serve grau em vez de
+  -- inventar influência.
+  centrality_backend TEXT NOT NULL DEFAULT 'none'
+                CHECK(centrality_backend IN ('none','python','rust')));
+
+-- ============================ v1.9.2 · F2-PR3+4 (ADR-44) ============================
+-- CENTRALIDADE persistida. Brandes é 95% do custo do request do grafo a 1200
+-- páginas (medido) e cresce ~O(n²): 100 páginas 25 ms, 1200 páginas 2571 ms,
+-- 5000 páginas 88 s no baseline. Calcular no request dá data de morte ao
+-- produto; e `structural_gaps` chamava `graph_data`, então abrir Grafo e
+-- Insights pagava DUAS vezes.
+--
+-- Projeção como todo o index.db: sai no rebuild e é recomputada pelo job
+-- `leiden`, junto do mapa — quem constrói o grafo é quem mede quem articula.
+CREATE TABLE IF NOT EXISTS graph_centrality(
+  page        TEXT PRIMARY KEY,
+  betweenness REAL NOT NULL);
+
+-- ============================ v1.9.3 · F2-PR2 (RFC-001, docs/16) ============================
+-- IDENTIDADE de tema. O rótulo do ADR-43 é estável para o mesmo bundle mas é
+-- derivado do menor membro: sai a página menor, muda o tema todo. Medido: um
+-- tema de 5 páginas cuja página mais conectada troca passa a ter DUAS páginas
+-- canônicas, nenhuma supersedida — o produto fabricando a contradição que o
+-- `policy.contradiction_candidate` existe para acusar.
+--
+-- `theme_id` é OPACO de propósito: derivado da composição atual, voltaria a
+-- mudar quando a composição muda, e nunca haveria `grew`.
+CREATE TABLE IF NOT EXISTS themes(
+  theme_id  TEXT PRIMARY KEY,
+  community INTEGER,                 -- rótulo da época vigente (pode mudar)
+  rel_path  TEXT NOT NULL,           -- communities/thm_<id>.md
+  born_at   REAL NOT NULL,
+  died_at   REAL,                    -- NULL = vivo
+  members   TEXT NOT NULL);          -- JSON: membros da época vigente
+
+-- Trilha das épocas. Vocabulário FECHADO — e `merged` fica declarado sem
+-- superfície: não foi observado na calibração (RFC-001 §2.3), porque
+-- modularidade resiste a fundir cliques densos.
+CREATE TABLE IF NOT EXISTS theme_epochs(
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  theme_id    TEXT NOT NULL,
+  event       TEXT NOT NULL
+              CHECK(event IN ('born','grew','shrank','merged','split','died')),
+  at          REAL NOT NULL,
+  bundle_head TEXT,
+  jaccard     REAL,                  -- casamento que gerou o evento
+  members     TEXT,                  -- JSON dos membros nesta época
+  related     TEXT);                 -- JSON: theme_id(s) envolvidos
+CREATE INDEX IF NOT EXISTS idx_epochs_theme ON theme_epochs(theme_id);

@@ -107,8 +107,12 @@ def _snapshot(settings) -> dict:
 
 
 # ============================================ repetibilidade (o DoD da fase)
-def test_index_db_subiu_para_7_aditivamente(base):
-    assert SCHEMA_VERSIONS["index.db"] == 7
+def test_migracao_do_index_e_aditiva(base):
+    """Robusto à VERSÃO, não cravado nela: o F2-PR1 subiu para 7 e o F2-PR3+4
+    para 8, e um `== 7` aqui quebraria o PR seguinte sem apontar defeito
+    nenhum — é a mesma classe de drift que o PR-0 atacou (G-6). O que importa
+    é a migração ser aditiva."""
+    assert SCHEMA_VERSIONS["index.db"] >= 7, "graph_snapshot exige v7+"
     idx = connect(base.app_support / "index.db")
     tabelas = {r["name"] for r in idx.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}

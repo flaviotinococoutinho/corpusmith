@@ -6,6 +6,7 @@ vez); só o inparseável de verdade (TOML inválido, schema_version errado)
 levanta RegistryError com mensagem clara.
 """
 from __future__ import annotations
+import re
 import tomllib
 from .model import (Assumption, DecisionFallback, EpistemicContract,
                     EvidenceKind, Finding, GuaranteeDescriptor,
@@ -13,6 +14,7 @@ from .model import (Assumption, DecisionFallback, EpistemicContract,
                     Registry, ValidityScope)
 
 SUPPORTED_SCHEMA = 1
+_SEMVER = re.compile(r"\d+\.\d+\.\d+")
 
 _KNOWN_FIELDS = {
     "title", "decision", "implementation_refs", "inductive_biases",
@@ -120,6 +122,14 @@ def parse_registry(text: str) -> tuple[Registry, tuple[Finding, ...]]:
     registry_meta = data.get("registry")
     if not isinstance(registry_meta, dict) or "version" not in registry_meta:
         raise RegistryError("[registry].version ausente")
+    # G-10: `version = "banana"` passava. A version é o que quatro PRs
+    # prometem bumpar; um valor que não ordena não distingue registro novo de
+    # registro velho, e o "1.1.0 → 1.2.0" do plano vira decoração.
+    if not _SEMVER.fullmatch(str(registry_meta["version"])):
+        raise RegistryError(
+            f"[registry].version={registry_meta['version']!r} não é semver "
+            f"MAJOR.MINOR.PATCH — uma version que não ordena não consegue "
+            f"dizer que um registro é mais novo que outro")
     mechanisms = data.get("mechanisms", {})
     if not isinstance(mechanisms, dict):
         raise RegistryError("[mechanisms] deve ser uma tabela")

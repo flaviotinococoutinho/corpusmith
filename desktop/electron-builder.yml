@@ -1,5 +1,12 @@
 appId: dev.flavio.llmwiki
 productName: LLM Wiki
+# O default do electron-builder é `dist/` — que aqui é a saída do Vite, listada
+# logo abaixo em `files`. Empacotar para dentro do diretório que se está
+# empacotando é a receita de um `.dmg` que engorda a cada build; explicitar
+# separa as duas coisas. Só apareceu quando o `release.yml` (PR-0.1) passou a
+# de fato executar o `electron-builder`, que até então nada executava.
+directories:
+  output: release
 files:
   - dist/**
   - dist-electron/**

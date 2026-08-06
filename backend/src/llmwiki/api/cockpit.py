@@ -311,8 +311,14 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
 
     # ================================================= Fase 5 (v0.15)
     @app.get("/cockpit/graph", dependencies=[Depends(auth)])
-    def graph():
-        return observatory.graph_data(s)
+    def graph(limit: int = 0):
+        """Grafo navegável. `limit` recorta o SUBGRAFO dos nós mais quentes
+        (F2-PR3+4) — `total_nodes`/`total_edges`/`truncated` continuam falando
+        do grafo inteiro, senão o recorte viraria mentira sobre o tamanho da
+        rede. A intermediação vem de `graph_centrality`, medida pelo job
+        `leiden`; `centrality.computed=false` significa "ainda não medida", e
+        aí `betweenness` é 0.0 e a interface serve grau."""
+        return observatory.graph_data(s, limit=limit or None)
 
     @app.get("/cockpit/insights", dependencies=[Depends(auth)])
     def insights():
