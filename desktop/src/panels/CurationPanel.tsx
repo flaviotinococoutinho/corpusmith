@@ -3,6 +3,7 @@
 // IA (pesos Hedge, flags) · exportador inteligente.
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";
+import { ActsHistory } from "./ActsHistory";
 import { DaemonUnavailable } from "./DaemonUnavailable";
 
 function Card({ title, children }: { title: string; children: any }) {
@@ -51,6 +52,14 @@ export function CurationPanel() {
     <div className="p-4 grid grid-cols-2 gap-3 text-sm">
       {notice && <p className="col-span-2 text-xs border rounded p-2
         bg-neutral-50">{notice}</p>}
+
+      {/* F-UI: o painel chamado "Curadoria" tinha tags, dicionário, config,
+          comportamento e export — e nenhum ato de curadoria nem histórico. */}
+      <div className="col-span-2">
+        <Card title="🕘 Atos aplicados">
+          <ActsHistory />
+        </Card>
+      </div>
 
       <Card title="🏷 Tags">
         {tags.map(([t, n]) => (

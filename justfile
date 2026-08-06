@@ -22,6 +22,7 @@ install:
 verify:
     cd backend && .venv/bin/python -m pytest tests -q
     cd desktop && npx tsc --noEmit
+    cd desktop && npm test
     docker compose config -q
     cd backend && .venv/bin/python -m llmwiki.cli epistemics lint
 

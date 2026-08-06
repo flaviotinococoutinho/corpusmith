@@ -1621,3 +1621,60 @@ de estourar para o teste poder reprovar.
 consequente do produto não tinha teste próprio, e é por isso que um degrau
 inteiro pôde morrer em silêncio por três versões.
 12 testes novos; **657 no total**.
+
+### ADR-49 — As superfícies órfãs, e o gate que não provava comportamento (v1.9.7, F-UI)
+**O pré-requisito veio primeiro, e ele era uma dívida declarada sem dono.** O
+ADR-41.3 nomeou a lacuna com precisão — *"não existe runner de teste de UI no
+desktop (só `tsc --noEmit` no gate)… o que isso NÃO prova: que o onClick foi
+religado"* — e ela não estava em G-1..G-10, portanto não entrou em fase nenhuma,
+enquanto quatro entregas da vitrine passavam a depender dela. Medido nesta
+árvore: **desligar o `onClick` do botão de reparo deixa `tsc --noEmit` sair 0**
+e o smoke reprovar. `vitest` + `jsdom` entram com config **separada** do
+`vite.config.mts`, que carrega o plugin de Electron e subiria um processo de
+Electron dentro do runner. `npm test` entra em `[gate]`, na CI e no `justfile`.
+**Cinco superfícies órfãs, todas com a mesma forma**: use case completo,
+endpoint completo, método de cliente às vezes já declarado — e nenhuma tela.
+- **doctor**: INV-001..006 eram o único verificador de integridade do produto e
+  só existiam no terminal. A StatusBar pintava `🩺 stacks!` em vermelho **sem
+  ato**, embora três dos seis se resolvam com um POST. Agora há aba, lista de
+  findings, botão de reparo que só se oferece quando há finding reparável, e o
+  badge navega para ela;
+- **undo**: completo desde o F1-PR1, com 409 nomeado, e inalcançável porque
+  `/curation/history` não tinha método no cliente — sem o `act_id` não havia
+  como chamá-lo. Aplicar era irreversível pela interface;
+- **cancel/retry**: o botão `↻` chamava `enqueue(type, payload)` e criava um
+  job **novo**, deixando o antigo `failed` para sempre, zerando o rastro de
+  tentativas e furando o dedupe, enquanto `/jobs/{id}/retry` existia. Cancelar
+  não existia. A tabela conhecia **quatro** dos oito estados da fila — e os
+  quatro que faltavam são os que dizem o que fazer.
+**O SSE era o pior dos cinco, e o mais difícil de ver.** O `EventSource` só
+entrega evento nomeado a quem registrou aquele nome; `onmessage` recebe só os
+sem nome. O cliente registrava **cinco** e o daemon declara **sessenta e dois**.
+Medido no fio, ingerindo uma nota: **10 frames, 6 tipos distintos — o cliente
+antigo receberia 3**. `page.stage`, `compile.extracting` e `source.ingested`
+saíam do backend e morriam ali, com o Stepper do Inbox e a barra de progresso
+por job já escritos, tipados e nunca alimentados uma única vez.
+**A correção não é uma lista maior.** Lista fixa maior cai na mesma armadilha
+na próxima adição. O produto **declara** o vocabulário em
+`runtime/events.py:EVENT_TYPES`, `/events/types` o serve (aditivo — nenhuma
+mudança de fio, nenhum RFC), o cliente pergunta, e **`emit` recusa tipo não
+declarado**: mesma disciplina de `DERIVATIONS` (ADR-46), registro dinâmico é
+registro que ninguém garante.
+**Três guardas, porque nenhuma cobre o buraco da outra**, e isso foi descoberto
+falhando: a varredura estática por literais deu verde com **nove** tipos de
+fora (`focus.goal.created` tem TRÊS segmentos e a regex tinha dois fixos); a
+recusa em runtime pegou esses nove ao rodar a suíte — e deixaria passar
+qualquer caminho não exercitado; a família por f-string (`f"retrieval.{…}"`)
+escapou das duas e tem teste que lê o condicional que a gera, ignorando as
+strings **comparadas** e olhando só as **produzidas**.
+**`test_pontas_soltas` inverteu de sinal, que era o combinado.** Ele declarava
+*"o undo segue inalcançável"* e quebraria *"no dia em que alguém religar":
+religou e quebrou. Rotas órfãs 12 → **11**; eventos mudos 44 → **0** — e o teto
+zero não é tautologia: a função que mede lê o `.ts` e, sem a ligação a
+`/events/types`, volta a acusar 44.
+**Falsificabilidade por mutação, uma por correção**: `onClick` do reparo
+desligado (tsc verde, smoke vermelho) · ponte SSE de volta aos cinco nomes (3
+testes) · `retryJob` de volta a `enqueue` (1) · 409 do undo engolido (1) ·
+cliente sem a busca de tipos (o teto de mudos volta a 44).
+17 testes de UI — **os primeiros do projeto** — e 6 de backend; **662** no
+backend, 17 no desktop.

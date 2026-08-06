@@ -50,13 +50,20 @@ export function StatusBar() {
       </span>
       {status && <span>💰 US$ {status.budget_left_usd.toFixed(2)}</span>}
       {health && (
-        <span title={`instância ${health.instance.id} · ${
+        // F-UI: o badge acusava o problema e não oferecia ato nenhum — o
+        // usuário via vermelho e não tinha para onde ir. Agora leva à aba
+        // que mostra os findings e oferece o reparo, pelo mesmo evento de
+        // navegação que a fila "Próxima ação" usa.
+        <button
+          title={`instância ${health.instance.id} · ${
             health.process.rss_mb} MB · integridade ${
-            stacksOk ? "ok" : "PROBLEMA"}`}
-          className={stacksOk ? "" : "text-red-600"}>
+            stacksOk ? "ok" : "PROBLEMA"} — clique para ver os invariantes`}
+          className={`hover:underline ${stacksOk ? "" : "text-red-600"}`}
+          onClick={() => window.dispatchEvent(
+            new CustomEvent("bc:navigate", { detail: "doctor" }))}>
           🩺 {stacksOk ? "ok" : "stacks!"} · 💾{" "}
           {(health.resources.disk_free_mb / 1024).toFixed(1)} GB
-        </span>)}
+        </button>)}
       <span className="flex-1 truncate text-neutral-400 font-mono">
         {tick && `${EVENT_LABEL[tick.type] ?? tick.type} · ${
           JSON.stringify(tick.data?.page ?? tick.data?.source ??

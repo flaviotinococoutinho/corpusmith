@@ -255,6 +255,18 @@ def build_app(s: Settings, queue: JobQueue, gov: Governor,
             local_only=body.local_only,
             as_of=body.as_of)
 
+    @app.get("/events/types", dependencies=[Depends(auth)])
+    def event_types():
+        """O vocabulário que este daemon emite (F-UI).
+
+        Aditivo, e é o que fecha o laço do SSE: o `EventSource` só entrega
+        evento nomeado a quem registrou aquele nome, então o cliente perguntava
+        por cinco e perdia os outros quarenta e três. Agora ele pergunta ao
+        servidor quais existem — e `EventBus.emit` recusa tipo fora da lista,
+        para a resposta não poder ficar desatualizada."""
+        from ..runtime.events import EVENT_TYPES
+        return {"types": sorted(EVENT_TYPES)}
+
     @app.get("/events", dependencies=[Depends(auth)])
     async def events(request: Request):
         q = bus.subscribe()
