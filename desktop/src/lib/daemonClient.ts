@@ -49,6 +49,28 @@ export interface DoctorReport {
   derivations?: Record<string, { state: string; reason?: string }>;
 }
 
+// F3-PR1 (RFC-003): o promote pode devolver COLLISION — nada foi escrito e
+// a decisão é do humano. Sem o tipo, o dialog lia `pages?.[0] ?? "ok"` e
+// mostrava "✅ criado: ok" para uma colisão: a mentira do log, na tela.
+export interface PromoteBody {
+  kind: string; title: string; content: string; source?: string;
+  privacy?: string; description?: string; tags?: string[];
+  resolution?: "update" | "new_slug";
+  target?: string;
+}
+
+export interface PromoteResult {
+  op: "ADD" | "UPDATE" | "COLLISION";
+  kind: string;
+  pages?: string[];
+  commit?: string;
+  // presentes só em COLLISION
+  target?: string;
+  score?: number;
+  reason?: string;
+  options?: string[];
+}
+
 /** Ato de curadoria já aplicado (`GET /curation/history`).
  *  `undone_by` preenchido = já desfeito; `undoes` = este É um desfazer. */
 export interface CurationAct {
@@ -300,7 +322,7 @@ export class DaemonClient {
   page = (path: string) =>
     this.get<PageDetail>(`/cockpit/page?path=${encodeURIComponent(path)}`);
   markStale = (path: string) => this.post("/cockpit/page/stale", { path });
-  promote = (body: unknown) => this.post("/cockpit/promote", body);
+  promote = (body: PromoteBody) => this.post<PromoteResult>("/cockpit/promote", body);
   memory = () => this.get<any>("/cockpit/memory");
   quality = () => this.get<any>("/cockpit/quality");
   review = () => this.get<any>("/cockpit/review");

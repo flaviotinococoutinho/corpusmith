@@ -40,7 +40,7 @@ class BundleWriter:
     def write(self, docs: list[OKFDocument], *, log_kind: str,
               log_message: str, commit_message: str,
               mode: str = "write") -> dict:
-        findings = self.harness.run(docs, mode=mode)
+        findings = self.harness.run(docs, mode=mode, intent=log_kind)
         if HarnessRunner.has_errors(findings):
             raise HarnessRejection(findings)
         with self.locked():

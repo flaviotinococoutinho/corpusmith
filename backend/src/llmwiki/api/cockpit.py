@@ -211,9 +211,15 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
                 content=body["content"], source=body.get("source", "chat"),
                 privacy=body.get("privacy", "local_only"),
                 description=body.get("description"),
-                tags=body.get("tags", []))
+                tags=body.get("tags", []),
+                resolution=body.get("resolution"),
+                target=body.get("target"))
         except ValueError as e:
             raise HTTPException(400, str(e))
+        # COLLISION não escreveu nada (RFC-003): emitir "promovido" aqui
+        # seria a MESMA mentira do log de "Creation", agora no barramento
+        if result["op"] == "COLLISION":
+            return result
         bus.emit("system", "memory.promoted",
                  {"kind": result["kind"], "page": result["pages"][0]})
         return result

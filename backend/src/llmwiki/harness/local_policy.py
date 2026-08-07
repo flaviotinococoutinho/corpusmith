@@ -23,13 +23,26 @@ RECOMMENDED_TYPES = {
     # transição registrada (SUPERSEDE), nunca por edição silenciosa
     "fact", "claim", "hypothesis", "observation", "opinion"}
 
-def check(docs, reader, git, mode: str = "write") -> list[Finding]:
+def check(docs, reader, git, mode: str = "write",
+          intent: str | None = None) -> list[Finding]:
     out: list[Finding] = []
     gaz = load_gazetteer(reader) if docs else None
     schemas = load_type_schemas(reader) if docs else {}
     for d in docs:
         x = d.meta.model_dump()
         via = str(x.get("generated_via", ""))
+
+        # RFC-003 (F3, P-7): o caminho destrutivo dominante não é UPDATE —
+        # é ADD sobre `rel_path` existente, gravado no log como "Creation".
+        # Medido: dois promotes do mesmo título, o segundo APAGA 40 linhas
+        # de anotação humana e o log mente. A regra lê o FILESYSTEM, não a
+        # projeção: vale mesmo com o índice irreparavelmente atrasado.
+        if intent == "Creation" and reader.exists(d.rel_path):
+            out.append(Finding(
+                "error", "policy.path_collision", d.rel_path,
+                "intenção declarada é Creation mas a página JÁ EXISTE — "
+                "sobrescrever seria destruição registrada como criação; "
+                "declare Update (fundindo frontmatter) ou use outro slug"))
 
         if x.get("privacy") not in ("local_only", "api_allowed"):
             out.append(Finding("error", "policy.privacy_required", d.rel_path,

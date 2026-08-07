@@ -1678,3 +1678,46 @@ testes) · `retryJob` de volta a `enqueue` (1) · 409 do undo engolido (1) ·
 cliente sem a busca de tipos (o teto de mudos volta a 44).
 17 testes de UI — **os primeiros do projeto** — e 6 de backend; **662** no
 backend, 17 no desktop.
+
+### ADR-50 — Colisão de caminho vira decisão humana (v1.9.8, F3-PR1)
+**Decisão registrada por RFC-003 (`docs/20`)**, porque a escada de
+reconciliação — com árbitro LLM opcional — passa a informar o `promote`, o
+caminho de escrita **humano** mais usado do produto (`docs/15` §1.1 já exigia
+RFC para a F3 por exatamente isso).
+**O defeito, reproduzido antes de corrigir**: dois promotes do mesmo título e
+o segundo APAGAVA a página do primeiro — 40 linhas de anotação humana viravam
+um rascunho de duas, com o log registrando *"Creation"*. O caminho destrutivo
+dominante não era UPDATE: era **ADD sobre `rel_path` existente**, que a escada
+estruturalmente não vê (ela exclui a própria `rel_path` dos degraus) e que o
+`promote` nem consultava.
+**Três camadas, cada uma com mutação que a derruba**:
+1. **`policy.path_collision`** — o `log_kind` que o writer já recebia vira
+   `intent` no gate: *"Creation" sobre página existente é erro*. A regra lê o
+   FILESYSTEM, não a projeção — vale com o índice irreparavelmente atrasado e
+   para qualquer chamador futuro que minta a intenção;
+2. **`op="COLLISION"`** — o promote roda `analyze()` (detecção pura, nenhuma
+   reescrita de prosa) e a MESMA escada do RFC-002; colisão de caminho ou de
+   similaridade devolve a decisão ao humano **sem escrever nada**, com três
+   saídas: escrever sobre a residente (log `Update`, frontmatter **fundido**
+   por `merge_meta`), criar com sufixo determinístico, ou cancelar. No caminho
+   humano a heurística **informa**; quem escreve é a pessoa;
+3. **fusão no fluxo de máquina** — UPDATE reconstruía o frontmatter do zero e
+   tags curadas por humano evaporavam a cada recompilação, com
+   `policy.metadata_shrink` (warn) como único guarda. `_merged_with_resident`
+   usa a mesma `merge_meta` do MergePages: uma regra de fusão, não duas.
+**A UI parou de mentir junto**: o `PromoteDialog` mostrava *"✅ criado: ok"*
+para qualquer resposta — inclusive uma COLLISION que não escreveu nada. Agora
+apresenta as três saídas, e o teste de mutação prova que reverter o dialog ao
+comportamento antigo derruba exatamente os 3 testes de colisão.
+**Verificado no fio**, daemon real: ADD → COLLISION (residente intacta, log
+intocado) → `resolution=update` (log *"[Update] promovido SOBRE …"*) →
+`resolution=new_slug` (`docker-2.md`). O evento `memory.promoted` não é
+emitido em COLLISION — seria a mentira do log, no barramento.
+**Registro epistêmico 1.5.0 → 1.6.0**: o contrato `reconciliation` declara o
+caminho humano no `validity_scope` e ganha `promote_memory.py` nos
+`implementation_refs`.
+**Condições de reentrada** (RFC-003 §12): auto-fusão na zona alta só com
+golden set; undo de criação continua dívida do ADR-41.1 (o `new_slug` cria
+via promote, que não é ato de curadoria); colisão interativa na consolidação
+em lote fica para F6.
+9 testes de backend + 4 de UI; **671 no backend, 21 no desktop**.

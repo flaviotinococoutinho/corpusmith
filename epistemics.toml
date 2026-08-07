@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.5.0"   # F3-PR0: reconciliation revisado (RFC-002) — o degrau de similaridade voltou a executar
+version = "1.6.0"   # F3-PR1: reconciliation também informa o promote humano (RFC-003) — COLLISION nunca escreve
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -171,6 +171,7 @@ title = "Reconciliação ADD/UPDATE/SUPERSEDE/NOOP/RECYCLE por escada determiní
 decision = "decidir se um candidato compilado é novo (ADD), atualiza (UPDATE), substitui (SUPERSEDE), nada acrescenta (NOOP) ou reidrata memória fria (RECYCLE)"
 implementation_refs = [
   "backend/src/llmwiki/usecases/reconcile_candidate.py",
+  "backend/src/llmwiki/usecases/promote_memory.py",
   "backend/src/llmwiki/kernel/information.py",
 ]
 inductive_biases = [
@@ -185,6 +186,7 @@ assumptions = [
 ]
 validity_scope = [
   "candidatos do pipeline de compilação contra o bundle local e a base fria",
+  "promoção humana (F3-PR1, RFC-003): a escada INFORMA a colisão e devolve op=COLLISION sem escrever — no caminho humano ela nunca decide, decide quem promove",
   "textos em que zlib captura redundância (NCD com corpos truncados em 8000 chars)",
   "índice FRESCO em relação ao bundle — quando não é, a escada reindexa antes de decidir e, se ainda assim não ficar fresco, declara index_stale na decisão (RFC-002 §4.2)",
 ]
