@@ -3,9 +3,23 @@ import { useEffect, useRef, useState } from "react";
 import { client } from "../lib/client";
 import { DaemonUnavailable } from "./DaemonUnavailable";
 
+// Os OITO estados da fila (runtime/queue.py:25-28). A tabela tinha quatro, e
+// os quatro que faltavam são justamente os que o usuário precisa reconhecer
+// para agir: `retry_scheduled` (vai voltar sozinho — esperar), `dead_lettered`
+// (esgotou as tentativas — só reexecução manual), `cancelled` e
+// `cancel_requested` (pedido feito, o worker honra no boundary).
 const STATE_ICON: Record<string, string> = {
   queued: "⏳", leased: "▶️", done: "✅", failed: "❌",
+  retry_scheduled: "🔁", dead_lettered: "⚰️",
+  cancelled: "🚫", cancel_requested: "🛑",
 };
+
+// `cancel` aceita queued/retry_scheduled (vira `cancelled` na hora) e leased
+// (vira `cancel_requested`, cooperativo). `retry_manual` aceita
+// failed/dead_lettered/cancelled. Fora disso o backend responde 409 — a UI
+// não oferece o botão para não prometer o que a fila recusa.
+const CANCELAVEL = new Set(["queued", "retry_scheduled", "leased"]);
+const REEXECUTAVEL = new Set(["failed", "dead_lettered", "cancelled"]);
 
 const PIPELINE = ["produce", "normalize", "reconcile", "write", "done"];
 
@@ -29,6 +43,17 @@ export function ProcessesPanel() {
   };
 
   const [erro, setErro] = useState<unknown>(null);
+  const [acaoErro, setAcaoErro] = useState<string | null>(null);
+
+  /** Cancelar/reexecutar erram com 409 quando a fila mudou de estado entre a
+   *  renderização e o clique — e é o caso comum, não a borda: um job `leased`
+   *  vira `done` sozinho. Mostrar o motivo e recarregar é a resposta honesta;
+   *  engolir deixaria o botão parecendo inerte. */
+  const agir = (p: Promise<unknown>) => {
+    setAcaoErro(null);
+    p.then(load).catch(e => { setAcaoErro(String(e)); load(); });
+  };
+
   useEffect(() => {
     client.connect().then(() => {
       load();
@@ -88,9 +113,12 @@ export function ProcessesPanel() {
                 </div>))}
             </div>)}
         </section>
+        {acaoErro && (
+          <p className="text-xs text-red-600 mb-1">{acaoErro}</p>)}
         <table className="w-full text-xs">
           <thead><tr className="text-left text-neutral-500">
-            <th>Job</th><th>Tipo</th><th>Estado</th><th>Tent.</th><th>Erro</th></tr></thead>
+            <th>Job</th><th>Tipo</th><th>Estado</th><th>Tent.</th><th>Erro</th>
+            <th>Ações</th></tr></thead>
           <tbody>{jobs.map(j => (
             <tr key={j.id} className="border-t">
               <td className="font-mono">{j.id}</td>
@@ -104,12 +132,23 @@ export function ProcessesPanel() {
                   </span>)}
               </td>
               <td>{j.attempts}</td>
-              <td className="text-red-600">{j.error?.slice(0, 80)}
-                {j.state === "failed" && (
-                  <button className="border rounded px-1 ml-1 text-neutral-700"
-                          title="reexecutar com o mesmo payload"
-                          onClick={() => client.enqueue(j.type, j.payload)
-                            .then(load)}>↻</button>)}
+              <td className="text-red-600">{j.error?.slice(0, 80)}</td>
+              <td className="whitespace-nowrap">
+                {/* Reexecuta ESTE job (`/jobs/{id}/retry`, que zera tentativas
+                    e devolve ao `queued`). Antes o botão chamava `enqueue`
+                    com o mesmo payload: criava um job NOVO, deixando o antigo
+                    `failed` para sempre e quebrando a contagem de tentativas
+                    e o dedupe. */}
+                {REEXECUTAVEL.has(j.state) && (
+                  <button className="border rounded px-1 mr-1 text-neutral-700"
+                          title="reexecutar este job (zera tentativas)"
+                          onClick={() => agir(client.retryJob(j.id))}>↻</button>)}
+                {CANCELAVEL.has(j.state) && (
+                  <button className="border rounded px-1 text-neutral-700"
+                          title={j.state === "leased"
+                            ? "pedir cancelamento (o worker honra ao concluir o passo)"
+                            : "cancelar agora"}
+                          onClick={() => agir(client.cancelJob(j.id))}>✕</button>)}
               </td>
             </tr>))}</tbody>
         </table>

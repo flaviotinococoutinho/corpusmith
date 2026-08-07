@@ -94,11 +94,16 @@ schema_version = 1
 # `test_ci_executa_todo_o_gate_declarado` estruturalmente NUNCA poderia acusar
 # que o caminho empacotado não é construído — e foi assim que ele passou meses
 # quebrado em quatro pontos distintos, nenhum visível sem executar o binário.
-ci_enforced = ["pytest", "tsc --noEmit", "docker compose config",
+# F-UI: `npm test` entra no gate. `tsc --noEmit` prova tipo, não
+# comportamento — com o `onClick` do reparo desligado ele sai 0 e o smoke
+# reprova. Era a única lacuna de processo que um ADR nomeava (41.3) e que
+# não estava em G-1..G-10, portanto não entrou em fase nenhuma.
+ci_enforced = ["pytest", "tsc --noEmit", "npm test",
+               "docker compose config",
                "cargo test", "epistemics lint", "doctor", "backup",
                "pyinstaller build.spec"]
-verify_enforced = ["pytest", "tsc --noEmit", "docker compose config",
-                   "epistemics lint"]
+verify_enforced = ["pytest", "tsc --noEmit", "npm test",
+                   "docker compose config", "epistemics lint"]
 
 # --- comandos de verificação (o gate único da spec §14.4). ---
 [commands]

@@ -28,9 +28,10 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 CLIENTE = RAIZ / "desktop/src/lib/daemonClient.ts"
 
-# Tetos MEDIDOS em 2026-07-27. Baixar junto com a correção; nunca subir.
-MAX_ROTAS_ORFAS = 12
-MAX_EVENTOS_MUDOS = 44
+# Tetos MEDIDOS em 2026-07-27; baixados no F-UI (2026-08-05). Baixar junto
+# com a correção; nunca subir.
+MAX_ROTAS_ORFAS = 11
+MAX_EVENTOS_MUDOS = 0
 
 
 def _rotas() -> list[tuple[str, str, str]]:
@@ -83,15 +84,18 @@ def test_rotas_sem_consumidor_nao_aumentam():
                                                             key=lambda x: x[1])))
 
 
-def test_o_undo_segue_inalcancavel_pelo_app_e_isso_esta_declarado():
-    """Achado confirmado por execução: o ato existe, o endpoint existe, e
-    nenhuma superfície lista os atos para obter o `act_id`. Este teste NÃO
-    conserta — declara, e quebra no dia em que alguém religar, forçando a
-    atualização do teto e da documentação."""
+def test_as_superficies_orfas_do_f_ui_ganharam_consumidor():
+    """O inverso do teste que estava aqui.
+
+    Ele declarava que `/curation/history` seguia sem consumidor e quebraria
+    "no dia em que alguém religar". Religou no F-UI, e ele quebrou — como
+    projetado. O que substitui a declaração é a asserção positiva: estas
+    cinco rotas tinham use case, endpoint e método de cliente, e nenhuma
+    tela. Voltar a perder qualquer uma delas reprova aqui."""
     orfas = {r for _, r, _ in _orfas()}
-    assert "/curation/history" in orfas, (
-        "o histórico de atos ganhou consumidor — baixe MAX_ROTAS_ORFAS e "
-        "atualize docs/17, porque o undo deixou de ser inalcançável")
+    for rota in ("/curation/history", "/system/doctor",
+                 "/system/doctor/repair", "/events/types", "/jobs"):
+        assert rota not in orfas, f"{rota} voltou a ficar sem superfície"
 
 
 def _eventos_emitidos() -> set[str]:
@@ -104,9 +108,26 @@ def _eventos_emitidos() -> set[str]:
 
 
 def _eventos_repassados() -> set[str]:
-    bloco = re.search(r'for \(const t of \[(.*?)\]', CLIENTE.read_text(), re.S)
-    return set(re.findall(r'["\']([a-z_]+\.[a-z_]+)["\']', bloco.group(1))) \
-        if bloco else set()
+    """O que a UI de fato recebe.
+
+    Até o F-UI isto era uma lista fixa de CINCO nomes no `daemonClient.ts`, e
+    esta função a lia de lá. Agora o cliente pergunta ao servidor
+    (`/events/types`) e escuta tudo que ele declara, então o conjunto
+    repassado É o vocabulário declarado — e o teto de mudos cai a zero.
+
+    Mas só enquanto o cliente estiver de fato ligado a `/events/types`: sem
+    isso valem os nomes fixos do arranque, e o teto volta a acusar. Ler o
+    `.ts` é o que impede este arquivo de virar tautologia sobre o backend —
+    o que ele mede é a distância entre o que o daemon emite e o que a
+    interface recebe."""
+    cliente = CLIENTE.read_text()
+    fixos = re.search(r'for \(const t of \[(.*?)\]', cliente, re.S)
+    fixos_set = (set(re.findall(r'["\']([a-z_]+\.[a-z_]+)["\']', fixos.group(1)))
+                 if fixos else set())
+    if "this.eventTypes()" not in cliente:
+        return fixos_set
+    from llmwiki.runtime.events import EVENT_TYPES
+    return fixos_set | set(EVENT_TYPES)
 
 
 def test_eventos_mudos_nao_aumentam():
@@ -119,20 +140,14 @@ def test_eventos_mudos_nao_aumentam():
         f"(teto {MAX_EVENTOS_MUDOS}):\n  " + "\n  ".join(sorted(mudos)))
 
 
-def test_o_evento_do_ato_de_curadoria_e_um_dos_mudos():
-    """`curation.applied` é emitido pelo esqueleto de TODO ato (F1-PR1) e
-    não chega à UI: o dialog descobre o resultado pela resposta HTTP, e
-    nenhuma outra superfície sabe que o canônico mudou. Declarado aqui para
-    não se perder entre 44."""
-    assert "curation.applied" in _eventos_emitidos() - _eventos_repassados()
-
-
-def test_o_evento_que_esta_sessao_criou_tambem_e_mudo():
-    """Honestidade sobre o próprio trabalho: `themes.adopt_refused` foi
-    emitido no F2-PR2 e ninguém escuta. Emitir evento sem escutador é
-    exatamente a ponta solta que este arquivo mede — inclusive quando fui eu
-    que a criei."""
-    assert "themes.adopt_refused" in _eventos_emitidos() - _eventos_repassados()
+def test_os_dois_eventos_nomeados_como_mudos_agora_chegam():
+    """`curation.applied` (emitido por TODO ato desde o F1-PR1) e
+    `themes.adopt_refused` (que eu mesmo criei mudo no F2-PR2) eram os dois
+    casos nomeados individualmente para não se perderem entre 44. Estão do
+    outro lado da ponte."""
+    mudos = _eventos_emitidos() - _eventos_repassados()
+    assert "curation.applied" not in mudos
+    assert "themes.adopt_refused" not in mudos
 
 
 # ================================ o degrau de similaridade morto

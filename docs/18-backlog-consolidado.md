@@ -79,7 +79,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 |---|---|:--:|---|
 | **PR-0.1** ✅ **ENTREGUE** (ADR-47) | **Release executável** — `exclude_binaries=True`, `sqlite-vec` no build, job de release com trigger de tag, token de release em `[gate].ci_enforced`, `expected_mechanisms` no registro | 4 | **G-8 e G-10 reabertas.** Sem o token no gate, `test_ci_executa_todo_o_gate_declarado` **estruturalmente nunca** poderá acusar |
 | **F3-PR0** ✅ **ENTREGUE** | **Fechar o laço da decisão canônica** — B1 **com RFC**, pré-condição de frescor ou INV de cobertura bundle→índice, `try/finally` no rebuild, teste do degrau de similaridade | 6 | **Pré-requisito da F3**: o P-7 faz `promote` consultar uma escada com dois degraus mortos |
-| **F-UI** | **As superfícies órfãs num PR só** — doctor, histórico com undo, cancel/retry, repasse genérico de SSE | 8 | Cinco achados, um arquivo de cliente, cinco painéis. Muito mais barato junto. **Pré-requisito: smoke de UI, hoje inexistente** |
+| **F-UI** ✅ **ENTREGUE** (ADR-49) | **As superfícies órfãs num PR só** — doctor, histórico com undo, cancel/retry, repasse genérico de SSE | 8 | Cinco achados, um arquivo de cliente, cinco painéis. Muito mais barato junto. **Pré-requisito: smoke de UI, hoje inexistente** |
 | **F-EPIST** | Trilha epistêmica, um PR por item | 5 | B4, rebaixar `retrieval_rrf_hedge`, contratos de `memory_freeze` e `consolidate_inbox`, `rglob` no `test_architecture` |
 
 ---
@@ -127,7 +127,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 | **X1** | **Numa máquina sem o extra `[ml]` compilado, "comunidade" é componente conexo** — o `backend` do carimbo hoje declara isso, mas nenhuma superfície mostra | 🔴 medido (o campo existe; o painel não usa) |
 | **X2** | O badge de frescor do grafo existe (F2-PR3+4); os demais artefatos derivados **não têm badge** | 🔴 medido |
 | **X3** | A fila propõe ato de escrita sobre página que pode estar aposentada — `gap_items` não filtra vitalidade | ⚪ alegado; **não reproduzi** no cenário testado (a página supersedida não entrou na fila), mas não descartei: pode ser que ela nunca fosse candidata a gap |
-| **X4** | Não existe runner de teste de UI no desktop — só `tsc --noEmit` | 🔴 medido; o cético provou com esbuild + jsdom que é viável |
+| **X4** ✅ **RESOLVIDO** (F-UI, ADR-49) | Não existe runner de teste de UI no desktop — só `tsc --noEmit` | 🔴 medido; `vitest` + `jsdom` entraram com config separada, e `npm test` está em `[gate]`. Medido de novo na entrada: com o `onClick` do reparo desligado, `tsc --noEmit` sai **0** e o smoke reprova |
 
 ---
 
@@ -156,7 +156,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
    consequência. Exige RFC: o casamento entre "corrigir uma linha de SQL" e
    "ativar um árbitro LLM sobre o canônico" é exatamente o que a regra existe
    para impedir;
-3. **F-UI** — converte sete capacidades já pagas em produto. Depende de um
+3. ✅ **F-UI** — converte sete capacidades já pagas em produto. Depende de um
    smoke de UI, que é o pré-requisito real;
 4. **F3** (P-3 + P-7) — a fila para de mentir;
 5. **F-EPIST** em paralelo, a qualquer momento: itens independentes e baratos.

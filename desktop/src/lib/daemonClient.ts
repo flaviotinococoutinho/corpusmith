@@ -28,6 +28,40 @@ export interface Finding {
   meta?: Record<string, unknown>;
 }
 
+// ------------------------------------------------------------- F-UI: doctor
+// Os invariantes INV-001..006 eram o único verificador de integridade do
+// produto e só existiam no terminal. O app pintava `🩺 stacks!` em vermelho e
+// não oferecia ato nenhum — embora `REPAIRABLE` resolva três dos seis com um
+// POST. Tipar o relatório aqui é o que faz `tsc` cobrar o painel quando o
+// backend renomear um campo.
+export interface DoctorFinding {
+  inv: string;
+  severity: "error" | "warn";
+  message: string;
+  hint?: string;
+}
+
+export interface DoctorReport {
+  ok: boolean;
+  findings: DoctorFinding[];
+  repaired: { mode?: string; pages?: number } | null;
+  counts: { error: number; warn: number };
+  derivations?: Record<string, { state: string; reason?: string }>;
+}
+
+/** Ato de curadoria já aplicado (`GET /curation/history`).
+ *  `undone_by` preenchido = já desfeito; `undoes` = este É um desfazer. */
+export interface CurationAct {
+  id: number;
+  act: string;
+  params: Record<string, unknown>;
+  commit_sha: string | null;
+  pages: string[];
+  created_at: number;
+  undoes: number | null;
+  undone_by: number | null;
+}
+
 // F2-PR3+4: o grafo declara DE QUANDO é a intermediação e QUEM a mediu.
 // `computed: false` = ainda não medida — a interface serve grau em vez de
 // inventar influência, e o badge oferece o job que a mede.
@@ -206,21 +240,58 @@ export class DaemonClient {
   enqueue = (type: string, payload: unknown = {}) =>
     this.post("/jobs", { type, payload });
 
+  eventTypes = () => this.get<{ types: string[] }>("/events/types");
+
+  /** Ponte SSE — F-UI.
+   *
+   *  O `EventSource` só entrega um evento NOMEADO a quem tenha feito
+   *  `addEventListener` com aquele nome exato; `onmessage` recebe apenas os
+   *  sem nome. Este método registrava CINCO nomes fixos e o servidor emite
+   *  cinquenta e três: `page.stage`, `pipeline.*`, `consolidate.done` e
+   *  `source.ingested` saíam do backend e morriam aqui. O Stepper do Inbox e
+   *  a barra de progresso por job estavam escritos, tipados — e nunca foram
+   *  alimentados uma única vez.
+   *
+   *  Uma lista fixa maior repetiria o erro na próxima adição. O cliente
+   *  PERGUNTA ao servidor o que ele emite (`/events/types`), e o servidor não
+   *  pode responder desatualizado porque `EventBus.emit` recusa tipo fora do
+   *  vocabulário declarado.
+   *
+   *  A conexão abre ANTES da lista chegar, de propósito: perder eventos
+   *  enquanto se espera por um GET seria trocar um buraco por outro. Até a
+   *  resposta, valem os nomes de sempre. */
   events(onEvent: (e: any) => void): EventSource {
     const es = new EventSource(
       `${this.base()}/events?auth=${encodeURIComponent(this.info?.token ?? "")}`);
-    es.onmessage = ev => onEvent(JSON.parse(ev.data));
-    for (const t of ["job.started", "job.done", "job.failed",
-                     "memory.promoted", "compile.done"]) {
+    const registrados = new Set<string>();
+    const escutar = (t: string) => {
+      if (registrados.has(t)) return;
+      registrados.add(t);
       es.addEventListener(t, ev =>
         onEvent(JSON.parse((ev as MessageEvent).data)));
-    }
+    };
+    es.onmessage = ev => onEvent(JSON.parse(ev.data));
+    for (const t of ["job.started", "job.done", "job.failed",
+                     "memory.promoted", "compile.done"]) escutar(t);
+    this.eventTypes()
+      .then(({ types }) => types.forEach(escutar))
+      .catch(() => { /* daemon antigo: seguem os cinco de sempre */ });
     return es;
   }
 
+  cancelJob = (id: string) => this.post<any>(`/jobs/${id}/cancel`, {});
+  retryJob = (id: string) => this.post<any>(`/jobs/${id}/retry`, {});
+
   // ---------------------------------------------- doctor (F0, v1.8.1)
-  doctor = () => this.get<any>("/system/doctor");
-  doctorRepair = () => this.post<any>("/system/doctor/repair", {});
+  doctor = () => this.get<DoctorReport>("/system/doctor");
+  doctorRepair = () => this.post<DoctorReport>("/system/doctor/repair", {});
+
+  // ------------------------------------------- histórico de atos (F-UI)
+  // `GET /curation/history` existe desde o F1-PR1 e nunca teve método aqui:
+  // sem o `act_id`, o `undo` — completo no backend, com 409 nomeado — era
+  // inalcançável pelo app. Aplicar era irreversível pela interface.
+  curationHistory = (limit = 30) =>
+    this.get<{ acts: CurationAct[] }>(`/curation/history?limit=${limit}`);
 
   // ------------------------------------------- cockpit (v0.7 §7.1)
   dashboard = () => this.get<any>("/cockpit/dashboard");

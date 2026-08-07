@@ -11,6 +11,7 @@ import { FocusPanel } from "./panels/FocusPanel";
 import { GraphPanel } from "./panels/GraphPanel";
 import { InsightsPanel } from "./panels/InsightsPanel";
 import { CurationPanel } from "./panels/CurationPanel";
+import { DoctorPanel } from "./panels/DoctorPanel";
 import { StatusBar } from "./panels/StatusBar";
 
 const TABS = {
@@ -26,6 +27,9 @@ const TABS = {
   curation:  ["🗂 Curadoria", CurationPanel],
   quality:   ["✅ Qualidade", QualityPanel],
   processes: ["⚙️ Processos", ProcessesPanel],
+  // F-UI: o doctor tinha use case, endpoint e método de cliente desde a F0,
+  // e nenhuma superfície — a StatusBar acusava o problema sem oferecer ato.
+  doctor:    ["🩺 Integridade", DoctorPanel],
 } as const;
 
 export default function App() {
