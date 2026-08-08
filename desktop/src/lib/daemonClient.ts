@@ -355,6 +355,19 @@ export class DaemonClient {
   nextActions = (limit = 40) =>                  // R3 (v1.8): fila única
     this.get<NextActionsQueue>(`/cockpit/next-actions?limit=${limit}`);
 
+  /** Veredito humano sobre PADRÃO COMPUTADO (F3-PR2, P-3).
+   *
+   *  Ponte e contradição não são páginas: são relações que o job recomputa.
+   *  Dizer "esta não vale" precisa de um lugar que sobreviva à recomputação —
+   *  senão o item rejeitado volta na execução seguinte, e a fila ensina o
+   *  usuário a ignorá-la. `until` adia com prazo; sem ele, some até alguém
+   *  reabrir. Nada é DELETADO. */
+  patternVerdict = (body: { kind: string; pages: string[];
+                            status: "accepted" | "rejected" | "deferred";
+                            until?: number; note?: string }) =>
+    this.post<{ kind: string; key: string; status: string }>(
+      "/cockpit/next-actions/verdict", body);
+
   /** Ato de curadoria (F1-PR6). Método PRÓPRIO em vez de usar `post()`:
    *  precisa preservar o corpo do erro. Aditivo — não toca a assinatura
    *  de `post()`/`get()`, conforme a regra de colisão do docs/15 §6. */

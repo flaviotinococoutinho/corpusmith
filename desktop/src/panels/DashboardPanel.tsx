@@ -16,6 +16,11 @@ const ACTION_TAB: Record<string, string> = {
 const navigate = (tab: string) =>
   window.dispatchEvent(new CustomEvent("bc:navigate", { detail: tab }));
 
+// Padrões COMPUTADOS: relações derivadas que o job recomputa, não páginas.
+// Veredito sobre página é ato de curadoria (vai ao frontmatter); veredito
+// sobre padrão vai para `pattern_verdicts`, com `until` e sem DELETE.
+const PADROES = new Set(["bridge", "contradiction"]);
+
 function NextActionsQueue({ onApplied }: { onApplied(): void }) {
   const [q, setQ] = useState<NextActionsQueue | null>(null);
   // F1-PR6: o clique abre o ATO quando o item declara ofertas; quando não
@@ -32,6 +37,19 @@ function NextActionsQueue({ onApplied }: { onApplied(): void }) {
     client.nextActions().then(setQ).catch(() => setFalhou(true));
   };
   useEffect(carregar, []);
+
+  /** As páginas que formam o padrão — a chave do veredito sai DELAS, nunca
+   *  do rótulo de comunidade (que é um número de época e muda a cada job). */
+  const paginasDo = (a: NextActionItem): string[] =>
+    a.action.type === "link"
+      ? [a.action.src as string, a.action.dst as string]
+      : (a.action.pages as string[] | undefined) ?? [a.target];
+
+  const julgar = (a: NextActionItem, status: "rejected" | "deferred",
+                  until?: number) =>
+    client.patternVerdict({ kind: a.kind, pages: paginasDo(a), status, until })
+      .then(carregar)
+      .catch(() => setFalhou(true));
   if (falhou)
     return <section><h2 className="font-medium mb-2">Próxima ação</h2>
       <p className="text-sm text-neutral-500">
@@ -77,6 +95,21 @@ function NextActionsQueue({ onApplied }: { onApplied(): void }) {
                                          text-[11px] shrink-0"
                       title={o.label}
                       onClick={() => setAberto(o)}>{o.act}</button>))}
+            {/* F3-PR2: padrão COMPUTADO (ponte, contradição) aceita veredito.
+                Sem ele, "já olhei, é falso positivo" não tinha onde ser dito
+                e o item de maior VoI voltava ao topo todo dia. Página não
+                entra aqui: veredito sobre canônico é ato de curadoria. */}
+            {PADROES.has(a.kind) && (
+              <div className="flex gap-1 shrink-0">
+                <button className="border rounded px-1.5 py-0.5 text-[11px]"
+                        title="adiar por 30 dias — volta depois"
+                        onClick={() => julgar(a, "deferred",
+                                              Date.now() / 1000 + 30 * 86400)}>
+                  adiar</button>
+                <button className="border rounded px-1.5 py-0.5 text-[11px]"
+                        title="não vale a pena — some até alguém reabrir"
+                        onClick={() => julgar(a, "rejected")}>dispensar</button>
+              </div>)}
             <div className="text-right text-xs tabular-nums shrink-0">
               <div title="valor de informação">VoI {a.value.toFixed(2)}</div>
               <div className="text-neutral-400"

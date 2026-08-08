@@ -60,7 +60,8 @@ def load_registry(path: Path | str | None = None
 #   desfechos ruins — contrato escrito às pressas para calar o gate, ou o gate
 #   desligado. Warn mantém a dívida VISÍVEL no mesmo lugar onde ela será paga.
 EXPECTED_MECHANISMS = (
-    "abstention", "adaptive_strategy_selection", "cognitive_priority",
+    "abstention", "adaptive_strategy_selection", "attention_queue",
+    "cognitive_priority",
     "graph_cache", "metacog_observation_mining", "native_graph_kernel",
     "native_index_builder", "native_sketch_kernel", "native_text_extraction",
     "pattern_layer_snapshot", "reconciliation", "retrieval_rrf_hedge",
@@ -69,8 +70,9 @@ EXPECTED_MECHANISMS = (
 
 # `docs/14` §5: "quatro contratos novos obrigatórios" seguido de SEIS nomes —
 # `pattern_layer_snapshot` já entrou (F2), os cinco abaixo não.
+# `attention_queue` saiu daqui no F3-PR2 e entrou em EXPECTED_MECHANISMS: a
+# dívida foi PAGA, e é o gesto de mover o nome que registra isso.
 PROMISED_MECHANISMS = (
-    ("attention_queue", "docs/14 §4 (fila de atenção)"),
     ("evidence_sufficiency", "docs/14 §4 (selo 2D de suporte)"),
     ("factual_conflict", "docs/14 §4 (policy.factual_conflict)"),
     ("inferred_cooccurrence_edges", "docs/14 §4 (co-menção materializada)"),

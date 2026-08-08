@@ -198,3 +198,28 @@ CREATE TABLE IF NOT EXISTS checkpoints(
   input_state TEXT NOT NULL,     -- estado da FONTE quando foi computada
   computed_at REAL NOT NULL,
   detail      TEXT);             -- JSON livre da derivação
+
+-- Vereditos sobre PADRÃO COMPUTADO (F3-PR2, P-3). Mora em `runtime.db` e não
+-- em `index.db` pela mesma razão dos `checkpoints` (ADR-46): o padrão é
+-- recomputável e morre no rebuild, mas o JUÍZO HUMANO sobre ele não pode
+-- morrer junto — o job `leiden` recriaria `graph_bridges` do zero e traria de
+-- volta exatamente a ponte que o usuário acabou de rejeitar.
+--
+-- `key` é derivada dos rel_paths ORDENADOS da evidência canônica, NUNCA do
+-- inteiro `community`: o rótulo de comunidade é um número de época, muda a
+-- cada execução do Leiden, e um veredito chaveado por ele suprimiria um
+-- padrão diferente na semana seguinte.
+--
+-- `until` é a supressão com prazo: rejeitar não é apagar. NULL = para sempre
+-- (até alguém reabrir), timestamp = volta a aparecer depois.
+CREATE TABLE IF NOT EXISTS pattern_verdicts(
+  kind      TEXT NOT NULL,        -- 'bridge' | 'contradiction' | …
+  key       TEXT NOT NULL,        -- sha256 dos rel_paths ordenados
+  status    TEXT NOT NULL
+            CHECK(status IN ('accepted','rejected','deferred')),
+  until     REAL,                 -- NULL = sem prazo
+  pages     TEXT NOT NULL,        -- JSON: a evidência canônica que gerou a key
+  note      TEXT,
+  decided_at REAL NOT NULL,
+  PRIMARY KEY (kind, key));
+CREATE INDEX IF NOT EXISTS idx_verdicts_kind ON pattern_verdicts(kind, until);

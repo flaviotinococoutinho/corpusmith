@@ -111,7 +111,7 @@ def test_version_e_o_conjunto_de_mecanismos_andam_juntos():
     digest = hashlib.sha256(
         ",".join(sorted(c.mechanism_id for c in registry.contracts))
         .encode()).hexdigest()[:12]
-    assert (registry.version, digest) == ("1.6.0", "5604232f4789"), (
+    assert (registry.version, digest) == ("1.7.0", "22536e836e7d"), (
         "o conjunto de mecanismos mudou — bumpe [registry].version em "
         "epistemics.toml e atualize este par no mesmo commit")
 
@@ -122,14 +122,16 @@ def test_apagar_contrato_deixa_o_lint_vermelho(tmp_path):
     finding(s)", exit 0. Falsificável — sem `_completude`, isto passa."""
     mutado = lint(_sem_contrato("theme_identity_matching", tmp_path))
     assert mutado["ok"] is False
-    assert mutado["mechanisms"] == 14
+    assert mutado["mechanisms"] == 15
     erros = [f for f in mutado["findings"] if f["severity"] == "error"]
     assert [(f["code"], f["mechanism_id"]) for f in erros] == [
         ("epistemic.mechanism_missing", "theme_identity_matching")]
 
 
 def test_promessa_nao_escrita_e_warn_e_nao_trava_o_gate():
-    """`docs/14` §5 declara seis contratos obrigatórios; cinco não existem.
+    """`docs/14` §5 declara seis contratos obrigatórios; quatro ainda não
+    existem (`pattern_layer_snapshot` entrou na F2, `attention_queue` no
+    F3-PR2 — e é o gesto de mover o nome entre as listas que registra isso).
     Erro travaria o gate hoje e o incentivo seria escrever contrato às
     pressas ou desligar a checagem — a dívida fica visível, não fatal."""
     resultado = lint()
@@ -365,7 +367,7 @@ def test_cli_lint_exit_codes(settings, capsys):
     # exit 0 = nenhum ERRO. Desde o G-10 a saída lista as dívidas conhecidas
     # (contratos prometidos por docs/14 e ainda não escritos) como `warn` —
     # visíveis sem travar o gate.
-    assert "15 mecanismo(s)" in out
+    assert "16 mecanismo(s)" in out
     assert "error" not in out
     # registro quebrado ⇒ ok=False (exit 1 no comando)
     broken = lint(path=settings.home / "nao_existe.toml")

@@ -58,7 +58,7 @@ machine_page_template_closed = true               # subclasses não sobrescrevem
 name = "runtime.db"
 authority = "operacional"
 rebuildable = false
-schema_version = 9          # + checkpoints (estado normalizado das derivações)
+schema_version = 10         # + pattern_verdicts (juízo humano sobre padrão computado)
 [[database]]
 name = "index.db"
 authority = "nenhuma (projeção)"

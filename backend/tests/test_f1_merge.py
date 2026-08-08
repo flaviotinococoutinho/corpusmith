@@ -206,10 +206,16 @@ def test_preview_declara_que_a_fusao_resolve_a_contradicao(base):
     assert "RESOLVE a contradição" in nota and DOI in nota
 
 
-def test_preview_declara_a_terceira_pagina_que_a_fusao_nao_trata(base, kb):
-    """O achado deste PR: `check_corpus` marca o grupo INTEIRO como
-    resolvido quando uma sucessão aparece nele. Fundir A em B silencia o
-    alerta também para o par (B, C) — sem tratá-lo. O preview declara."""
+def test_a_terceira_pagina_sobrevive_a_fusao(base, kb):
+    """O inverso do teste que estava aqui — e era o combinado.
+
+    Ele fixava a dívida do ADR-41.5: `check_corpus` marcava o grupo INTEIRO
+    como resolvido assim que UMA sucessão aparecesse, então fundir A em B
+    silenciava também o par (B, C), sem tratá-lo. O F3-PR2 pagou a dívida:
+    a sucessão particiona o grupo e resolve só o bloco que liga.
+
+    Falsificável — com o `any(...)` de volta, `check_corpus` devolve [] e
+    esta asserção cai."""
     BundleWriter(kb).write(
         [_doc("concepts/c.md", "Versão C", f"# C\n\noutra. Ver doi:{DOI}.")],
         log_kind="Update", log_message="m", commit_message="c")
@@ -217,11 +223,13 @@ def test_preview_declara_a_terceira_pagina_que_a_fusao_nao_trata(base, kb):
     nota = MergePages(base, page="concepts/b.md", into="concepts/a.md"
                       ).execute(dry_run=True)["preview"]["note"]
     assert "concepts/c.md" in nota
-    assert "silencia o grupo" in nota
-    # e a consequência declarada é REAL: depois da fusão o alerta some
+    assert "SEGUE na fila" in nota
     MergePages(base, page="concepts/b.md", into="concepts/a.md").execute()
     reader = BundleReader(kb / "bundle")
-    assert check_corpus(list(reader.iter_concepts()), reader) == []
+    restantes = check_corpus(list(reader.iter_concepts()), reader)
+    assert [f.meta["pages"] for f in restantes] == [
+        ["concepts/a.md", "concepts/c.md"]], (
+        "a convivência não tratada precisa continuar visível")
 
 
 def test_preview_sem_contradicao_nao_inventa_declaracao(base, kb):

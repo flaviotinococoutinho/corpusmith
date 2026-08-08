@@ -1721,3 +1721,62 @@ golden set; undo de criação continua dívida do ADR-41.1 (o `new_slug` cria
 via promote, que não é ato de curadoria); colisão interativa na consolidação
 em lote fica para F6.
 9 testes de backend + 4 de UI; **671 no backend, 21 no desktop**.
+
+### ADR-51 — Veredito e vitalidade: a fila para de mentir (v1.9.9, F3-PR2)
+**"Nada fecha e nada aposenta"** é como `docs/14` nomeia o P-3, e cada palavra
+era literal. Reproduzido antes de corrigir:
+```
+review_items -> ['concepts/apagada.md', 'concepts/morta.md', 'concepts/viva.md']
+```
+`morta.md` tinha `superseded_by` — aposentada por um ato humano explícito — e
+`apagada.md` **nunca existiu no bundle**: `page_heat` guarda uso por caminho e
+nenhuma fonte o confrontava com a autoridade. Uma pergunta respondida também
+não tinha como sair: `type: question` valia 0.9 e voltava ao topo todo dia.
+**Dois níveis, separados pelo invariante — e a separação é a decisão.**
+Veredito sobre objeto **canônico** mora no canônico: `answered_by` e
+`resolved_at` no frontmatter, escritos pelo ato `CloseQuestion`, versionados
+em Git e revertíveis pelo `undo` como qualquer outro ato. Veredito sobre
+padrão **computado** (ponte, contradição candidata) não pode morar lá — não é
+página, é relação derivada que o job recria — e vai para `pattern_verdicts`
+(runtime 9→10), pelo MESMO motivo dos checkpoints (ADR-46): guardado em
+`index.db`, o juízo humano seria apagado pela recomputação que ele existe
+para calar, e o item rejeitado voltaria na execução seguinte.
+**A chave sai da evidência canônica, nunca da época.** O caminho óbvio seria
+chavear pelo inteiro `community` do Leiden — e ele muda a cada execução, então
+o veredito de hoje suprimiria um padrão diferente na semana que vem.
+`pattern_key` hasheia os `rel_path` ordenados: A↔B é o mesmo padrão que B↔A,
+para sempre. E rejeitar suprime com `until`, **jamais DELETE** — apagar a
+linha seria desfeito pela próxima recomputação e não deixaria rastro do juízo.
+**A primeira verificação do `CloseQuestion` era TEATRO, e a medição mostrou.**
+A ideia óbvia — recusar se o `/ask` ainda abstém — não serve: com
+`abstain_threshold = 0.0` (o default) a abstenção quase nunca dispara e,
+pior, perguntar o título de uma pergunta **encontra a própria pergunta**, que
+é uma página do bundle (`páginas na evidência: ['questions/q2.md']`). A guarda
+passaria apontando para uma página de culinária. O que se verifica é o
+**vínculo**: perguntado o título, o produto chega à página declarada como
+resposta? A própria pergunta é descartada das evidências. E a verificação não
+decide — `force=true` fecha contra a máquina, e a força fica no preview e no
+log.
+**`policy.dangling_successor` não existia nem para `superseded_by`**, que está
+no produto desde a v0.8: dava para aposentar uma página apontando para o
+vazio, tirando-a da fila sem sucessora real. A regra vale para o LOTE, porque
+a fusão escreve sucessora e aposentada no mesmo `write`.
+**A dívida do ADR-41.5 foi paga junto**, porque é o mesmo defeito: `resolved =
+any(...)` silenciava o GRUPO INTEIRO assim que uma sucessão aparecesse — com
+A, B e C no mesmo DOI, fundir A em B calava o par (B, C) sem tratá-lo, no item
+de maior VoI da fila. A sucessão passa a **particionar** o grupo (union-find):
+resolve o bloco que liga, não o grupo. O teste que fixava a dívida inverteu de
+sinal, como o combinado.
+**`[mechanisms.attention_queue]` finalmente existe** (registro 1.6.0 → 1.7.0):
+a superfície que ORDENA o tempo do usuário não tinha contrato nenhum e era um
+dos cinco `mechanism_promised` do lint. O nome saiu de `PROMISED_MECHANISMS` e
+entrou em `EXPECTED_MECHANISMS` — o gesto de mover é o que registra a dívida
+paga. Restam quatro.
+**Verificado no fio**, daemon real: pergunta na fila → `close_question` sem
+`force` (*"verificado: perguntado o título, o produto chega a …"*) → **fila
+vazia**, com log `[Update] pergunta fechada por …`.
+**Falsificabilidade, seis mutações**: `review_items` sem filtro · `gap_items`
+sem o corte · `bridge_items` sem vitalidade nem veredito (3 testes) ·
+`check_corpus` com o `any()` de volta · sem `dangling_successor` · verificação
+do `close` desligada. Cada uma derruba exatamente os testes que a cobrem.
+19 testes de backend + 4 de UI; **690 no backend, 25 no desktop**.

@@ -150,6 +150,12 @@ def test_next_actions_truncates_with_flag(settings, kb):
 
 
 def test_bridge_items_reads_persisted_bridges(settings, kb):
+    # F3-PR2: as páginas precisam EXISTIR no bundle. Antes o fixture inseria
+    # pontes para caminhos inventados e passava — o mesmo buraco que fazia a
+    # fila propor trabalho sobre página inexistente em produção.
+    _write(settings, kb,
+           _doc("concepts/tema-a.md", "Tema A", "# A\n\ntexto."),
+           _doc("concepts/tema-b.md", "Tema B", "# B\n\ntexto."))
     idx = connect(settings.app_support / "index.db")
     idx.execute("INSERT OR REPLACE INTO graph_bridges VALUES (?,?,?,?,?)",
                 ("concepts/tema-a.md", "concepts/tema-b.md", 0.15, 4, 9))

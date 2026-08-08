@@ -337,6 +337,26 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
         com origem, valor e custo. PROPÕE; o humano decide."""
         return curation.next_actions(limit=limit)
 
+    @app.post("/cockpit/next-actions/verdict", dependencies=[Depends(auth)])
+    def next_action_verdict(body: dict):
+        """Veredito humano sobre PADRÃO COMPUTADO (F3-PR2, P-3).
+
+        Aqui — e não num ato de curadoria — porque o alvo não é uma página:
+        é uma relação derivada (ponte, contradição candidata) que o job
+        recomputa. Escrever isso no canônico seria inventar conteúdo; o
+        veredito vai para `pattern_verdicts`, chaveado pela evidência
+        canônica e suprimindo com `until`, jamais DELETE."""
+        from ..runtime.verdicts import record
+        try:
+            v = record(s, body["kind"], body["pages"], body["status"],
+                       until=body.get("until"), note=body.get("note", ""))
+        except KeyError as e:
+            raise HTTPException(400, f"campo obrigatório ausente: {e}")
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        return {"kind": v.kind, "key": v.key, "status": v.status,
+                "until": v.until, "pages": list(v.pages)}
+
     @app.get("/cockpit/gaps", dependencies=[Depends(auth)])
     def structural_gaps(limit: int = 8):
         """Lacunas estruturais (v1.1, InfraNodus próprio): blocos que
