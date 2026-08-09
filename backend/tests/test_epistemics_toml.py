@@ -17,6 +17,20 @@ def _params(mechanism_id: str) -> dict[str, str]:
     return dict(contract.parameters)
 
 
+def test_rrf_hedge_nao_alega_regret_no_regime_bandit():
+    """C13 (docs/17): o bound do Hedge exige perda de TODOS os experts por
+    rodada; `record_outcome` só atualiza os streams CONTRIBUINTES (bandit
+    sem correção de amostragem) e o clamp [0.5, 2.0] satura em 3 desfechos
+    (medido: 1.0→1.284→1.649→2.0). O MESMO kernel aplicado a estratégias
+    declara `heuristic` — os dois usos devem alegar a mesma honestidade, e
+    o peso saturável precisa estar nos failure modes declarados."""
+    from llmwiki.harness.epistemics import load_registry
+    registry, _ = load_registry()
+    contract = registry.get("retrieval_rrf_hedge")
+    assert contract.guarantee.kind.value == "heuristic"
+    assert any("satura" in m.text for m in contract.known_failure_modes)
+
+
 def test_rrf_hedge_parameters_match_code():
     from llmwiki.retrieval.streams import RRF_K
     from llmwiki.kernel.information import hedge

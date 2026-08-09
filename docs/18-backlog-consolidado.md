@@ -80,7 +80,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 | **PR-0.1** ✅ **ENTREGUE** (ADR-47) | **Release executável** — `exclude_binaries=True`, `sqlite-vec` no build, job de release com trigger de tag, token de release em `[gate].ci_enforced`, `expected_mechanisms` no registro | 4 | **G-8 e G-10 reabertas.** Sem o token no gate, `test_ci_executa_todo_o_gate_declarado` **estruturalmente nunca** poderá acusar |
 | **F3-PR0** ✅ **ENTREGUE** | **Fechar o laço da decisão canônica** — B1 **com RFC**, pré-condição de frescor ou INV de cobertura bundle→índice, `try/finally` no rebuild, teste do degrau de similaridade | 6 | **Pré-requisito da F3**: o P-7 faz `promote` consultar uma escada com dois degraus mortos |
 | **F-UI** ✅ **ENTREGUE** (ADR-49) | **As superfícies órfãs num PR só** — doctor, histórico com undo, cancel/retry, repasse genérico de SSE | 8 | Cinco achados, um arquivo de cliente, cinco painéis. Muito mais barato junto. **Pré-requisito: smoke de UI, hoje inexistente** |
-| **F-EPIST** | Trilha epistêmica, um PR por item | 5 | B4, rebaixar `retrieval_rrf_hedge`, contratos de `memory_freeze` e `consolidate_inbox`, `rglob` no `test_architecture` |
+| **F-EPIST** (em andamento, um PR por item) | Trilha epistêmica | 5 | ✅ B4 · ✅ rebaixar `retrieval_rrf_hedge` (C13: heuristic + failure mode do clamp saturável, registro 1.7.1) · ✅ `rglob`/import absoluto no `test_architecture` (T7) · **restam**: contratos de `memory_freeze` e `consolidate_inbox`, remover `cold_memory.py` dos refs de `abstention`, campo de efeito colateral no `EpistemicContract` (C6) |
 
 ---
 
