@@ -14,6 +14,7 @@ graça, herdados do esqueleto.
 """
 from __future__ import annotations
 from .base import CurationAct, CurationPreview
+from .close import CloseQuestion
 from .edit import EditPage
 from .invalidate import InvalidatePage
 from .link import LinkPages, UnlinkPages
@@ -23,6 +24,7 @@ from .undo import UndoCurationAct, UndoNotExpressible
 
 ACTS: dict[str, type[CurationAct]] = {
     "supersede": SupersedePage,
+    "close_question": CloseQuestion,
     "edit": EditPage,
     "invalidate": InvalidatePage,
     "link": LinkPages,
@@ -31,6 +33,7 @@ ACTS: dict[str, type[CurationAct]] = {
     "undo": UndoCurationAct,
 }
 
-__all__ = ["ACTS", "CurationAct", "CurationPreview", "EditPage",
+__all__ = ["ACTS", "CloseQuestion", "CurationAct", "CurationPreview",
+           "EditPage",
            "InvalidatePage", "LinkPages", "MergePages", "SupersedePage",
            "UndoCurationAct", "UndoNotExpressible", "UnlinkPages"]

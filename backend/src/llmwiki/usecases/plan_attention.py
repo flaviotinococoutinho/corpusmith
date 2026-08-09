@@ -22,6 +22,7 @@ from .base import UseCase
 from .cognitive_state import current_state
 from ..kernel.activation import base_level_activation, retrieval_probability
 from ..kernel.attention import fill_budget, review_gain
+from ..kernel.vitality import aposentada, filtrar, vivas
 from ..okf.bundle import BundleReader
 from ..runtime.db import connect
 from ..settings import Settings
@@ -34,6 +35,19 @@ _GAP_VALUE = {"question": 0.9, "contested": 0.8, "stale": 0.6,
 
 def _cost(words: int) -> float:
     return max(_MIN_COST, round(words / _WPM, 1))
+
+
+def paginas_vivas(settings: Settings) -> set[str]:
+    """Alvos que ainda aceitam trabalho novo (F3-PR2, P-3).
+
+    UMA leitura do bundle, compartilhada por todas as fontes da fila. Antes
+    cada uma decidia sozinha o que contava — e `review_items`, que lê
+    `page_heat` (histórico de uso por caminho, sem confronto com a
+    autoridade), propunha revisar página aposentada e até página que nunca
+    existiu. Medido."""
+    reader = BundleReader(settings.path("knowledge") / "bundle")
+    return vivas({d.rel_path: d.meta.model_dump(exclude_none=True)
+                  for d in reader.iter_concepts()})
 
 
 # As três fontes viram funções de módulo (v1.8): PlanAttention monta a
@@ -62,7 +76,7 @@ def review_items(settings: Settings) -> list[dict]:
                     "reason": f"revisão no ponto de esforço produtivo "
                               f"(P(recall)={p:.2f} ⇒ ganho {gain:.2f})"})
     idx.close()
-    return out
+    return filtrar(out, paginas_vivas(settings))
 
 
 def gap_items(settings: Settings) -> list[dict]:
@@ -75,6 +89,11 @@ def gap_items(settings: Settings) -> list[dict]:
     for doc in reader.iter_concepts():
         meta = doc.meta.model_dump(exclude_none=True)
         words = len(doc.body.split())
+        # F3-PR2: sucedida ou invalidada não é alvo de trabalho NOVO — e uma
+        # pergunta FECHADA (`answered_by`) muito menos: era o item de maior
+        # valor da fila (0.9) e voltava toda vez, mesmo depois de respondida
+        if aposentada(meta) or meta.get("answered_by"):
+            continue
         if doc.meta.type == "question":
             kind, reason = "question", "pergunta aberta na sua memória"
         elif doc.rel_path in contested:

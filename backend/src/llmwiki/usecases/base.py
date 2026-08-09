@@ -94,6 +94,15 @@ class MachinePageUseCase(UseCase):
             document.rel_path = decision["target"]
         if decision["op"] == "UPDATE":
             document.rel_path = decision["target"]
+        if decision["op"] in ("UPDATE", "RECYCLE"):
+            # RFC-003 §4.4: UPDATE reconstruía o frontmatter DO ZERO a
+            # partir do draft — tags e campos curados por humano na
+            # residente evaporavam a cada recompilação, com
+            # `policy.metadata_shrink` (warn) como único guarda de um
+            # caminho que o produto percorre sozinho. A fusão é a MESMA do
+            # MergePages: o novo manda, o que falta vem da residente,
+            # listas se unem, `confidence` cai para a mais fraca.
+            document = self._merged_with_resident(document)
         if decision["op"] == "SUPERSEDE":
             self._supersede(decision["target"], document.rel_path)
         self._stage("write", page=document.rel_path, op=decision["op"])
@@ -137,6 +146,24 @@ class MachinePageUseCase(UseCase):
             rel_path=draft.rel_path, body=body,
             meta=OKFFrontMatter(**{k: v for k, v in meta.items()
                                    if v is not None}))
+
+    def _merged_with_resident(self, document: OKFDocument) -> OKFDocument:
+        """Documento com o frontmatter da residente FUNDIDO (RFC-003 §4.4).
+
+        Puro exceto pela leitura; a transformação mora em
+        `kernel/curation.py:merge_meta`, compartilhada com o MergePages —
+        uma regra de fusão, não duas."""
+        from ..kernel.curation import merge_meta, mergeable_source_meta
+        reader = self._writer.reader
+        if not reader.exists(document.rel_path):
+            return document
+        residente = reader.load(document.rel_path)
+        fundido = merge_meta(
+            document.meta.model_dump(exclude_none=True),
+            mergeable_source_meta(
+                residente.meta.model_dump(exclude_none=True)))
+        return OKFDocument(rel_path=document.rel_path, body=document.body,
+                           meta=OKFFrontMatter(**fundido))
 
     def _supersede(self, old_path: str, new_path: str) -> None:
         """Invalidar, nunca apagar (zep): a antiga aponta para a nova.

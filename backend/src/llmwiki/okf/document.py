@@ -31,6 +31,11 @@ class OKFFrontMatter(BaseModel):
     superseded_by: str | None = None       # rel_path da página substituta
     sensitive_data: bool | None = None     # setado pelo detector de PII (§4.3)
     entities: list[str] | None = None      # lista curta legível (anexo: index.db)
+    # F3-PR2 (P-3): veredito sobre objeto CANÔNICO mora no canônico. Uma
+    # pergunta fechada aponta a página que a respondeu e QUANDO — nada
+    # disso é projeção: é conteúdo, versionado em Git e sujeito ao gate.
+    answered_by: str | None = None         # rel_path da página que respondeu
+    resolved_at: datetime | None = None    # quando o curador declarou fechada
 
     @field_validator("type")
     @classmethod

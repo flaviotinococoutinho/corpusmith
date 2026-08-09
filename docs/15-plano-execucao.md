@@ -113,7 +113,7 @@ Divergências do `14` marcadas com ⚠ e justificadas.
 | 9 | ✅ **F2-PR1** · seed, carimbo, poda, INV-004, job semanal — **ENTREGUE** (ADR-**43**, não 42 — ver nota) | 6 | Duas emendas **obrigatórias**: exigir a perna `[ml]` no mesmo PR (G-2 — **já paga pelo PR-0**, o PR usou o instrumento em vez de recriá-lo) e **excluir `communities/`** da construção do grafo (D-E) |
 | 10 | ✅ **F2-PR2** · `theme_id` por casamento de partições — **ENTREGUE** ([RFC-001](16-rfc-theme-id.md) + ADR-45) | 8 | **RFC** (§1.1) — o primeiro do projeto; o template do `docs/10` §19 estava marcado "a instanciar". Único PR da F2 que escreve no canônico |
 | 11 | ✅ **F2-PR3 + F2-PR4 como UM merge** — **ENTREGUE** (ADR-44) | 10 | ⚠ Divirjo da decomposição em quatro. O próprio PR3 admite que "os dois devem sair na mesma semana", porque sozinho mostra `betweenness: null` e o grafo perde o tamanho por influência. Um pacote que só não é regressão se outro sair junto é **um commit, não um PR** |
-| 12 | **F3 → F4 → F5 → F6 → F7** | — | Daí em diante a ordem do `14` se sustenta. F3 exige **RFC** (§1.1); F5 herda a dívida do `MD_LINK` já resolvida na F1 |
+| 12 | **F3 → F4 → F5 → F6 → F7** — **F3 COMPLETA** ✅ — F3-PR1 (P-7, colisão: RFC-003 `docs/20` + ADR-50, v1.9.8) e F3-PR2 (P-3, veredito e vitalidade: ADR-51, v1.9.9) | — | Daí em diante a ordem do `14` se sustenta. F3 exige **RFC** (§1.1) — cumprido para o P-7; F5 herda a dívida do `MD_LINK` já resolvida na F1 |
 
 ---
 

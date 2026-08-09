@@ -211,9 +211,15 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
                 content=body["content"], source=body.get("source", "chat"),
                 privacy=body.get("privacy", "local_only"),
                 description=body.get("description"),
-                tags=body.get("tags", []))
+                tags=body.get("tags", []),
+                resolution=body.get("resolution"),
+                target=body.get("target"))
         except ValueError as e:
             raise HTTPException(400, str(e))
+        # COLLISION não escreveu nada (RFC-003): emitir "promovido" aqui
+        # seria a MESMA mentira do log de "Creation", agora no barramento
+        if result["op"] == "COLLISION":
+            return result
         bus.emit("system", "memory.promoted",
                  {"kind": result["kind"], "page": result["pages"][0]})
         return result
@@ -330,6 +336,26 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
         pontes frágeis e contradições ranqueadas por VoI/custo — cada item
         com origem, valor e custo. PROPÕE; o humano decide."""
         return curation.next_actions(limit=limit)
+
+    @app.post("/cockpit/next-actions/verdict", dependencies=[Depends(auth)])
+    def next_action_verdict(body: dict):
+        """Veredito humano sobre PADRÃO COMPUTADO (F3-PR2, P-3).
+
+        Aqui — e não num ato de curadoria — porque o alvo não é uma página:
+        é uma relação derivada (ponte, contradição candidata) que o job
+        recomputa. Escrever isso no canônico seria inventar conteúdo; o
+        veredito vai para `pattern_verdicts`, chaveado pela evidência
+        canônica e suprimindo com `until`, jamais DELETE."""
+        from ..runtime.verdicts import record
+        try:
+            v = record(s, body["kind"], body["pages"], body["status"],
+                       until=body.get("until"), note=body.get("note", ""))
+        except KeyError as e:
+            raise HTTPException(400, f"campo obrigatório ausente: {e}")
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        return {"kind": v.kind, "key": v.key, "status": v.status,
+                "until": v.until, "pages": list(v.pages)}
 
     @app.get("/cockpit/gaps", dependencies=[Depends(auth)])
     def structural_gaps(limit: int = 8):

@@ -15,10 +15,18 @@ class HarnessRunner:
     def __init__(self, reader, git):
         self.reader, self.git = reader, git
 
-    def run(self, docs: list[OKFDocument], mode: str = "write") -> Findings:
-        """Gate de escrita: docs já parseados (o writer só recebe objetos)."""
+    def run(self, docs: list[OKFDocument], mode: str = "write",
+            intent: str | None = None) -> Findings:
+        """Gate de escrita: docs já parseados (o writer só recebe objetos).
+
+        `intent` é o `log_kind` que o chamador vai gravar no log do bundle
+        (RFC-003). O dado sempre viajou até uma linha antes do gate e era
+        usado só para ESCREVER o log — agora o gate confere a intenção
+        declarada contra o estado do mundo: "Creation" sobre página
+        existente é a mentira exata que destruiu prosa humana em silêncio."""
         return Findings(okf_conformance.check(docs, self.reader)) \
-            .extend(local_policy.check(docs, self.reader, self.git, mode=mode))
+            .extend(local_policy.check(docs, self.reader, self.git,
+                                       mode=mode, intent=intent))
 
     def lint_bundle(self, bundle_root: Path, mode: str = "write") -> Findings:
         """Auditoria do bundle inteiro: varre ARQUIVOS CRUS — malformados

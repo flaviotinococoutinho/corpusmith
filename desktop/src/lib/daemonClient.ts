@@ -49,6 +49,28 @@ export interface DoctorReport {
   derivations?: Record<string, { state: string; reason?: string }>;
 }
 
+// F3-PR1 (RFC-003): o promote pode devolver COLLISION — nada foi escrito e
+// a decisão é do humano. Sem o tipo, o dialog lia `pages?.[0] ?? "ok"` e
+// mostrava "✅ criado: ok" para uma colisão: a mentira do log, na tela.
+export interface PromoteBody {
+  kind: string; title: string; content: string; source?: string;
+  privacy?: string; description?: string; tags?: string[];
+  resolution?: "update" | "new_slug";
+  target?: string;
+}
+
+export interface PromoteResult {
+  op: "ADD" | "UPDATE" | "COLLISION";
+  kind: string;
+  pages?: string[];
+  commit?: string;
+  // presentes só em COLLISION
+  target?: string;
+  score?: number;
+  reason?: string;
+  options?: string[];
+}
+
 /** Ato de curadoria já aplicado (`GET /curation/history`).
  *  `undone_by` preenchido = já desfeito; `undoes` = este É um desfazer. */
 export interface CurationAct {
@@ -300,7 +322,7 @@ export class DaemonClient {
   page = (path: string) =>
     this.get<PageDetail>(`/cockpit/page?path=${encodeURIComponent(path)}`);
   markStale = (path: string) => this.post("/cockpit/page/stale", { path });
-  promote = (body: unknown) => this.post("/cockpit/promote", body);
+  promote = (body: PromoteBody) => this.post<PromoteResult>("/cockpit/promote", body);
   memory = () => this.get<any>("/cockpit/memory");
   quality = () => this.get<any>("/cockpit/quality");
   review = () => this.get<any>("/cockpit/review");
@@ -332,6 +354,19 @@ export class DaemonClient {
   gaps = () => this.get<any>("/cockpit/gaps");   // v1.1: lacunas estruturais
   nextActions = (limit = 40) =>                  // R3 (v1.8): fila única
     this.get<NextActionsQueue>(`/cockpit/next-actions?limit=${limit}`);
+
+  /** Veredito humano sobre PADRÃO COMPUTADO (F3-PR2, P-3).
+   *
+   *  Ponte e contradição não são páginas: são relações que o job recomputa.
+   *  Dizer "esta não vale" precisa de um lugar que sobreviva à recomputação —
+   *  senão o item rejeitado volta na execução seguinte, e a fila ensina o
+   *  usuário a ignorá-la. `until` adia com prazo; sem ele, some até alguém
+   *  reabrir. Nada é DELETADO. */
+  patternVerdict = (body: { kind: string; pages: string[];
+                            status: "accepted" | "rejected" | "deferred";
+                            until?: number; note?: string }) =>
+    this.post<{ kind: string; key: string; status: string }>(
+      "/cockpit/next-actions/verdict", body);
 
   /** Ato de curadoria (F1-PR6). Método PRÓPRIO em vez de usar `post()`:
    *  precisa preservar o corpo do erro. Aditivo — não toca a assinatura

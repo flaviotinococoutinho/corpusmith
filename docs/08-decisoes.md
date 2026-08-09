@@ -1678,3 +1678,105 @@ testes) · `retryJob` de volta a `enqueue` (1) · 409 do undo engolido (1) ·
 cliente sem a busca de tipos (o teto de mudos volta a 44).
 17 testes de UI — **os primeiros do projeto** — e 6 de backend; **662** no
 backend, 17 no desktop.
+
+### ADR-50 — Colisão de caminho vira decisão humana (v1.9.8, F3-PR1)
+**Decisão registrada por RFC-003 (`docs/20`)**, porque a escada de
+reconciliação — com árbitro LLM opcional — passa a informar o `promote`, o
+caminho de escrita **humano** mais usado do produto (`docs/15` §1.1 já exigia
+RFC para a F3 por exatamente isso).
+**O defeito, reproduzido antes de corrigir**: dois promotes do mesmo título e
+o segundo APAGAVA a página do primeiro — 40 linhas de anotação humana viravam
+um rascunho de duas, com o log registrando *"Creation"*. O caminho destrutivo
+dominante não era UPDATE: era **ADD sobre `rel_path` existente**, que a escada
+estruturalmente não vê (ela exclui a própria `rel_path` dos degraus) e que o
+`promote` nem consultava.
+**Três camadas, cada uma com mutação que a derruba**:
+1. **`policy.path_collision`** — o `log_kind` que o writer já recebia vira
+   `intent` no gate: *"Creation" sobre página existente é erro*. A regra lê o
+   FILESYSTEM, não a projeção — vale com o índice irreparavelmente atrasado e
+   para qualquer chamador futuro que minta a intenção;
+2. **`op="COLLISION"`** — o promote roda `analyze()` (detecção pura, nenhuma
+   reescrita de prosa) e a MESMA escada do RFC-002; colisão de caminho ou de
+   similaridade devolve a decisão ao humano **sem escrever nada**, com três
+   saídas: escrever sobre a residente (log `Update`, frontmatter **fundido**
+   por `merge_meta`), criar com sufixo determinístico, ou cancelar. No caminho
+   humano a heurística **informa**; quem escreve é a pessoa;
+3. **fusão no fluxo de máquina** — UPDATE reconstruía o frontmatter do zero e
+   tags curadas por humano evaporavam a cada recompilação, com
+   `policy.metadata_shrink` (warn) como único guarda. `_merged_with_resident`
+   usa a mesma `merge_meta` do MergePages: uma regra de fusão, não duas.
+**A UI parou de mentir junto**: o `PromoteDialog` mostrava *"✅ criado: ok"*
+para qualquer resposta — inclusive uma COLLISION que não escreveu nada. Agora
+apresenta as três saídas, e o teste de mutação prova que reverter o dialog ao
+comportamento antigo derruba exatamente os 3 testes de colisão.
+**Verificado no fio**, daemon real: ADD → COLLISION (residente intacta, log
+intocado) → `resolution=update` (log *"[Update] promovido SOBRE …"*) →
+`resolution=new_slug` (`docker-2.md`). O evento `memory.promoted` não é
+emitido em COLLISION — seria a mentira do log, no barramento.
+**Registro epistêmico 1.5.0 → 1.6.0**: o contrato `reconciliation` declara o
+caminho humano no `validity_scope` e ganha `promote_memory.py` nos
+`implementation_refs`.
+**Condições de reentrada** (RFC-003 §12): auto-fusão na zona alta só com
+golden set; undo de criação continua dívida do ADR-41.1 (o `new_slug` cria
+via promote, que não é ato de curadoria); colisão interativa na consolidação
+em lote fica para F6.
+9 testes de backend + 4 de UI; **671 no backend, 21 no desktop**.
+
+### ADR-51 — Veredito e vitalidade: a fila para de mentir (v1.9.9, F3-PR2)
+**"Nada fecha e nada aposenta"** é como `docs/14` nomeia o P-3, e cada palavra
+era literal. Reproduzido antes de corrigir:
+```
+review_items -> ['concepts/apagada.md', 'concepts/morta.md', 'concepts/viva.md']
+```
+`morta.md` tinha `superseded_by` — aposentada por um ato humano explícito — e
+`apagada.md` **nunca existiu no bundle**: `page_heat` guarda uso por caminho e
+nenhuma fonte o confrontava com a autoridade. Uma pergunta respondida também
+não tinha como sair: `type: question` valia 0.9 e voltava ao topo todo dia.
+**Dois níveis, separados pelo invariante — e a separação é a decisão.**
+Veredito sobre objeto **canônico** mora no canônico: `answered_by` e
+`resolved_at` no frontmatter, escritos pelo ato `CloseQuestion`, versionados
+em Git e revertíveis pelo `undo` como qualquer outro ato. Veredito sobre
+padrão **computado** (ponte, contradição candidata) não pode morar lá — não é
+página, é relação derivada que o job recria — e vai para `pattern_verdicts`
+(runtime 9→10), pelo MESMO motivo dos checkpoints (ADR-46): guardado em
+`index.db`, o juízo humano seria apagado pela recomputação que ele existe
+para calar, e o item rejeitado voltaria na execução seguinte.
+**A chave sai da evidência canônica, nunca da época.** O caminho óbvio seria
+chavear pelo inteiro `community` do Leiden — e ele muda a cada execução, então
+o veredito de hoje suprimiria um padrão diferente na semana que vem.
+`pattern_key` hasheia os `rel_path` ordenados: A↔B é o mesmo padrão que B↔A,
+para sempre. E rejeitar suprime com `until`, **jamais DELETE** — apagar a
+linha seria desfeito pela próxima recomputação e não deixaria rastro do juízo.
+**A primeira verificação do `CloseQuestion` era TEATRO, e a medição mostrou.**
+A ideia óbvia — recusar se o `/ask` ainda abstém — não serve: com
+`abstain_threshold = 0.0` (o default) a abstenção quase nunca dispara e,
+pior, perguntar o título de uma pergunta **encontra a própria pergunta**, que
+é uma página do bundle (`páginas na evidência: ['questions/q2.md']`). A guarda
+passaria apontando para uma página de culinária. O que se verifica é o
+**vínculo**: perguntado o título, o produto chega à página declarada como
+resposta? A própria pergunta é descartada das evidências. E a verificação não
+decide — `force=true` fecha contra a máquina, e a força fica no preview e no
+log.
+**`policy.dangling_successor` não existia nem para `superseded_by`**, que está
+no produto desde a v0.8: dava para aposentar uma página apontando para o
+vazio, tirando-a da fila sem sucessora real. A regra vale para o LOTE, porque
+a fusão escreve sucessora e aposentada no mesmo `write`.
+**A dívida do ADR-41.5 foi paga junto**, porque é o mesmo defeito: `resolved =
+any(...)` silenciava o GRUPO INTEIRO assim que uma sucessão aparecesse — com
+A, B e C no mesmo DOI, fundir A em B calava o par (B, C) sem tratá-lo, no item
+de maior VoI da fila. A sucessão passa a **particionar** o grupo (union-find):
+resolve o bloco que liga, não o grupo. O teste que fixava a dívida inverteu de
+sinal, como o combinado.
+**`[mechanisms.attention_queue]` finalmente existe** (registro 1.6.0 → 1.7.0):
+a superfície que ORDENA o tempo do usuário não tinha contrato nenhum e era um
+dos cinco `mechanism_promised` do lint. O nome saiu de `PROMISED_MECHANISMS` e
+entrou em `EXPECTED_MECHANISMS` — o gesto de mover é o que registra a dívida
+paga. Restam quatro.
+**Verificado no fio**, daemon real: pergunta na fila → `close_question` sem
+`force` (*"verificado: perguntado o título, o produto chega a …"*) → **fila
+vazia**, com log `[Update] pergunta fechada por …`.
+**Falsificabilidade, seis mutações**: `review_items` sem filtro · `gap_items`
+sem o corte · `bridge_items` sem vitalidade nem veredito (3 testes) ·
+`check_corpus` com o `any()` de volta · sem `dangling_successor` · verificação
+do `close` desligada. Cada uma derruba exatamente os testes que a cobrem.
+19 testes de backend + 4 de UI; **690 no backend, 25 no desktop**.

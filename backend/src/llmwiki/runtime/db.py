@@ -36,7 +36,7 @@ _SCHEMAS = {
 # restore em versão mais nova é seguro por construção (connect() reaplica
 # CREATE IF NOT EXISTS + _migrate idempotente ao abrir o banco restaurado).
 SCHEMA_VERSIONS = {
-    "runtime.db": 9,     # + checkpoints (estado das derivações)
+    "runtime.db": 10,    # + pattern_verdicts (juízo humano sobre padrão)
     "index.db": 9,       # + themes/theme_epochs (identidade, RFC-001)
     "cold.db": 1,
     "cognitive.db": 2,   # v0.19 base + v0.20 experiências/analogias

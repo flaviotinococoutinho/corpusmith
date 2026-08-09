@@ -21,10 +21,13 @@ não afogar a interface.
 """
 from __future__ import annotations
 from .base import UseCase
-from .plan_attention import gap_items, inbox_items, review_items
+from .plan_attention import (gap_items, inbox_items, paginas_vivas,
+                             review_items)
 from ..harness.local_policy import check_corpus
+from ..kernel.vitality import filtrar
 from ..okf.bundle import BundleReader
 from ..runtime.db import connect
+from ..runtime.verdicts import pattern_key, suppressed_keys
 from ..settings import Settings
 
 MAX_ACTIONS = 40
@@ -158,10 +161,22 @@ def bridge_items(settings: Settings) -> list[dict]:
     idx = connect(settings.app_support / "index.db")
     rows = [dict(r) for r in idx.execute(
         "SELECT src, dst, weight, small_side FROM graph_bridges "
-        "ORDER BY weight LIMIT 10")]
+        "ORDER BY weight LIMIT 30")]
     idx.close()
+    # F3-PR2: a ponte liga DUAS páginas — se qualquer ponta foi aposentada, o
+    # item pede para linkar um endereço que já não aceita trabalho. E o
+    # veredito humano ("esta ponte não vale") passa a suprimir com `until`,
+    # jamais DELETE: o job `leiden` recomputa `graph_bridges` do zero e um
+    # DELETE seria desfeito na próxima execução, trazendo de volta o item que
+    # o usuário acabou de rejeitar.
+    vivas_ = paginas_vivas(settings)
+    suprimidos = suppressed_keys(settings, "bridge")
     out = []
     for r in rows:
+        if r["src"] not in vivas_ or r["dst"] not in vivas_:
+            continue
+        if pattern_key([r["src"], r["dst"]]) in suprimidos:
+            continue
         ta, tb = _titleize(r["src"]), _titleize(r["dst"])
         value = round(min(0.85, _BRIDGE_VALUE + 0.03 * (r["small_side"] - 2)),
                       3)
@@ -172,7 +187,10 @@ def bridge_items(settings: Settings) -> list[dict]:
             "reason": f"fio fraco (peso {r['weight']:.2f}) entre dois blocos "
                       f"reais — linkar fortalece a rede",
             "action": {"type": "link", "src": r["src"], "dst": r["dst"]}})
-    return out
+    # o LIMIT da SQL subiu para 30 porque agora há descarte (pontas mortas,
+    # vereditos): cortar 10 ANTES do filtro devolveria menos de 10 pontes
+    # vivas sempre que houvesse uma rejeitada no topo
+    return out[:10]
 
 
 def contradiction_items(settings: Settings) -> list[dict]:
@@ -182,8 +200,14 @@ def contradiction_items(settings: Settings) -> list[dict]:
     detecção do painel Qualidade — fonte única, sem heurística nova."""
     reader = BundleReader(settings.path("knowledge") / "bundle")
     docs = list(reader.iter_concepts())
+    suprimidos = suppressed_keys(settings, "contradiction")
     out = []
     for f in check_corpus(docs, reader):
+        # F3-PR2: "já olhei, é falso positivo" precisa CALAR o item — senão
+        # a contradição de maior VoI volta ao topo da fila toda vez e ensina
+        # o usuário a ignorar a fila inteira
+        if pattern_key(f.meta.get("pages", [f.path])) in suprimidos:
+            continue
         out.append({
             "kind": "contradiction", "target": f.path,
             "title": _titleize(f.path), "origin": _ORIGIN["contradiction"],

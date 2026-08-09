@@ -23,13 +23,26 @@ RECOMMENDED_TYPES = {
     # transição registrada (SUPERSEDE), nunca por edição silenciosa
     "fact", "claim", "hypothesis", "observation", "opinion"}
 
-def check(docs, reader, git, mode: str = "write") -> list[Finding]:
+def check(docs, reader, git, mode: str = "write",
+          intent: str | None = None) -> list[Finding]:
     out: list[Finding] = []
     gaz = load_gazetteer(reader) if docs else None
     schemas = load_type_schemas(reader) if docs else {}
     for d in docs:
         x = d.meta.model_dump()
         via = str(x.get("generated_via", ""))
+
+        # RFC-003 (F3, P-7): o caminho destrutivo dominante não é UPDATE —
+        # é ADD sobre `rel_path` existente, gravado no log como "Creation".
+        # Medido: dois promotes do mesmo título, o segundo APAGA 40 linhas
+        # de anotação humana e o log mente. A regra lê o FILESYSTEM, não a
+        # projeção: vale mesmo com o índice irreparavelmente atrasado.
+        if intent == "Creation" and reader.exists(d.rel_path):
+            out.append(Finding(
+                "error", "policy.path_collision", d.rel_path,
+                "intenção declarada é Creation mas a página JÁ EXISTE — "
+                "sobrescrever seria destruição registrada como criação; "
+                "declare Update (fundindo frontmatter) ou use outro slug"))
 
         if x.get("privacy") not in ("local_only", "api_allowed"):
             out.append(Finding("error", "policy.privacy_required", d.rel_path,
@@ -72,6 +85,24 @@ def check(docs, reader, git, mode: str = "write") -> list[Finding]:
                 out.append(Finding("error", "policy.citation_invalid", d.rel_path,
                                    f"refs {sorted(refs - listed)} sem entrada "
                                    "em Citations"))
+
+        # F3-PR2 (P-3): SUCESSOR PENDURADO. `superseded_by` e `answered_by`
+        # apontam para uma página canônica — apontar para o que não existe
+        # aposenta a origem e não entrega a sucessora, tirando o item da fila
+        # sem que nada tenha sido resolvido. A regra não existia nem para
+        # `superseded_by`, que está no produto desde a v0.8.
+        #
+        # Vale para o LOTE inteiro: uma fusão que escreve a sucessora e a
+        # aposentada no mesmo `write` é legítima, e olhar só o disco a
+        # reprovaria.
+        no_lote = {doc.rel_path for doc in docs}
+        for chave in ("superseded_by", "answered_by"):
+            alvo = x.get(chave)
+            if alvo and alvo not in no_lote and not reader.exists(str(alvo)):
+                out.append(Finding(
+                    "error", "policy.dangling_successor", d.rel_path,
+                    f"{chave} aponta para '{alvo}', que não existe no "
+                    f"bundle — a página sairia da fila sem sucessora real"))
 
         for sha in COMMIT_REF.findall(d.body + " " + str(x.get("stale_as_of", ""))):
             if not git.has_commit(sha):
@@ -120,6 +151,31 @@ def check(docs, reader, git, mode: str = "write") -> list[Finding]:
 CONTRADICTION_IDS = ("doi", "isbn", "issn", "arxiv")
 
 
+def _blocos_de_sucessao(group, pages: set[str]) -> list[set[str]]:
+    """Partição das páginas do grupo pelas relações de sucessão declaradas.
+
+    Union-find sobre `superseded_by`/`supersedes` restritos ao grupo: duas
+    páginas ligadas por sucessão estão RESOLVIDAS entre si. Um bloco só ⇒
+    nada a reportar; dois ou mais ⇒ as versões ainda convivem."""
+    pai = {p: p for p in pages}
+
+    def raiz(p: str) -> str:
+        while pai[p] != p:
+            pai[p] = pai[pai[p]]
+            p = pai[p]
+        return p
+
+    for d, x in group:
+        for chave in ("superseded_by", "supersedes"):
+            outro = x.get(chave)
+            if outro in pages and outro != d.rel_path:
+                pai[raiz(d.rel_path)] = raiz(outro)
+    blocos: dict[str, set[str]] = {}
+    for p in pages:
+        blocos.setdefault(raiz(p), set()).add(p)
+    return list(blocos.values())
+
+
 def check_corpus(docs, reader) -> list[Finding]:
     """Detecção AGM-inspirada de CONTRADIÇÃO candidata (v0.10, só no lint):
     o mesmo identificador forte em 2+ páginas sem relação de sucessão
@@ -138,15 +194,24 @@ def check_corpus(docs, reader) -> list[Finding]:
                 by_id.setdefault(m.canonical, []).append((d, x))
     out: list[Finding] = []
     for ident, group in by_id.items():
-        pages = {d.rel_path for d, _ in group}
+        # F3-PR2 paga a dívida declarada no ADR-41.5 e confirmada pela
+        # auditoria: `resolved = any(...)` silenciava o GRUPO INTEIRO assim
+        # que UMA sucessão aparecesse nele. Com A, B e C compartilhando o
+        # mesmo DOI, fundir A em B calava também o par (B, C) — sem que
+        # aquela convivência tivesse sido tratada, e justamente no item de
+        # maior valor epistêmico da fila (VoI 0.85).
+        #
+        # A relação de sucessão PARTICIONA o grupo: páginas ligadas por
+        # supersede formam um bloco resolvido entre si; o conflito é o que
+        # sobra ENTRE blocos. `invalid_at` tira a página do grupo — ela
+        # declarou não valer mais, então não contradiz ninguém.
+        vivas_no_grupo = [(d, x) for d, x in group if not x.get("invalid_at")]
+        pages = {d.rel_path for d, _ in vivas_no_grupo}
         if len(pages) < 2:
             continue
-        resolved = any(x.get("superseded_by") in pages
-                       or x.get("supersedes") in pages
-                       or x.get("invalid_at")
-                       for _, x in group)
-        if resolved:
+        if len(_blocos_de_sucessao(vivas_no_grupo, pages)) < 2:
             continue
+        group = vivas_no_grupo
         entrenched = sorted(
             group, key=lambda item: (
                 not str(item[1].get("generated_via", "")).startswith("human:"),

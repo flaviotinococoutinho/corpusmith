@@ -23,11 +23,14 @@ class CurationFacade:
     def promote(self, *, kind: str, title: str, content: str,
                 source: str = "chat", privacy: str = "local_only",
                 description: str | None = None,
-                tags: list[str] | None = None) -> dict:
+                tags: list[str] | None = None,
+                resolution: str | None = None,
+                target: str | None = None) -> dict:
         return PromoteToMemory(self._settings, kind=kind, title=title,
                                content=content, source=source,
                                privacy=privacy, description=description,
-                               tags=tags).execute()
+                               tags=tags, resolution=resolution,
+                               target=target).execute()
 
     def mark_stale(self, page_path: str) -> dict:
         return MarkPageStale(self._settings, page_path).execute()

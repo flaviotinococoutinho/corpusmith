@@ -137,9 +137,9 @@ class MergePages(CurationAct):
                 partes.append(
                     "mas o mesmo identificador também aparece em "
                     + ", ".join(terceiras)
-                    + " — essa convivência NÃO é tratada aqui, e o alerta de "
-                      "corpus deixa de aparecer para o grupo inteiro (uma "
-                      "sucessão no grupo silencia o grupo)")
+                    + " — essa convivência NÃO é tratada aqui e SEGUE na "
+                      "fila depois desta fusão (F3-PR2: a sucessão resolve "
+                      "só o bloco que ela liga, não o grupo inteiro)")
         return "; ".join(partes)
 
     # ------------------------------------------------------------- esqueleto

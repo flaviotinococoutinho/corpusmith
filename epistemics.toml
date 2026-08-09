@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.5.0"   # F3-PR0: reconciliation revisado (RFC-002) — o degrau de similaridade voltou a executar
+version = "1.7.0"   # F3-PR2: + attention_queue (P-3) — a fila da v1.8 finalmente tem contrato
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -171,6 +171,7 @@ title = "Reconciliação ADD/UPDATE/SUPERSEDE/NOOP/RECYCLE por escada determiní
 decision = "decidir se um candidato compilado é novo (ADD), atualiza (UPDATE), substitui (SUPERSEDE), nada acrescenta (NOOP) ou reidrata memória fria (RECYCLE)"
 implementation_refs = [
   "backend/src/llmwiki/usecases/reconcile_candidate.py",
+  "backend/src/llmwiki/usecases/promote_memory.py",
   "backend/src/llmwiki/kernel/information.py",
 ]
 inductive_biases = [
@@ -185,6 +186,7 @@ assumptions = [
 ]
 validity_scope = [
   "candidatos do pipeline de compilação contra o bundle local e a base fria",
+  "promoção humana (F3-PR1, RFC-003): a escada INFORMA a colisão e devolve op=COLLISION sem escrever — no caminho humano ela nunca decide, decide quem promove",
   "textos em que zlib captura redundância (NCD com corpos truncados em 8000 chars)",
   "índice FRESCO em relação ao bundle — quando não é, a escada reindexa antes de decidir e, se ainda assim não ficar fresco, declara index_stale na decisão (RFC-002 §4.2)",
 ]
@@ -219,6 +221,75 @@ ncd_body_window = 8000
 strong_ids = "doi,isbn,issn,arxiv,git_sha"
 page_limit = 8
 chunk_limit = 64
+
+# ---------------------------------------------------------- fila de atenção
+# F3-PR2 (P-3). `docs/14` §4 declarava este contrato OBRIGATÓRIO e ele não
+# existia: a fila da v1.8 — a superfície que ORDENA o que o usuário faz com o
+# tempo dele — não tinha contrato nenhum, e o lint o listava como um dos cinco
+# `mechanism_promised`. Os failure modes abaixo são os do plano, verbatim,
+# mais os dois que a F3 mediu ao consertar a fila.
+[mechanisms.attention_queue]
+title = "Fila única de próxima ação (ranking por densidade valor/custo)"
+decision = "ordenar o que merece a atenção do curador agora, unificando revisão espaçada, lacunas, inbox, pontes frágeis e contradições candidatas"
+implementation_refs = [
+  "backend/src/llmwiki/usecases/next_actions.py",
+  "backend/src/llmwiki/usecases/plan_attention.py",
+  "backend/src/llmwiki/kernel/vitality.py",
+  "backend/src/llmwiki/kernel/attention.py",
+]
+inductive_biases = [
+  "densidade valor/custo (VoI por minuto) ordena melhor que valor absoluto — item caríssimo de valor alto não deve afogar cinco baratos",
+  "custo é leitura estimada a 150 palavras/min com piso de 2 min",
+  "revisão vale mais na zona de esforço produtivo: review_gain(p) = 4p(1−p) (Bjork 1994) — o trivial e o perdido rendem pouco",
+  "valor por tipo é fixo e declarado (contradição 0.85 > pergunta 0.9 > contestada 0.8 > stale 0.6 > inbox 0.5), não aprendido",
+]
+assumptions = [
+  "page_heat (leituras e citações) aproxima o uso real da página",
+  "os pesos por tipo refletem a preferência vigente do curador — não há ground truth de prioridade contra o qual calibrá-los",
+  "o alvo de um item ainda EXISTE e ainda aceita trabalho — pressuposto que era falso até o F3-PR2 e agora é verificado (kernel/vitality.py)",
+]
+validity_scope = [
+  "bundle local com histórico de uso registrado em page_heat",
+  "itens cujo alvo está vivo: sem superseded_by, sem invalid_at, e presente no bundle",
+]
+known_failure_modes = [
+  "página NUNCA LIDA pode ser a mais valiosa e apenas não ter sido procurada — a fila é cega para o que não tem histórico",
+  "recorrência não é importância: reler muito uma página pode significar que ela está mal escrita, não que é central",
+  "custo por palavras/min ignora dificuldade — 300 palavras de matemática não custam o mesmo que 300 de prosa",
+  "medido no F3-PR2: sem filtro de vitalidade a fila propunha revisar página aposentada e página inexistente, porque page_heat é chaveado por caminho e ninguém o confrontava com a autoridade",
+  "veredito humano sobre padrão computado (ponte, contradição) precisa de pattern_verdicts com until: apagar a linha do padrão seria desfeito na próxima recomputação do job",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "ordenação por densidade valor/custo sobre as fontes declaradas, com alvo verificado vivo; NÃO otimalidade da atenção nem completude das fontes"
+universal_guarantee = false
+fallback = ["request_human_review"]
+adaptive = false
+feedback_signal = ""
+composite = true
+composite_components = [
+  "review", "question", "contested", "stale", "inbox", "bridge",
+  "contradiction",
+]
+evidence = ["deterministic_check", "property_test"]
+misinterpretations = [
+  "posição na fila NÃO é importância absoluta — é densidade valor/custo sob pesos declarados e fontes conhecidas",
+  "item ausente da fila não significa 'nada a fazer ali': significa que nenhuma fonte o detectou, ou que um veredito humano o suprimiu com until",
+  "truncated=true é teto de INTERFACE, não fim da fila — esconder item não é ciclo de vida (docs/14 §P-3 rejeita resolver a fila cheia aumentando MAX_ACTIONS)",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.attention_queue.parameters]
+max_actions = 40
+words_per_minute = 150
+min_cost_min = 2.0
+value_question = 0.9
+value_contested = 0.8
+value_stale = 0.6
+value_inbox = 0.5
+value_bridge_base = 0.7
+value_contradiction = 0.85
+review_gain_floor = 0.3
 
 # ============================================================ cognição
 [mechanisms.cognitive_priority]
