@@ -54,6 +54,25 @@ def test_eval_roda_out_of_the_box_e_passa(settings, kb):
     assert total >= 10 and passed == total         # golden é VERDADE local
 
 
+def test_envelope_nao_inverte_o_escopo_de_validade(settings, kb):
+    """B4 do docs/18: `out_of_scope` recebia o `validity_scope` do
+    contrato SEM negação — o painel Qualidade dizia que o regime em que o
+    mecanismo VALE estava "fora de escopo". O conteúdo honesto do campo
+    ("onde NÃO foi medido") são os failure modes declarados."""
+    from llmwiki.harness.epistemics import load_registry
+    from llmwiki.usecases.evaluate_memory import EvaluateMemory, envelopes_for
+    seed_golden_eval(settings)
+    EvaluateMemory(settings).execute()
+    registry, _ = load_registry()
+    contract = next(c for c in registry.contracts
+                    if "eval_memory" in c.evaluated_by
+                    and c.validity_scope and c.known_failure_modes)
+    env = envelopes_for(settings, contract.mechanism_id, limit=1)[0]
+    assert env["out_of_scope"] == [m.text for m in
+                                   contract.known_failure_modes]
+    assert env["out_of_scope"] != [s.text for s in contract.validity_scope]
+
+
 def test_metricas_fracionarias_recall_e_mrr(settings, kb):
     seed_golden_eval(settings)
     result = EvaluateMemory(settings).execute()
