@@ -52,6 +52,27 @@ def test_repair_rebuilds_and_clears_orphan(settings, kb):
     assert not any(f["inv"] == "INV-001" for f in fixed["findings"])
 
 
+def test_repair_com_embeddings_populadas_nao_estoura_fk(settings, kb):
+    """Regressão do incidente v1.9: com jobs `embed` concluindo, o repair
+    do doctor (rebuild full) estourava IntegrityError na FK
+    embeddings.chunk_id → chunks(id) — o caminho de recuperação era ele
+    mesmo irrecuperável."""
+    BundleWriter(kb).write([_doc("concepts/a.md", "A")],
+                           log_kind="Creation", log_message="m",
+                           commit_message="c")
+    rebuild_index(settings)
+    idx = connect(settings.app_support / "index.db")
+    chunk = idx.execute("SELECT id FROM chunks").fetchone()["id"]
+    idx.execute("INSERT INTO embeddings(chunk_id, model, vec) "
+                "VALUES (?,?,?)", (chunk, "m", b"\x00"))
+    # índice sobre outra revisão (INV-002) — o estado que pede repair
+    idx.execute("UPDATE index_meta SET value='cafebabe' "
+                "WHERE key='bundle_head'")
+    idx.commit(); idx.close()
+    fixed = DiagnoseSystem(settings, repair=True).execute()
+    assert fixed["ok"] and fixed["repaired"]["mode"] == "full"
+
+
 def test_doctor_flags_stale_generation(settings, kb):
     BundleWriter(kb).write([_doc("concepts/a.md", "A")],
                            log_kind="Creation", log_message="m",

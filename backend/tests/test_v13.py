@@ -116,6 +116,40 @@ def test_incremental_purges_removed_and_full_on_gazetteer_change(settings, kb):
     assert rebuild_index(settings)["mode"] == "incremental"
 
 
+def test_rebuild_com_embeddings_populadas_nao_viola_fk(settings, kb):
+    """Regressão da FK `embeddings.chunk_id → chunks(id)`: o rebuild poda
+    vetores junto com os chunks — no incremental só os da página purgada;
+    no full todos (ids renumerados ⇒ vetor sobrevivente apontaria para
+    chunk errado). Sem a poda, editar página com embedding vivo estourava
+    IntegrityError e levava o `doctor --repair` junto."""
+    _write(settings, kb,
+           _doc("concepts/a.md", "A", "# A\n\nprimeiro conteúdo"),
+           _doc("concepts/b.md", "B", "# B\n\nsegundo conteúdo"))
+    idx = connect(settings.app_support / "index.db")
+    ids = {r["page"]: r["id"] for r in
+           idx.execute("SELECT page, id FROM chunks")}
+    for page in ("concepts/a.md", "concepts/b.md"):
+        idx.execute("INSERT INTO embeddings(chunk_id, model, vec) "
+                    "VALUES (?,?,?)", (ids[page], "m", b"\x00"))
+    idx.commit(); idx.close()
+    # incremental: muda só B — vetor de A sobrevive, o de B sai com o chunk
+    (kb / "bundle/concepts/b.md").write_text(
+        (kb / "bundle/concepts/b.md").read_text().replace(
+            "segundo", "segundo conteúdo REVISADO"))
+    assert rebuild_index(settings)["mode"] == "incremental"
+    idx = connect(settings.app_support / "index.db")
+    remaining = [r["chunk_id"] for r in
+                 idx.execute("SELECT chunk_id FROM embeddings")]
+    idx.close()
+    assert remaining == [ids["concepts/a.md"]]
+    # full: nenhum vetor pode sobrar
+    assert rebuild_index(settings, full=True)["mode"] == "full"
+    idx = connect(settings.app_support / "index.db")
+    assert idx.execute("SELECT COUNT(*) c FROM embeddings"
+                       ).fetchone()["c"] == 0
+    idx.close()
+
+
 # --------------------------------------------- HippoRAG: stream de grafo
 def test_graph_stream_reaches_linked_page_multi_hop(settings, kb):
     a = _doc("concepts/uso-postgres.md", "Uso de PostgreSQL",
