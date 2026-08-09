@@ -204,6 +204,18 @@ def test_rejeicao_de_politica_vira_422_legivel_no_ato(client, kb):
                                      for f in corpo["findings"])
 
 
+def test_parametro_desconhecido_vira_400_nao_500(client):
+    """Kwargs que o ato não aceita são erro do CHAMADOR, não crash do
+    servidor — medido: `page` em vez de `src` no link devolvia 500 cru
+    (TypeError atravessava a facade sem virar código estável)."""
+    r = client.post("/curation/act", json={
+        "act": "link",
+        "params": {"page": "concepts/a.md", "target": "concepts/b.md"},
+        "dry_run": True})
+    assert r.status_code == 400, r.text
+    assert "link" in r.json()["detail"]
+
+
 def test_422_vale_tambem_para_as_superficies_antigas(client):
     """G-7 transversal: o handler é único, então /cockpit/promote — que
     ANTES devolvia 500 — passa a devolver 422 com a regra nomeada."""
