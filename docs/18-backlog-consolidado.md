@@ -95,7 +95,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 | **T3** | **Desfazer uma criação não é expressável** — `BundleWriter.remove` não roda o Harness. O ato recusa com 409 nomeado | ADR-41.1 |
 | **T4** | O commit acontece **antes** do registro na trilha: janela em que o canônico mudou e a trilha não sabe | ADR-41.1 |
 | **T5** | `merged` está no vocabulário fechado e **não foi observado** na calibração | RFC-001 §2.3 |
-| **T6** | `_CommunitySummaryPage` reescreve o sumário a cada execução mesmo com conteúdo idêntico → o HEAD move a cada job | ADR-45 |
+| **T6** ✅ **RESOLVIDO** | `_CommunitySummaryPage` reescreve o sumário a cada execução mesmo com conteúdo idêntico → o HEAD move a cada job | ADR-45. `source_sha256` (fingerprint dos membros) decide: conjunto idêntico ⇒ nem rotula nem escreve — HEAD imóvel medido por teste, e o job semanal para de re-sortear rótulo de tema que ninguém pediu para mudar |
 
 ### 5.2 Buracos no gate (🟠 confirmado)
 
