@@ -333,12 +333,14 @@ duas emendas de acoplamento da §3 foram aplicadas. Verificado num HOME real:
 dry-run não move o HEAD, o apply faz exatamente 1 commit, a página antiga
 segue legível e o doctor sai 0.
 
-**Próximo passo: F1-PR2** — `UndoCurationAct`, com o rito **reformulado**
-por D-C: nada de `git revert` no worktree antes do gate (os bytes entrariam
-antes do Harness e recuperar de uma rejeição exigiria `checkout`/`reset`, a
-operação que o `14` proíbe). O undo lê os blobs do commit pai, monta
-`OKFDocument`s e passa pelo `write()` normal — **escrita para frente**,
-registrada como ato NOVO. A aresta a declarar no DoD: desfazer a *criação*
-de uma página só é expressável por `BundleWriter.remove`, que não roda o
-Harness — "gate inescapável" e "um commit" não podem valer juntos nesse
-caso, e o PR precisa dizer qual cede.
+**Estado em 2026-08-09 (DOC1 do [`18`](18-backlog-consolidado.md)): as
+fases-modelo TERMINARAM.** Este parágrafo dizia "Próximo passo: F1-PR2"
+quando F1 inteira (ADR-41.1–41.5), F2 inteira (ADR-43/44/45 + RFC-001),
+PR-0.1 (ADR-47), F3-PR0 (RFC-002 + ADR-48), F-UI (ADR-49) e a F3 completa
+(RFC-003, ADR-50/51) já estavam nos merges #14–#23 — a seção era o único
+lugar do documento que não sabia disso. As tabelas dos §3–4 seguem valendo
+como registro do raciocínio de sequenciamento; o **estado vivo** (o que
+resta, com nível de evidência por item) mora no
+[`18-backlog-consolidado.md`](18-backlog-consolidado.md), que é atualizado
+no PR que resolve cada item — este arquivo não acompanha mais entrega a
+entrega.

@@ -27,8 +27,8 @@ Nada aqui é opinião sobre estilo. Onde não há evidência, está dito.
 | **B2** ✅ **RESOLVIDO** (F3-PR0: pré-condição de frescor + `index_stale` declarado) | **`index.db` — projeção declarada sem autoridade — decide ADD/UPDATE/SUPERSEDE.** Mesmo candidato, só o estado da projeção muda → `UPDATE` ou `ADD`, com `doctor.ok=True` nos dois | 🟠 confirmado | O cético produziu **duas páginas canônicas vivas para o mesmo DOI** pelo mesmo use case. Viola `AGENTS.md` §6 e `architecture.toml` (`authority = "nenhuma (projeção)"`) |
 | **B3** | **`rebuild_index` sem `try/finally`**: exceção no meio vaza a conexão com transação aberta e trava `index.db` por 30 s no processo | 🟠 confirmado | Recuperável, mas o produto parece travado |
 | **B4** | **`out_of_scope` recebe `validity_scope` sem negação** (`evaluate_memory.py:184`), e o painel renderiza como "Fora de escopo" | 🟠 confirmado | Inversão exata do significado: o painel diz que o escopo **avaliado** está fora do escopo. Correção de uma linha |
-| **B5** | `build.spec:12` faz `EXE(...)` sem `exclude_binaries=True` — obrigatório em onedir. `just sidecar` **não constrói mais** | 🟠 confirmado | Nem a receita manual de empacotamento funciona. Com o token, constrói (3,4 MB) |
-| **B6** | `collect_dynamic_libs("sqlite_vec")` devolve `[]` porque `sqlite-vec` só existe no extra `[ml]` e `just bootstrap` instala `.[dev]` | 🟠 confirmado | O binário sairia **sem a extensão nativa vec0, em silêncio** |
+| **B5** ✅ **RESOLVIDO** (PR-0.1, ADR-47) | `build.spec:12` faz `EXE(...)` sem `exclude_binaries=True` — obrigatório em onedir. `just sidecar` **não constrói mais** | 🟠 confirmado | Nem a receita manual de empacotamento funciona. Com o token, constrói (3,4 MB) |
+| **B6** ✅ **RESOLVIDO** (PR-0.1, ADR-47) | `collect_dynamic_libs("sqlite_vec")` devolve `[]` porque `sqlite-vec` só existe no extra `[ml]` e `just bootstrap` instala `.[dev]` | 🟠 confirmado | O binário sairia **sem a extensão nativa vec0, em silêncio** — o `build.spec` agora falha alto quando o extra `[ml]` não está presente |
 
 ---
 
@@ -101,7 +101,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 
 | # | O quê | Consequência |
 |---|---|---|
-| **T7** | `INV-ARCH-003/004` só inspecionam imports **relativos**, e o scan de `api/` usa `glob` em vez de `rglob` | O cético plantou violações que passaram verdes |
+| **T7** ✅ **RESOLVIDO** | `INV-ARCH-003/004` só inspecionam imports **relativos**, e o scan de `api/` usa `glob` em vez de `rglob` | O cético plantou violações que passaram verdes. Fechado com `_internal_imports` (relativo E absoluto) + `rglob` — reprovação verificada com violação plantada, e o teste antigo confirmado cego à mesma planta |
 | **T8** ✅ **RESOLVIDO** (PR-0.1) | `epistemics lint` fica verde com **contrato obrigatório apagado** (G-10) | Esquecer um contrato na F3/F4/F5 é silencioso |
 | **T9** | O `conftest` derruba o Ollama e com isso cega 100 % da suíte para a única FK do `index.db` | Foi assim que o defeito da FK sobreviveu |
 | **T10** | Nenhum teste cobre `/events`, `/system/doctor` por HTTP, `/jobs/{id}/cancel` nem qualquer superfície de UI | O bloco inteiro do §2 é invisível ao gate |
@@ -135,7 +135,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 
 | # | O quê | Evidência |
 |---|---|---|
-| **DOC1** | `docs/15` §8 (estado da execução) desatualizado em relação às Fases 1 e 2 | ⚪ alegado |
+| **DOC1** ✅ **RESOLVIDO** | `docs/15` §8 (estado da execução) desatualizado em relação às Fases 1 e 2 | ⚪ alegado → 🔴 medido: dizia "Próximo passo: F1-PR2" com F1–F3 inteiras entregues. O §8 passou a fechar com o estado real e a apontar para este documento como fonte viva |
 | **DOC2** | `docs/11-epistemic-contracts.md` desatualizado em relação aos 15 mecanismos atuais | ⚪ alegado |
 | **DOC3** | O template de RFC do `docs/10` §19 foi **instanciado** (RFC-001), mas o `docs/10` ainda o marca "🎯 a instanciar" | 🔴 medido |
 | **DOC4** | `docs/17` continha uma linha desatualizada que fez um cético gastar um ciclo inteiro refutando alegação já corrigida — **já corrigida**, mas mostra a classe | 🟠 confirmado |
