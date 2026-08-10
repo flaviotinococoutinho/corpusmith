@@ -142,7 +142,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 | **DOC2** ✅ **RESOLVIDO** | `docs/11-epistemic-contracts.md` desatualizado em relação aos 15 mecanismos atuais | ⚪ alegado → 🔴 medido: dizia 7 contratos (são 16) e que o golden não é distribuído (o QA-1 entregou o seed). Corrigido apontando `epistemics.toml` como fonte viva |
 | **DOC3** ✅ **RESOLVIDO** | O template de RFC do `docs/10` §19 foi **instanciado** (RFC-001), mas o `docs/10` ainda o marca "🎯 a instanciar" | 🔴 medido — corrigido: ✅ com links para RFC-001/002/003 |
 | **DOC4** | `docs/17` continha uma linha desatualizada que fez um cético gastar um ciclo inteiro refutando alegação já corrigida — **já corrigida**, mas mostra a classe | 🟠 confirmado |
-| **DOC5** | `AGENTS.md` cita contagem de teste desatualizada (a suíte cresce a cada PR e o número no doc não) | 🔵 planejado (G-9, parcialmente pago pelo PR-0) |
+| **DOC5** ✅ **RESOLVIDO** (PR-0) | `AGENTS.md` cita contagem de teste desatualizada (a suíte cresce a cada PR e o número no doc não) | 🔵 → 🔴 verificado: nenhuma contagem literal de testes resta no `AGENTS.md` (o piso verificado do PR-0 substituiu o número); e o índice `docs/README.md` — que não listava os docs 16–20 — passou a listá-los |
 
 ---
 
