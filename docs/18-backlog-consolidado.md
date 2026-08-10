@@ -126,7 +126,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 |---|---|---|
 | **X1** | **Numa máquina sem o extra `[ml]` compilado, "comunidade" é componente conexo** — o `backend` do carimbo hoje declara isso, mas nenhuma superfície mostra | 🔴 medido (o campo existe; o painel não usa) |
 | **X2** | O badge de frescor do grafo existe (F2-PR3+4); os demais artefatos derivados **não têm badge** | 🔴 medido |
-| **X3** | A fila propõe ato de escrita sobre página que pode estar aposentada — `gap_items` não filtra vitalidade | ⚪ alegado; **não reproduzi** no cenário testado (a página supersedida não entrou na fila), mas não descartei: pode ser que ela nunca fosse candidata a gap |
+| **X3** ✅ **RESOLVIDO** (F3-PR2, ADR-51) | A fila propõe ato de escrita sobre página que pode estar aposentada — `gap_items` não filtra vitalidade | ⚪ alegado → 🔴 medido e fechado: `gap_items` pula `aposentada(meta)` e pergunta `answered_by`; todas as fontes da fila compartilham `paginas_vivas`. O defeito foi reproduzido e preso por `test_f3_vitalidade.py` (`test_a_fila_para_de_propor_pagina_aposentada_e_inexistente`, pergunta fechada sai da fila, ponte com ponta aposentada) |
 | **X4** ✅ **RESOLVIDO** (F-UI, ADR-49) | Não existe runner de teste de UI no desktop — só `tsc --noEmit` | 🔴 medido; `vitest` + `jsdom` entraram com config separada, e `npm test` está em `[gate]`. Medido de novo na entrada: com o `onClick` do reparo desligado, `tsc --noEmit` sai **0** e o smoke reprova |
 
 ---
