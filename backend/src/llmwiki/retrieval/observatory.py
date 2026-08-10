@@ -67,9 +67,9 @@ def graph_data(settings: Settings, *, limit: int | None = None) -> dict:
         betweenness = {r["page"]: r["betweenness"] for r in
                        idx.execute("SELECT page, betweenness "
                                    "FROM graph_centrality")}
-        snap = idx.execute("SELECT centrality_backend, computed_at, "
-                           "bundle_head FROM graph_snapshot WHERE id=1"
-                           ).fetchone()
+        snap = idx.execute("SELECT backend, centrality_backend, "
+                           "computed_at, bundle_head "
+                           "FROM graph_snapshot WHERE id=1").fetchone()
     except Exception:                                # índice antigo (< v8)
         betweenness, snap = {}, None
     idx.close()
@@ -97,6 +97,14 @@ def graph_data(settings: Settings, *, limit: int | None = None) -> dict:
         "computed_at": (snap["computed_at"] if snap else None),
         "bundle_head": (snap["bundle_head"] if snap else None),
         "pages": len(betweenness)}
+    # X1+X2: o carimbo INTEIRO viaja — inclusive o backend de PARTIÇÃO,
+    # que diz se "comunidade" veio do Leiden ou do fallback de componentes
+    freshness = {
+        "partition_backend": (snap["backend"] if snap else "none"),
+        "centrality_backend": (snap["centrality_backend"] if snap
+                               else "none"),
+        "computed_at": (snap["computed_at"] if snap else None),
+        "bundle_head": (snap["bundle_head"] if snap else None)}
     total_nodes, total_edges = len(nodes), len(edges)
     if limit and limit < total_nodes:
         # os mais quentes primeiro, grau como desempate — e `page` como
@@ -107,6 +115,7 @@ def graph_data(settings: Settings, *, limit: int | None = None) -> dict:
         edges = [e for e in edges
                  if e["src"] in visiveis and e["dst"] in visiveis]
     return {"nodes": nodes, "edges": edges, "centrality": centrality,
+            "freshness": freshness,
             "total_nodes": total_nodes, "total_edges": total_edges,
             "truncated": len(nodes) < total_nodes}
 
@@ -149,6 +158,7 @@ def structural_gaps(settings: Settings, limit: int = 8) -> dict:
          for n in graph["nodes"] if n["betweenness"] > 0),
         key=lambda a: -a["betweenness"])[:10]
     return {"gaps": out, "articulators": articulators,
+            "freshness": graph["freshness"],
             "communities": len({n["community"] for n in graph["nodes"]
                                 if n["community"] >= 0})}
 
@@ -233,6 +243,7 @@ def insights(settings: Settings) -> dict:
     else:
         structure = "diverso"         # vários temas equilibrados e ligados
     return {
+        "freshness": graph["freshness"],
         "gaps": {
             "questions": [p["page"] for p in pages if p["type"] == "question"],
             "orphans": [n["page"] for n in graph["nodes"] if n["orphan"]][:20],

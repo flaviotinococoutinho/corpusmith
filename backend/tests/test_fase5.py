@@ -63,10 +63,25 @@ def test_graph_insights_dictionary_shapes(client, settings, kb):
         nodes["concepts/grpc.md"])
 
     ins = client.get("/cockpit/insights").json()
-    assert set(ins) == {"gaps", "topology", "activity", "classifiers"}
+    assert set(ins) == {"gaps", "topology", "activity", "classifiers",
+                        "freshness"}
     assert "questions/latencia.md" in ins["gaps"]["questions"]
     assert ins["topology"]["nodes"] == 3
     assert ins["classifiers"]["by_privacy"]
+
+
+def test_frescor_viaja_com_insights_e_gaps(client, settings, kb):
+    """X1+X2 (docs/18 §6): o carimbo existia em graph_snapshot e era
+    DESCARTADO por insights/gaps — a superfície não tinha como dizer de
+    quando é o mapa nem quem o produziu (numa máquina sem [ml],
+    "comunidade" é componente conexo em silêncio). O shape é estável
+    mesmo sem mapa computado (campos None/none, nunca ausentes)."""
+    _seed(settings, kb)
+    for rota in ("/cockpit/insights", "/cockpit/gaps"):
+        f = client.get(rota).json()["freshness"]
+        assert set(f) == {"partition_backend", "centrality_backend",
+                          "computed_at", "bundle_head"}, rota
+        assert f["partition_backend"] in ("leiden", "components", "none")
 
     d = client.get("/cockpit/dictionary").json()
     assert {"types", "origins", "confidence_scale", "verdicts",
