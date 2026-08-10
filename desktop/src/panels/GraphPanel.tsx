@@ -150,6 +150,14 @@ export function GraphPanel() {
                        + `medida pelo kernel ${data.centrality.backend}`}>
               articulação por {data.centrality.backend}
             </span>)}
+          {/* X1: numa máquina sem o extra [ml], "comunidade" é componente
+              conexo — o carimbo registrava e nenhuma superfície dizia */}
+          {data.freshness?.partition_backend === "components" && (
+            <span className="text-amber-700"
+                  title="o extra [ml] (igraph/leidenalg) não está ativo — o
+ mapa usa componentes conexos, não Leiden">
+              mapa por componentes (sem [ml])
+            </span>)}
           {data.truncated && (
             <span className="text-neutral-500">
               mostrando {data.nodes.length} de {data.total_nodes} nós

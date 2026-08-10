@@ -52,10 +52,25 @@ export function InsightsPanel() {
   if (erro) return <DaemonUnavailable error={erro} onRetry={load} />;
   if (!ins) return <div className="p-6">Calculando indicadores…</div>;
   const g = ins.gaps, t = ins.topology;
+  const f = ins.freshness;
   return (
     <div className="p-4 grid grid-cols-2 gap-3 text-sm">
       {notice && <p className="col-span-2 text-xs border rounded p-2
         bg-neutral-50">{notice}</p>}
+      {/* X2: os indicadores derivam do MAPA — sem o carimbo, um painel
+          computado sobre um mapa velho parecia atual. O grafo já tinha o
+          badge; os demais artefatos derivados não. */}
+      {f && (
+        <p className="col-span-2 text-xs text-neutral-500">
+          {f.computed_at
+            ? <>mapa de {new Date(f.computed_at * 1000).toLocaleString()}
+                {" · partição por "}{f.partition_backend}
+                {f.partition_backend === "components" &&
+                  <span className="text-amber-700"> (sem [ml] — componentes
+ conexos, não Leiden)</span>}</>
+            : <span className="text-amber-700">⏳ mapa nunca computado — os
+ indicadores usam grau e componentes brutos</span>}
+        </p>)}
       <Section title="🔗 Lacunas estruturais (fios ausentes do discurso)">
         <div className="text-xs space-y-2">
           <p className="text-neutral-400">

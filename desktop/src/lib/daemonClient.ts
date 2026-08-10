@@ -95,6 +95,13 @@ export interface GraphCentrality {
   pages: number;
 }
 
+export interface GraphFreshness {
+  partition_backend: "none" | "leiden" | "components";
+  centrality_backend: "none" | "python" | "rust";
+  computed_at: number | null;
+  bundle_head: string | null;
+}
+
 export interface GraphData {
   nodes: Array<Record<string, unknown> & {
     page: string; degree: number; betweenness: number; community: number;
@@ -102,6 +109,7 @@ export interface GraphData {
   edges: Array<{ src: string; dst: string; confidence: string;
                  bridge?: boolean }>;
   centrality: GraphCentrality;
+  freshness: GraphFreshness;
   total_nodes: number;
   total_edges: number;
   truncated: boolean;
