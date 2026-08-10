@@ -51,6 +51,7 @@ EVENT_TYPES: frozenset[str] = frozenset({
     "analogy.registered", "analogy.promoted",
     # operação e manutenção
     "doctor.repaired", "backup.created", "backup.restored",
+    "backup.verify_failed",             # P-14: zip novo que não confere
     "config.tuned", "config.rolled_back", "behavior.streams_reset",
     "reference.imported", "eval.done", "lora.dataset",
     "review.scheduled", "review.done", "review.completed",

@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.7.0"   # F3-PR2: + attention_queue (P-3) — a fila da v1.8 finalmente tem contrato
+version = "1.7.1"   # C13: retrieval_rrf_hedge rebaixado a heuristic (regime bandit + clamp saturável)
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -54,9 +54,15 @@ known_failure_modes = [
   "mudança abrupta na distribuição de consultas (concept drift; o clamp acelera a readaptação mas não a elimina)",
   "falha correlacionada de todos os streams (pergunta fora da cobertura do corpus)",
   "loss atribuído por página, não por stream individual: streams que co-trouxeram a página dividem o mesmo julgamento",
+  "o clamp satura em 3 desfechos consecutivos (medido: 1.0→1.284→1.649→2.0 no teto; 1.0→0.779→0.607→0.5 no piso) — a partir daí evidência adicional na mesma direção tem efeito ZERO: o peso é um contador de 3 passos, não uma distribuição minimizadora de arrependimento",
 ]
-guarantee_kind = "online_regret_relative"
-guarantee_relative_to = "melhor stream fixo entre os observados, sob as perdas registradas; o clamp [0.5, 2.0] troca parte do bound formal por exploração garantida (nenhum stream é silenciado para sempre)"
+# C13 (docs/17): rebaixado de online_regret_relative — o bound do Hedge
+# (Freund & Schapire) exige perda de TODOS os experts por rodada, e
+# record_outcome só atualiza os streams CONTRIBUINTES (bandit sem correção
+# de amostragem). Mesma honestidade do segundo uso do kernel
+# (adaptive_strategy_selection), que sempre declarou heuristic.
+guarantee_kind = "heuristic"
+guarantee_relative_to = "fusão proporcional a pesos multiplicativos sobre desfechos observados; SEM bound formal de arrependimento no regime bandit implementado (só os streams contribuintes recebem loss, sem correção de amostragem) e com clamp [0.5, 2.0] que troca a distribuição por exploração garantida (nenhum stream é silenciado para sempre)"
 universal_guarantee = false
 fallback = ["degrade"]
 adaptive = true

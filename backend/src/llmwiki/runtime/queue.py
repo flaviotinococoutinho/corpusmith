@@ -40,19 +40,26 @@ class JobQueue:
                 dedupe_key: str | None = None) -> str:
         with self._lock:
             if dedupe_key:
+                # `done` SEGURA a chave — dedupe por período só existe se o
+                # ciclo concluído continuar ocupando a chave até o período
+                # virar. MEDIDO sem isto: `review:<semana>` era liberada ao
+                # concluir e o job SEMANAL rodava a cada passada do
+                # scheduler na segunda-feira (5 commits numa noite).
                 row = self.db.execute(
-                    "SELECT id FROM jobs WHERE dedupe_key=? "
-                    "AND state IN ('queued','leased')", (dedupe_key,)).fetchone()
+                    "SELECT id FROM jobs WHERE dedupe_key=? AND state IN "
+                    "('queued','leased','retry_scheduled',"
+                    "'cancel_requested','done')", (dedupe_key,)).fetchone()
                 if row:
                     return row["id"]
             jid = uuid.uuid4().hex[:12]
             if dedupe_key:
-                # chave já usada por job TERMINAL: libera para o novo ciclo
-                # (sem isto o INSERT viola a UNIQUE e mata o scheduler)
+                # chave usada por job que NÃO segura (falha/cancelamento):
+                # libera para a retentativa — sem isto o INSERT viola a
+                # UNIQUE e mata o scheduler
                 self.db.execute(
                     "UPDATE jobs SET dedupe_key = dedupe_key || ':' || id "
-                    "WHERE dedupe_key = ? AND state NOT IN "
-                    "('queued','leased','retry_scheduled')", (dedupe_key,))
+                    "WHERE dedupe_key = ? AND state IN "
+                    "('failed','cancelled','dead_lettered')", (dedupe_key,))
             self.db.execute(
                 "INSERT INTO jobs(id,type,payload,priority,dedupe_key,created_at) "
                 "VALUES (?,?,?,?,?,?)",

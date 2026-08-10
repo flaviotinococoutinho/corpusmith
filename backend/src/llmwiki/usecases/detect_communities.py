@@ -608,6 +608,8 @@ class DetectCommunities(UseCase):
         for page, community in communities.items():
             if community >= 0 and not page.startswith("communities/"):
                 members_by_community[community].append(page)
+        from ..okf.bundle import BundleReader
+        reader = BundleReader(self._settings.path("knowledge") / "bundle")
         written = 0
         for community, members in members_by_community.items():
             if len(members) < 2:
@@ -616,13 +618,21 @@ class DetectCommunities(UseCase):
                 adjacency[p].values()) if p in adjacency else 0)[:8]
             titles = [(p, p.rsplit("/", 1)[-1][:-3].replace("-", " "))
                       for p in top]
-            label, summary = self._label(titles)
             fingerprint = hashlib.sha256(
                 "\n".join(sorted(members)).encode()).hexdigest()
             tema = getattr(self, "_temas", {}).get(frozenset(members))
             if tema is None:            # sem casamento (backend trocou): id novo
                 from ..kernel.themes import theme_id as _tid
                 tema = _tid(set(members))
+            # T6 (ADR-45): membros idênticos ⇒ sumário derivado idêntico.
+            # Reescrever moveria o HEAD a cada job semanal sem informação
+            # nova — e re-consultaria o LLM para rotular o mesmo conjunto,
+            # trocando um rótulo já aceito por outro sorteio do modelo.
+            rel = f"communities/{tema}.md"
+            if reader.exists(rel) and \
+                    reader.load(rel).meta.source_sha256 == fingerprint:
+                continue
+            label, summary = self._label(titles)
             _CommunitySummaryPage(self._settings, label, summary,
                                   titles, fingerprint, tema).execute()
             written += 1

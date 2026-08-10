@@ -157,7 +157,12 @@ painel Qualidade → seção "Contratos epistêmicos"┘  (harness/epistemics)
   seta automaticamente (porta: comparar envelopes consecutivos);
 - idiomas/domínios do golden não são extraídos por caso (campos vazios
   com exclusão declarada);
-- o golden set não é distribuído por default (QA-1) — sem ele, todos os
-  mecanismos aparecem honestamente como `unevaluated`;
-- contratos cobrem 7 mecanismos; candidatos futuros: consolidação
-  SimHash, staleness, freeze/recycle (ACT-R), lint de citações.
+- ~~o golden set não é distribuído por default~~ — **pago pelo QA-1**:
+  `seed_golden_eval` distribui 10+ casos out-of-the-box e o eval deixa de
+  ser no-op (idempotente: nunca sobrescreve golden curado pelo usuário);
+- contratos cobrem **16 mecanismos** — a fonte viva é `epistemics.toml`
+  (`[registry].version` + `EXPECTED_MECHANISMS` no lint; este documento
+  não acompanha o conjunto entrada a entrada). Candidatos ainda sem
+  contrato: consolidação SimHash, staleness, freeze/recycle (ACT-R) e
+  lint de citações — os dois primeiros declarados devidos no
+  [`18`](18-backlog-consolidado.md) (F-EPIST).

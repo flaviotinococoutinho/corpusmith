@@ -72,6 +72,11 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 | [13-plano-experiencia-memoria.md](13-plano-experiencia-memoria.md) | **Plano avançado** de experiência de memória/curadoria/classificação — auditoria de consistência + receitas mineradas de projetos externos + roadmap em 4 fases |
 | [14-plano-viabilidade.md](14-plano-viabilidade.md) | **Plano de viabilidade** — o que falta para o produto ser usável por quem não é o autor: 14 problemas por complexidade DECRESCENTE (o ato de curadoria e a camada de padrões como objeto) + roadmap em 8 fases + matriz de não-adoção |
 | [15-plano-execucao.md](15-plano-execucao.md) | **Plano de execução** — pacotes de trabalho PR a PR das duas fases-modelo, ordem revisada, 10 lacunas de PROCESSO (a CI não executa o gate que o AGENTS.md declara), dependências ocultas, colisões de arquivo e o limiar de RFC |
+| [16-rfc-theme-id.md](16-rfc-theme-id.md) | **RFC-001** — identidade de tema por casamento de partições (τ = 1/3 calibrado contra a banda vazia; vocabulário fechado de épocas) |
+| [17-auditoria-integridade.md](17-auditoria-integridade.md) | **Auditoria adversarial de integridade** — achados de um cético independente rodando o código (garantias infladas, buracos de lint/gate), com nível de evidência |
+| [18-backlog-consolidado.md](18-backlog-consolidado.md) | **Backlog consolidado (fonte VIVA do que falta)** — bugs, fluxos incompletos, débito técnico e experiência, cada item com nível de evidência; atualizado no PR que resolve cada item |
+| [19-rfc-escada-reconciliacao.md](19-rfc-escada-reconciliacao.md) | **RFC-002** — a escada de reconciliação volta a ter três degraus (B1: o degrau de similaridade era código morto; árbitro LLM segue atrás de flag desligada) |
+| [20-rfc-colisao-de-caminho.md](20-rfc-colisao-de-caminho.md) | **RFC-003** — colisão de caminho entre promoção humana e compilação de máquina (P-7) |
 
 ## Guia rápido de roteamento (para não misturar especialidades)
 
@@ -85,6 +90,8 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 - É **para onde levar a experiência de memória/curadoria/classificação**? → `13`.
 - É **o que falta para ser viável para um terceiro** (e em que ordem)? → `14`.
 - É **como executar isso** (PR a PR, processo, RFC vs ADR)? → `15` + `AGENTS.md` §8.
+- É **o que AINDA falta, com evidência**? → `18` (fonte viva; `14`/`15` são o registro do raciocínio).
+- É **uma heurística no caminho de escrita**? → as RFCs `16`, `19`, `20` são os precedentes instanciados.
 - É **como instalar/verificar o ambiente**? → `12` + `scripts/install.sh`.
 
 ## Como manter esta documentação
