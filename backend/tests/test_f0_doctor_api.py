@@ -97,3 +97,29 @@ def test_api_nao_importa_jobs_nem_a_facade(settings):
         fonte = __import__("inspect").getsource(module)
         assert "from ..jobs" not in fonte and "from .jobs" not in fonte, \
             f"{module.__name__} importa jobs — ciclo com facades"
+
+
+# ==================== T10 residual: cancel/retry de jobs por HTTP
+def test_cancel_e_retry_de_job_por_http(client, settings):
+    """T10 (docs/18 §5.2): a fila tinha teste, a SUPERFÍCIE não — e é a
+    superfície que o painel Processos chama (F-UI). Erro vira 409 com
+    mensagem, nunca 500; shapes ficam presos aqui."""
+    # enfileirar via HTTP e cancelar na hora (queued ⇒ cancelled)
+    jid = client.post("/jobs", json={"type": "embed", "payload": {}}
+                      ).json()["job_id"]
+    r = client.post(f"/jobs/{jid}/cancel")
+    assert r.status_code == 200
+    assert r.json() == {"job_id": jid, "state": "cancelled"}
+    # cancelado é reexecutável (retry_manual): volta a queued
+    r = client.post(f"/jobs/{jid}/retry")
+    assert r.status_code == 200
+    assert r.json() == {"job_id": jid, "state": "queued"}
+    # done não é cancelável ⇒ 409 nomeado, não 500
+    rt = connect(settings.app_support / "runtime.db")
+    rt.execute("UPDATE jobs SET state='done' WHERE id=?", (jid,))
+    rt.commit(); rt.close()
+    assert client.post(f"/jobs/{jid}/cancel").status_code == 409
+    assert client.post(f"/jobs/{jid}/retry").status_code == 409
+    # job desconhecido ⇒ 409 (a fila não o conhece), não 500
+    assert client.post("/jobs/nao-existe/cancel").status_code == 409
+    assert client.post("/jobs/nao-existe/retry").status_code == 409

@@ -104,7 +104,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 | **T7** | `INV-ARCH-003/004` só inspecionam imports **relativos**, e o scan de `api/` usa `glob` em vez de `rglob` | O cético plantou violações que passaram verdes |
 | **T8** ✅ **RESOLVIDO** (PR-0.1) | `epistemics lint` fica verde com **contrato obrigatório apagado** (G-10) | Esquecer um contrato na F3/F4/F5 é silencioso |
 | **T9** | O `conftest` derruba o Ollama e com isso cega 100 % da suíte para a única FK do `index.db` | Foi assim que o defeito da FK sobreviveu |
-| **T10** | Nenhum teste cobre `/events`, `/system/doctor` por HTTP, `/jobs/{id}/cancel` nem qualquer superfície de UI | O bloco inteiro do §2 é invisível ao gate |
+| **T10** ✅ **RESOLVIDO** (por partes) | Nenhum teste cobre `/events`, `/system/doctor` por HTTP, `/jobs/{id}/cancel` nem qualquer superfície de UI | Doctor HTTP: F0 (`test_f0_doctor_api`) · UI: F-UI/X4 (vitest no gate) · vocabulário `/events/types` + laço SSE: F-UI (`test_eventos`) · `cancel`/`retry` por HTTP com 409 nomeado: coberto agora (a superfície já se comportava certo; o gate é que não a via) |
 | **T11** | `bench compare` está fora do gate por PR (variação entre máquinas), e o baseline segue em `1.7.0` contra produto `1.9.x` | G-4 |
 
 ### 5.3 Dependências ocultas ainda abertas (`docs/15` §5)
