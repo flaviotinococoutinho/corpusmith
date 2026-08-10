@@ -135,3 +135,56 @@ def test_every_implementation_ref_exists():
     assert not [f for f in findings
                 if f.code == "epistemic.implementation_ref_missing"]
     assert all(c.implementation_refs for c in registry.contracts)
+
+
+def test_freeze_parameters_match_code():
+    """O mecanismo mais destrutivo sem contrato (docs/17): 5 limiares
+    decidindo o que sai da memória quente, nenhum sob cross-check."""
+    import inspect
+    from llmwiki.kernel.activation import DECAY
+    from llmwiki.usecases import cold_memory
+    p = _params("memory_freeze")
+    assert float(p["actr_decay"]) == DECAY
+    src = inspect.getsource(cold_memory)
+    assert f'"memory.max_recall_probability", ' \
+           f'{float(p["max_recall_probability_default"])}' in src
+    assert f'"memory.min_idle_days", ' \
+           f'{int(float(p["min_idle_days_default"]))}' in src
+    assert f'"memory.freeze_tau", {float(p["freeze_tau_default"])}' in src
+    assert f'"memory.activation_noise", ' \
+           f'{float(p["activation_noise_default"])}' in src
+
+
+def test_consolidate_parameters_match_code():
+    import inspect
+    from llmwiki.kernel.sketch import simhash
+    from llmwiki.usecases.consolidate_inbox import _Signature
+    p = _params("consolidate_inbox")
+    assert int(p["near_duplicate_hamming"]) == \
+        _Signature.NEAR_DUPLICATE_HAMMING
+    assert int(p["simhash_shingle"]) == \
+        inspect.signature(simhash).parameters["shingle"].default
+    src = inspect.getsource(
+        __import__("llmwiki.usecases.consolidate_inbox",
+                   fromlist=["x"]))
+    assert f"text[:{int(p['text_window_chars']):_}]".replace("_", "_") \
+        in src.replace("100_000", "100000") \
+        or "text[:100_000]" in src
+
+
+def test_freeze_declara_proxy_e_efeito_colateral_do_recycle():
+    """docs/17: P(recall) mede HEAT DE LEITURA, não valor; e com
+    auto_recycle uma CONSULTA escreve no bundle. Os dois têm de estar
+    declarados — omiti-los é o que fazia o mecanismo parecer coberto."""
+    from llmwiki.harness.epistemics import load_registry
+    registry, _ = load_registry()
+    c = registry.get("memory_freeze")
+    texto = " ".join(m.text for m in c.known_failure_modes).lower()
+    assert "leitura" in texto or "heat" in texto      # proxy declarado
+    assert "auto_recycle" in texto or "consulta" in texto  # efeito colateral
+    assert c.high_impact is True
+    # e cold_memory.py NÃO aparece mais como ref de abstention (parecia
+    # cobrir o freeze sem contrato)
+    ab = registry.get("abstention")
+    assert not any("cold_memory" in r for r in ab.implementation_refs)
+    assert any("cold_memory" in r for r in c.implementation_refs)
