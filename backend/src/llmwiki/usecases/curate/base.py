@@ -25,6 +25,7 @@ guarda o `commit`.
 """
 from __future__ import annotations
 import json
+import threading
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from ..base import UseCase
@@ -64,6 +65,15 @@ class CurationAct(UseCase):
 
     ACT = "act"
     LOG_KIND = "Update"
+    # D-H (docs/15 §5): o flock do writer serializa só a ESCRITA — o plano
+    # podia ser computado sobre estado que outro ato mudou entre o plan e o
+    # apply, e o rebuild corria fora de qualquer lock. Este mutex fecha o
+    # rito inteiro (plan→apply→record→rebuild) no processo do daemon, onde
+    # todos os atos HTTP rodam. Resíduo declarado: CLI × daemon são
+    # processos distintos — lá o flock segue garantindo a escrita, mas um
+    # plano pode envelhecer entre processos (mesma janela de antes, agora
+    # dita em voz alta).
+    _rito = threading.Lock()
 
     def __init__(self, settings: Settings, notify=None):
         self._settings = settings
@@ -72,10 +82,15 @@ class CurationAct(UseCase):
 
     # ------------------------------------------------- esqueleto IMUTÁVEL
     def execute(self, dry_run: bool = False) -> dict:
-        preview = self._plan()
         if dry_run:
+            # CQS: o preview é puro e não disputa o rito com ninguém
             return {"dry_run": True, "applied": False,
-                    "preview": preview.to_dict()}
+                    "preview": self._plan().to_dict()}
+        with self._rito:
+            return self._executar_serializado()
+
+    def _executar_serializado(self) -> dict:
+        preview = self._plan()
         if preview.blocked:
             # o rito não começa se o preview já prevê rejeição: assim o
             # 422 sai do MESMO cálculo que o usuário viu no dry-run
