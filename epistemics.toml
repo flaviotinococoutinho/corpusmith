@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.7.1"   # C13: retrieval_rrf_hedge rebaixado a heuristic (regime bandit + clamp saturável)
+version = "1.8.0"   # F-EPIST: + memory_freeze e consolidate_inbox — os dois mecanismos sem contrato do docs/17
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -134,7 +134,6 @@ title = "Abstenção com fallback determinístico para a base fria"
 decision = "responder OU confessar ausência de cobertura (custo de silêncio < custo de resposta fabricada)"
 implementation_refs = [
   "backend/src/llmwiki/usecases/ask_memory.py",
-  "backend/src/llmwiki/usecases/cold_memory.py",
 ]
 inductive_biases = [
   "evidência vazia ou top_score abaixo do limiar indica ausência de cobertura, não resposta difícil",
@@ -172,6 +171,94 @@ threshold_config_key = "ask.abstain_threshold"
 threshold_default = 0.0
 
 # ======================================================== reconciliação
+[mechanisms.memory_freeze]
+title = "Esquecimento por congelamento ACT-R (freeze para a base fria; recycle de volta)"
+decision = "remover uma página da memória QUENTE (retrieval padrão) para a base fria — e reidratá-la quando cold_matches casarem com a pergunta"
+implementation_refs = [
+  "backend/src/llmwiki/usecases/cold_memory.py",
+  "backend/src/llmwiki/kernel/activation.py",
+]
+inductive_biases = [
+  "a ativação de nível-base do ACT-R (Anderson et al. 2004) prevê recuperabilidade a partir do histórico de USO — o que foi lido tende a ser pedido de novo",
+  "página sem dependente TMS e fora do overlay preferred pode sair do retrieval sem quebrar raciocínio de terceiros",
+]
+assumptions = [
+  "page_heat (reads/cites por caminho) representa uso real — não distingue leitura por engano de leitura por valor",
+  "o decay canônico d=0.5, calibrado em experimentos de memória humana, transfere para memória de conhecimento pessoal (NÃO recalibrado neste produto)",
+  "os limiares default (P(recall) 0.05, ócio 90d) fazem sentido para o bundle do usuário — nenhum foi calibrado em dado real",
+]
+validity_scope = [
+  "páginas com heat registrado, de tipos não protegidos, sem dependentes TMS",
+  "decisão CONSERVADORA: na dúvida (qualquer gate), veta — congelar exige passar por todos",
+]
+known_failure_modes = [
+  "P(recall) é PROXY de heat de LEITURA, não de compreensão nem de valor: página valiosa raramente aberta congela; página ruim muito aberta fica",
+  "heat ausente ⇒ ativação -inf: página nunca lida é candidata imediata (o gate de ócio só protege quem já foi usado)",
+  "force=True fura os gates de overlay/recall/ócio — tipo protegido e dependentes TMS seguem vetando, o resto cede ao humano",
+  "com memory.auto_recycle ligado, uma CONSULTA /ask que case com o digest frio ESCREVE no bundle e commita (RecycleMemory) — leitura com efeito colateral canônico, sem gate humano no caminho",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "cadeia determinística de vetos sobre um modelo psicológico (ACT-R) cujos limiares NÃO foram calibrados no bundle real — a garantia é a reversibilidade (esquecer = compactar, nunca destruir; o digest fica na base fria e o recycle restaura), não a justeza da seleção"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+evidence = ["deterministic_check", "human_feedback"]
+misinterpretations = [
+  "congelar não é apagar: o conteúdo integral segue no Git e o digest na base fria — FreezeVeto é a saída normal, não erro",
+  "P(recall) alto não significa página boa — significa página LIDA",
+]
+high_impact = true
+abstention_supported = false
+human_review_available = true
+[mechanisms.memory_freeze.parameters]
+max_recall_probability_default = 0.05
+min_idle_days_default = 90
+freeze_tau_default = 0.0
+activation_noise_default = 0.4
+actr_decay = 0.5
+
+[mechanisms.consolidate_inbox]
+title = "Consolidação do inbox por clusters SimHash"
+decision = "agrupar notas cruas near-duplicadas e compilar UMA página por cluster (uma chamada de LLM por cluster, não uma por nota)"
+implementation_refs = [
+  "backend/src/llmwiki/usecases/consolidate_inbox.py",
+  "backend/src/llmwiki/kernel/sketch.py",
+]
+inductive_biases = [
+  "textos near-duplicados compartilham a maioria dos shingles de 3 palavras — SimHash (Charikar 2002) aproxima essa sobreposição em 64 bits",
+  "entidades compartilhadas entre os membros confirmam a coesão do cluster (interseção, não união)",
+]
+assumptions = [
+  "a janela text[:100_000] representa o documento (cauda além disso não muda o sketch)",
+  "hamming <= 8 em 64 bits separa duplicata de coincidência no inbox típico",
+]
+validity_scope = [
+  "notas de texto do inbox (raw/); recorrência DETERMINÍSTICA, sem embeddings",
+]
+known_failure_modes = [
+  "texto curto: poucos shingles tornam o sketch instável (simhash de vazio = 0)",
+  "paráfrase profunda escapa: SimHash é LEXICAL, não semântico — mesmo fato reescrito não clusteriza",
+  "boilerplate compartilhado (cabeçalho/rodapé idênticos) domina os shingles e produz falso cluster",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "distância de Hamming <= 8 sobre SimHash de 64 bits com shingles de 3 palavras — limiar de projeto, não calibrado em corpus real; fora de cluster nada se perde (a fonte fica pendente para o compile individual)"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+evidence = ["deterministic_check"]
+misinterpretations = [
+  "cluster não é juízo de MÉRITO: é sobreposição lexical — a página compilada passa pelo mesmo Harness de qualquer escrita",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.consolidate_inbox.parameters]
+near_duplicate_hamming = 8
+simhash_shingle = 3
+text_window_chars = 100000
+
 [mechanisms.reconciliation]
 title = "Reconciliação ADD/UPDATE/SUPERSEDE/NOOP/RECYCLE por escada determinística"
 decision = "decidir se um candidato compilado é novo (ADD), atualiza (UPDATE), substitui (SUPERSEDE), nada acrescenta (NOOP) ou reidrata memória fria (RECYCLE)"

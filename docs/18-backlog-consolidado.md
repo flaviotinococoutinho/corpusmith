@@ -80,7 +80,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 | **PR-0.1** ✅ **ENTREGUE** (ADR-47) | **Release executável** — `exclude_binaries=True`, `sqlite-vec` no build, job de release com trigger de tag, token de release em `[gate].ci_enforced`, `expected_mechanisms` no registro | 4 | **G-8 e G-10 reabertas.** Sem o token no gate, `test_ci_executa_todo_o_gate_declarado` **estruturalmente nunca** poderá acusar |
 | **F3-PR0** ✅ **ENTREGUE** | **Fechar o laço da decisão canônica** — B1 **com RFC**, pré-condição de frescor ou INV de cobertura bundle→índice, `try/finally` no rebuild, teste do degrau de similaridade | 6 | **Pré-requisito da F3**: o P-7 faz `promote` consultar uma escada com dois degraus mortos |
 | **F-UI** ✅ **ENTREGUE** (ADR-49) | **As superfícies órfãs num PR só** — doctor, histórico com undo, cancel/retry, repasse genérico de SSE | 8 | Cinco achados, um arquivo de cliente, cinco painéis. Muito mais barato junto. **Pré-requisito: smoke de UI, hoje inexistente** |
-| **F-EPIST** (em andamento, um PR por item) | Trilha epistêmica | 5 | ✅ B4 · ✅ rebaixar `retrieval_rrf_hedge` (C13: heuristic + failure mode do clamp saturável, registro 1.7.1) · ✅ `rglob`/import absoluto no `test_architecture` (T7) · **restam**: contratos de `memory_freeze` e `consolidate_inbox`, remover `cold_memory.py` dos refs de `abstention`, campo de efeito colateral no `EpistemicContract` (C6) |
+| **F-EPIST** ✅ **CONCLUÍDA** (exceto C6) | Trilha epistêmica | 5 | ✅ B4 · ✅ `retrieval_rrf_hedge` heuristic (C13) · ✅ `rglob`/import absoluto (T7) · ✅ contratos de `memory_freeze` e `consolidate_inbox` (registro 1.8.0, 18 mecanismos; P(recall) declarado PROXY de heat; efeito colateral do `auto_recycle` dito em voz alta; `cold_memory.py` saiu dos refs de `abstention`) · **resta**: campo de efeito colateral no `EpistemicContract` (C6 — exige mudança de modelo) |
 
 ---
 
@@ -103,7 +103,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 |---|---|---|
 | **T7** ✅ **RESOLVIDO** | `INV-ARCH-003/004` só inspecionam imports **relativos**, e o scan de `api/` usa `glob` em vez de `rglob` | O cético plantou violações que passaram verdes. Fechado com `_internal_imports` (relativo E absoluto) + `rglob` — reprovação verificada com violação plantada, e o teste antigo confirmado cego à mesma planta |
 | **T8** ✅ **RESOLVIDO** (PR-0.1) | `epistemics lint` fica verde com **contrato obrigatório apagado** (G-10) | Esquecer um contrato na F3/F4/F5 é silencioso |
-| **T9** | O `conftest` derruba o Ollama e com isso cega 100 % da suíte para a única FK do `index.db` | Foi assim que o defeito da FK sobreviveu |
+| **T9** ✅ **RESOLVIDO** (na consequência) | O `conftest` derruba o Ollama e com isso cega 100 % da suíte para a única FK do `index.db` | A FK ganhou testes que a exercitam SEM Ollama (inserção direta em `embeddings` + rebuild/repair — regressão do incidente). O redirecionamento hermético do conftest permanece, por design: o que mudou é que a FK deixou de depender dele |
 | **T10** ✅ **RESOLVIDO** (por partes) | Nenhum teste cobre `/events`, `/system/doctor` por HTTP, `/jobs/{id}/cancel` nem qualquer superfície de UI | Doctor HTTP: F0 (`test_f0_doctor_api`) · UI: F-UI/X4 (vitest no gate) · vocabulário `/events/types` + laço SSE: F-UI (`test_eventos`) · `cancel`/`retry` por HTTP com 409 nomeado: coberto agora (a superfície já se comportava certo; o gate é que não a via) |
 | **T11** | `bench compare` está fora do gate por PR (variação entre máquinas), e o baseline segue em `1.7.0` contra produto `1.9.x` | G-4 |
 

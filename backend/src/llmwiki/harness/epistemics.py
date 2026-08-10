@@ -61,7 +61,7 @@ def load_registry(path: Path | str | None = None
 #   desligado. Warn mantém a dívida VISÍVEL no mesmo lugar onde ela será paga.
 EXPECTED_MECHANISMS = (
     "abstention", "adaptive_strategy_selection", "attention_queue",
-    "cognitive_priority",
+    "cognitive_priority", "consolidate_inbox", "memory_freeze",
     "graph_cache", "metacog_observation_mining", "native_graph_kernel",
     "native_index_builder", "native_sketch_kernel", "native_text_extraction",
     "pattern_layer_snapshot", "reconciliation", "retrieval_rrf_hedge",
