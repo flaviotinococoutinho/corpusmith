@@ -42,6 +42,31 @@ def _relative_imports(path: Path) -> set[str]:
     return found
 
 
+def _internal_imports(path: Path) -> set[str]:
+    """Pacotes de llmwiki alcançados por QUALQUER forma de import —
+    relativo (`from ..facades import X`) ou absoluto
+    (`from llmwiki.facades import X` / `import llmwiki.facades`).
+
+    T7 (docs/18 §5.2): INV-ARCH-003/004 só olhavam os relativos, então
+    reescrever a violação em forma absoluta passava verde — o cético
+    plantou exatamente isso."""
+    tree = ast.parse(path.read_text())
+    found: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            parts = (node.module or "").split(".")
+            if node.level > 0:
+                found.add(parts[0])
+            elif parts[0] == "llmwiki" and len(parts) > 1:
+                found.add(parts[1])
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                parts = alias.name.split(".")
+                if parts[0] == "llmwiki" and len(parts) > 1:
+                    found.add(parts[1])
+    return found
+
+
 def test_kernel_and_normalize_are_pure():
     """kernel/, normalize/, cognitive/ e epistemic/ são núcleo PURO:
     stdlib, zero I/O, zero framework. O domínio cognitivo (v0.19) e o
@@ -82,19 +107,22 @@ def test_usecases_do_not_reach_outward():
     # escaparia em silêncio de INV-ARCH-003 se a varredura fosse plana
     for module in (SRC / "usecases").rglob("*.py"):
         absolute = _absolute_imports(module)
-        relative = _relative_imports(module)
         assert "fastapi" not in absolute, f"{module}: use case importou fastapi"
-        assert not relative & {"facades", "api", "jobs"}, \
+        # T7: _internal_imports vê relativo E absoluto — reescrever
+        # `from ..facades` como `from llmwiki.facades` não escapa mais
+        assert not _internal_imports(module) & {"facades", "api", "jobs"}, \
             f"{module}: use case importou camada mais externa"
 
 
 def test_api_speaks_only_to_facades():
     """A camada HTTP (mais mutável) orquestra via facades — nunca via
     use cases ou jobs diretamente."""
-    for module in (SRC / "api").glob("*.py"):
-        relative = _relative_imports(module)
-        assert not relative & {"usecases", "jobs"}, \
-            f"{module}: api pulou a facade ({relative})"
+    # rglob + _internal_imports (T7): subpacote novo de api/ e import
+    # absoluto entram no invariante no dia em que nascerem
+    for module in (SRC / "api").rglob("*.py"):
+        internal = _internal_imports(module)
+        assert not internal & {"usecases", "jobs"}, \
+            f"{module}: api pulou a facade ({internal})"
 
 
 def test_every_usecase_has_single_public_method():
