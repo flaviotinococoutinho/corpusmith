@@ -181,7 +181,10 @@ class EvaluateMemory(UseCase):
                 known_exclusions=(
                     "idiomas ausentes do golden set",
                     "perguntas fora do bundle",),
-                out_of_scope=tuple(s.text for s in contract.validity_scope),
+                # "onde NÃO foi medido": os failure modes declarados —
+                # NUNCA o validity_scope, que é onde o mecanismo VALE (B4)
+                out_of_scope=tuple(
+                    m.text for m in contract.known_failure_modes),
                 eval_run_ids=tuple(run_ids),
                 evaluation_status=status)
             data = envelope.to_dict()
