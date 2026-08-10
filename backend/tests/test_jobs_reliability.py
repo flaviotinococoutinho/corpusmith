@@ -130,3 +130,25 @@ def test_pipeline_cooperative_cancel_stops_between_stages(settings, kb):
                          cancelled=cancelled).execute()
     assert result["state"] == "cancelled"
     assert ran == ["a"]                             # b NÃO rodou
+
+
+def test_dedupe_periodico_segura_apos_done_e_libera_apos_falha(queue):
+    """MEDIDO em produção local: a chave `review:<semana>` era liberada
+    assim que o job terminava ("novo ciclo"), então o job SEMANAL rodava
+    a cada passada do scheduler na segunda-feira — 5 commits
+    `review: 2026-W32` numa noite. Dedupe por período só existe se `done`
+    SEGURA a chave; falha/cancelamento liberam (retry na próxima passada
+    em vez de silêncio até a semana virar)."""
+    jid = queue.enqueue("review_weekly", {}, dedupe_key="review:2026-W32")
+    leased = queue.lease()
+    assert leased["id"] == jid
+    queue.complete(jid, {})
+    # done SEGURA: mesma chave devolve o job já concluído, sem linha nova
+    assert queue.enqueue("review_weekly", {},
+                         dedupe_key="review:2026-W32") == jid
+    # falha LIBERA: outro período, job falha ⇒ a passada seguinte re-tenta
+    jid2 = queue.enqueue("review_weekly", {}, dedupe_key="review:2026-W33")
+    queue.lease()
+    queue.fail(jid2, "quebrou", transient=False)
+    jid3 = queue.enqueue("review_weekly", {}, dedupe_key="review:2026-W33")
+    assert jid3 != jid2
