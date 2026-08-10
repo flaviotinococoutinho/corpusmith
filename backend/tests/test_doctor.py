@@ -121,3 +121,21 @@ def test_migration_ledger_records_first_stamp(settings):
     rt.close()
     assert rows and rows[0]["to_version"] == SCHEMA_VERSIONS["runtime.db"]
     assert rows[0]["from_version"] is None       # banco nasceu na versão atual
+
+
+def test_review_semanal_nao_deixa_o_doctor_vermelho(settings, kb):
+    """Achado da PRIMEIRA execução da CI numa segunda-feira (package
+    smoke): `review_weekly` escreve `reviews/<semana>.md` e COMMITA sem
+    reindexar — INV-002 error até o próximo rebuild. Mesma classe do bug
+    do `leiden`, corrigido no F2 ("o job não deixa o doctor vermelho");
+    o ramo semanal do Scheduler nunca tinha sido exercitado num smoke."""
+    from llmwiki.jobs import REGISTRY
+    BundleWriter(kb).write([_doc("concepts/a.md", "A")],
+                           log_kind="Creation", log_message="m",
+                           commit_message="c")
+    rebuild_index(settings)            # consolidate/embed carimbam o índice
+    assert DiagnoseSystem(settings).execute()["ok"], "cenário já sujo"
+    REGISTRY["review_weekly"](settings, {}, lambda *a, **k: None)
+    rel = DiagnoseSystem(settings).execute()
+    erros = [f for f in rel["findings"] if f["severity"] == "error"]
+    assert not erros, f"o job deixou o doctor vermelho: {erros}"
