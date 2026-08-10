@@ -87,10 +87,13 @@ def verify_backup(archive: str | Path) -> dict:
 
 class CreateBackup(UseCase):
     def __init__(self, settings: Settings, out: str | None = None,
-                 notify=None):
+                 notify=None, exclude_job: str | None = None):
         self._settings = settings
         self._out = out
         self._notify = notify or (lambda *a, **k: None)
+        # P-14: quando o backup RODA como job, ele mesmo está leased —
+        # sem se excluir, esperaria o timeout inteiro de quiescência
+        self._exclude_job = exclude_job
 
     def execute(self) -> dict:
         home = self._settings.home.expanduser()
@@ -113,7 +116,8 @@ class CreateBackup(UseCase):
             rt = connect(self._settings.app_support / "runtime.db")
             busy = rt.execute(
                 "SELECT COUNT(*) c FROM jobs WHERE state IN "
-                "('leased','cancel_requested')").fetchone()["c"]
+                "('leased','cancel_requested') AND id != ?",
+                (self._exclude_job or "",)).fetchone()["c"]
             rt.close()
             if not busy:
                 return

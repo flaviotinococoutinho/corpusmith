@@ -69,7 +69,7 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 | **P-8** | **A memória não lembra o que falhou** — abstenção não deixa rastro | 3 | F3 (deliberadamente depois) |
 | **P-11** | **Custo das superfícies** — reprocessam o bundle a cada abertura | 2 | **parcialmente pago** pelo ADR-44 (grafo 2571 → 139 ms); resta o resto |
 | **P-12** | **O ritual semanal inalcançável** | 2 | = F3 acima |
-| **P-14** | **Durabilidade invisível** — backup excelente, nunca automático | 2 | — |
+| **P-14** ✅ **RESOLVIDO** | **Durabilidade invisível** — backup excelente, nunca automático | 2 | Job `backup` semanal no Scheduler (dedupe por semana ISO, prioridade mínima): cria, **verifica cada sha256** e só então poda além de `backup.keep` (default 4); a quiescência exclui o próprio job; `backup.verify_failed` declarado e repassado à UI |
 
 ---
 

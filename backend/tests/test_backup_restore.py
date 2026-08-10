@@ -142,3 +142,82 @@ def test_backup_uses_quiescence_lock(settings, kb):
     result = CreateBackup(settings).execute()
     assert result["files"] > 3
     assert not (settings.app_support / "backup.lock").exists()  # liberado
+
+
+# ==================================== P-14: durabilidade deixa de ser invisível
+def test_backup_e_agendado_semanalmente(settings):
+    """P-14 (docs/18 §3): "backup excelente, nunca automático". Segunda-
+    feira o Scheduler enfileira `backup` com dedupe semanal e a MENOR
+    prioridade do agendador — durabilidade não compete com o usuário."""
+    from llmwiki.jobs import REGISTRY
+    from llmwiki.runtime.queue import JobQueue
+    from llmwiki.runtime.scheduler import Scheduler
+    assert "backup" in REGISTRY, "o job precisa existir para ser agendado"
+    db = connect(settings.app_support / "runtime.db")
+    fila = JobQueue(db)
+    agendados: list[tuple] = []
+    fila.enqueue = lambda nome, payload, **kw: agendados.append(
+        (nome, kw.get("priority"), kw.get("dedupe_key")))
+    sch = Scheduler(fila, interval=0.01)
+    sch._halt.wait = lambda *a: sch._halt.set()
+    import time as _t
+    monday = _t.struct_time((2026, 7, 27, 3, 0, 0, 0, 208, 0))
+    original = _t.localtime
+    _t.localtime = lambda *a: monday
+    try:
+        Scheduler.run(sch)
+    finally:
+        _t.localtime = original
+    backup = [a for a in agendados if a[0] == "backup"]
+    assert backup, f"backup não agendado: {[a[0] for a in agendados]}"
+    _, prioridade, dedupe = backup[0]
+    assert prioridade == 8, "backup cede a vez até para o leiden (7)"
+    assert dedupe and dedupe.startswith("backup:")
+    assert len(dedupe.split(":")[1]) >= 6      # semana ISO, não dia
+
+
+def test_job_de_backup_cria_verifica_e_reporta(settings, kb):
+    """O job não é só o CreateBackup: um backup automático que ninguém
+    verifica é fé, não durabilidade — o run VERIFICA cada sha256."""
+    from pathlib import Path
+    from llmwiki.jobs import REGISTRY
+    _seed(settings, kb)
+    out = REGISTRY["backup"](settings, {}, lambda *a, **k: None)
+    assert out["verify"]["ok"] is True
+    assert out["verify"]["checked"] == out["files"]
+    assert Path(out["path"]).exists()
+
+
+def test_retencao_poda_o_antigo_so_depois_de_verificar_o_novo(settings, kb):
+    """keep=1: após o segundo backup verificado, só o mais novo fica.
+    A poda vem DEPOIS da verificação — um zip novo inválido nunca
+    justifica apagar o anterior que verificou."""
+    import time as _t
+    from llmwiki.jobs import REGISTRY
+    _seed(settings, kb)
+    primeiro = REGISTRY["backup"](settings, {"keep": 1},
+                                  lambda *a, **k: None)
+    _t.sleep(1.1)                       # carimbo do nome tem grão de 1 s
+    segundo = REGISTRY["backup"](settings, {"keep": 1},
+                                 lambda *a, **k: None)
+    assert segundo["pruned"] == 1
+    restantes = list_backups(settings)
+    assert len(restantes) == 1
+    assert restantes[0]["path"] == segundo["path"]
+    assert primeiro["path"] != segundo["path"]
+
+
+def test_quiescencia_ignora_o_proprio_job_de_backup(settings):
+    """O job roda DENTRO do worker: sem excluir a si mesmo da contagem de
+    leased, todo backup agendado esperaria o timeout inteiro de
+    quiescência antes de fotografar."""
+    import time as _t
+    rt = connect(settings.app_support / "runtime.db")
+    rt.execute("INSERT INTO jobs(id, type, payload, state, created_at) "
+               "VALUES ('eu-mesmo','backup','{}','leased', 1.0)")
+    rt.commit(); rt.close()
+    inicio = _t.monotonic()
+    CreateBackup(settings, exclude_job="eu-mesmo")._await_quiescence(
+        timeout_s=2.0)
+    assert _t.monotonic() - inicio < 1.0, \
+        "esperou o timeout com o único leased sendo ele mesmo"
