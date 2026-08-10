@@ -109,9 +109,12 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 
 ### 5.3 Dependências ocultas ainda abertas (`docs/15` §5)
 
-- **D-H** — o lock protege o bundle, não a projeção: o `rebuild_index` de cada
-  `_apply` escreve fora do lock. A Fase 1 multiplicou por sete os escritores
-  humanos. 🔵 planejado, não verificado recentemente;
+- **D-H** ✅ **RESOLVIDO no processo** — o lock protegia o bundle, não o rito:
+  medido por teste de corrida (o plan de B invadia a janela do apply de A e B
+  concluía antes). O esqueleto do ato agora segura um mutex do plan ao
+  rebuild no processo do daemon, onde todos os atos HTTP rodam. **Resíduo
+  declarado**: CLI × daemon são processos distintos — o flock segue
+  garantindo a escrita, mas um plano pode envelhecer entre processos;
 - **co-menção contada duas vezes** — o laço em memória do F2-PR1 colidirá com a
   materialização que a F5 (P-6) promete: o mesmo par somaria 0,5 (lido) + 0,25
   (recomputado). 🟠 confirmado, e **muda o escopo da F5**;
