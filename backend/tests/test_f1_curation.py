@@ -204,6 +204,18 @@ def test_rejeicao_de_politica_vira_422_legivel_no_ato(client, kb):
                                      for f in corpo["findings"])
 
 
+def test_parametro_desconhecido_vira_400_nao_500(client):
+    """Kwargs que o ato não aceita são erro do CHAMADOR, não crash do
+    servidor — medido: `page` em vez de `src` no link devolvia 500 cru
+    (TypeError atravessava a facade sem virar código estável)."""
+    r = client.post("/curation/act", json={
+        "act": "link",
+        "params": {"page": "concepts/a.md", "target": "concepts/b.md"},
+        "dry_run": True})
+    assert r.status_code == 400, r.text
+    assert "link" in r.json()["detail"]
+
+
 def test_422_vale_tambem_para_as_superficies_antigas(client):
     """G-7 transversal: o handler é único, então /cockpit/promote — que
     ANTES devolvia 500 — passa a devolver 422 com a regra nomeada."""
@@ -263,3 +275,49 @@ def test_cli_curate_dry_run_nao_escreve(base, kb, capsys):
     assert cmd_curate(base, args) == 0
     assert "superseded_by" in capsys.readouterr().out
     assert GitStore(kb).repo.head.commit.hexsha == head_antes
+
+
+# ===================================== D-H: o rito inteiro é serializado
+def test_dois_atos_concorrentes_nao_entrelacam_o_rito(base, kb):
+    """D-H (docs/15 §5): o flock do writer serializa só a ESCRITA — o
+    plano podia ser computado sobre estado que outro ato mudou entre o
+    plan e o apply, e o rebuild corria fora de qualquer lock. O esqueleto
+    agora segura um mutex do processo do plan ao rebuild: numa corrida,
+    o segundo ato PLANEJA depois de o primeiro reindexar."""
+    import threading
+    from llmwiki.usecases.curate.invalidate import InvalidatePage
+    trace: list[str] = []
+    original_plan = InvalidatePage._plan
+    original_apply = InvalidatePage._apply
+    barreira = threading.Event()
+
+    def plan_instrumentado(self):
+        trace.append(f"plan:{self._page}")
+        return original_plan(self)
+
+    def apply_lento(self, preview):
+        if self._page == "concepts/a.md":
+            barreira.set()               # B pode tentar começar AGORA
+            import time
+            time.sleep(0.3)              # janela generosa para B invadir
+        out = original_apply(self, preview)
+        trace.append(f"applied:{self._page}")
+        return out
+
+    InvalidatePage._plan = plan_instrumentado
+    InvalidatePage._apply = apply_lento
+    try:
+        t = threading.Thread(target=lambda: InvalidatePage(
+            base, page="concepts/a.md", reason="corrida").execute())
+        t.start()
+        barreira.wait(5.0)               # A está DENTRO do apply
+        InvalidatePage(base, page="concepts/b.md",
+                       reason="corrida").execute()
+        t.join(10.0)
+    finally:
+        InvalidatePage._plan = original_plan
+        InvalidatePage._apply = original_apply
+    # sem o mutex, o plan de B invade a janela entre o plan de A e a
+    # conclusão do apply de A — B teria planejado sobre estado que A mudou
+    assert trace == ["plan:concepts/a.md", "applied:concepts/a.md",
+                     "plan:concepts/b.md", "applied:concepts/b.md"], trace

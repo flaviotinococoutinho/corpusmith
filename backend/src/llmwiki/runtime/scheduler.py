@@ -50,6 +50,10 @@ class Scheduler(threading.Thread):
                 # cede a vez para tudo que o usuário pediu
                 self.queue.enqueue("leiden", {}, priority=7,
                                    dedupe_key=f"leiden:{week}")
+                # P-14: durabilidade deixa de ser invisível — e cede a
+                # vez para TUDO (o job verifica e poda além de keep)
+                self.queue.enqueue("backup", {}, priority=8,
+                                   dedupe_key=f"backup:{week}")
             today = time.strftime("%Y-%m-%d")
             self.queue.enqueue("embed", {}, priority=3,
                                dedupe_key=f"embed:{today}")

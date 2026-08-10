@@ -49,6 +49,10 @@ class JobContext:
     def cancelled(self) -> bool:
         return self._queue.cancel_requested(self._job_id)
 
+    @property
+    def job_id(self) -> str:
+        return self._job_id
+
 
 class Worker(threading.Thread):
     def __init__(self, s: Settings, queue: JobQueue, bus: EventBus,

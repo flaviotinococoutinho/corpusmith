@@ -732,7 +732,10 @@ distribuída.
 [`08-decisoes.md`](08-decisoes.md). Template de RFC (Status, Contexto,
 Problema mensurado, Opções, Decisão, Invariantes, CAP, Migrations, Falhas,
 Segurança, Observabilidade, Rollout, Rollback, Custo, Risco de
-overengineering, Condições de reentrada, Evidências) — 🎯 a instanciar.
+overengineering, Condições de reentrada, Evidências) — ✅ instanciado três
+vezes: [RFC-001](16-rfc-theme-id.md) (theme_id),
+[RFC-002](19-rfc-escada-reconciliacao.md) (escada de reconciliação) e
+[RFC-003](20-rfc-colisao-de-caminho.md) (colisão de caminho).
 
 ---
 

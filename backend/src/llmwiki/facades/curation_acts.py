@@ -46,4 +46,9 @@ class CurationActsFacade:
     def _build(self, act: str, params: dict, notify=None):
         if act not in ACTS:
             raise KeyError(f"ato desconhecido: {act}")
-        return ACTS[act](self._settings, notify=notify, **params)
+        try:
+            return ACTS[act](self._settings, notify=notify, **params)
+        except TypeError as e:
+            # kwargs errados são erro do CHAMADOR (400), não crash (500)
+            raise ValueError(f"parâmetros inválidos para o ato "
+                             f"{act!r}: {e}") from e

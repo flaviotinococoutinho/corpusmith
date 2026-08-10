@@ -25,6 +25,10 @@ log = logging.getLogger("llmwiki")
 def main() -> None:
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s %(name)s %(levelname)s %(message)s")
+    # o health-check de modelo (GET /api/tags a cada 5 min) não é evento:
+    # em INFO o httpx respondia por >90% do log do daemon (medido: 1709 de
+    # 1845 linhas em duas semanas)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     s = Settings.load()
     ensure_bundle(s.path("knowledge"))
 

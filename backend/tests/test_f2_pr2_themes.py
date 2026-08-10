@@ -369,10 +369,9 @@ def test_pagina_antiga_malformada_nao_bloqueia_as_outras(base, kb):
 def test_adocao_e_idempotente(base, kb):
     """Job semanal não pode re-supersedir o que já supersedeu.
 
-    A asserção é sobre a CONTAGEM de adoções e sobre os bytes da página, não
-    sobre o HEAD: o `_CommunitySummaryPage` reescreve o sumário a cada
-    execução mesmo com conteúdo igual, e isso é comportamento pré-existente do
-    eixo de máquina — não foi introduzido aqui e não é o que este teste mede."""
+    A asserção é sobre a CONTAGEM de adoções e sobre os bytes da página —
+    o HEAD imóvel em reexecução idêntica é medido à parte por
+    `test_sumario_identico_nao_move_o_head` (T6, resolvido)."""
     membros = [f"concepts/{m}.md" for m in base._membros_do_teste]
     _legado(kb, "ana", membros)
     primeira = DetectCommunities(base).execute()
@@ -381,6 +380,20 @@ def test_adocao_e_idempotente(base, kb):
     segunda = DetectCommunities(base).execute()
     assert segunda["themes_adopted"] == 0, "re-adotou o que já estava adotado"
     assert (kb / "bundle/communities/ana.md").read_bytes() == conteudo
+
+
+def test_sumario_identico_nao_move_o_head(base, kb):
+    """T6 (ADR-45): membros idênticos ⇒ mesmo `source_sha256` ⇒ o sumário
+    derivado é o mesmo — reescrevê-lo movia o HEAD a cada job semanal,
+    enchendo o Git canônico de commits sem informação. Segunda execução
+    sem mudança no bundle: zero sumários escritos, HEAD imóvel."""
+    from llmwiki.okf.git_store import GitStore
+    DetectCommunities(base).execute()
+    head = GitStore(kb).repo.head.commit.hexsha
+    segunda = DetectCommunities(base).execute()
+    assert segunda["summaries"] == 0, "reescreveu sumário sem mudança"
+    assert GitStore(kb).repo.head.commit.hexsha == head, \
+        "o job moveu o HEAD sem informação nova"
 
 
 # ==================================== INV-005 no doctor

@@ -1,7 +1,7 @@
 """Registry de jobs — contrato único: run(settings, payload, emit) -> dict."""
 from __future__ import annotations
-from . import (ask, compile as compile_job, consolidate, embed, leiden,
-               lora, metacog, ocr, pipeline, reconcile,  # noqa: F401 —
+from . import (ask, backup, compile as compile_job, consolidate, embed,
+               leiden, lora, metacog, ocr, pipeline, reconcile,  # noqa: F401 —
                # reconcile: adapter de compatibilidade v0.8 (plan/log),
                # consumido por testes de contrato; fora do REGISTRY
                reflect, rerank, review)
@@ -28,4 +28,5 @@ REGISTRY = {
     "index_rebuild": _index,
     "pipeline": pipeline.run,
     "metacog": metacog.run,
+    "backup": backup.run,
 }
