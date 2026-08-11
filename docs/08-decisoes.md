@@ -1780,3 +1780,58 @@ sem o corte · `bridge_items` sem vitalidade nem veredito (3 testes) ·
 `check_corpus` com o `any()` de volta · sem `dangling_successor` · verificação
 do `close` desligada. Cada uma derruba exatamente os testes que a cobrem.
 19 testes de backend + 4 de UI; **690 no backend, 25 no desktop**.
+
+### ADR-52 — F4: os números epistêmicos param de mentir (v1.10)
+**Contexto**: três promessas centrais do produto são traídas pelo número
+que as representa, e as três moram no mesmo lugar (`epistemics.toml` +
+`/ask`) — por isso o `docs/14` as agrupa na F4:
+
+- **P-9**: `base._document` carimba `valid_at = now` junto com
+  `timestamp = now`. O eixo de tempo de MUNDO colapsa no de escrita — o
+  filtro `as_of` (que existe e é testado) filtra sobre um campo que não
+  significa o que o `docs/01` §4 promete;
+- **P-4**: a "confiança" do `/ask` é `1 − entropia da fusão`: mede
+  DISPERSÃO e **zera quando a base é rasa** — certeza máxima exatamente
+  quando a evidência é mais fraca. `evidence_sufficiency` é um dos
+  contratos prometidos que o lint lista desde o G-10;
+- **P-5**: `page_overlay.status = 'contested'` deriva de DESFECHO DE USO
+  ("levou a beco") e cinco superfícies o exibem como disputa factual.
+
+**Decisão** (três, uma por problema):
+
+1. **`valid_at` deixa de ter default de escrita.** Página de máquina só
+   carrega `valid_at` quando o conhecimento o fornece (extração, draft,
+   ato humano com `when`). Ausente ⇒ válida em qualquer `as_of` (o
+   comportamento do filtro já era esse: `not va ⇒ passa`). `timestamp`
+   segue sendo o registro. NÃO é breaking: campo opcional no OKF desde
+   sempre, e a partição bi-temporal do fuse não muda de forma.
+2. **`support` nasce AO LADO de `uncertainty`** (aditivo — a razão de a
+   F4 ser ADR e não RFC). `kernel/sufficiency.py` (puro) compõe quatro
+   parcelas já disponíveis no request: páginas distintas (satura em 3),
+   streams que corroboram (satura em 3; `fused.provenance` já existia
+   para o Hedge), fração de evidência aterrada por span (v1.8) e fração
+   fresca (nem stale nem superseded). `uncertainty` continua publicada e
+   ROTULADA como dispersão. O contrato `evidence_sufficiency` sai de
+   `PROMISED` para `EXPECTED` (registro 1.9.0) declarando o `support`
+   como COMPOSTO heurístico: parcelas com saturação de projeto, não
+   calibradas — mas a propriedade que importa é testada: base rasa ⇒
+   support BAIXO mesmo com uncertainty 0.
+3. **`contested` → `low_yield`** em valor, chave e rótulo — com a
+   detecção de conflito REAL (`policy.factual_conflict`) entrando
+   depois, separada, porque rename honesto e detector novo não se
+   revisam juntos.
+
+**Rollout em três PRs** (colisões de arquivo e revisabilidade):
+**F4-PR1** = decisões 1 e 2 (este ADR, `base.py`, `sufficiency.py`,
+`ask_memory`, contrato, painel); **F4-PR2** = decisão 3 (rename em ~19
+arquivos + CHECK de `page_overlay` com migração index.db 9→10 +
+superfícies); **F4-PR3** = `policy.factual_conflict` (quantity/date,
+mesma dimensão, fora de tolerância, span nas DUAS — precisão > recall) +
+limpeza do legado de `valid_at` como ATO em lote com preview.
+
+**Invariantes**: INV-EPI-001 reforçado (o número central do produto
+ganha contrato); INV-DATA-001..004 intocados. **Portas de reentrada**:
+calibrar as saturações do `support` contra o golden quando houver
+amostra; o legado de `valid_at` (~toda página de máquina existente) fica
+INALTERADO até o ato em lote da F4-PR3 — reescrever frontmatter em massa
+sem preview seria exatamente o que o produto proíbe.
