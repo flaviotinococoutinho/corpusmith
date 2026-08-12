@@ -61,9 +61,9 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 |---|---|:--:|---|
 | **P-3** | **Nada fecha e nada aposenta** — perguntas eternas, padrões reaparecem sem consentimento, a fila propõe trabalho sobre página morta | 4 | F1 + F2 (prontas) ⇒ **desbloqueada** |
 | **P-7** | **Colisão de caminho** — promoção humana e compilação de máquina se sobrescrevem em silêncio | 3 | idem. **Exige RFC** (heurística no caminho de escrita) |
-| **P-4** | **Suficiência ≠ dispersão** — a "confiança" mede dispersão da fusão e satura em quase toda resposta | 4 | F3 |
-| **P-5** | **Conflito × impopularidade** — o produto chama "em disputa" o que só deu beco | 4 | F3 |
-| **P-9** | **`valid_at` = tempo de escrita** — a bi-temporalidade degenera | 3 | 🟡 **declarado** no ADR-41; o parâmetro `when` já está aberto |
+| **P-4** ✅ **RESOLVIDO** (F4-PR1, ADR-52) | **Suficiência ≠ dispersão** — a "confiança" mede dispersão da fusão e satura em quase toda resposta | 4 | `support` 2D (4 parcelas com saturação declarada) AO LADO de `uncertainty`, contrato `evidence_sufficiency` pago (registro 1.9.0), selo "sustentação fraca" no painel — base rasa deixa de virar certeza máxima muda |
+| **P-5** ⏳ **F4-PR2/PR3** (ADR-52) | **Conflito × impopularidade** — o produto chama "em disputa" o que só deu beco | 4 | rename `contested → low_yield` (valor+chave+rótulo, ~19 arquivos + migração index.db) na F4-PR2; detector `policy.factual_conflict` real na F4-PR3 |
+| **P-9** ✅ **RESOLVIDO no fluxo novo** (F4-PR1, ADR-52) | **`valid_at` = tempo de escrita** — a bi-temporalidade degenera | 3 | o default de escrita morreu: página nova só carrega `valid_at` quando o conhecimento o fornece (ausente = válida em qualquer `as_of`, semântica pinada). **Legado** (~todas as páginas de máquina existentes) fica para o ato em lote com preview da F4-PR3 |
 | **P-6** | **A aresta tem sintaxe, não semântica** — nenhuma relação tipada; co-menção não materializada | 4 | F1 (formato de link resolvido no ADR-41.2) |
 | **P-10** | **Entidade ↔ página** — vínculo existe no canônico e é jogado fora na projeção | 3 | F5 |
 | **P-8** | **A memória não lembra o que falhou** — abstenção não deixa rastro | 3 | F3 (deliberadamente depois) |
