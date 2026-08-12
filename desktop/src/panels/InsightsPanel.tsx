@@ -108,10 +108,10 @@ export function InsightsPanel() {
           <div><b>{g.questions.length}</b> pergunta(s) aberta(s)
             {g.questions.slice(0, 4).map((p: string) => (
               <div key={p} className="font-mono truncate">{p}</div>))}</div>
-          <div><b>{g.orphans.length}</b> órfã(s) · <b>{g.contested.length}</b>{" "}
-            contestada(s) · <b>{g.stale.length}</b> stale ·{" "}
+          <div><b>{g.orphans.length}</b> órfã(s) · <b>{g.low_yield.length}</b>{" "}
+            de baixo rendimento · <b>{g.stale.length}</b> stale ·{" "}
             <b>{g.cold_count}</b> na base fria</div>
-          {g.contested.slice(0, 3).map((p: string) => (
+          {g.low_yield.slice(0, 3).map((p: string) => (
             <div key={p} className="flex items-center gap-1">
               <span className="font-mono flex-1 truncate">⚔️ {p}</span>
               <button className="border rounded px-1"

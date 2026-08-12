@@ -138,7 +138,7 @@ def test_golden_projection_breakdown():
     root = ws["items"][0]
     assert root["components"]["user_focus"] == 1.0
     assert root["epistemic"] == {"confidence": "extracted",
-                                 "stale": False, "contested": False}
+                                 "stale": False, "low_yield": False}
     assert ws["open_questions"][0]["page"] == "questions/quando-nao-usar.md"
     assert ws["excluded_by_gate"][0]["page"] == "concepts/velho.md"
     assert ws["policy_version"] == 1 and ws["eligible"] == 3

@@ -11,7 +11,7 @@ import { client } from "../lib/client";
 import { InsightsPanel } from "./InsightsPanel";
 
 const BASE = {
-  gaps: { questions: [], orphans: [], contested: [], stale: [],
+  gaps: { questions: [], orphans: [], low_yield: [], stale: [],
           cold_count: 0, eval: [] },
   topology: { nodes: 0, edges: 0, components: 1, largest_component_pct: 0,
               avg_degree: 0, bridges: [], communities: 0,

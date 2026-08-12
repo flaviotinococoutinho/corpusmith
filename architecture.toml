@@ -63,7 +63,7 @@ schema_version = 10         # + pattern_verdicts (juízo humano sobre padrão co
 name = "index.db"
 authority = "nenhuma (projeção)"
 rebuildable = true
-schema_version = 9          # F2-PR2: + themes/theme_epochs (RFC-001)
+schema_version = 10         # F4-PR2: page_overlay contested → low_yield (ADR-52)
 [[database]]
 name = "cold.db"
 authority = "memória fria"

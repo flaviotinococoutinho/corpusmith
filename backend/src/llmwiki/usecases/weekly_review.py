@@ -83,7 +83,8 @@ class PublishWeeklyReview(MachinePageUseCase):
             f"{', '.join(p['path'] for p in data['promote']) or '(nenhuma)'}\n"
             f"- Arquivar: "
             f"{', '.join(p['path'] for p in data['archive']) or '(nenhuma)'}\n"
-            f"- Contestadas: {', '.join(data['contested']) or '(nenhuma)'}\n")
+            f"- Baixo rendimento: "
+            f"{', '.join(data['low_yield']) or '(nenhuma)'}\n")
         return DraftPage(
             rel_path=f"reviews/{week}.md",
             title=f"Revisão semanal {week}", body=body,
