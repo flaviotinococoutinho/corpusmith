@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS graph_bridges(
 -- overlay derivado do reflect (§8), recomputável
 CREATE TABLE IF NOT EXISTS page_overlay(
   page TEXT PRIMARY KEY,
-  status TEXT CHECK(status IN ('preferred','tentative','contested')),
+  status TEXT CHECK(status IN ('preferred','tentative','low_yield')),
   useful INTEGER DEFAULT 0, dead INTEGER DEFAULT 0, updated REAL);
 
 -- ============================ v1.9.1 · F2-PR1 (ADR-43) ============================

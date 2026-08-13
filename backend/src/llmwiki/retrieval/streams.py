@@ -4,7 +4,7 @@
 - fusão RRF ponderada por CRÉDITO de stream (Hedge sobre os desfechos —
   kernel.information.hedge): cada stream é um "expert"; quem acerta ganha
   peso, quem leva a becos perde — com clamp para preservar exploração;
-- boost do overlay (preferred +15% · contested −20%);
+- boost do overlay (preferred +15% · low_yield −20%);
 - partição temporal (válidas em `as_of` primeiro);
 - INCERTEZA: entropia normalizada da distribuição fundida — massa de score
   espalhada significa "não sei onde está a resposta";
@@ -68,7 +68,7 @@ class EvidenceStreams:
                 by_id.setdefault(cid, hit)
                 provenance.setdefault(hit["page"], set()).add(name)
         for cid, hit in by_id.items():
-            factor = {"preferred": 1.15, "contested": 0.8}.get(
+            factor = {"preferred": 1.15, "low_yield": 0.8}.get(
                 (overlay or {}).get(hit["page"]), 1.0)
             scores[cid] *= factor
         ordered = sorted(by_id.values(), key=lambda h: -scores[h["id"]])

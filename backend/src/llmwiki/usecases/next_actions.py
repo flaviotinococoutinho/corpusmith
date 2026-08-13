@@ -40,7 +40,7 @@ _CONTRADICTION_COST = 8.0    # ler ambas e decidir supersede/merge
 _ORIGIN = {
     "review": "revisão espaçada",
     "question": "pergunta aberta",
-    "contested": "página contestada",
+    "low_yield": "página de baixo rendimento",
     "stale": "conhecimento a revalidar",
     "inbox": "captura não absorvida",
     "bridge": "ponte frágil no grafo",
@@ -48,7 +48,7 @@ _ORIGIN = {
 }
 # o que o clique faz — a interface roteia por `action.type`, não decide
 _ACTION_TYPE = {
-    "review": "read", "question": "answer", "contested": "resolve",
+    "review": "read", "question": "answer", "low_yield": "resolve",
     "stale": "review", "inbox": "compile",
 }
 
@@ -115,7 +115,7 @@ def acts_for(item: dict) -> list[dict]:
                 "label": "Fundir uma das páginas nesta",
                 "options": {"page": outras}})
         return ofertas
-    if kind in ("contested", "stale"):
+    if kind in ("low_yield", "stale"):
         # F1-PR3: o ato que estes kinds pediam existe agora. Corrigir o
         # corpo NÃO afirma nada sobre o mundo — é o gesto certo para "deu
         # beco" e para "precisa de revisão", ao contrário de `invalidate`,

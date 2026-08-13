@@ -60,7 +60,7 @@ class KnowledgeItemView:
     superseded: bool = False
     invalid: bool = False                     # bi-temporal: invalid_at no passado
     stale: bool = False
-    contested: bool = False
+    low_yield: bool = False
     sensitive: bool = False
     # --- estrutura/custo (peso estrutural e operacional) ---
     distance: int = 0                         # saltos até o conceito raiz

@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.9.0"   # F4-PR1 (ADR-52): + evidence_sufficiency — o support 2D paga o contrato prometido
+version = "1.9.1"   # F4-PR2 (ADR-52): overlay contested → low_yield (valor, chave e rótulo)
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -84,7 +84,7 @@ hedge_clamp_ceiling = 2.0
 loss_useful = -1.0
 loss_not_useful = 1.0
 overlay_preferred_boost = 1.15
-overlay_contested_penalty = 0.8
+overlay_low_yield_penalty = 0.8
 
 [mechanisms.evidence_sufficiency]
 title = "Suficiência de evidência (support 2D ao lado da dispersão)"
@@ -405,7 +405,7 @@ adaptive = false
 feedback_signal = ""
 composite = true
 composite_components = [
-  "review", "question", "contested", "stale", "inbox", "bridge",
+  "review", "question", "low_yield", "stale", "inbox", "bridge",
   "contradiction",
 ]
 evidence = ["deterministic_check", "property_test"]
@@ -422,7 +422,7 @@ max_actions = 40
 words_per_minute = 150
 min_cost_min = 2.0
 value_question = 0.9
-value_contested = 0.8
+value_low_yield = 0.8
 value_stale = 0.6
 value_inbox = 0.5
 value_bridge_base = 0.7

@@ -36,7 +36,7 @@ function montar(actions: unknown[]) {
     orphans: [], orphan_count: 0, pending_jobs: 0, by_type: {},
     budget_left_usd: 0, recommended_actions: [] } as any);
   vi.spyOn(client, "reflectCand").mockResolvedValue(
-    { promote: [], archive: [], contested: [] } as any);
+    { promote: [], archive: [], low_yield: [] } as any);
   vi.spyOn(client, "stats").mockResolvedValue({
     by_type: [], heat_buckets: [0, 0, 0, 0, 0],
     outcomes: { useful: 0, dead_end: 0, corrected: 0 },

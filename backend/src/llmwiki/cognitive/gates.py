@@ -22,8 +22,8 @@ def hard_gates(view: KnowledgeItemView, goal: dict,
         refused.append("privacy: sensível e a política não autoriza")
     if view.stale and not policy["gates"]["allow_stale"]:
         refused.append("stale: política exige conteúdo revisado")
-    if view.contested and not policy["gates"]["allow_contested"]:
-        refused.append("contested: política exclui disputas em aberto")
+    if view.low_yield and not policy["gates"]["allow_low_yield"]:
+        refused.append("low_yield: política exclui páginas de baixo rendimento")
     if view.distance > policy["budgets"]["max_distance"] \
             and not view.pinned and view.page != goal["root"]:
         refused.append(f"scope: a {view.distance} saltos do raiz "
