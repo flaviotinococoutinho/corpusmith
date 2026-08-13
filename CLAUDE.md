@@ -1,0 +1,51 @@
+# Brain Compiler
+
+**`AGENTS.md` é a fonte normativa deste repositório. Leia-o antes de qualquer
+alteração** — as regras lá são MUST/MUST NOT (RFC 2119) e este arquivo não as
+substitui nem as resume por completo.
+
+Complementos: [`architecture.toml`](architecture.toml) traz as regras
+legíveis por máquina (presas à realidade por
+`backend/tests/test_architecture_toml.py`) e
+[`docs/10-engenharia-ai-friendly.md`](docs/10-engenharia-ai-friendly.md) a
+arquitetura-alvo.
+
+## O gate
+
+Toda mudança precisa passar pelo gate. Atalho na raiz:
+
+```bash
+just verify
+```
+
+Ele executa a suíte do backend (pytest), o typecheck do cockpit
+(`npx tsc --noEmit`), a validação do compose e os testes Rust dos kernels
+nativos. O conjunto exato **não é decidido aqui**: `architecture.toml [gate]`
+é a fonte única, e `backend/tests/test_pr0_gate.py` cruza gate, CI e justfile
+— se a CI deixar de rodar algo do gate, a suíte quebra. Não contorne isso
+editando só um dos três lados.
+
+`bench compare` fica fora do gate por PR de propósito (razão de speedup varia
+entre máquinas); é guarda de mesma-máquina/nightly.
+
+## Ferramentas de operação (não são testes)
+
+```bash
+cd backend && .venv/bin/python -m llmwiki.cli doctor            # invariantes INV-*
+cd backend && .venv/bin/python -m llmwiki.cli epistemics lint   # contratos epistêmicos
+cd backend && .venv/bin/python -m llmwiki.cli backup create     # backup verificável
+```
+
+## Forma do projeto
+
+Plataforma local-first de memória e conhecimento: bundle canônico versionado
+em Git + daemon de compilação/consulta + cockpit Electron. **Núcleo
+determinístico; LLM e I/O ficam na borda** — não introduza chamada de modelo
+nem I/O no núcleo para "resolver" um problema de borda.
+
+- `backend/` — Python, ambiente em `backend/.venv`
+- `native/` — kernels Rust (workspace Cargo)
+- `desktop/` — cockpit Electron/TypeScript
+- `docs/` — conceitos e engenharia; `benchmarks/baseline.json` é referência medida
+
+Skills do projeto em `.claude/skills/`: `docs-sync`, `ship-pr`, `verify-env`.
