@@ -12,17 +12,17 @@ import json
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.epistemic import (EvaluationStatus, RegistryError,
+from corpusmith.api.system import build_app
+from corpusmith.epistemic import (EvaluationStatus, RegistryError,
                                envelope_status, parse_registry,
                                validate_registry)
-from llmwiki.harness.epistemics import (DEFAULT_PATH, EXPECTED_MECHANISMS,
+from corpusmith.harness.epistemics import (DEFAULT_PATH, EXPECTED_MECHANISMS,
                                         PROMISED_MECHANISMS, lint,
                                         load_registry)
-from llmwiki.runtime.db import SCHEMA_VERSIONS, connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
+from corpusmith.runtime.db import SCHEMA_VERSIONS, connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -317,7 +317,7 @@ def test_epistemic_domain_is_pure():
     """Redundante com test_architecture (defesa em profundidade): o
     domínio epistêmico não importa infraestrutura nem transporte."""
     import ast
-    src = REPO / "backend" / "src" / "llmwiki" / "epistemic"
+    src = REPO / "backend" / "src" / "corpusmith" / "epistemic"
     forbidden = {"sqlite3", "httpx", "pathlib", "yaml", "pydantic",
                  "fastapi", "requests", "subprocess"}
     for module in src.rglob("*.py"):
@@ -360,7 +360,7 @@ def test_runtime_migration_is_idempotent(settings):
 
 # ------------------------------------------------------------ CLI/API
 def test_cli_lint_exit_codes(settings, capsys):
-    from llmwiki.cli import cmd_epistemics
+    from corpusmith.cli import cmd_epistemics
     ns = argparse.Namespace(op="lint", mechanism=None)
     assert cmd_epistemics(settings, ns) == 0
     out = capsys.readouterr().out
@@ -376,7 +376,7 @@ def test_cli_lint_exit_codes(settings, capsys):
 
 
 def test_cli_list_and_show(settings, capsys):
-    from llmwiki.cli import cmd_epistemics
+    from corpusmith.cli import cmd_epistemics
     assert cmd_epistemics(settings, argparse.Namespace(
         op="list", mechanism=None)) == 0
     assert "retrieval_rrf_hedge" in capsys.readouterr().out
@@ -395,7 +395,7 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token="t")
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t"})
+        c.headers.update({"x-corpusmith-auth": "t"})
         yield c
 
 
@@ -426,7 +426,7 @@ def test_envelope_status_rule():
 def test_eval_writes_envelopes_with_golden_hash(settings, kb):
     """Integração: eval → envelopes com sha256 do golden, eval_run_ids
     e amostra pequena ⇒ partially_evaluated (não 'evaluated')."""
-    from llmwiki.usecases.evaluate_memory import EvaluateMemory, envelopes_for
+    from corpusmith.usecases.evaluate_memory import EvaluateMemory, envelopes_for
     gold = kb / "bundle" / "harness"
     gold.mkdir(exist_ok=True)
     text = json.dumps({"q": "resultado do experimento zeta?",
@@ -449,7 +449,7 @@ def test_eval_writes_envelopes_with_golden_hash(settings, kb):
 
 
 def test_eval_without_golden_writes_nothing(settings, kb):
-    from llmwiki.usecases.evaluate_memory import EvaluateMemory
+    from corpusmith.usecases.evaluate_memory import EvaluateMemory
     assert "skipped" in EvaluateMemory(settings).execute()
     rt = connect(settings.app_support / "runtime.db")
     n = rt.execute("SELECT COUNT(*) c FROM evaluation_envelopes"
@@ -469,7 +469,7 @@ def test_uncertainty_is_not_exposed_as_truth_probability():
     assert "calibração" in text
     assert "concentrada e incorreta" in text
     import inspect
-    from llmwiki.usecases import ask_memory
+    from corpusmith.usecases import ask_memory
     src = inspect.getsource(ask_memory)
     assert '"uncertainty": fused.uncertainty' in src
     assert "truth_probability" not in src

@@ -27,50 +27,72 @@ dependencies = [
 ]
 
 [[package]]
-name = "braincore-etl"
+name = "cfg-if"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
+
+[[package]]
+name = "corpusmith-etl"
 version = "0.1.0"
 dependencies = [
- "braincore-types",
+ "corpusmith-types",
  "serde",
  "serde_json",
 ]
 
 [[package]]
-name = "braincore-graph"
+name = "corpusmith-graph"
 version = "0.1.0"
 dependencies = [
- "braincore-types",
+ "corpusmith-types",
 ]
 
 [[package]]
-name = "braincore-sketch"
+name = "corpusmith-native-python"
+version = "0.1.0"
+dependencies = [
+ "corpusmith-graph",
+ "corpusmith-sketch",
+ "corpusmith-types",
+ "pyo3",
+]
+
+[[package]]
+name = "corpusmith-native-worker"
+version = "0.1.0"
+dependencies = [
+ "corpusmith-etl",
+ "corpusmith-graph",
+ "corpusmith-sketch",
+ "corpusmith-types",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "corpusmith-sketch"
 version = "0.1.0"
 dependencies = [
  "blake2",
- "braincore-types",
+ "corpusmith-types",
  "rayon",
  "unicode-general-category",
 ]
 
 [[package]]
-name = "braincore-text"
+name = "corpusmith-text"
 version = "0.1.0"
 dependencies = [
- "braincore-types",
+ "corpusmith-types",
 ]
 
 [[package]]
-name = "braincore-types"
+name = "corpusmith-types"
 version = "0.1.0"
 dependencies = [
  "serde",
 ]
-
-[[package]]
-name = "cfg-if"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
 name = "crossbeam-deque"
@@ -160,28 +182,6 @@ name = "libc"
 version = "0.2.186"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
-
-[[package]]
-name = "llmwiki-native-python"
-version = "0.1.0"
-dependencies = [
- "braincore-graph",
- "braincore-sketch",
- "braincore-types",
- "pyo3",
-]
-
-[[package]]
-name = "llmwiki-native-worker"
-version = "0.1.0"
-dependencies = [
- "braincore-etl",
- "braincore-graph",
- "braincore-sketch",
- "braincore-types",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "memchr"

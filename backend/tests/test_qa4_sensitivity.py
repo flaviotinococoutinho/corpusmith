@@ -11,16 +11,16 @@ LSH/casa de pombos (test_v16), jitter estável e backoff (reliability)."""
 from __future__ import annotations
 import math
 import pytest
-from llmwiki.kernel.information import hedge
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.retrieval.streams import EvidenceStreams, RRF_K
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.governor import Governor
-from llmwiki.settings import Settings
-from llmwiki.usecases.ask_memory import AskMemory, _invalid_citations
-from llmwiki.usecases.consolidate_inbox import _Signature
+from corpusmith.kernel.information import hedge
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.retrieval.streams import EvidenceStreams, RRF_K
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.governor import Governor
+from corpusmith.settings import Settings
+from corpusmith.usecases.ask_memory import AskMemory, _invalid_citations
+from corpusmith.usecases.consolidate_inbox import _Signature
 
 
 # ------------------------------------------------------- Hedge clamp [.5, 2]
@@ -116,7 +116,7 @@ def test_estimativa_que_estoura_bloqueia_na_frente(settings):
 
 # --------------------------------------- near-duplicata (hamming ≤ 8) exata
 def _sig(settings, kb, text):
-    from llmwiki.normalize.gazetteer import Gazetteer
+    from corpusmith.normalize.gazetteer import Gazetteer
     return _Signature("raw/x.md", text, Gazetteer([]))
 
 

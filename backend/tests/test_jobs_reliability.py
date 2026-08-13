@@ -3,8 +3,8 @@ retry com backoff, dead-letter, órfãos e retry manual."""
 from __future__ import annotations
 import time
 import pytest
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.queue import JobQueue, _stable_jitter
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.queue import JobQueue, _stable_jitter
 
 
 @pytest.fixture
@@ -115,7 +115,7 @@ def test_startup_sweep_recovers_leased_and_cancel_requested(queue):
 
 
 def test_pipeline_cooperative_cancel_stops_between_stages(settings, kb):
-    from llmwiki.usecases.run_pipeline import RunPipeline, SavePipeline
+    from corpusmith.usecases.run_pipeline import RunPipeline, SavePipeline
     ran = []
     registry = {"a": lambda s, p, e: ran.append("a") or {},
                 "b": lambda s, p, e: ran.append("b") or {}}

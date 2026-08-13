@@ -19,18 +19,18 @@ Três coisas que estes testes fixam e que nenhum ato anterior precisou:
 """
 from __future__ import annotations
 import pytest
-from llmwiki.harness.local_policy import check_corpus
-from llmwiki.kernel.curation import merge_meta, mergeable_source_meta
-from llmwiki.okf.absorbed import sources_of, with_absorbed
-from llmwiki.okf.bundle import BundleReader
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.git_store import GitStore
-from llmwiki.okf.regions import RegiaoInconsistente
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.usecases.curate import ACTS, MergePages, UndoCurationAct
-from llmwiki.usecases.next_actions import acts_for
+from corpusmith.harness.local_policy import check_corpus
+from corpusmith.kernel.curation import merge_meta, mergeable_source_meta
+from corpusmith.okf.absorbed import sources_of, with_absorbed
+from corpusmith.okf.bundle import BundleReader
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.git_store import GitStore
+from corpusmith.okf.regions import RegiaoInconsistente
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.usecases.curate import ACTS, MergePages, UndoCurationAct
+from corpusmith.usecases.next_actions import acts_for
 
 DOI = "10.1145/3292500.3330648"
 
@@ -135,7 +135,7 @@ def test_recusa_fundir_em_si_mesma(base):
 def test_recusa_fundir_pagina_ja_supersedida(base, kb):
     """Duas sucessoras para a mesma página seria uma cadeia bifurcada que
     nem o lint detecta hoje."""
-    from llmwiki.usecases.curate import SupersedePage
+    from corpusmith.usecases.curate import SupersedePage
     SupersedePage(base, page="concepts/b.md",
                   successor="concepts/a.md").execute()
     with pytest.raises(ValueError, match="já foi supersedida"):
@@ -153,18 +153,18 @@ def test_recusa_absorver_duas_vezes(base, kb):
 def test_recusa_corpo_com_sentinela_ambigua(base, kb):
     """Mesma guarda do F1-PR4, agora compartilhada: sentinela de
     fechamento apagada à mão não pode fazer a fusão engolir prosa."""
-    corpo = ("# A\n\n<!-- llmwiki:absorvido de concepts/x.md -->\n"
+    corpo = ("# A\n\n<!-- corpusmith:absorvido de concepts/x.md -->\n"
              "texto\n\nPROSA HUMANA NO MEIO\n\n"
-             "<!-- llmwiki:absorvido de concepts/y.md -->\ntexto\n"
-             "<!-- /llmwiki:absorvido -->\n")
+             "<!-- corpusmith:absorvido de concepts/y.md -->\ntexto\n"
+             "<!-- /corpusmith:absorvido -->\n")
     with pytest.raises(RegiaoInconsistente, match="inconsistente"):
         with_absorbed(corpo, "concepts/z.md", "Z", "z")
 
 
 def test_sentinela_em_cerca_de_codigo_e_ignorada():
     """A primeira vítima seria a página que documenta esta feature."""
-    corpo = ("# Doc\n\n```md\n<!-- llmwiki:absorvido de concepts/x.md -->\n"
-             "<!-- /llmwiki:absorvido -->\n```\n")
+    corpo = ("# Doc\n\n```md\n<!-- corpusmith:absorvido de concepts/x.md -->\n"
+             "<!-- /corpusmith:absorvido -->\n```\n")
     assert sources_of(corpo) == []
     assert "concepts/z.md" in with_absorbed(corpo, "concepts/z.md", "Z", "z")
 
@@ -249,7 +249,7 @@ def test_preview_do_merge_nao_varre_o_bundle(base, kb):
     consulta indexada — provado contando quantos documentos o detector
     recebe."""
     vistos = []
-    import llmwiki.usecases.curate.merge as mod
+    import corpusmith.usecases.curate.merge as mod
     original = mod.check_corpus
     mod.check_corpus = lambda docs, reader: vistos.append(len(docs)) or \
         original(docs, reader)
@@ -269,8 +269,8 @@ def test_regiao_entra_antes_de_citations_e_nao_desarma_o_detector(base, kb):
     texto absorvido fica legitimada); região ANTES ⇒ `citation_invalid`.
     Um ato de curadoria desarmando o detector de citação fabricada é pior
     que não ter o ato."""
-    from llmwiki.harness.local_policy import check
-    from llmwiki.okf.absorbed import with_absorbed
+    from corpusmith.harness.local_policy import check
+    from corpusmith.okf.absorbed import with_absorbed
     corpo = "# V\n\nafirma [1].\n\n# Citations\n\n[1] fonte real\n"
     fundido = with_absorbed(corpo, "concepts/b.md", "B",
                             "afirma [42] que ninguém definiu.")
@@ -291,17 +291,17 @@ def test_bloco_de_relacoes_da_origem_nao_entra_na_vencedora(base, kb):
     """Se entrasse, a vencedora ficaria com DOIS pares de sentinela de
     relações e `find_block` passaria a recusar — a página nunca mais
     receberia um link. As relações seguem na página de origem."""
-    from llmwiki.okf.relations import find_block
-    from llmwiki.usecases.curate import LinkPages
+    from corpusmith.okf.relations import find_block
+    from corpusmith.usecases.curate import LinkPages
     LinkPages(base, src="concepts/b.md", dst="concepts/a.md").execute()
     MergePages(base, page="concepts/b.md", into="concepts/a.md").execute()
     reader = BundleReader(kb / "bundle")
     vencedora = reader.load("concepts/a.md").body
-    assert "llmwiki:relacionados" not in vencedora
+    assert "corpusmith:relacionados" not in vencedora
     assert find_block(vencedora) is None       # não recusa: corpo sem ambiguidade
     # e a vencedora continua podendo receber relação
     LinkPages(base, src="concepts/a.md", dst="concepts/b.md").execute()
-    assert "llmwiki:relacionados" in reader.load("concepts/a.md").body
+    assert "corpusmith:relacionados" in reader.load("concepts/a.md").body
 
 
 def test_recusa_fundir_pagina_que_ja_e_resultado_de_fusao(base, kb):

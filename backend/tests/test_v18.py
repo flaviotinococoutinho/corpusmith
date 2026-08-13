@@ -8,13 +8,13 @@ Nada de cálculo novo: os testes fixam que a projeção é fiel, determinística
 e reconstruível (migração aditiva idempotente no index.db).
 """
 from __future__ import annotations
-from llmwiki.kernel.grounding import ground_spans, MAX_SPANS
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect, _migrate, _columns
-from llmwiki.usecases.ask_memory import AskMemory
-from llmwiki.usecases.next_actions import (NextActions, bridge_items,
+from corpusmith.kernel.grounding import ground_spans, MAX_SPANS
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect, _migrate, _columns
+from corpusmith.usecases.ask_memory import AskMemory
+from corpusmith.usecases.next_actions import (NextActions, bridge_items,
                                            contradiction_items, _titleize)
 
 
@@ -189,10 +189,10 @@ def test_contradiction_items_flag_same_identifier_without_succession(
 
 def test_cockpit_next_actions_endpoint(settings, kb):
     from fastapi.testclient import TestClient
-    from llmwiki.api.system import build_app
-    from llmwiki.runtime.events import EventBus
-    from llmwiki.runtime.governor import Governor
-    from llmwiki.runtime.queue import JobQueue
+    from corpusmith.api.system import build_app
+    from corpusmith.runtime.events import EventBus
+    from corpusmith.runtime.governor import Governor
+    from corpusmith.runtime.queue import JobQueue
     (kb / "raw").mkdir(parents=True, exist_ok=True)
     (kb / "raw" / "nota.md").write_text("# Nota\n\nabsorver depois.")
     rt = connect(settings.app_support / "runtime.db")
@@ -200,7 +200,7 @@ def test_cockpit_next_actions_endpoint(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token="t")
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t"})
+        c.headers.update({"x-corpusmith-auth": "t"})
         r = c.get("/cockpit/next-actions?limit=5")
     assert r.status_code == 200, r.text
     body = r.json()

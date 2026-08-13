@@ -4,13 +4,13 @@
 [workspace]
 resolver = "2"
 members = [
-  "crates/braincore-types",
-  "crates/braincore-graph",
-  "crates/braincore-sketch",
-  "crates/braincore-text",
-  "crates/braincore-etl",
-  "crates/llmwiki-native-python",
-  "crates/llmwiki-native-worker",
+  "crates/corpusmith-types",
+  "crates/corpusmith-graph",
+  "crates/corpusmith-sketch",
+  "crates/corpusmith-text",
+  "crates/corpusmith-etl",
+  "crates/corpusmith-native-python",
+  "crates/corpusmith-native-worker",
 ]
 
 [workspace.package]

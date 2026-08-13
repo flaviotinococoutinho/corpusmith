@@ -7,7 +7,7 @@
 
 ## 1. A tese central: memória como compilação
 
-O LLM Wiki trata conhecimento pessoal como um **alvo de compilação**:
+O Corpusmith trata conhecimento pessoal como um **alvo de compilação**:
 fontes brutas (`raw/`) são *código-fonte*; páginas OKF versionadas em Git
 são o *binário auditável*; o índice SQLite é um *artefato derivado*
 sempre reconstruível. As consequências dessa metáfora são normativas:
@@ -16,7 +16,7 @@ sempre reconstruível. As consequências dessa metáfora são normativas:
   não passa por LLM. O LLM é um estágio da pipeline cercado por passadas
   determinísticas (o "sanduíche", doc 02 §1) — nunca a autoridade final.
 - **O índice nunca é a verdade**: `index.db` pode ser apagado e
-  reconstruído (`llmwiki okf index`) sem perda. A verdade está no bundle
+  reconstruído (`corpusmith okf index`) sem perda. A verdade está no bundle
   + Git. Corolário: qualquer melhoria de retrieval é segura para
   experimentar — o pior caso é reindexar.
 - **Git é o juiz**: toda escrita no bundle é um commit com trilha em

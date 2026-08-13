@@ -6,7 +6,7 @@
 // INV-001..006 — índice órfão, índice obsoleto, supersedida vazando para a
 // recuperação, mapa de padrões velho, dois temas canônicos vivos, derivação
 // atrasada — eram o único verificador de integridade do produto e só existiam
-// via `llmwiki doctor` no terminal.
+// via `corpusmith doctor` no terminal.
 //
 // O usuário do app via `🩺 stacks!` em vermelho na StatusBar: sabia que algo
 // tinha quebrado e não tinha por onde agir, embora três dos seis se resolvam

@@ -18,7 +18,7 @@ crewAI, n8n, flatbuffers, StringZilla, opendataloader/chandra, SocratiCode.
 
 ## 0. Tese central
 
-O brain-compiler já **calcula muito mais sinal do que mostra**. O backend
+O corpusmith já **calcula muito mais sinal do que mostra**. O backend
 produz, hoje, com teste: valor de informação (VoI = lacuna × conectividade),
 pesos Hedge por stream, entropia de retrieval, recuperabilidade ACT-R
 (BLA), calibração Brier, intermediação de Brandes, lacunas estruturais,
@@ -156,7 +156,7 @@ escolhida rende mais.
 - **O que é lá:** 35 padrões agênticos num "textbook executável", API
   uniforme `.run(task)`, e — nota notável — a disciplina central é
   *"LLMs commit to categorical features and Python composes the deciding
-  signal"*, **idêntica** ao princípio do brain-compiler ("sinais para a
+  signal"*, **idêntica** ao princípio do corpusmith ("sinais para a
   heurística; significado para o Python").
 - **Mapeia em:** pipelines v0.17 (`pipelines.spec`, builtin) + docs/07
   (sinergias). Vários padrões do catálogo **já existem** aqui sob outro
@@ -243,11 +243,11 @@ escolhida rende mais.
 ### R10 · Sketch/algoritmo byte-level para Fase 3 (de **StringZilla**)
 - **O que é lá:** operações SIMD sobre strings sem alocação (busca,
   hashing, hamming).
-- **Mapeia em:** `braincore-text` (Fase 3, planejada) e `braincore-sketch`.
+- **Mapeia em:** `corpusmith-text` (Fase 3, planejada) e `corpusmith-sketch`.
 - **Receita:** SE a Fase 3 for medida como hotspot (ADR-39 exige
   benchmark antes de migrar), a **abordagem** byte-level/alloc-free é a
   referência de design — sem adicionar a dependência (o produto tem sua
-  própria `braincore-sketch`). Puramente uma nota de arquitetura para
+  própria `corpusmith-sketch`). Puramente uma nota de arquitetura para
   quando/se a Fase 3 entrar.
 - **Custo:** P3 · 0 pontos agora (referência). **Rejeitar:** a dependência
   em si (viola o orçamento; a lógica é própria).

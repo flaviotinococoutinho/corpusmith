@@ -6,7 +6,7 @@ bundle sintético determinístico e saída JSON de schema estável.
 As asserções são SEMÂNTICAS (contagens determinísticas do reindex), não
 de tempo absoluto — tempo vira flakiness em CI."""
 from __future__ import annotations
-from llmwiki.bench import run_bench, synthetic_bundle
+from corpusmith.bench import run_bench, synthetic_bundle
 
 
 def test_bench_sintetico_e_deterministico_e_completo(tmp_path):

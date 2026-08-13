@@ -1,7 +1,7 @@
 """Kernel puro (v0.9): teoria da informação e topologia."""
 from __future__ import annotations
-from llmwiki.kernel.information import hedge, ncd, shannon_entropy, surprisal
-from llmwiki.kernel.topology import component_persistence, fragile_bridges
+from corpusmith.kernel.information import hedge, ncd, shannon_entropy, surprisal
+from corpusmith.kernel.topology import component_persistence, fragile_bridges
 
 
 # ------------------------------------------------------------- informação

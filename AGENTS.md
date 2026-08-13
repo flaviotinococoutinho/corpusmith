@@ -7,12 +7,24 @@
 > as regras legíveis-por-máquina em [`architecture.toml`](architecture.toml)
 > (presa à realidade por `backend/tests/test_architecture_toml.py`).
 
-## 1. O que é o Brain Compiler
+## 1. O que é o Corpusmith
 
-Plataforma **local-first** de memória e conhecimento (também "LLM Wiki"):
-bundle canônico versionado em Git + daemon de compilação/consulta +
-Cockpit Electron. Núcleo determinístico; LLM e I/O ficam na borda.
-Panorama de produto: [`docs/01-conceitos.md`](docs/01-conceitos.md).
+**O compilador local e governado de conhecimento** (*the local-first
+governed knowledge compiler*): transforma fontes dispersas num corpus
+canônico versionado em Git — auditável, temporal e reutilizável por
+qualquer IA. Bundle canônico + daemon de compilação/consulta + Cockpit
+Electron de curadoria. Núcleo determinístico; LLM e I/O ficam na borda.
+
+A categoria: outras memórias ajudam agentes a recordar; **Corpusmith
+governa o que humanos e agentes podem tratar como conhecimento** — o que
+foi aceito, com base em quê, por quem, em qual período e sob quais
+limites. Máquinas escrevem sob políticas; humanos governam, revisam e
+podem reverter. Canônico ≠ verdadeiro: o registro diz o que foi *aceito*.
+
+Panorama de produto: [`docs/01-conceitos.md`](docs/01-conceitos.md) ·
+categoria e identidade: [`docs/21`](docs/21-adr-categoria-corpusmith.md).
+Nomes históricos (Brain Compiler, LLM Wiki, pacote `llmwiki`) foram
+unificados em Corpusmith no ADR-53; o histórico Git preserva os originais.
 
 ## 2. Verificação — o gate único
 
@@ -28,10 +40,10 @@ cargo test --workspace --manifest-path native/Cargo.toml  # kernels nativos (se 
 Integridade em runtime (não são testes, são ferramentas de operação):
 
 ```bash
-cd backend && .venv/bin/python -m llmwiki.cli doctor          # invariantes INV-*
-cd backend && .venv/bin/python -m llmwiki.cli backup create   # backup verificável
-cd backend && .venv/bin/python -m llmwiki.cli epistemics lint # contratos epistêmicos
-cd backend && .venv/bin/python -m llmwiki.cli bench compare   # speedups python×rust MEDIDOS
+cd backend && .venv/bin/python -m corpusmith.cli doctor          # invariantes INV-*
+cd backend && .venv/bin/python -m corpusmith.cli backup create   # backup verificável
+cd backend && .venv/bin/python -m corpusmith.cli epistemics lint # contratos epistêmicos
+cd backend && .venv/bin/python -m corpusmith.cli bench compare   # speedups python×rust MEDIDOS
 ```
 
 **O gate é IMPOSTO, não só declarado** (PR-0): `architecture.toml [gate]` é
@@ -75,7 +87,7 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | INV-PRIV-001 | conteúdo `local_only` não sai da máquina | `harness/local_policy.py` |
 | INV-OPS-001 | config aplicada tem linhagem, validação e rollback | `test_v16.py` |
 | INV-OPS-002 | todo job termina em estado terminal ou permanece recuperável | `test_jobs_reliability.py` |
-| INV-EPI-001 | mecanismo heurístico tem contrato em `epistemics.toml`: sem garantia universal, com vieses/failure modes/fallback declarados e sem autocertificação | `test_epistemics.py`, `test_epistemics_toml.py`, `llmwiki epistemics lint` |
+| INV-EPI-001 | mecanismo heurístico tem contrato em `epistemics.toml`: sem garantia universal, com vieses/failure modes/fallback declarados e sem autocertificação | `test_epistemics.py`, `test_epistemics_toml.py`, `corpusmith epistemics lint` |
 
 ## 5. Caminhos PROIBIDOS (MUST NOT)
 

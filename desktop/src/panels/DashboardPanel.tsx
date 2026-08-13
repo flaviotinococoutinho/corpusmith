@@ -170,7 +170,7 @@ export function DashboardPanel() {
   if (!d) return <div className="p-6">Carregando estado da memória…</div>;
   return (
     <div className="p-6 space-y-6 max-w-3xl">
-      <h1 className="text-xl font-semibold">Sua wiki agora</h1>
+      <h1 className="text-xl font-semibold">Seu corpus agora</h1>
       <div className="grid grid-cols-3 gap-3 text-sm">
         {[["Páginas OKF", d.pages], ["Chunks indexados", d.chunks],
           ["Decisões", d.decisions], ["Stale", d.stale_count],

@@ -1,8 +1,8 @@
 {
-  "name": "llmwiki-desktop",
-  "version": "1.9.0",
+  "name": "corpusmith-desktop",
+  "version": "2.0.0",
   "private": true,
-  "description": "LLM Wiki — Cockpit de Memória Agêntica",
+  "description": "Corpusmith — Cockpit de Memória Agêntica",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",

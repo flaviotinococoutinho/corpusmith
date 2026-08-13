@@ -6,15 +6,15 @@ from __future__ import annotations
 import random
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.kernel import identity
-from llmwiki.kernel.sketch import BITS, bands, hamming
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.settings import Settings
-from llmwiki.usecases.configure_system import (HISTORY_LIMIT, RollbackConfig,
+from corpusmith.api.system import build_app
+from corpusmith.kernel import identity
+from corpusmith.kernel.sketch import BITS, bands, hamming
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.settings import Settings
+from corpusmith.usecases.configure_system import (HISTORY_LIMIT, RollbackConfig,
                                                TuneConfig, config_history)
 
 
@@ -24,7 +24,7 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token="t")
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t"})
+        c.headers.update({"x-corpusmith-auth": "t"})
         yield c
 
 
@@ -94,7 +94,7 @@ def test_lsh_bands_cover_all_64_bits():
 
 # ================================= consolidação: seleção adaptativa exata
 def test_candidate_pairs_indexed_mode_equals_pairwise(settings):
-    from llmwiki.usecases.consolidate_inbox import ConsolidateInbox, _Signature
+    from corpusmith.usecases.consolidate_inbox import ConsolidateInbox, _Signature
 
     class _Stub:                                  # assinatura sintética
         NEAR_DUPLICATE_HAMMING = _Signature.NEAR_DUPLICATE_HAMMING
@@ -170,17 +170,17 @@ def test_new_flags_are_allowed_but_must_be_boolean(settings):
 
 # ============================================= contratos: health + HATEOAS
 def test_root_is_a_hateoas_map_without_auth(client):
-    r = client.get("/", headers={"x-llmwiki-auth": "errado"})
+    r = client.get("/", headers={"x-corpusmith-auth": "errado"})
     assert r.status_code == 200
     body = r.json()
-    assert body["service"] == "llmwiki"
+    assert body["service"] == "corpusmith"
     assert {"health_full", "config_rollback", "dashboard"} <= set(body["_links"])
     assert body["_links"]["config"]["href"] == "/cockpit/config"
 
 
 def test_health_full_requires_auth_and_reports_deep_state(client):
     assert client.get("/health/full",
-                      headers={"x-llmwiki-auth": "errado"}).status_code == 401
+                      headers={"x-corpusmith-auth": "errado"}).status_code == 401
     r = client.get("/health/full").json()
     assert r["ok"] is True
     assert r["instance"]["module"] == "daemon"   # snowflake decodificado
@@ -214,10 +214,10 @@ def test_rollback_on_virgin_history_is_409(client):
 
 # ==================================================== tracing ponta a ponta
 def test_ask_id_is_a_decodable_trace(settings, kb):
-    from llmwiki.facades import MemoryFacade
-    from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-    from llmwiki.okf.writer import BundleWriter
-    from llmwiki.retrieval.fts import rebuild_index
+    from corpusmith.facades import MemoryFacade
+    from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+    from corpusmith.okf.writer import BundleWriter
+    from corpusmith.retrieval.fts import rebuild_index
     BundleWriter(kb).write(
         [OKFDocument(rel_path="concepts/kafka.md", body="# Kafka\n\nfilas.",
                      meta=OKFFrontMatter(type="concept", title="Kafka",
@@ -231,7 +231,7 @@ def test_ask_id_is_a_decodable_trace(settings, kb):
 
 
 def test_machine_page_stages_share_one_trace(settings, kb):
-    from llmwiki.usecases.base import DraftPage, MachinePageUseCase
+    from corpusmith.usecases.base import DraftPage, MachinePageUseCase
     seen = []
 
     class _Page(MachinePageUseCase):

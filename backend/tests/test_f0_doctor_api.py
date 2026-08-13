@@ -1,7 +1,7 @@
 """F0 (v1.8.1) — o doctor ganha porta HTTP (docs/15 §2, G-3).
 
 `DiagnoseSystem` é o único verificador de INV-* do produto e vivia
-alcançável só por `llmwiki doctor`: zero ocorrências de doctor/diagnose em
+alcançável só por `corpusmith doctor`: zero ocorrências de doctor/diagnose em
 api/, facades/ e desktop/src. Sem porta, o app não pode mostrar índice
 órfão nem oferecer reparo — e um invariante NOVO (o carimbo da camada de
 padrões, F2-PR1) nasceria invisível na única superfície que a fase existe
@@ -10,15 +10,15 @@ para melhorar.
 from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.facades import SystemFacade
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
+from corpusmith.api.system import build_app
+from corpusmith.facades import SystemFacade
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
 
 TOKEN = "t0"
 
@@ -27,17 +27,17 @@ TOKEN = "t0"
 def client(settings, kb):
     rt = connect(settings.app_support / "runtime.db")
     connect(settings.app_support / "index.db").close()
-    from llmwiki.jobs import REGISTRY          # o daemon injeta; o teste imita
+    from corpusmith.jobs import REGISTRY          # o daemon injeta; o teste imita
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token=TOKEN, known_jobs=set(REGISTRY))
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": TOKEN})
+        c.headers.update({"x-corpusmith-auth": TOKEN})
         yield c
 
 
 def test_doctor_endpoint_exige_auth_e_devolve_invariantes(client):
     assert client.get("/system/doctor",
-                      headers={"x-llmwiki-auth": "errado"}).status_code == 401
+                      headers={"x-corpusmith-auth": "errado"}).status_code == 401
     r = client.get("/system/doctor")
     assert r.status_code == 200, r.text
     body = r.json()
@@ -47,7 +47,7 @@ def test_doctor_endpoint_exige_auth_e_devolve_invariantes(client):
 
 def test_doctor_repara_indice_orfao_pela_api(client, settings, kb):
     """INV-001: chunk de página que não existe mais no bundle. O reparo
-    era alcançável só por `llmwiki doctor --repair`."""
+    era alcançável só por `corpusmith doctor --repair`."""
     BundleWriter(kb).write(
         [OKFDocument(rel_path="concepts/viva.md", body="# Viva\n\ncorpo.",
                      meta=OKFFrontMatter(type="concept", title="Viva",
@@ -82,7 +82,7 @@ def test_facade_sem_known_jobs_nao_derruba_a_checagem_de_pipeline(settings,
     repassar o conjunto que o daemon injeta — e sem ele ainda funcionar."""
     connect(settings.app_support / "index.db").close()
     assert SystemFacade(settings).doctor()["counts"]["error"] == 0
-    from llmwiki.jobs import REGISTRY
+    from corpusmith.jobs import REGISTRY
     completo = SystemFacade(settings, set(REGISTRY)).doctor()
     assert completo["ok"] is True
 
@@ -91,8 +91,8 @@ def test_api_nao_importa_jobs_nem_a_facade(settings):
     """O `known_jobs` existe porque `jobs/` importa `facades/`: nem a
     camada HTTP nem a facade podem importar jobs de volta (ciclo + inversão
     do gradiente). Este teste crava a razão da injeção."""
-    import llmwiki.api.system as api_system
-    import llmwiki.facades.system as facade_system
+    import corpusmith.api.system as api_system
+    import corpusmith.facades.system as facade_system
     for module in (api_system, facade_system):
         fonte = __import__("inspect").getsource(module)
         assert "from ..jobs" not in fonte and "from .jobs" not in fonte, \

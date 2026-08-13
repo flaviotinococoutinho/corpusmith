@@ -1,5 +1,5 @@
-# llmwiki — configuração default (Parte V §4.2 + Manual Ap. D + v0.6 §5.5)
-home: ~/llmwiki
+# corpusmith — configuração default (Parte V §4.2 + Manual Ap. D + v0.6 §5.5)
+home: ~/corpusmith
 
 paths:
   knowledge: knowledge

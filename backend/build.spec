@@ -1,9 +1,9 @@
-# pyinstaller build.spec  → dist/llmwiki-server/ (onedir: startup rápido)
+# pyinstaller build.spec  → dist/corpusmith-server/ (onedir: startup rápido)
 #
 # Duas correções do PR-0.1, ambas com a falha REPRODUZIDA antes:
 #
 # 1. `exclude_binaries=True` no EXE. Sem ele o onedir quebra com
-#    `ValueError: Resource '.../llmwiki-server' is not a valid file!` — o EXE
+#    `ValueError: Resource '.../corpusmith-server' is not a valid file!` — o EXE
 #    tenta ser um onefile e o COLLECT seguinte não tem o que coletar. Medido:
 #    `pyinstaller build.spec` falhava assim, então `just sidecar` NÃO
 #    construía, e por isso o binário que o `sidecar.ts` procura no app
@@ -44,6 +44,6 @@ a = Analysis(
     excludes=["fitz", "pymupdf4llm", "ebooklib"],  # AGPL fora do binário (§8 v0.6)
 )
 pyz = PYZ(a.pure)
-exe = EXE(pyz, a.scripts, exclude_binaries=True, name="llmwiki-server",
+exe = EXE(pyz, a.scripts, exclude_binaries=True, name="corpusmith-server",
           console=True)
-coll = COLLECT(exe, a.binaries, a.datas, name="llmwiki-server")
+coll = COLLECT(exe, a.binaries, a.datas, name="corpusmith-server")

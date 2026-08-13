@@ -14,8 +14,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 import pytest
-from llmwiki import paths
-from llmwiki.harness import epistemics
+from corpusmith import paths
+from corpusmith.harness import epistemics
 
 BACKEND = Path(__file__).resolve().parents[1]
 REPO = BACKEND.parent
@@ -35,8 +35,8 @@ def test_resource_no_binario_ignora_o_source_root(monkeypatch, tmp_path):
     """`_MEIPASS` manda; `source_root` é irrelevante dentro do binário.
 
     Medido antes da correção: `FileNotFoundError:
-    .../llmwiki-server/db/schema_runtime.sql`, com o arquivo em
-    `.../llmwiki-server/_internal/db/schema_runtime.sql`. O daemon morria
+    .../corpusmith-server/db/schema_runtime.sql`, com o arquivo em
+    `.../corpusmith-server/_internal/db/schema_runtime.sql`. O daemon morria
     antes de abrir a porta."""
     monkeypatch.setattr(paths.sys, "frozen", True, raising=False)
     monkeypatch.setattr(paths.sys, "_MEIPASS", str(tmp_path / "_internal"),
@@ -105,9 +105,9 @@ def test_na_arvore_o_lint_continua_checando_refs(monkeypatch, tmp_path):
                                                 epistemics.lint()["findings"]}
     mentiroso = tmp_path / "m.toml"
     texto = epistemics.DEFAULT_PATH.read_text()
-    alvo = "backend/src/llmwiki/retrieval/streams.py"
+    alvo = "backend/src/corpusmith/retrieval/streams.py"
     assert alvo in texto, "âncora do teste saiu do registro"
     mentiroso.write_text(texto.replace(
-        alvo, "backend/src/llmwiki/nao_existe.py"))
+        alvo, "backend/src/corpusmith/nao_existe.py"))
     codigos = {f["code"] for f in epistemics.lint(mentiroso)["findings"]}
     assert "epistemic.implementation_ref_missing" in codigos

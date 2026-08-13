@@ -6,16 +6,16 @@ import json
 import zipfile
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.facades import CurationFacade, MemoryFacade
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.settings import Settings
+from corpusmith.api.system import build_app
+from corpusmith.facades import CurationFacade, MemoryFacade
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.settings import Settings
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token="t")
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t"})
+        c.headers.update({"x-corpusmith-auth": "t"})
         yield c
 
 
@@ -138,13 +138,13 @@ def test_config_tunes_live_and_persists(client, settings, kb):
     assert not MemoryFacade(settings).ask("gRPC", local_only=True)["abstained"]
     # persistência: um novo load() enxerga o override
     import os
-    os.environ["LLMWIKI_HOME"] = str(settings.home)
+    os.environ["CORPUSMITH_HOME"] = str(settings.home)
     try:
         client.post("/cockpit/config", json={"memory": {"min_idle_days": 33}})
         reloaded = Settings.load()
         assert reloaded.get("memory.min_idle_days") == 33
     finally:
-        del os.environ["LLMWIKI_HOME"]
+        del os.environ["CORPUSMITH_HOME"]
     # seção desconhecida → 400
     assert client.post("/cockpit/config",
                        json={"server": {"port": 1}}).status_code == 400

@@ -4,17 +4,17 @@ verificador de citação mal-atribuída."""
 from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.okf.authorities import invalidate_cache, load_gazetteer
-from llmwiki.okf.bundle import BundleReader
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.normalize import analyze
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.usecases.manage_reference import (ImportReferenceData,
+from corpusmith.api.system import build_app
+from corpusmith.okf.authorities import invalidate_cache, load_gazetteer
+from corpusmith.okf.bundle import BundleReader
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.normalize import analyze
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.usecases.manage_reference import (ImportReferenceData,
                                                check_quotation,
                                                reference_stats,
                                                seed_reference)
@@ -26,7 +26,7 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token="t")
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t"})
+        c.headers.update({"x-corpusmith-auth": "t"})
         yield c
 
 
@@ -146,8 +146,8 @@ def test_inv003_superseded_out_of_default_retrieval(settings, kb):
     """INV-003 (v1.3): substituída NÃO participa da recuperação padrão;
     com as_of histórico, a partição bi-temporal decide e a evidência
     carrega a marca."""
-    from llmwiki.facades import MemoryFacade
-    from llmwiki.retrieval.fts import rebuild_index as _rb
+    from corpusmith.facades import MemoryFacade
+    from corpusmith.retrieval.fts import rebuild_index as _rb
     BundleWriter(kb).write([
         OKFDocument(rel_path="concepts/porta-v1.md",
                     body="# Porta\n\nporta do daemon era 9000.",
@@ -176,7 +176,7 @@ def test_inv003_superseded_out_of_default_retrieval(settings, kb):
 
 
 def test_inv002_index_generation_change_forces_full_rebuild(settings, kb):
-    from llmwiki.retrieval import fts
+    from corpusmith.retrieval import fts
     BundleWriter(kb).write(
         [OKFDocument(rel_path="concepts/a.md", body="# A\n\ncorpo.",
                      meta=OKFFrontMatter(type="concept", title="A",

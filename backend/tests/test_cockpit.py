@@ -3,11 +3,11 @@ qualidade == lint_bundle; auth por header OU ?auth=."""
 from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
+from corpusmith.api.system import build_app
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
 
 TOKEN = "test-token"
 
@@ -19,15 +19,15 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token=TOKEN)
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": TOKEN})
+        c.headers.update({"x-corpusmith-auth": TOKEN})
         yield c
 
 
 def test_auth_header_or_query(client):
     assert client.get("/cockpit/dashboard",
-                      headers={"x-llmwiki-auth": "errado"}).status_code == 401
+                      headers={"x-corpusmith-auth": "errado"}).status_code == 401
     assert client.get(f"/cockpit/dashboard?auth={TOKEN}",
-                      headers={"x-llmwiki-auth": "errado"}).status_code == 200
+                      headers={"x-corpusmith-auth": "errado"}).status_code == 200
 
 
 def test_promote_creates_page_log_commit_event(client, kb, settings):
@@ -120,7 +120,7 @@ def test_outcome_endpoint_and_correction_to_inbox(client, kb, settings):
         "ask_id": "abc123", "verdict": "corrected",
         "note": "a porta correta é 8377", "pages": ["runbooks/daemon.md"]})
     assert r.status_code == 200
-    from llmwiki.runtime.db import connect
+    from corpusmith.runtime.db import connect
     rt = connect(settings.app_support / "runtime.db")
     row = rt.execute("SELECT verdict, pages FROM ask_outcomes "
                      "ORDER BY id DESC LIMIT 1").fetchone()
@@ -144,7 +144,7 @@ def test_eval_authorities_reflect_endpoints(client):
 def test_quality_includes_eval_and_ask_returns_v08_fields(client, kb, settings):
     q = client.get("/cockpit/quality").json()
     assert "eval" in q
-    from llmwiki.retrieval.fts import rebuild_index
+    from corpusmith.retrieval.fts import rebuild_index
     rebuild_index(settings)
     r = client.post("/ask", json={"query": "teste sem cobertura xyzzy"}).json()
     assert r["abstained"] is True and "ask_id" in r and "trajectory" in r
@@ -179,7 +179,7 @@ def test_ingest_creates_source_and_optionally_compiles(client, kb, settings):
 
 def test_inbox_links_compiled_source_to_page(client, kb, settings):
     (kb / "raw" / "nota.md").write_text("# Nota\n\nconteúdo da nota.\n")
-    from llmwiki.facades import CompilerFacade
+    from corpusmith.facades import CompilerFacade
     result = CompilerFacade(settings).compile("raw/nota.md")
     items = client.get("/cockpit/inbox").json()["items"]
     nota = next(i for i in items if i["path"] == "raw/nota.md")
@@ -188,7 +188,7 @@ def test_inbox_links_compiled_source_to_page(client, kb, settings):
 
 
 def test_stats_endpoint_shape(client, settings):
-    from llmwiki.runtime.db import connect
+    from corpusmith.runtime.db import connect
     rt = connect(settings.app_support / "runtime.db")
     rt.execute("INSERT INTO ask_outcomes(ask_id, verdict, pages) "
                "VALUES ('t', 'useful', '[]')")

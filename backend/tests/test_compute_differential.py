@@ -12,13 +12,13 @@ from __future__ import annotations
 import math
 import random
 import pytest
-from llmwiki.compute.python_kernel import PythonComputeKernel
-from llmwiki.kernel.graphwalk import personalized_pagerank as ppr_reference
-from llmwiki.kernel.sketch import bands, hamming, simhash
+from corpusmith.compute.python_kernel import PythonComputeKernel
+from corpusmith.kernel.graphwalk import personalized_pagerank as ppr_reference
+from corpusmith.kernel.sketch import bands, hamming, simhash
 
 rust = pytest.importorskip(
-    "llmwiki_native", reason="extensão nativa ausente — fallback Python")
-from llmwiki.compute.rust_kernel import RustComputeKernel  # noqa: E402
+    "corpusmith_native", reason="extensão nativa ausente — fallback Python")
+from corpusmith.compute.rust_kernel import RustComputeKernel  # noqa: E402
 
 ABS_TOL = 1e-8          # PPR/Brandes: ordem de soma difere entre backends
 
@@ -182,12 +182,12 @@ def test_brandes_matches_within_tolerance():
 def test_ask_evidence_identical_between_backends(settings, kb):
     """Fim-a-fim: o /ask com backend rust devolve as MESMAS páginas de
     evidência que com python (conteúdo canônico e decisão intocados)."""
-    from llmwiki.compute.select import get_kernel
-    from llmwiki.compute.graph_cache import invalidate
-    from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-    from llmwiki.okf.writer import BundleWriter
-    from llmwiki.retrieval.fts import rebuild_index
-    from llmwiki.usecases.ask_memory import AskMemory
+    from corpusmith.compute.select import get_kernel
+    from corpusmith.compute.graph_cache import invalidate
+    from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+    from corpusmith.okf.writer import BundleWriter
+    from corpusmith.retrieval.fts import rebuild_index
+    from corpusmith.usecases.ask_memory import AskMemory
     docs = [OKFDocument(
         rel_path=f"concepts/kubernetes-{i}.md",
         body=f"# Kubernetes {i}\n\nKubernetes orquestra contêineres. "

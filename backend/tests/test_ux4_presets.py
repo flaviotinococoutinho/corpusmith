@@ -5,14 +5,14 @@ Aplicar um preset é uma geração; desfazer é o rollback de sempre."""
 from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.facades.curation import CurationFacade
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.settings import Settings
-from llmwiki.usecases.configure_system import (PRESETS, config_history,
+from corpusmith.api.system import build_app
+from corpusmith.facades.curation import CurationFacade
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.settings import Settings
+from corpusmith.usecases.configure_system import (PRESETS, config_history,
                                                list_presets)
 
 TOKEN = "test-token"
@@ -68,7 +68,7 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token=TOKEN)
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": TOKEN})
+        c.headers.update({"x-corpusmith-auth": TOKEN})
         yield c
 
 

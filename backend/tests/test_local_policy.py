@@ -2,7 +2,7 @@
 citações só para api:*, promoção humana liberada (§9 aceite)."""
 from __future__ import annotations
 from datetime import datetime, timezone
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
 
 
 def _doc(rel="concepts/x.md", body="# X\n\ncorpo", **meta):

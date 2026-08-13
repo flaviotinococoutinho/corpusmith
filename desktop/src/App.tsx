@@ -18,7 +18,7 @@ const TABS = {
   dashboard: ["🏠 Estado", DashboardPanel],
   ask:       ["💬 Consulta", ChatEvidencePanel],
   inbox:     ["📥 Inbox", InboxPanel],
-  wiki:      ["📚 Wiki", ExplorerPanel],
+  wiki:      ["📚 Corpus", ExplorerPanel],
   graph:     ["🕸 Grafo", GraphPanel],
   insights:  ["📈 Indicadores", InsightsPanel],
   memory:    ["🧠 Memória", MemoryPanel],

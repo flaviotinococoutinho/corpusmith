@@ -7,7 +7,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - run: git config --global user.email ci@llmwiki && git config --global user.name CI
+      - run: git config --global user.email ci@corpusmith && git config --global user.name CI
       - run: pip install -e "backend[dev]"
       - run: python -m pytest backend/tests -q
   # PR-0: o resto do gate do AGENTS.md §2 — antes daqui `epistemics lint` e
@@ -19,16 +19,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - run: git config --global user.email ci@llmwiki && git config --global user.name CI
+      - run: git config --global user.email ci@corpusmith && git config --global user.name CI
       - run: pip install -e "backend[dev]"
       - name: contratos epistêmicos (INV-EPI-001)
-        run: cd backend && python -m llmwiki.cli epistemics lint
+        run: cd backend && python -m corpusmith.cli epistemics lint
       - name: HOME sintético para as ferramentas de operação
-        run: python -c "from pathlib import Path; from llmwiki.bench import synthetic_bundle; synthetic_bundle(Path.home()/'llmwiki-ci', 40)"
+        run: python -c "from pathlib import Path; from corpusmith.bench import synthetic_bundle; synthetic_bundle(Path.home()/'corpusmith-ci', 40)"
       - name: invariantes INV-* reparáveis
-        run: cd backend && LLMWIKI_HOME=$HOME/llmwiki-ci python -m llmwiki.cli okf index && LLMWIKI_HOME=$HOME/llmwiki-ci python -m llmwiki.cli doctor
+        run: cd backend && CORPUSMITH_HOME=$HOME/corpusmith-ci python -m corpusmith.cli okf index && CORPUSMITH_HOME=$HOME/corpusmith-ci python -m corpusmith.cli doctor
       - name: backup verificável (manifesto + sha256)
-        run: cd backend && LLMWIKI_HOME=$HOME/llmwiki-ci python -m llmwiki.cli backup create && LLMWIKI_HOME=$HOME/llmwiki-ci python -m llmwiki.cli backup verify
+        run: cd backend && CORPUSMITH_HOME=$HOME/corpusmith-ci python -m corpusmith.cli backup create && CORPUSMITH_HOME=$HOME/corpusmith-ci python -m corpusmith.cli backup verify
   # PR-0 (G-2): sem esta perna o ramo Leiden de PRODUÇÃO (igraph/leidenalg)
   # nunca é executado — só o fallback de componentes. Verde-por-skip sobre o
   # algoritmo que de fato roda não é verde.
@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - run: git config --global user.email ci@llmwiki && git config --global user.name CI
+      - run: git config --global user.email ci@corpusmith && git config --global user.name CI
       - run: pip install -e "backend[dev,ml]"
       - run: python -m pytest backend/tests -q -m ml
   desktop:
@@ -67,8 +67,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
       - run: cargo test --workspace --manifest-path native/Cargo.toml
-      - run: pip install maturin && maturin build --release -m native/crates/llmwiki-native-python/Cargo.toml -o native/target/wheels
-      - run: cargo build --release --manifest-path native/Cargo.toml -p llmwiki-native-worker
+      - run: pip install maturin && maturin build --release -m native/crates/corpusmith-native-python/Cargo.toml -o native/target/wheels
+      - run: cargo build --release --manifest-path native/Cargo.toml -p corpusmith-native-worker
 
   # PR-0.1: o caminho EMPACOTADO passa a ser construído E EXECUTADO pela CI.
   #
@@ -87,32 +87,32 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - run: git config --global user.email ci@llmwiki && git config --global user.name CI
+      - run: git config --global user.email ci@corpusmith && git config --global user.name CI
       # `[ml]` obrigatório: sem sqlite-vec o build.spec FALHA ALTO em vez de
       # embarcar um binário sem busca vetorial
       - run: pip install -e "backend[dev,ml]" pyinstaller
       - run: cd backend && pyinstaller build.spec
       - name: o binário empacotado SOBE e responde
         run: |
-          export LLMWIKI_HOME="$RUNNER_TEMP/pkg-home"
-          mkdir -p "$LLMWIKI_HOME"
-          backend/dist/llmwiki-server/llmwiki-server &
+          export CORPUSMITH_HOME="$RUNNER_TEMP/pkg-home"
+          mkdir -p "$CORPUSMITH_HOME"
+          backend/dist/corpusmith-server/corpusmith-server &
           for i in $(seq 1 40); do
-            J=$(find "$LLMWIKI_HOME" -name daemon.json 2>/dev/null | head -1)
+            J=$(find "$CORPUSMITH_HOME" -name daemon.json 2>/dev/null | head -1)
             [ -n "$J" ] && break; sleep 1
           done
           test -n "$J" || { echo "::error::o sidecar empacotado nao abriu a porta"; exit 1; }
           P=$(python -c "import json;print(json.load(open('$J'))['port'])")
           T=$(python -c "import json;print(json.load(open('$J'))['token'])")
-          curl -sf -m 10 "http://127.0.0.1:$P/health" -H "x-llmwiki-auth: $T"
-          curl -sf -m 20 "http://127.0.0.1:$P/system/doctor" -H "x-llmwiki-auth: $T" \
+          curl -sf -m 10 "http://127.0.0.1:$P/health" -H "x-corpusmith-auth: $T"
+          curl -sf -m 20 "http://127.0.0.1:$P/system/doctor" -H "x-corpusmith-auth: $T" \
             | python -c "import json,sys; d=json.load(sys.stdin); \
                          sys.exit(0 if d['counts']['error']==0 else 1)"
           # o registro epistêmico é lido em RUNTIME e mora na raiz do repo:
           # fora dos `datas` do build.spec o app instalado responde
           # `registry_missing` e o painel Qualidade acusa "lint com erros"
-          curl -sf -m 20 "http://127.0.0.1:$P/cockpit/epistemics" -H "x-llmwiki-auth: $T" \
+          curl -sf -m 20 "http://127.0.0.1:$P/cockpit/epistemics" -H "x-corpusmith-auth: $T" \
             | python -c "import json,sys; d=json.load(sys.stdin)['lint']; \
                          sys.exit(0 if d['ok'] and d['mechanisms'] > 0 else 1)"
       - name: a extensao vetorial vec0 foi embarcada
-        run: test -f backend/dist/llmwiki-server/_internal/sqlite_vec/vec0.so
+        run: test -f backend/dist/corpusmith-server/_internal/sqlite_vec/vec0.so

@@ -1,5 +1,5 @@
-appId: dev.flavio.llmwiki
-productName: LLM Wiki
+appId: dev.flavio.corpusmith
+productName: Corpusmith
 # O default do electron-builder é `dist/` — que aqui é a saída do Vite, listada
 # logo abaixo em `files`. Empacotar para dentro do diretório que se está
 # empacotando é a receita de um `.dmg` que engorda a cada build; explicitar
@@ -15,5 +15,5 @@ mac:
   hardenedRuntime: true            # exigido p/ notarização junto do sidecar
   target: [dmg]
 extraResources:
-  - from: ../backend/dist/llmwiki-server/
+  - from: ../backend/dist/corpusmith-server/
     to: backend/

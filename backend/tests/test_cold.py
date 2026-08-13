@@ -3,16 +3,16 @@ recall de fallback e reciclagem (manual, automática e via reconciliador)."""
 from __future__ import annotations
 import time
 import pytest
-from llmwiki.facades import CompilerFacade, CurationFacade
-from llmwiki.kernel.activation import retrieval_probability
-from llmwiki.okf.bundle import BundleReader
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.usecases.cold_memory import (FreezeMemory, FreezeVeto,
+from corpusmith.facades import CompilerFacade, CurationFacade
+from corpusmith.kernel.activation import retrieval_probability
+from corpusmith.okf.bundle import BundleReader
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.usecases.cold_memory import (FreezeMemory, FreezeVeto,
                                           RecycleMemory, cold_search)
-from llmwiki.usecases.ask_memory import AskMemory
+from corpusmith.usecases.ask_memory import AskMemory
 
 
 def _doc(rel="concepts/x.md", body="# X\n\ncorpo", **meta):
@@ -187,15 +187,15 @@ def test_reconcile_log_check_migration(tmp_path):
 @pytest.fixture
 def client(settings, kb):
     from fastapi.testclient import TestClient
-    from llmwiki.api.system import build_app
-    from llmwiki.runtime.events import EventBus
-    from llmwiki.runtime.governor import Governor
-    from llmwiki.runtime.queue import JobQueue
+    from corpusmith.api.system import build_app
+    from corpusmith.runtime.events import EventBus
+    from corpusmith.runtime.governor import Governor
+    from corpusmith.runtime.queue import JobQueue
     rt = connect(settings.app_support / "runtime.db")
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token="t")
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t"})
+        c.headers.update({"x-corpusmith-auth": "t"})
         yield c
 
 
@@ -203,7 +203,7 @@ def test_cockpit_cold_endpoints(client, kb, settings):
     client.post("/cockpit/promote", json={
         "kind": "semantic", "title": "Velharia",
         "content": "assunto raramente usado", "privacy": "local_only"})
-    from llmwiki.retrieval.fts import rebuild_index as _ri
+    from corpusmith.retrieval.fts import rebuild_index as _ri
     _ri(settings)
     _make_idle(settings, "concepts/velharia.md")
     r = client.post("/cockpit/freeze", json={"path": "concepts/velharia.md"})

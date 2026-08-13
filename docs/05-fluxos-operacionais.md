@@ -8,7 +8,7 @@
 
 ```
 daemon.main()
- ├─ Settings.load()  (LLMWIKI_CONFIG > default.yaml > defaults; LLMWIKI_HOME)
+ ├─ Settings.load()  (CORPUSMITH_CONFIG > default.yaml > defaults; CORPUSMITH_HOME)
  ├─ ensure_bundle()  bootstrap idempotente: bundle/{index.md,log.md} + git init + commit
  ├─ connect(runtime.db) + connect(index.db)   ← schema + migrações aqui
  ├─ JobQueue · EventBus · Governor · Slots
@@ -306,7 +306,7 @@ EvaluateMemory: para cada caso de bundle/harness/golden_eval.jsonl
 
 ## 9. Auditoria de qualidade
 
-`llmwiki okf lint` e `GET /cockpit/quality` usam a MESMA fonte
+`corpusmith okf lint` e `GET /cockpit/quality` usam a MESMA fonte
 (`CurationFacade.lint → LintBundle → HarnessRunner.lint_bundle`, que
 varre arquivos CRUS — malformados viram findings, nunca são engolidos).
 Quality agrega ainda: eval por categoria, pontes frágeis, órfãos, stale,
@@ -315,7 +315,7 @@ cobertura de privacy.
 ## 10. Implantação (release macOS)
 
 ```
-pyinstaller build.spec            → backend/dist/llmwiki-server/ (onedir)
+pyinstaller build.spec            → backend/dist/corpusmith-server/ (onedir)
 cd desktop && npm run build       → tsc --noEmit + vite build + electron-builder
 assinar + notarizar               (hardenedRuntime; sidecar não assinado morre)
 smoke: app abre com daemon morto (read-only) · sobe daemon ·

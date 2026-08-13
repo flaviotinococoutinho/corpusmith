@@ -5,9 +5,9 @@ CPython usa `_stop()` como MÉTODO interno de `Thread`, e qualquer
 callable". Parar e JUNTAR precisa ser sempre seguro (shutdown limpo)."""
 from __future__ import annotations
 import time
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.runtime.scheduler import Scheduler
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.runtime.scheduler import Scheduler
 
 
 def test_scheduler_para_e_junta_sem_typeerror(settings):

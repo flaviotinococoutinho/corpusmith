@@ -208,7 +208,7 @@ export class CurationError extends Error {
 
 declare global {
   interface Window {
-    llmwiki?: {
+    corpusmith?: {
       handshake(): Promise<Handshake | null>;
       // F0: opcional — versões antigas do preload não expõem
       sidecarFailure?(): Promise<SidecarFailure | null>;
@@ -224,7 +224,7 @@ export class DaemonClient {
     this.connecting ??= (async () => {
       const t0 = Date.now();
       for (;;) {
-        this.info = (await window.llmwiki?.handshake()) ?? null;
+        this.info = (await window.corpusmith?.handshake()) ?? null;
         if (this.info) {
           try {
             const r = await fetch(this.base() + "/health");
@@ -255,7 +255,7 @@ export class DaemonClient {
   }
 
   headers(): Record<string, string> {
-    return { "x-llmwiki-auth": this.info?.token ?? "" };
+    return { "x-corpusmith-auth": this.info?.token ?? "" };
   }
 
   private async get<T = any>(p: string): Promise<T> {

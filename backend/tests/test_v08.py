@@ -4,14 +4,14 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 import pytest
-from llmwiki.harness.runner import HarnessRejection
-from llmwiki.jobs import reconcile, reflect
-from llmwiki.jobs.ask import answer, answer_local
-from llmwiki.normalize import analyze
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
+from corpusmith.harness.runner import HarnessRejection
+from corpusmith.jobs import reconcile, reflect
+from corpusmith.jobs.ask import answer, answer_local
+from corpusmith.normalize import analyze
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
 
 
 def _doc(rel="concepts/x.md", body="# X\n\ncorpo", **meta):
@@ -209,7 +209,7 @@ def test_eval_memory_five_categories(settings, kb):
     ]
     (gold / "golden_eval.jsonl").write_text(
         "\n".join(json.dumps(c) for c in cases))
-    from llmwiki.harness import eval_memory
+    from corpusmith.harness import eval_memory
     out = eval_memory.run(settings, {}, lambda *a, **k: None)
     assert out["stats"]["extract"] == [1, 1]
     assert out["stats"]["abstain"] == [1, 1]
@@ -257,7 +257,7 @@ def test_outcome_trains_stream_credit_via_hedge(settings, kb):
     _write_indexed(settings, kb, page)
     r = answer_local(settings, "filas locais sqlite")
     assert not r["abstained"]
-    from llmwiki.facades import MemoryFacade
+    from corpusmith.facades import MemoryFacade
     MemoryFacade(settings).record_outcome(
         verdict="dead_end", ask_id=r["ask_id"],
         pages=[e["page"] for e in r["evidence"]])
@@ -291,7 +291,7 @@ def test_communities_job_stores_fragile_bridges(settings, kb):
     BundleWriter(kb).write(docs, log_kind="Creation",
                            log_message="m", commit_message="c")
     rebuild_index(settings)
-    from llmwiki.facades import CompilerFacade
+    from corpusmith.facades import CompilerFacade
     result = CompilerFacade(settings).detect_communities()
     assert result["communities"] >= 2
     idx = connect(settings.app_support / "index.db")

@@ -3,11 +3,11 @@ com fading, intercalação, Toulmin na crítica, tipos epistemológicos e
 memória episódica da experiência."""
 from __future__ import annotations
 import pytest
-from llmwiki.cognitive import KnowledgeItemView, validate_policy
-from llmwiki.cognitive.progress import (exercise_prompt, interleave,
+from corpusmith.cognitive import KnowledgeItemView, validate_policy
+from corpusmith.cognitive.progress import (exercise_prompt, interleave,
                                         support_level)
-from llmwiki.cognitive.scoring import cognitive_priority
-from llmwiki.cognitive.model import new_focus_goal
+from corpusmith.cognitive.scoring import cognitive_priority
+from corpusmith.cognitive.model import new_focus_goal
 
 
 def _goal():
@@ -57,6 +57,6 @@ def test_critique_prompt_decomposes_toulmin():
 
 
 def test_epistemic_types_are_first_class():
-    from llmwiki.harness.local_policy import RECOMMENDED_TYPES
+    from corpusmith.harness.local_policy import RECOMMENDED_TYPES
     assert {"fact", "claim", "hypothesis", "observation",
             "opinion"} <= RECOMMENDED_TYPES

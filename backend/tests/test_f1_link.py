@@ -14,16 +14,16 @@ prosa, sentinela dentro de cerca de código, e entrada numérica desarmando
 """
 from __future__ import annotations
 import pytest
-from llmwiki.harness import local_policy
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.git_store import GitStore
-from llmwiki.okf.relations import (ABRE, FECHA, BlocoInconsistente,
+from corpusmith.harness import local_policy
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.git_store import GitStore
+from corpusmith.okf.relations import (ABRE, FECHA, BlocoInconsistente,
                                    entries_of, find_block, with_link,
                                    without_link)
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.usecases.curate import LinkPages, UndoCurationAct, UnlinkPages
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.usecases.curate import LinkPages, UndoCurationAct, UnlinkPages
 
 
 def _doc(rel, title, body, **meta):
@@ -82,7 +82,7 @@ def test_entrada_numerica_nao_desarma_citation_invalid(base, kb):
                                           generated_via="api:openai",
                                           source_sha256="x" * 64))
 
-    from llmwiki.okf.bundle import BundleReader
+    from corpusmith.okf.bundle import BundleReader
 
     class _Git:
         def has_commit(self, _s): return True
@@ -137,7 +137,7 @@ def test_link_vira_aresta_no_grafo(base, kb):
 def test_link_com_relacao_tipada_preserva_o_rel(base, kb):
     LinkPages(base, src="concepts/a.md", dst="concepts/b.md",
               rel="refines").execute()
-    from llmwiki.okf.links import parse_links
+    from corpusmith.okf.links import parse_links
     corpo = (kb / "bundle/concepts/a.md").read_text()
     link = next(l for l in parse_links(corpo)
                 if l.target == "/concepts/b.md")

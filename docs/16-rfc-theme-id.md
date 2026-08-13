@@ -199,7 +199,7 @@ aqui — se vier, exige `ALTER` no `_migrate` com teste de upgrade.
 ## 9. Observabilidade
 
 `graph_snapshot` ganha `themes_matched` e `events`; `theme_epochs` é a trilha
-auditável; o doctor passa a verificar INV-005. `llmwiki themes` lista tema,
+auditável; o doctor passa a verificar INV-005. `corpusmith themes` lista tema,
 `theme_id`, membros e a última época.
 
 ## 10. Rollout e rollback

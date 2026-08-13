@@ -19,13 +19,13 @@ Dois pontos que este PR trata e que os atos anteriores não precisavam:
 """
 from __future__ import annotations
 import pytest
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.git_store import GitStore
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.usecases.curate import ACTS, EditPage, UndoCurationAct
-from llmwiki.usecases.next_actions import acts_for
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.git_store import GitStore
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.usecases.curate import ACTS, EditPage, UndoCurationAct
+from corpusmith.usecases.next_actions import acts_for
 
 
 @pytest.fixture
@@ -108,7 +108,7 @@ def test_recusa_remover_campo_de_frontmatter(base):
 def test_edicao_invalida_e_rejeitada_pelo_gate(base, kb):
     """O Harness continua soberano sobre a escrita humana: privacidade
     inválida não entra."""
-    from llmwiki.harness.runner import HarnessRejection
+    from corpusmith.harness.runner import HarnessRejection
     with pytest.raises((HarnessRejection, ValueError)):
         EditPage(base, page="concepts/a.md",
                  meta_patch={"privacy": "publico-irrestrito"}).execute()
@@ -178,10 +178,10 @@ def test_o_campo_do_prefill_existe_na_resposta_da_pagina(base, kb):
     `field` declarado é servido pelo endpoint que a interface consulta —
     e que o valor é o corpo atual, não uma projeção."""
     from fastapi.testclient import TestClient
-    from llmwiki.api.system import build_app
-    from llmwiki.runtime.events import EventBus
-    from llmwiki.runtime.governor import Governor
-    from llmwiki.runtime.queue import JobQueue
+    from corpusmith.api.system import build_app
+    from corpusmith.runtime.events import EventBus
+    from corpusmith.runtime.governor import Governor
+    from corpusmith.runtime.queue import JobQueue
     rt = connect(base.app_support / "runtime.db")
     app = build_app(base, JobQueue(rt), Governor(base, rt), EventBus(rt),
                     token="t3")
@@ -189,7 +189,7 @@ def test_o_campo_do_prefill_existe_na_resposta_da_pagina(base, kb):
                        "action": {}})[0]
     fonte = oferta["prefill"]["body"]
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t3"})
+        c.headers.update({"x-corpusmith-auth": "t3"})
         r = c.get("/cockpit/page", params={"path": fonte["page"]})
         assert r.status_code == 200, r.text
         assert fonte["field"] in r.json(), "prefill aponta para campo inexistente"
@@ -200,7 +200,7 @@ def test_reenviar_o_corpo_pre_preenchido_nao_muda_nada(base, kb):
     """Consequência do prefill: abrir o dialog e aplicar sem digitar é
     NOOP no conteúdo — o usuário não perde a página por reflexo."""
     atual = base.path("knowledge") / "bundle/concepts/a.md"
-    from llmwiki.okf.bundle import BundleReader
+    from corpusmith.okf.bundle import BundleReader
     corpo = BundleReader(base.path("knowledge") / "bundle").load(
         "concepts/a.md").body
     antes = atual.read_bytes()

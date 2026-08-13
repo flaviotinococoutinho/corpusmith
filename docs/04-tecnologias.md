@@ -40,7 +40,7 @@
 - Bundle OKF = diretório de Markdown (legível sem o sistema).
 - Lock de escrita inter-processo: `fcntl.flock` em `.write.lock`
   (daemon × CLI concorrentes).
-- Handshake do daemon: `~/llmwiki/state/daemon.json` (porta + token
+- Handshake do daemon: `~/corpusmith/state/daemon.json` (porta + token
   efêmero, chmod 600).
 
 ## 2. Backend Python
@@ -49,7 +49,7 @@
 |---|---|---|
 | **pydantic v2** | `OKFFrontMatter` (extra="allow", timestamp/valid_at/invalid_at coagidos a datetime), `Settings` | validação na borda; kernel NÃO usa pydantic (teste de arquitetura) |
 | **python-frontmatter** | parse/dump YAML+Markdown | `dumps` serializa datetimes como ISO (mode="json" no model_dump) |
-| **FastAPI + uvicorn** | API local (127.0.0.1) | auth por token efêmero em header `x-llmwiki-auth` OU `?auth=` (EventSource não envia headers) |
+| **FastAPI + uvicorn** | API local (127.0.0.1) | auth por token efêmero em header `x-corpusmith-auth` OU `?auth=` (EventSource não envia headers) |
 | **sse-starlette** | `GET /events` | eventos do bus com keepalive ping 15s |
 | **httpx** | CLI→daemon, router→Ollama/Anthropic | timeouts explícitos sempre |
 | **GitPython** | GitStore | ver §1 |
@@ -62,10 +62,10 @@ threadsafety=3). Slots por classe de job: `heavy` (compile, lora,
 leiden, ocr, pipeline) = 1; `light` = 2.
 
 ### Extras opcionais (nunca requisitos)
-- `llmwiki[parsers]` — pymupdf4llm, ebooklib (**AGPL**): executados em
+- `corpusmith[parsers]` — pymupdf4llm, ebooklib (**AGPL**): executados em
   SUBPROCESSO por `ingestion/extract.py`; **jamais no binário
   PyInstaller** (excludes explícitos no build.spec).
-- `llmwiki[ml]` — sqlite-vec, igraph, leidenalg: Leiden de verdade e
+- `corpusmith[ml]` — sqlite-vec, igraph, leidenalg: Leiden de verdade e
   vetores; fallbacks stdlib cobrem a ausência.
 
 ## 3. Modelos (models/router.py)
@@ -87,7 +87,7 @@ de API grava tokens/USD no `ledger`.
 - **Processo**: main (`electron/main.ts`) sobe o sidecar
   (`sidecar.ts`: binário PyInstaller empacotado OU venv em dev OU
   conecta a daemon já vivo), lê o handshake e o expõe ao renderer via
-  preload/contextBridge (`window.llmwiki.handshake()`).
+  preload/contextBridge (`window.corpusmith.handshake()`).
 - **daemonClient.ts**: singleton com `connect()` (poll de /health),
   header de auth, e um método por endpoint. EventSource usa `?auth=`.
 - **live.ts** (v0.11): UMA assinatura SSE compartilhada por todos os
@@ -104,13 +104,13 @@ de API grava tokens/USD no `ledger`.
 
 ## 5. Implantação
 
-- **PyInstaller onedir** (`build.spec`): `dist/llmwiki-server/`;
+- **PyInstaller onedir** (`build.spec`): `dist/corpusmith-server/`;
   hiddenimports para uvicorn/sse; datas = config + schemas SQL; AGPL
   excluído.
 - **electron-builder**: `extraResources` embute o sidecar em
   `resources/backend/`; macOS exige hardenedRuntime + notarização (o
   Gatekeeper mata sidecar não assinado).
-- **launchd** (`launchd/com.llmwiki.daemon.plist` +
+- **launchd** (`launchd/com.corpusmith.daemon.plist` +
   `scripts/install_daemon.sh`): daemon como LaunchAgent com KeepAlive.
 - **justfile**: bootstrap, models, daemon, test, lint, index, sidecar,
   app — o operador não decora comandos.

@@ -9,7 +9,7 @@ async function createWindow(): Promise<void> {
   win = new BrowserWindow({
     width: 1280,
     height: 840,
-    title: "LLM Wiki — Cockpit",
+    title: "Corpusmith — Cockpit",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -23,12 +23,12 @@ async function createWindow(): Promise<void> {
   }
 }
 
-ipcMain.handle("llmwiki:handshake", async () =>
+ipcMain.handle("corpusmith:handshake", async () =>
   (await daemonAlive()) ? readHandshake() : null);
 
 // F0: a UI passa a poder PERGUNTAR por que o sidecar não subiu, em vez de
 // ficar em "Carregando…" para sempre (a falha era um `return` mudo).
-ipcMain.handle("llmwiki:sidecarFailure", async () => sidecarFailure());
+ipcMain.handle("corpusmith:sidecarFailure", async () => sidecarFailure());
 
 app.whenReady().then(async () => {
   await startSidecar(process.resourcesPath);

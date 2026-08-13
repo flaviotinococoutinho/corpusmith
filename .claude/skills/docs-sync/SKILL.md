@@ -1,6 +1,6 @@
 ---
 name: docs-sync
-description: Auditar e atualizar a documentação conceitual em docs/ contra a estrutura real do código do LLM Wiki. Usar após qualquer mudança em funcionalidade core (regras do Harness, endpoints, tabelas, jobs, use cases, detectores, constantes calibráveis) ou quando o usuário pedir para revisar/sincronizar a documentação.
+description: Auditar e atualizar a documentação conceitual em docs/ contra a estrutura real do código do Corpusmith. Usar após qualquer mudança em funcionalidade core (regras do Harness, endpoints, tabelas, jobs, use cases, detectores, constantes calibráveis) ou quando o usuário pedir para revisar/sincronizar a documentação.
 ---
 
 # docs-sync — manter docs/ fiel ao código
@@ -35,34 +35,34 @@ Execute a partir de `backend/` e compare cada saída com a seção citada:
 
 ```bash
 # 1. Regras do Harness (compare com 06-referencia §1)
-grep -rhoE '"(okf|policy)\.[a-z_]+"' src/llmwiki/harness/ src/llmwiki/normalize/engine.py | sort -u
+grep -rhoE '"(okf|policy)\.[a-z_]+"' src/corpusmith/harness/ src/corpusmith/normalize/engine.py | sort -u
 
 # 2. Endpoints (compare com 06-referencia §2)
-grep -rhoE '@app\.(get|post)\("[^"]+"' src/llmwiki/api/ | sort -u
+grep -rhoE '@app\.(get|post)\("[^"]+"' src/corpusmith/api/ | sort -u
 
 # 3. Tabelas (compare com 06-referencia §3)
 grep -hoE 'CREATE (VIRTUAL )?TABLE IF NOT EXISTS \S+' db/*.sql | sort -u
 
 # 4. Jobs (compare com 06-referencia §4)
-sed -n '/^REGISTRY = {/,/^}/p' src/llmwiki/jobs/__init__.py
+sed -n '/^REGISTRY = {/,/^}/p' src/corpusmith/jobs/__init__.py
 
 # 5. Use cases: classes e método público único (compare com 06-referencia §10)
-grep -rhE '^class \w+\(.*UseCase' src/llmwiki/usecases/
+grep -rhE '^class \w+\(.*UseCase' src/corpusmith/usecases/
 
 # 6. Facades e métodos (compare com 05 §11)
-grep -rhE '    def [a-z_]+' src/llmwiki/facades/*.py
+grep -rhE '    def [a-z_]+' src/corpusmith/facades/*.py
 
 # 7. Detectores/subkinds (compare com 06-referencia §8)
-grep -rhoE '"(cpf|cnpj|doi|arxiv|isbn|issn|orcid|cve|uuid|semver|iban|git_sha|iso|nbr|rfc|nist|ieee|eu_reg|regulator|country|uf|cep|address|date|qty)"' src/llmwiki/normalize/detectors/ | sort -u
+grep -rhoE '"(cpf|cnpj|doi|arxiv|isbn|issn|orcid|cve|uuid|semver|iban|git_sha|iso|nbr|rfc|nist|ieee|eu_reg|regulator|country|uf|cep|address|date|qty)"' src/corpusmith/normalize/detectors/ | sort -u
 
 # 8. Tipos OKF recomendados (compare com 06-referencia §6)
-sed -n '/RECOMMENDED_TYPES = {/,/}/p' src/llmwiki/harness/local_policy.py
+sed -n '/RECOMMENDED_TYPES = {/,/}/p' src/corpusmith/harness/local_policy.py
 
 # 9. Flags e config (compare com 06-referencia §5)
 sed -n '1,60p' config/default.yaml
 
 # 10. Constantes calibráveis (compare com 06-referencia §11)
-grep -rnE '(RRF_K|HI, LO|eta: float|floor: float|ceiling|DECAY|CHUNK_CHARS|1\.15|0\.8\}|BETWEEN 2 AND 30|max\(p99, 8\)|min_shared|score > 0\.6|score < 0\.15)' src/llmwiki | grep -v tests
+grep -rnE '(RRF_K|HI, LO|eta: float|floor: float|ceiling|DECAY|CHUNK_CHARS|1\.15|0\.8\}|BETWEEN 2 AND 30|max\(p99, 8\)|min_shared|score > 0\.6|score < 0\.15)' src/corpusmith | grep -v tests
 
 # 11. A suíte é o juiz final — doc que contradiz teste verde está errada
 .venv/bin/pytest -q

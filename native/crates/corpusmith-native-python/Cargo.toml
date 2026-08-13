@@ -1,0 +1,15 @@
+[package]
+name = "corpusmith-native-python"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "corpusmith_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+corpusmith-types = { path = "../corpusmith-types" }
+corpusmith-graph = { path = "../corpusmith-graph" }
+corpusmith-sketch = { path = "../corpusmith-sketch" }
+pyo3 = { version = "0.23", features = ["abi3-py311", "extension-module"] }

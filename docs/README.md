@@ -1,4 +1,4 @@
-# Documentação do Brain Compiler / LLM Wiki
+# Documentação do Corpusmith
 
 Índice **roteado por especialidade**. Cada documento cobre UMA disciplina,
 para que revisor humano e agente de IA saibam exatamente onde uma decisão
@@ -55,7 +55,7 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 |---|---|
 | [06-referencia.md](06-referencia.md) | Todas as regras do Harness, endpoints, tabelas dos 5 bancos, jobs, flags, tipos OKF, frontmatter |
 | [../architecture.toml](../architecture.toml) | Contrato de arquitetura legível-por-máquina (preso a `test_architecture_toml.py`) |
-| [../epistemics.toml](../epistemics.toml) | Contratos epistemológicos legíveis-por-máquina (presos a `test_epistemics_toml.py`; lint em `llmwiki epistemics lint`) |
+| [../epistemics.toml](../epistemics.toml) | Contratos epistemológicos legíveis-por-máquina (presos a `test_epistemics_toml.py`; lint em `corpusmith epistemics lint`) |
 
 ### 🔄 Fluxos operacionais — QUANDO / ONDE
 | Doc | Conteúdo |

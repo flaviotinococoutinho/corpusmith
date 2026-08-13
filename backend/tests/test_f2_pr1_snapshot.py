@@ -19,14 +19,14 @@ porque é justamente no fallback que o carimbo precisa dizer a verdade.
 """
 from __future__ import annotations
 import pytest
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.git_store import GitStore
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import SCHEMA_VERSIONS, connect
-from llmwiki.usecases.detect_communities import (LEIDEN_SEED,
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.git_store import GitStore
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import SCHEMA_VERSIONS, connect
+from corpusmith.usecases.detect_communities import (LEIDEN_SEED,
                                                  DetectCommunities)
-from llmwiki.usecases.diagnose import DiagnoseSystem
+from corpusmith.usecases.diagnose import DiagnoseSystem
 
 
 def _doc(rel, title, body, **extra):
@@ -287,7 +287,7 @@ def test_ponte_para_pagina_supersedida_e_podada(com_pontes, kb):
     antes = [dict(r) for r in idx.execute("SELECT src, dst FROM graph_bridges")]
     idx.close()
     assert antes, "o cenário precisa de ponte para o teste valer"
-    from llmwiki.usecases.curate import SupersedePage
+    from corpusmith.usecases.curate import SupersedePage
     alvo = antes[0]["src"]
     outra = next(f"concepts/b{b}-p{i}.md" for b in range(4)
                  for i in range(5) if f"concepts/b{b}-p{i}.md" != alvo)
@@ -343,9 +343,9 @@ def test_o_job_leiden_e_agendado_e_com_prioridade_baixa(settings, tmp_path):
     Prioridade 7 (baixa) de propósito: o mapa cede a vez para tudo que o
     usuário pediu — numa máquina pequena essa ordem é a diferença entre um
     produto que responde e um que está sempre ocupado."""
-    from llmwiki.jobs import REGISTRY
-    from llmwiki.runtime.queue import JobQueue
-    from llmwiki.runtime.scheduler import Scheduler
+    from corpusmith.jobs import REGISTRY
+    from corpusmith.runtime.queue import JobQueue
+    from corpusmith.runtime.scheduler import Scheduler
     assert "leiden" in REGISTRY, "o job precisa existir para ser agendado"
     db = connect(settings.app_support / "runtime.db")
     fila = JobQueue(db)

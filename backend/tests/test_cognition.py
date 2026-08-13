@@ -7,23 +7,23 @@ import json
 import time
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.kernel.attention import fill_budget, review_gain
-from llmwiki.kernel.calibration import (brier_score, calibration_bins,
+from corpusmith.api.system import build_app
+from corpusmith.kernel.attention import fill_budget, review_gain
+from corpusmith.kernel.calibration import (brier_score, calibration_bins,
                                         overconfidence)
-from llmwiki.facades import CognitionFacade, MemoryFacade
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.usecases.cognitive_state import (DeclareCognitiveState,
+from corpusmith.facades import CognitionFacade, MemoryFacade
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.usecases.cognitive_state import (DeclareCognitiveState,
                                               STRATEGIES, current_state,
                                               delivery_budget)
-from llmwiki.usecases.configure_system import config_history
-from llmwiki.usecases.metacognition import ObserveMetacognition
+from corpusmith.usecases.configure_system import config_history
+from corpusmith.usecases.metacognition import ObserveMetacognition
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token="t")
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t"})
+        c.headers.update({"x-corpusmith-auth": "t"})
         yield c
 
 

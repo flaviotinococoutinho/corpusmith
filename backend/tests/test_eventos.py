@@ -17,12 +17,12 @@ import re
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.runtime.events import (EVENT_TYPES, EventBus,
+from corpusmith.api.system import build_app
+from corpusmith.runtime.events import (EVENT_TYPES, EventBus,
                                     EventTypeNaoDeclarado)
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
 
 TOKEN = "tev"
 
@@ -33,10 +33,10 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token=TOKEN)
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": TOKEN})
+        c.headers.update({"x-corpusmith-auth": TOKEN})
         yield c
 
-SRC = Path(__file__).resolve().parents[1] / "src" / "llmwiki"
+SRC = Path(__file__).resolve().parents[1] / "src" / "corpusmith"
 # `canal.evento` e também `canal.sub.evento`: a jornada cognitiva usa TRÊS
 # segmentos (`focus.goal.created`), e a primeira versão desta regex, com dois
 # fixos, deu verde com nove tipos de fora. Quem os pegou foi a recusa em

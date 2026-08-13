@@ -16,18 +16,18 @@ escolher em silêncio qual invariante cede).
 from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.facades.curation_acts import CurationActsFacade
-from llmwiki.kernel.curation import UndoNotExpressible
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.git_store import GitStore
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.usecases.curate import SupersedePage, UndoCurationAct
+from corpusmith.api.system import build_app
+from corpusmith.facades.curation_acts import CurationActsFacade
+from corpusmith.kernel.curation import UndoNotExpressible
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.git_store import GitStore
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.usecases.curate import SupersedePage, UndoCurationAct
 
 TOKEN = "t2"
 
@@ -55,7 +55,7 @@ def client(base):
     app = build_app(base, JobQueue(rt), Governor(base, rt), EventBus(rt),
                     token=TOKEN)
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": TOKEN})
+        c.headers.update({"x-corpusmith-auth": TOKEN})
         yield c
 
 
@@ -231,7 +231,7 @@ def test_o_undo_nao_usa_revert_reset_nem_checkout():
     explicar por que NÃO o usa)."""
     import ast
     import inspect
-    import llmwiki.usecases.curate.undo as modulo
+    import corpusmith.usecases.curate.undo as modulo
     arvore = ast.parse(inspect.getsource(modulo))
     chamados = {getattr(n.func, "attr", None) or getattr(n.func, "id", None)
                 for n in ast.walk(arvore) if isinstance(n, ast.Call)}
@@ -290,7 +290,7 @@ def test_cli_recusa_com_mensagem_limpa_e_codigo_estavel(base, capsys):
     """AGENTS §9 exige erro com código estável: a recusa do undo não pode
     sair como traceback de ValueError (era o comportamento antes)."""
     import argparse
-    from llmwiki.cli import cmd_curate
+    from corpusmith.cli import cmd_curate
     aplicado = SupersedePage(base, page="concepts/a.md",
                              successor="concepts/b.md").execute()
     args = argparse.Namespace(act="undo",

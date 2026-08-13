@@ -1,0 +1,17 @@
+[package]
+name = "corpusmith-native-worker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "corpusmith-native-worker"
+path = "src/main.rs"
+
+[dependencies]
+corpusmith-types = { path = "../corpusmith-types" }
+corpusmith-graph = { path = "../corpusmith-graph" }
+corpusmith-sketch = { path = "../corpusmith-sketch" }
+corpusmith-etl = { path = "../corpusmith-etl" }
+serde = { workspace = true }
+serde_json = { workspace = true }

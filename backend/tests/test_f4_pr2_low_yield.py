@@ -5,10 +5,10 @@ repetido) e cinco superfícies o exibiam como conflito factual. O valor,
 as chaves e os rótulos viram `low_yield`; o conflito REAL chega na
 F4-PR3 (`policy.factual_conflict`)."""
 from __future__ import annotations
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
 
 
 def _doc(rel, title, body, **meta):
@@ -41,7 +41,7 @@ def test_migracao_converte_contested_legado(settings, tmp_path):
     """Banco antigo com 'contested' abre no produto novo com o valor
     migrado — sem isso, todo index.db existente quebraria no CHECK."""
     import sqlite3
-    from llmwiki.runtime.db import SCHEMA_VERSIONS, reset_initialized
+    from corpusmith.runtime.db import SCHEMA_VERSIONS, reset_initialized
     db = settings.app_support / "index.db"
     connect(db).close()                    # inicializa o banco do produto
     # simula o banco da versão anterior: sem CHECK novo, valor antigo
@@ -66,7 +66,7 @@ def test_migracao_converte_contested_legado(settings, tmp_path):
 
 
 def test_fila_oferece_low_yield_com_rotulo_honesto(settings, kb):
-    from llmwiki.usecases.plan_attention import gap_items
+    from corpusmith.usecases.plan_attention import gap_items
     _write(settings, kb,
            _doc("concepts/beco.md", "Beco", "# Beco\n\nsempre dá em nada."))
     idx = connect(settings.app_support / "index.db")
@@ -84,7 +84,7 @@ def test_fila_oferece_low_yield_com_rotulo_honesto(settings, kb):
 def test_politica_cognitiva_aceita_chave_legada(settings):
     """`allow_contested` vive em snapshots PERSISTIDOS (cognitive.db).
     A chave nova governa; a legada é traduzida, nunca recusada."""
-    from llmwiki.cognitive.policy import validate_policy
+    from corpusmith.cognitive.policy import validate_policy
     p = validate_policy({"gates": {"allow_contested": False}})
     assert p["gates"]["allow_low_yield"] is False
     p2 = validate_policy({"gates": {"allow_low_yield": True}})

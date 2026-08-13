@@ -1,0 +1,11 @@
+[package]
+name = "corpusmith-sketch"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+corpusmith-types = { path = "../corpusmith-types" }
+blake2 = { workspace = true }
+rayon = { workspace = true }
+unicode-general-category = { workspace = true }

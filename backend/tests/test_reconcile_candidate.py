@@ -15,12 +15,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import pytest
-from llmwiki.okf.authorities import load_gazetteer, normalize_machine_body
-from llmwiki.okf.bundle import BundleReader
-from llmwiki.okf.document import OKFDocument
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.usecases.reconcile_candidate import (HI, LO, ReconcileCandidate,
+from corpusmith.okf.authorities import load_gazetteer, normalize_machine_body
+from corpusmith.okf.bundle import BundleReader
+from corpusmith.okf.document import OKFDocument
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.usecases.reconcile_candidate import (HI, LO, ReconcileCandidate,
                                                   log_decision)
 
 from conftest import write_page
@@ -36,7 +36,7 @@ Usada aqui como terceiro termo do escore de similaridade da reconciliação.
 
 
 def _commit(kb: Path, mensagem: str = "fixture") -> None:
-    from llmwiki.okf.git_store import GitStore
+    from corpusmith.okf.git_store import GitStore
     GitStore(kb).commit(mensagem)
 
 
@@ -204,7 +204,7 @@ def test_atraso_irreparavel_marca_a_decisao(indexado, bundle, monkeypatch):
 
     `confidence` cai para `ambiguous`, que é o vocabulário que o produto já
     usa para "não me trate como certeza"."""
-    import llmwiki.usecases.reconcile_candidate as rc
+    import corpusmith.usecases.reconcile_candidate as rc
     monkeypatch.setattr(rc.ReconcileCandidate, "_atraso",
                         staticmethod(lambda _v: "stale"))
     doc, report = _candidato(indexado, bundle, "concepts/z.md",
@@ -223,7 +223,7 @@ def test_o_atraso_vai_para_a_trilha_de_auditoria(indexado, bundle,
                                                  monkeypatch):
     """"Quantas decisões saíram de um índice atrasado?" tem de ser consulta,
     não suposição — senão o diagnóstico morre no objeto em memória."""
-    import llmwiki.usecases.reconcile_candidate as rc
+    import corpusmith.usecases.reconcile_candidate as rc
     monkeypatch.setattr(rc.ReconcileCandidate, "_atraso",
                         staticmethod(lambda _v: "absent"))
     doc, report = _candidato(indexado, bundle, "concepts/w.md",
@@ -246,9 +246,9 @@ def test_indice_fresco_nao_paga_reindexacao(indexado, bundle, monkeypatch):
     Sem esta guarda, ingerir N documentos custaria N reconstruções — e a
     correção de um defeito de correção viraria um defeito de desempenho numa
     máquina de 8 GB."""
-    import llmwiki.usecases.reconcile_candidate as rc
+    import corpusmith.usecases.reconcile_candidate as rc
     chamadas = []
-    import llmwiki.retrieval.fts as fts
+    import corpusmith.retrieval.fts as fts
     original = fts.rebuild_index
     monkeypatch.setattr(fts, "rebuild_index",
                         lambda *a, **k: (chamadas.append(1),
@@ -273,7 +273,7 @@ def test_rebuild_index_fecha_a_conexao_mesmo_falhando(settings, kb, bundle,
     write_page(bundle, "concepts/a.md",
                "---\ntype: concept\ntitle: A\nprivacy: local_only\n---\n# A\n")
     _commit(kb)
-    import llmwiki.retrieval.fts as fts
+    import corpusmith.retrieval.fts as fts
 
     def _explode(_s, idx, *, full):
         # A ESCRITA antes do erro é o que torna o teste capaz de reprovar:

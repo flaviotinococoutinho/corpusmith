@@ -7,12 +7,12 @@
 > Fundamentos científicos: [`03-teoria.md`](03-teoria.md).
 
 Fonte normativa: [`../epistemics.toml`](../epistemics.toml) · domínio puro:
-`backend/src/llmwiki/epistemic/` · loader único: `harness/epistemics.py` ·
+`backend/src/corpusmith/epistemic/` · loader único: `harness/epistemics.py` ·
 presa à realidade por `test_epistemics.py` + `test_epistemics_toml.py`.
 
 ## 1. Problema
 
-O Brain Compiler acumula mecanismos que **decidem sob incerteza**: fusão
+O Corpusmith acumula mecanismos que **decidem sob incerteza**: fusão
 RRF+Hedge, entropia de retrieval, abstenção, reconciliação
 ADD/UPDATE/SUPERSEDE, prioridade cognitiva, mineração metacognitiva.
 Cada um embute vieses indutivos, aproximações e limites — mas essas
@@ -144,7 +144,7 @@ métrica sem envelope não autoriza generalização.**
 ```
 golden_eval.jsonl ──► eval_memory ──► eval_runs (como antes)
                           └────────► evaluation_envelopes (v1.6)
-llmwiki epistemics lint|list|show|evaluations   ┐
+corpusmith epistemics lint|list|show|evaluations   ┐
 GET /cockpit/epistemics[/{id}[/evaluations]]    ├─ MESMA fonte
 painel Qualidade → seção "Contratos epistêmicos"┘  (harness/epistemics)
 ```
