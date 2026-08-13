@@ -138,7 +138,7 @@ def test_eval_authorities_reflect_endpoints(client):
                                                   "metrics": None}
     assert "entities" in client.get("/cockpit/authorities").json()
     cand = client.get("/cockpit/reflect").json()
-    assert set(cand) == {"promote", "archive", "contested"}
+    assert set(cand) == {"promote", "archive", "low_yield"}
 
 
 def test_quality_includes_eval_and_ask_returns_v08_fields(client, kb, settings):

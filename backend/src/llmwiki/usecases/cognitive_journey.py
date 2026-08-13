@@ -58,7 +58,7 @@ def _candidate_views(settings: Settings, goal: dict,
     words = {r["page"]: (r["c"] or 0) / 6 for r in idx.execute(
         "SELECT page, SUM(LENGTH(text)) c FROM chunks GROUP BY page")}
     contested = {r["page"] for r in idx.execute(
-        "SELECT page FROM page_overlay WHERE status='contested'")}
+        "SELECT page FROM page_overlay WHERE status='low_yield'")}
     idx.close()
 
     rt = connect(settings.app_support / "runtime.db")
@@ -92,7 +92,7 @@ def _candidate_views(settings: Settings, goal: dict,
             superseded=bool(meta.get("superseded_by")),
             invalid=bool(invalid_at and invalid_at.timestamp() <= now),
             stale=bool(meta.get("stale_as_of")),
-            contested=page in contested,
+            low_yield=page in contested,
             sensitive=bool(meta.get("sensitive_data")),
             distance=distance[page],
             degree=len(adjacency.get(page, ())),
@@ -524,7 +524,7 @@ def curation_projection(settings: Settings, limit: int = 20) -> dict:
     cog.close()
     idx = connect(settings.app_support / "index.db")
     contested = {r["page"] for r in idx.execute(
-        "SELECT page FROM page_overlay WHERE status='contested'")}
+        "SELECT page FROM page_overlay WHERE status='low_yield'")}
     idx.close()
     items = []
     reader = BundleReader(settings.path("knowledge") / "bundle")

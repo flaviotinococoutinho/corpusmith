@@ -38,10 +38,11 @@ def usage_candidates(settings: Settings) -> dict:
         "SELECT path, score FROM page_heat WHERE score < 0.15 "
         "AND last_seen < unixepoch() - 90*86400 ORDER BY score LIMIT 10")]
     contested = [r["page"] for r in idx.execute(
-        "SELECT page FROM page_overlay WHERE status='contested'")]
+        "SELECT page FROM page_overlay WHERE status='low_yield'")]
     rt.close()
     idx.close()
-    return {"promote": promote, "archive": archive, "contested": contested}
+    return {"promote": promote, "archive": archive,
+            "low_yield": contested}
 
 
 class ReflectOnUsage(UseCase):
@@ -64,7 +65,7 @@ class ReflectOnUsage(UseCase):
         self._notify("reflect.done",
                      {"promote": len(candidates["promote"]),
                       "archive": len(candidates["archive"]),
-                      "contested": len(candidates["contested"])})
+                      "low_yield": len(candidates["low_yield"])})
         return candidates
 
     def _recalculate_heat(self, rt, ratios) -> None:
@@ -92,7 +93,7 @@ class ReflectOnUsage(UseCase):
             elif useful / total >= 0.75:
                 status = "preferred"
             elif dead / total >= 0.5:
-                status = "contested"
+                status = "low_yield"
             else:
                 status = "tentative"
             idx.execute("INSERT OR REPLACE INTO page_overlay VALUES (?,?,?,?,?)",

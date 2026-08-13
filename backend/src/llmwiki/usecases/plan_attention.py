@@ -29,7 +29,7 @@ from ..settings import Settings
 
 _WPM = 150.0
 _MIN_COST = 2.0
-_GAP_VALUE = {"question": 0.9, "contested": 0.8, "stale": 0.6,
+_GAP_VALUE = {"question": 0.9, "low_yield": 0.8, "stale": 0.6,
               "inbox": 0.5}
 
 
@@ -83,7 +83,7 @@ def gap_items(settings: Settings) -> list[dict]:
     reader = BundleReader(settings.path("knowledge") / "bundle")
     idx = connect(settings.app_support / "index.db")
     contested = {r["page"] for r in idx.execute(
-        "SELECT page FROM page_overlay WHERE status = 'contested'")}
+        "SELECT page FROM page_overlay WHERE status = 'low_yield'")}
     idx.close()
     out = []
     for doc in reader.iter_concepts():
@@ -97,9 +97,9 @@ def gap_items(settings: Settings) -> list[dict]:
         if doc.meta.type == "question":
             kind, reason = "question", "pergunta aberta na sua memória"
         elif doc.rel_path in contested:
-            kind, reason = "contested", ("página contestada — resolver a "
-                                         "disputa vale mais que ler coisa "
-                                         "nova")
+            kind, reason = "low_yield", ("página de baixo rendimento — "
+                                         "os desfechos dizem beco; editar "
+                                         "ou aposentar vale mais que reler")
         elif meta.get("stale_as_of"):
             kind, reason = "stale", "marcada stale: revisar ou suceder"
         else:

@@ -33,7 +33,7 @@ def build_working_set(candidates: list[KnowledgeItemView], goal: dict,
                  "accessibility_level": s.view.accessibility_level,
                  "epistemic": {"confidence": s.view.epistemic_confidence,
                                "stale": s.view.stale,
-                               "contested": s.view.contested},
+                               "low_yield": s.view.low_yield},
                  "pinned": s.view.pinned}
         if s.view.type == "question":
             if len(questions) < budgets["max_questions"]:

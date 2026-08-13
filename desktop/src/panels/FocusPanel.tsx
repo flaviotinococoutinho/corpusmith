@@ -154,7 +154,7 @@ declarada × validada por prática"
                   {EPI_BADGE[i.epistemic.confidence] ?? i.epistemic.confidence}
                 </span>
                 {i.epistemic.stale && <span>🟡</span>}
-                {i.epistemic.contested && <span>⚔️</span>}
+                {i.epistemic.low_yield && <span>🪫</span>}
                 <span className="tabular-nums" title="prioridade cognitiva
 (da experiência — não é confiança)">{i.score.toFixed(2)}</span>
               </div>

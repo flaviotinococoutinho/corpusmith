@@ -62,7 +62,7 @@ def cognitive_priority(view: KnowledgeItemView, goal: dict,
                        "incerteza e destrava dependentes")
     if view.stale:
         reasons.append("⚠ marcada stale no canônico — ler com reserva")
-    if view.contested:
+    if view.low_yield:
         reasons.append("⚔ contestada no canônico — há disputa aberta")
     if not reasons:
         reasons.append(f"a {view.distance} salto(s) do raiz, "

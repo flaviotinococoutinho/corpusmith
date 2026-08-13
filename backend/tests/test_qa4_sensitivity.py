@@ -4,7 +4,7 @@ que mudar uma constante (ou inverter um comparador) quebre a suíte em
 vez de mudar o produto em silêncio.
 
 Cobertos aqui: clamp do Hedge [0.5, 2.0] · fatores de overlay
-(preferred 1.15 / contested 0.8) na fusão RRF · ask.abstain_threshold ·
+(preferred 1.15 / low_yield 0.8) na fusão RRF · ask.abstain_threshold ·
 fronteira do orçamento do Governor · near-duplicata hamming ≤ 8 ·
 fronteira de dígitos da citação [n] (QA-3). Já cobertos alhures: bandas
 LSH/casa de pombos (test_v16), jitter estável e backoff (reliability)."""
@@ -45,7 +45,7 @@ def test_hedge_sem_perda_nao_muda_peso():
 
 # ------------------------------------------ overlay na fusão (1.15 / 0.8)
 @pytest.mark.parametrize("status,factor", [
-    ("preferred", 1.15), ("contested", 0.8), (None, 1.0)])
+    ("preferred", 1.15), ("low_yield", 0.8), (None, 1.0)])
 def test_overlay_multiplica_o_score_rrf_exatamente(status, factor):
     streams = EvidenceStreams()
     streams.add("fts", [{"id": 1, "page": "concepts/a.md"}])
@@ -57,7 +57,7 @@ def test_overlay_contested_afunda_abaixo_de_neutro_no_mesmo_rank():
     streams = EvidenceStreams()
     streams.add("fts", [{"id": 1, "page": "concepts/a.md"},
                         {"id": 2, "page": "concepts/b.md"}])
-    fused = streams.fuse(overlay={"concepts/a.md": "contested"})
+    fused = streams.fuse(overlay={"concepts/a.md": "low_yield"})
     # a (rank 0, ×0.8 ⇒ 0.0131) perde de b (rank 1, ×1.0 ⇒ 0.0161)? NÃO:
     # 0.8/61 = 0.0131 < 1/62 = 0.0161 ⇒ b assume o topo
     assert fused.hits[0]["page"] == "concepts/b.md"
