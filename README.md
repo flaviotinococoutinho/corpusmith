@@ -59,6 +59,13 @@ reguladas.
 
 *Not another agent-memory database.*
 
+### 📖 Entenda em 15 minutos
+
+**[`docs/00-o-que-e-corpusmith.md`](docs/00-o-que-e-corpusmith.md)** conta a
+história inteira do zero: o problema, a categoria, a tese de compilação, **um
+fato seguido do PDF até a resposta**, quem pode mudar o quê, e o que o
+produto **não** alega. Se você só vai ler um documento, leia esse.
+
 ---
 
 Arquitetura: knowledge base **OKF local-first** com daemon de

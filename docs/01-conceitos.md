@@ -5,7 +5,26 @@
 > o vocabulário compartilhado — quando dois módulos discordarem sobre um
 > termo, este texto arbitra.
 
-## 1. A tese central: memória como compilação
+## 0. A pergunta que o produto responde
+
+Antes do vocabulário, a categoria — porque cada termo abaixo existe para
+sustentar UMA pergunta, e ela não é "o que recuperar" nem "o que recordar":
+
+> **O que foi aceito como conhecimento, com base em quê, por quem, em qual
+> período e sob quais limites?**
+
+Governar isso é o produto; recuperar e representar são meios. A explicação
+narrativa completa está em [`00-o-que-e-corpusmith.md`](00-o-que-e-corpusmith.md);
+a decisão de categoria e a fronteira do que se pode alegar, em
+[`21`](21-adr-categoria-corpusmith.md).
+
+Cada conceito deste documento é uma peça dessa resposta:
+**aceito** → §7 proveniência e §6 autoridade · **com base em quê** → §8
+epistemologia operacional · **por quem** → §7 divisão máquina/humano ·
+**em qual período** → §4 bi-temporalidade · **sob quais limites** → §5
+escala de confiança e os contratos epistêmicos ([`11`](11-epistemic-contracts.md)).
+
+## 1. A tese central: conhecimento como alvo de compilação
 
 O Corpusmith trata conhecimento pessoal como um **alvo de compilação**:
 fontes brutas (`raw/`) são *código-fonte*; páginas OKF versionadas em Git

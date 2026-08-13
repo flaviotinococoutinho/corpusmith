@@ -12,7 +12,8 @@ confirma.**
 |---|---|
 | **agente de IA / mantenedor fazendo mudança** | [`../AGENTS.md`](../AGENTS.md) → [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md) |
 | **revisor de arquitetura** | [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md) + [`../architecture.toml`](../architecture.toml) |
-| **entendendo o produto** | [`01-conceitos.md`](01-conceitos.md) |
+| **entendendo o produto pela primeira vez** | [`00-o-que-e-corpusmith.md`](00-o-que-e-corpusmith.md) — a explicação inteira, do zero |
+| **procurando o vocabulário exato** | [`01-conceitos.md`](01-conceitos.md) |
 | **procurando uma regra/endpoint/tabela** | [`06-referencia.md`](06-referencia.md) |
 
 ## Mapa por especialidade
@@ -22,6 +23,7 @@ Conceitos do sistema como produto, sem detalhe de implementação.
 
 | Doc | Conteúdo |
 |---|---|
+| [00-o-que-e-corpusmith.md](00-o-que-e-corpusmith.md) | **A explicação completa, do zero**: o problema, a categoria (governar ≠ recordar), a tese de compilação, **um fato seguido do PDF à resposta**, o modelo de autoridade, o que torna as alegações verificáveis e o que o produto NÃO alega |
 | [01-conceitos.md](01-conceitos.md) | OKF, camadas de memória, bi-temporalidade, escala de confiança, controle de autoridade, epistemologia (abstenção, desfecho, eval) |
 
 ### 🔬 Ciência & teoria — POR QUE funciona
@@ -77,10 +79,14 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 | [18-backlog-consolidado.md](18-backlog-consolidado.md) | **Backlog consolidado (fonte VIVA do que falta)** — bugs, fluxos incompletos, débito técnico e experiência, cada item com nível de evidência; atualizado no PR que resolve cada item |
 | [19-rfc-escada-reconciliacao.md](19-rfc-escada-reconciliacao.md) | **RFC-002** — a escada de reconciliação volta a ter três degraus (B1: o degrau de similaridade era código morto; árbitro LLM segue atrás de flag desligada) |
 | [20-rfc-colisao-de-caminho.md](20-rfc-colisao-de-caminho.md) | **RFC-003** — colisão de caminho entre promoção humana e compilação de máquina (P-7) |
+| [21-adr-categoria-corpusmith.md](21-adr-categoria-corpusmith.md) | **ADR-53** — Corpusmith: o nome, a categoria (*governed knowledge compiler*) e a **fronteira de honestidade** — o que o produto pode e não pode alegar hoje |
 
 ## Guia rápido de roteamento (para não misturar especialidades)
 
-- É **o que o usuário vê / por que o produto existe**? → `01`.
+- **Nunca vi este projeto antes** → `00` (leia inteiro; os outros são de consulta).
+- É **o que o usuário vê / por que o produto existe**? → `00`, depois `01`.
+- É **o que o produto pode ou NÃO pode alegar** (categoria, fronteira de
+  honestidade, nomes históricos)? → `21`.
 - É **por que uma técnica funciona** (prova, paper, matemática)? → `03`.
 - É **como o software é organizado** (camada, tipo, padrão, algoritmo)? → `10`, `02`, `04`.
 - É **o que um mecanismo heurístico pode ALEGAR / onde foi avaliado**? → `11` + `epistemics.toml`.
