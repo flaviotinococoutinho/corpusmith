@@ -1,0 +1,46 @@
+name: Propor uma melhoria
+description: Uma mudança de produto, engenharia, documentação ou experiência
+title: "proposal: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Descreva o problema antes da solução. Mudanças de autoridade, privacidade, formato canônico, schema não aditivo, dependência relevante ou API incompatível passam pelo processo de RFC do repositório.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: Quem é afetado, em qual situação e qual evidência mostra a necessidade?
+      placeholder: Hoje..., o que causa..., observado por...
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Resultado desejado
+      description: Qual resultado verificável indicaria que o problema foi resolvido?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta e alternativas
+      description: Descreva a menor mudança útil e as alternativas consideradas.
+    validations:
+      required: true
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Contratos e riscos
+      description: Invariantes, fontes de verdade, privacidade, compatibilidade ou ADRs que podem ser afetados.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmações
+      options:
+        - label: Procurei por uma proposta existente sobre este problema.
+          required: true
+        - label: A proposta não contém tokens, dados pessoais nem conteúdo privado.
+          required: true

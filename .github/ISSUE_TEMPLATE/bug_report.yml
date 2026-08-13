@@ -1,0 +1,61 @@
+name: Relatar um bug
+description: Comportamento reproduzível que difere do contrato ou da documentação
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado pelo relato. Não publique tokens, dados pessoais, conteúdo privado do corpus ou vulnerabilidades não corrigidas. Para vulnerabilidades, use **Report a vulnerability** na aba Security.
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Comportamento observado
+      description: O que aconteceu e qual era o resultado esperado?
+      placeholder: Descreva o observado e o esperado.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reprodução mínima
+      description: Forneça passos e entradas sintéticas que permitam reproduzir o problema.
+      placeholder: |
+        1. Execute ...
+        2. Com a configuração ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versão ou commit
+      placeholder: v2.0.0 ou SHA
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Ambiente
+      description: Sistema operacional, arquitetura, versões de Python/Node e modo de execução relevante.
+      placeholder: macOS arm64; Python 3.12; Node 20; instalação local
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnóstico sanitizado
+      description: Logs, saída do doctor ou stack trace, sem dados privados nem segredos.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmações
+      options:
+        - label: Procurei por uma issue existente sobre este problema.
+          required: true
+        - label: Removi tokens, dados pessoais e conteúdo privado do relato.
+          required: true
+        - label: Este relato não descreve uma vulnerabilidade ainda não corrigida.
+          required: true
