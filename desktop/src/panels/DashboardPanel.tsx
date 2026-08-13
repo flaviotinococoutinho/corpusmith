@@ -24,7 +24,7 @@ const PADROES = new Set(["bridge", "contradiction"]);
 function NextActionsQueue({ onApplied }: { onApplied(): void }) {
   const [q, setQ] = useState<NextActionsQueue | null>(null);
   // F1-PR6: o clique abre o ATO quando o item declara ofertas; quando não
-  // declara (question/inbox/review/stale/contested), continua navegando —
+  // declara (question/inbox/review/stale/low_yield), continua navegando —
   // trocar tudo por dialog regrediria 5 dos 7 kinds para "sem destino".
   const [aberto, setAberto] = useState<CurationActOffer | null>(null);
   // F0/P-11: antes, pendente E erro caíam no MESMO `null` ⇒ a única
@@ -222,7 +222,7 @@ export function DashboardPanel() {
       {notice && <p className="text-sm border rounded p-2 bg-neutral-50">
         {notice}</p>}
       {cand && (cand.promote.length > 0 || cand.archive.length > 0
-                || cand.contested.length > 0) && (
+                || cand.low_yield.length > 0) && (
         <section className="grid grid-cols-3 gap-3 text-sm">
           <div className="border rounded p-3">
             <h3 className="font-medium mb-1">🔥 Candidatos a promoção</h3>
@@ -242,8 +242,8 @@ export function DashboardPanel() {
               : <div className="text-neutral-400 text-xs">(nenhuma)</div>}
           </div>
           <div className="border rounded p-3">
-            <h3 className="font-medium mb-1">⚔️ Contestadas</h3>
-            {cand.contested.length ? cand.contested.map((p: string) => (
+            <h3 className="font-medium mb-1">🪫 Baixo rendimento</h3>
+            {cand.low_yield.length ? cand.low_yield.map((p: string) => (
               <div key={p} className="font-mono text-xs">{p}</div>))
               : <div className="text-neutral-400 text-xs">(nenhuma)</div>}
           </div>

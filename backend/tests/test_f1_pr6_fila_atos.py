@@ -33,7 +33,7 @@ from llmwiki.usecases.curate import ACTS
 from llmwiki.usecases.next_actions import NextActions, acts_for
 
 TOKEN = "t6"
-KINDS = ["review", "question", "contested", "stale", "inbox", "bridge",
+KINDS = ["review", "question", "low_yield", "stale", "inbox", "bridge",
          "contradiction"]
 
 
@@ -116,7 +116,7 @@ def test_kinds_sem_ato_declaram_lista_vazia(kind):
                                 "target": "concepts/x.md"}}) == []
 
 
-@pytest.mark.parametrize("kind", ["contested", "stale"])
+@pytest.mark.parametrize("kind", ["low_yield", "stale"])
 def test_stale_e_contested_oferecem_edit_e_nunca_invalidate(kind):
     """A recusa que IMPORTA aqui é semântica e permanece: `invalidate`
     afirma que o fato EXPIROU NO MUNDO, e nem "precisa de revisão" (stale)

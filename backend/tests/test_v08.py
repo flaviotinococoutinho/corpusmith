@@ -181,13 +181,13 @@ def test_reflect_builds_overlay_and_contested_sinks(settings, kb):
     rt.commit()
     rt.close()
     result = reflect.run(settings, {}, lambda *a, **k: None)
-    assert "concepts/ruim.md" in result["contested"]
+    assert "concepts/ruim.md" in result["low_yield"]
     idx = connect(settings.app_support / "index.db")
     status = {r["page"]: r["status"] for r in
               idx.execute("SELECT page, status FROM page_overlay")}
     idx.close()
     assert status["concepts/bom.md"] == "preferred"
-    assert status["concepts/ruim.md"] == "contested"
+    assert status["concepts/ruim.md"] == "low_yield"
     r = answer_local(settings, "resposta sobre cache lru")
     assert r["evidence"][0]["page"] == "concepts/bom.md"     # contested afunda
 

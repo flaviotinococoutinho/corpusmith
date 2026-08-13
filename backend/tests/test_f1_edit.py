@@ -139,7 +139,7 @@ def test_pagina_ja_canonica_nao_recebe_aviso_de_reformatacao(base):
 
 
 # ============================================ a fila passa a ter destino
-@pytest.mark.parametrize("kind", ["contested", "stale"])
+@pytest.mark.parametrize("kind", ["low_yield", "stale"])
 def test_contested_e_stale_agora_oferecem_edit(kind):
     """Eram os dois kinds sem ato: `invalidate` afirmaria expiração no
     mundo que nenhum dos dois declara. Corrigir o corpo não afirma nada."""
@@ -162,7 +162,7 @@ def test_oferta_declara_campo_longo_e_de_onde_vem_o_valor_inicial():
     """`body` não é campo curto como `page`. Quem declara isso é a OFERTA:
     a alternativa era o `.tsx` saber o nome do ato, e é justamente o que os
     testes de contrato existem para evitar."""
-    oferta = acts_for({"kind": "contested", "target": "concepts/a.md",
+    oferta = acts_for({"kind": "low_yield", "target": "concepts/a.md",
                        "action": {}})[0]
     assert oferta["multiline"] == ["body"]
     assert oferta["prefill"] == {"body": {"page": "concepts/a.md",
@@ -185,7 +185,7 @@ def test_o_campo_do_prefill_existe_na_resposta_da_pagina(base, kb):
     rt = connect(base.app_support / "runtime.db")
     app = build_app(base, JobQueue(rt), Governor(base, rt), EventBus(rt),
                     token="t3")
-    oferta = acts_for({"kind": "contested", "target": "concepts/a.md",
+    oferta = acts_for({"kind": "low_yield", "target": "concepts/a.md",
                        "action": {}})[0]
     fonte = oferta["prefill"]["body"]
     with TestClient(app) as c:

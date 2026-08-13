@@ -51,9 +51,9 @@ def test_rrf_hedge_parameters_match_code():
     # boosts do overlay como em streams.fuse
     from llmwiki.retrieval import streams
     fuse_src = inspect.getsource(streams)
-    assert '"preferred": 1.15' in fuse_src and '"contested": 0.8' in fuse_src
+    assert '"preferred": 1.15' in fuse_src and '"low_yield": 0.8' in fuse_src
     assert float(p["overlay_preferred_boost"]) == 1.15
-    assert float(p["overlay_contested_penalty"]) == 0.8
+    assert float(p["overlay_low_yield_penalty"]) == 0.8
 
 
 def test_uncertainty_parameters_match_code():

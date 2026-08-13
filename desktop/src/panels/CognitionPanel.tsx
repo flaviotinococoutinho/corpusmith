@@ -17,7 +17,7 @@ function Card({ title, children }: { title: string; children: any }) {
 
 const SCALE = [1, 2, 3, 4, 5];
 const KIND_ICON: Record<string, string> = {
-  review: "🔁", question: "❓", contested: "⚔️", stale: "🟡", inbox: "📥",
+  review: "🔁", question: "❓", low_yield: "🪫", stale: "🟡", inbox: "📥",
 };
 
 export function CognitionPanel() {

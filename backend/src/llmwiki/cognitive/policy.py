@@ -33,7 +33,7 @@ DEFAULT_POLICY = {
     "gates": {
         "allow_sensitive": False,
         "allow_stale": True,            # stale entra SINALIZADO (revisão)
-        "allow_contested": True,        # contestado entra marcado — decidir
+        "allow_low_yield": True,        # baixo rendimento entra marcado
     },
     "review": {                         # prática espaçada (spaced-v1)
         "base_interval_days": 1.0,
@@ -47,7 +47,19 @@ DEFAULT_POLICY = {
 }
 
 
+def _translate_legacy(policy: dict) -> dict:
+    """F4-PR2 (ADR-52): `allow_contested` vive em snapshots PERSISTIDOS
+    (cognitive.db). A chave legada é traduzida, nunca recusada — recusar
+    invalidaria toda projeção gravada antes do rename."""
+    gates = dict((policy or {}).get("gates", {}) or {})
+    if "allow_contested" in gates:
+        gates.setdefault("allow_low_yield", gates.pop("allow_contested"))
+        policy = {**(policy or {}), "gates": gates}
+    return policy
+
+
 def validate_policy(policy: dict) -> dict:
+    policy = _translate_legacy(policy)
     """Valida forma e domínios; devolve cópia normalizada (nunca muta)."""
     p = copy.deepcopy(DEFAULT_POLICY)
     for section in ("weights", "budgets", "gates", "review"):

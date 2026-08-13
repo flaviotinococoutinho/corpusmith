@@ -37,7 +37,7 @@ _SCHEMAS = {
 # CREATE IF NOT EXISTS + _migrate idempotente ao abrir o banco restaurado).
 SCHEMA_VERSIONS = {
     "runtime.db": 10,    # + pattern_verdicts (juízo humano sobre padrão)
-    "index.db": 9,       # + themes/theme_epochs (identidade, RFC-001)
+    "index.db": 10,      # F4-PR2 (ADR-52): page_overlay contested → low_yield
     "cold.db": 1,
     "cognitive.db": 2,   # v0.19 base + v0.20 experiências/analogias
     "reference.db": 1,
@@ -140,6 +140,25 @@ def _migrate(conn: sqlite3.Connection, name: str) -> None:
             if col not in pe_cols:
                 conn.execute(f"ALTER TABLE page_entities ADD COLUMN {col} "
                              "INTEGER")
+        # v1.10 (F4-PR2, ADR-52): 'contested' derivava de DESFECHO DE USO
+        # e era exibido como disputa. O CHECK antigo carrega o valor no
+        # SQL da tabela — recriar mapeando é a única migração possível
+        row = conn.execute("SELECT sql FROM sqlite_master WHERE "
+                           "type='table' AND name='page_overlay'").fetchone()
+        if row and "contested" in row["sql"]:
+            conn.executescript(
+                "ALTER TABLE page_overlay RENAME TO page_overlay_old;"
+                "CREATE TABLE page_overlay("
+                "  page TEXT PRIMARY KEY,"
+                "  status TEXT CHECK(status IN "
+                "    ('preferred','tentative','low_yield')),"
+                "  useful INTEGER DEFAULT 0, dead INTEGER DEFAULT 0,"
+                "  updated REAL);"
+                "INSERT INTO page_overlay "
+                "  SELECT page, CASE status WHEN 'contested' "
+                "    THEN 'low_yield' ELSE status END, "
+                "    useful, dead, updated FROM page_overlay_old;"
+                "DROP TABLE page_overlay_old;")
         # F2-PR3+4: `graph_snapshot` nasceu na v7 sem o backend da
         # centralidade. `CREATE TABLE IF NOT EXISTS` não altera tabela que já
         # existe, então banco v7 precisa do ALTER — sem isto o snapshot antigo
