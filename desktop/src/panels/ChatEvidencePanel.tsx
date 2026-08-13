@@ -80,6 +80,13 @@ export function ChatEvidencePanel() {
               {r.uncertainty > 0.85 && <span
                 className="ml-2 border border-amber-400 rounded px-1 text-amber-600">
                 ~ incerta ({Math.round(r.uncertainty * 100)}%)</span>}
+              {/* P-4 (ADR-52): a dispersão zera em base rasa — o selo de
+                  SUSTENTAÇÃO diz quanta evidência há, e avisa quando é
+                  pouca mesmo com "certeza" alta */}
+              {r.support && r.support.score <= 0.5 && !r.abstained && <span
+                className="ml-2 border border-amber-400 rounded px-1 text-amber-600"
+                title={`páginas ${r.support.components.distinct_pages} · streams ${r.support.components.corroborating_streams} · aterrada ${r.support.components.grounded_fraction} · fresca ${r.support.components.freshness}`}>
+                ⚖ sustentação fraca ({Math.round(r.support.score * 100)}%)</span>}
               {r.strategy && <span className="ml-2 border rounded px-1"
                 title={r.cognitive?.declared
                   ? `adaptada à carga declarada ${r.cognitive.load}/5`

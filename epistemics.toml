@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.8.0"   # F-EPIST: + memory_freeze e consolidate_inbox — os dois mecanismos sem contrato do docs/17
+version = "1.9.0"   # F4-PR1 (ADR-52): + evidence_sufficiency — o support 2D paga o contrato prometido
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -85,6 +85,51 @@ loss_useful = -1.0
 loss_not_useful = 1.0
 overlay_preferred_boost = 1.15
 overlay_contested_penalty = 0.8
+
+[mechanisms.evidence_sufficiency]
+title = "Suficiência de evidência (support 2D ao lado da dispersão)"
+decision = "quantificar QUANTA evidência sustenta a resposta do /ask — o eixo que a uncertainty (dispersão) não mede e inverte na base rasa"
+implementation_refs = [
+  "backend/src/llmwiki/kernel/sufficiency.py",
+  "backend/src/llmwiki/usecases/ask_memory.py",
+]
+inductive_biases = [
+  "mais páginas distintas corroborando = sustentação maior (satura em 3: além disso é redundância, não suficiência)",
+  "mais streams independentes trazendo a mesma evidência = menos dependência de um único índice (satura em 3)",
+  "evidência aterrada por span (v1.8) é conferível a olho — vale mais que texto sem âncora",
+  "evidência fresca (nem stale nem superseded) sustenta mais que suspeita",
+]
+assumptions = [
+  "as quatro parcelas capturam eixos INDEPENDENTES de sustentação (não há dupla contagem relevante entre elas)",
+  "média simples das parcelas é um agregador razoável — nenhum peso foi calibrado",
+]
+validity_scope = [
+  "respostas do /ask sobre o bundle local; publicado AO LADO de uncertainty, nunca no lugar",
+]
+known_failure_modes = [
+  "as saturações (3 páginas, 3 streams) são limiares de PROJETO, não calibrados — a porta de reentrada do ADR-52 é calibrá-los contra o golden",
+  "support alto não valida a resposta: 3 páginas erradas que concordam pontuam como 3 certas (mede sustentação, não verdade)",
+  "grounded_fraction depende do gazetteer: pergunta sem entidade conhecida zera a parcela mesmo com evidência boa",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "composição normalizada de quatro contagens observáveis do próprio request — sem calibração empírica; a propriedade TESTADA é a que motivou o mecanismo: base rasa ⇒ support baixo mesmo com uncertainty 0"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+composite = true
+composite_components = ["distinct_pages", "corroborating_streams", "grounded_fraction", "freshness"]
+evidence = ["deterministic_check"]
+misinterpretations = [
+  "support NÃO é probabilidade de verdade — é contagem de sustentação; o eixo factual segue sendo desfecho observado + Brier",
+  "uncertainty continua publicada e continua significando DISPERSÃO",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.evidence_sufficiency.parameters]
+pages_saturation = 3
+streams_saturation = 3
 
 [mechanisms.retrieval_uncertainty]
 title = "Incerteza de retrieval por entropia normalizada da fusão"

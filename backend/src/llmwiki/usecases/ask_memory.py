@@ -16,6 +16,7 @@ import random
 import re
 import time
 from .base import UseCase
+from ..kernel.sufficiency import empty_support, evidence_support
 from .cognitive_state import STRATEGIES, current_state, delivery_budget
 from ..compute import get_kernel
 from ..kernel.grounding import ground_spans
@@ -98,6 +99,7 @@ class AskMemory(UseCase):
             gaps.append("há memória FRIA compatível — recicle para responder: "
                         + ", ".join(m["page"] for m in matches[:3]))
         return {"answer": None, "abstained": True, "blocked": False,
+                "support": empty_support(),
                 "via": "none", "ask_id": ask_id,
                 "uncertainty": fused.uncertainty, "gaps": gaps,
                 "cold_matches": matches,
@@ -193,9 +195,23 @@ class AskMemory(UseCase):
                         for h in fused.hits]
             with profile.stage("compose"):
                 answer, via, blocked = self._compose(evidence)
+            # P-4 (ADR-52): o selo 2D — a dispersão (`uncertainty`) zera
+            # em base rasa; o `support` diz QUANTA evidência há
+            n = max(1, len(evidence))
+            support = evidence_support(
+                distinct_pages=len({e["page"] for e in evidence}),
+                corroborating_streams=len(
+                    set().union(*fused.provenance.values())
+                    if fused.provenance else set()),
+                grounded_fraction=sum(
+                    1 for e in evidence if e["spans"]) / n,
+                fresh_fraction=sum(
+                    1 for e in evidence
+                    if not e["stale"] and not e["superseded"]) / n)
             return {"answer": answer, "via": via, "blocked": blocked,
                     "abstained": False, "ask_id": ask_id,
                     "identity": parse_id(ask_id),
+                    "support": support,
                     "uncertainty": fused.uncertainty,
                     "strategy": self._strategy,
                     "cognitive": {"load": self._state["load"],

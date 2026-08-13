@@ -188,3 +188,17 @@ def test_freeze_declara_proxy_e_efeito_colateral_do_recycle():
     ab = registry.get("abstention")
     assert not any("cold_memory" in r for r in ab.implementation_refs)
     assert any("cold_memory" in r for r in c.implementation_refs)
+
+
+def test_sufficiency_components_e_parametros_match_code():
+    """P-4 (ADR-52): as parcelas declaradas são EXATAMENTE as que o
+    kernel produz, e as saturações de projeto ficam sob cross-check."""
+    from llmwiki.kernel import sufficiency
+    from llmwiki.harness.epistemics import load_registry
+    registry, _ = load_registry()
+    contract = registry.get("evidence_sufficiency")
+    out = sufficiency.evidence_support(1, 1, 0.5, 0.5)
+    assert set(contract.composite_components) == set(out["components"])
+    p = dict(contract.parameters)
+    assert int(p["pages_saturation"]) == sufficiency._PAGES_SATURATION
+    assert int(p["streams_saturation"]) == sufficiency._STREAMS_SATURATION

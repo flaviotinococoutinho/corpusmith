@@ -134,8 +134,12 @@ class MachinePageUseCase(UseCase):
     # -------------------------------------------------------- invariantes
     def _document(self, draft: DraftPage, body: str, report) -> OKFDocument:
         now = datetime.now(timezone.utc)
+        # P-9 (ADR-52): `timestamp` é REGISTRO; `valid_at` é tempo de
+        # MUNDO e só existe quando o conhecimento o fornece (draft/ato).
+        # Defaultar para `now` colapsava os dois eixos e o `as_of`
+        # filtrava sobre um carimbo sem significado.
         meta = {"type": "concept", "title": draft.title,
-                "timestamp": now, "valid_at": now,
+                "timestamp": now,
                 "privacy": "local_only",
                 "entities": report.entities_frontmatter() or None,
                 **draft.meta}
