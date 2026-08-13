@@ -1,12 +1,12 @@
 """Golden tests permanentes do pacote normalize (v0.8 §12.1)."""
 from __future__ import annotations
-from llmwiki.normalize import Gazetteer, analyze, rewrite
-from llmwiki.normalize.detectors.dates import detect as detect_dates
-from llmwiki.normalize.detectors.identifiers import (
+from corpusmith.normalize import Gazetteer, analyze, rewrite
+from corpusmith.normalize.detectors.dates import detect as detect_dates
+from corpusmith.normalize.detectors.identifiers import (
     valid_cnpj, valid_cpf, valid_iban, valid_isbn, valid_issn, valid_orcid)
-from llmwiki.normalize.detectors.quantities import canonical_number, detect as detect_qty
-from llmwiki.normalize.engine import findings
-from llmwiki.normalize.masking import is_protected, protected_spans
+from corpusmith.normalize.detectors.quantities import canonical_number, detect as detect_qty
+from corpusmith.normalize.engine import findings
+from corpusmith.normalize.masking import is_protected, protected_spans
 
 
 # ---------------------------------------------------------------- checksums

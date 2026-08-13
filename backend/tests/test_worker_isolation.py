@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import time
 import pytest
-from llmwiki.runtime.procjobs import (WorkerCancelled, WorkerCrashed,
+from corpusmith.runtime.procjobs import (WorkerCancelled, WorkerCrashed,
                                       run_in_subprocess, should_isolate)
 
 
@@ -105,7 +105,7 @@ def test_sigkill_crash_is_transient_worker_crashed(settings):
 
 
 def test_manifest_rejects_unknown_fields(settings, tmp_path):
-    from llmwiki.jobs_proc import main
+    from corpusmith.jobs_proc import main
     manifest = tmp_path / "m.json"
     manifest.write_text(json.dumps({
         "protocol_version": 1, "job_id": "x", "trace_id": "t",
@@ -115,7 +115,7 @@ def test_manifest_rejects_unknown_fields(settings, tmp_path):
 
 
 def test_manifest_rejects_wrong_protocol(settings, tmp_path):
-    from llmwiki.jobs_proc import main
+    from corpusmith.jobs_proc import main
     manifest = tmp_path / "m.json"
     manifest.write_text(json.dumps({
         "protocol_version": 99, "job_id": "x", "trace_id": "t",
@@ -130,7 +130,7 @@ def test_native_worker_selfcheck_protocol(tmp_path):
     import subprocess
     from pathlib import Path
     binary = Path(__file__).resolve().parents[2] / "native" / "target" \
-        / "release" / "llmwiki-native-worker"
+        / "release" / "corpusmith-native-worker"
     if not binary.exists():
         pytest.skip("worker nativo não compilado")
     out = tmp_path / "out"

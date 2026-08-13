@@ -14,18 +14,18 @@ fechado como o de máquina.
 from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.facades.curation_acts import CurationActsFacade
-from llmwiki.harness.runner import HarnessRejection
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.git_store import GitStore
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.usecases.curate import ACTS, CurationAct, SupersedePage
+from corpusmith.api.system import build_app
+from corpusmith.facades.curation_acts import CurationActsFacade
+from corpusmith.harness.runner import HarnessRejection
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.git_store import GitStore
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.usecases.curate import ACTS, CurationAct, SupersedePage
 
 TOKEN = "t1"
 
@@ -57,7 +57,7 @@ def client(base, kb):
     app = build_app(base, JobQueue(rt), Governor(base, rt), EventBus(rt),
                     token=TOKEN)
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": TOKEN})
+        c.headers.update({"x-corpusmith-auth": TOKEN})
         yield c
 
 
@@ -166,9 +166,9 @@ def _nomes_do_modulo(modulo) -> tuple[set[str], set[str]]:
 def test_ato_nao_normaliza_prosa_humana():
     """v0.8 §1.2: o sanduíche de normalização de corpo é do eixo MÁQUINA.
     Um ato humano que o chamasse reescreveria a prosa do usuário."""
-    import llmwiki.usecases.curate.base as ato_base
-    import llmwiki.usecases.curate.invalidate as invalidar
-    import llmwiki.usecases.curate.supersede as suceder
+    import corpusmith.usecases.curate.base as ato_base
+    import corpusmith.usecases.curate.invalidate as invalidar
+    import corpusmith.usecases.curate.supersede as suceder
     for modulo in (ato_base, invalidar, suceder):
         importados, chamados = _nomes_do_modulo(modulo)
         assert "normalize_machine_body" not in importados | chamados, (
@@ -178,7 +178,7 @@ def test_ato_nao_normaliza_prosa_humana():
 def test_os_dois_eixos_usam_a_mesma_definicao_de_sucessao():
     """A transformação mora no kernel PURO: o eixo máquina não conhece o
     eixo humano (seria ciclo e inverteria o gradiente de mutabilidade)."""
-    from llmwiki.usecases import base as maquina
+    from corpusmith.usecases import base as maquina
     importados, chamados = _nomes_do_modulo(maquina)
     assert "superseded_meta" in importados and "superseded_meta" in chamados
     assert not any(origem.endswith("curate") or ".curate." in origem
@@ -265,7 +265,7 @@ def test_dry_run_e_obrigatorio_no_corpo(client):
 
 
 def test_cli_curate_dry_run_nao_escreve(base, kb, capsys):
-    from llmwiki.cli import cmd_curate
+    from corpusmith.cli import cmd_curate
     import argparse
     args = argparse.Namespace(
         act="supersede",
@@ -285,7 +285,7 @@ def test_dois_atos_concorrentes_nao_entrelacam_o_rito(base, kb):
     agora segura um mutex do processo do plan ao rebuild: numa corrida,
     o segundo ato PLANEJA depois de o primeiro reindexar."""
     import threading
-    from llmwiki.usecases.curate.invalidate import InvalidatePage
+    from corpusmith.usecases.curate.invalidate import InvalidatePage
     trace: list[str] = []
     original_plan = InvalidatePage._plan
     original_apply = InvalidatePage._apply

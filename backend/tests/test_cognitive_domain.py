@@ -3,13 +3,13 @@ infraestrutura (nem Settings): só dados entram, só dados saem."""
 from __future__ import annotations
 import random
 import pytest
-from llmwiki.cognitive import (DEFAULT_POLICY, KnowledgeItemView,
+from corpusmith.cognitive import (DEFAULT_POLICY, KnowledgeItemView,
                                build_working_set, cognitive_priority,
                                hard_gates, new_focus_goal, new_session,
                                resume_session, schedule_review,
                                suspend_session, update_accessibility,
                                validate_policy)
-from llmwiki.cognitive.session import add_step, complete_session
+from corpusmith.cognitive.session import add_step, complete_session
 
 
 def _goal(**kw):

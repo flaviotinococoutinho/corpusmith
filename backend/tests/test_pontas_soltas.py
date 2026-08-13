@@ -36,7 +36,7 @@ MAX_EVENTOS_MUDOS = 0
 
 def _rotas() -> list[tuple[str, str, str]]:
     achadas = []
-    for py in (RAIZ / "backend/src/llmwiki/api").rglob("*.py"):
+    for py in (RAIZ / "backend/src/corpusmith/api").rglob("*.py"):
         for no in ast.walk(ast.parse(py.read_text())):
             if not isinstance(no, ast.FunctionDef):
                 continue
@@ -102,7 +102,7 @@ def _eventos_emitidos() -> set[str]:
     tipos = set()
     padrao = re.compile(
         r'(?:_notify|emit|publish)\(\s*["\']([a-z_]+\.[a-z_.]+)["\']')
-    for py in (RAIZ / "backend/src/llmwiki").rglob("*.py"):
+    for py in (RAIZ / "backend/src/corpusmith").rglob("*.py"):
         tipos |= set(padrao.findall(py.read_text()))
     return tipos
 
@@ -126,7 +126,7 @@ def _eventos_repassados() -> set[str]:
                  if fixos else set())
     if "this.eventTypes()" not in cliente:
         return fixos_set
-    from llmwiki.runtime.events import EVENT_TYPES
+    from corpusmith.runtime.events import EVENT_TYPES
     return fixos_set | set(EVENT_TYPES)
 
 
@@ -187,5 +187,5 @@ def test_a_falha_da_similaridade_deixou_de_ser_muda():
     finally:
         con.close()
     # e o use case agora tem onde registrar isso
-    from llmwiki.usecases.reconcile_candidate import ReconcileCandidate
+    from corpusmith.usecases.reconcile_candidate import ReconcileCandidate
     assert hasattr(ReconcileCandidate, "similarity_error")

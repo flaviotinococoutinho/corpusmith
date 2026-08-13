@@ -6,11 +6,11 @@ Idempotência: o seed nunca sobrescreve golden nem páginas do usuário."""
 from __future__ import annotations
 import json
 import pytest
-from llmwiki.okf.bundle import BundleReader
-from llmwiki.okf.git_store import GitStore
-from llmwiki.harness.runner import HarnessRunner
-from llmwiki.usecases.evaluate_memory import EvaluateMemory
-from llmwiki.usecases.seed_eval import seed_golden_eval
+from corpusmith.okf.bundle import BundleReader
+from corpusmith.okf.git_store import GitStore
+from corpusmith.harness.runner import HarnessRunner
+from corpusmith.usecases.evaluate_memory import EvaluateMemory
+from corpusmith.usecases.seed_eval import seed_golden_eval
 
 
 def _golden(kb):
@@ -59,8 +59,8 @@ def test_envelope_nao_inverte_o_escopo_de_validade(settings, kb):
     contrato SEM negação — o painel Qualidade dizia que o regime em que o
     mecanismo VALE estava "fora de escopo". O conteúdo honesto do campo
     ("onde NÃO foi medido") são os failure modes declarados."""
-    from llmwiki.harness.epistemics import load_registry
-    from llmwiki.usecases.evaluate_memory import EvaluateMemory, envelopes_for
+    from corpusmith.harness.epistemics import load_registry
+    from corpusmith.usecases.evaluate_memory import EvaluateMemory, envelopes_for
     seed_golden_eval(settings)
     EvaluateMemory(settings).execute()
     registry, _ = load_registry()

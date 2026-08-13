@@ -14,8 +14,8 @@ from __future__ import annotations
 import json
 import httpx
 import pytest
-from llmwiki.models.router import ModelRouter, ModelUnavailable
-from llmwiki.settings import Settings
+from corpusmith.models.router import ModelRouter, ModelUnavailable
+from corpusmith.settings import Settings
 
 GB = 1_000_000_000
 
@@ -26,7 +26,7 @@ def _settings(tmp_path, **local) -> Settings:
                      "qwen3-vl:4b", "qwen3-vl:2b-instruct"],
             "embed": "nomic-embed-text", "memory_fraction": 0.6}
     base.update(local)
-    return Settings(home=tmp_path / "llmwiki", models={
+    return Settings(home=tmp_path / "corpusmith", models={
         "local": base, "api": {"provider": "anthropic", "chat": "x"}})
 
 
@@ -38,11 +38,11 @@ def _stub_tags(monkeypatch, installed: dict[str, int]):
         assert "/api/tags" in url
         return httpx.Response(200, json=payload,
                               request=httpx.Request("GET", url))
-    monkeypatch.setattr("llmwiki.models.router.httpx.get", fake_get)
+    monkeypatch.setattr("corpusmith.models.router.httpx.get", fake_get)
 
 
 def _stub_ram(monkeypatch, total_bytes: int):
-    monkeypatch.setattr("llmwiki.models.router._total_ram_bytes",
+    monkeypatch.setattr("corpusmith.models.router._total_ram_bytes",
                         lambda: total_bytes)
 
 
@@ -117,7 +117,7 @@ def test_ollama_no_ar_sem_modelo_levanta_model_unavailable(
         return httpx.Response(
             404, json={"error": "model 'x' not found"},
             request=httpx.Request("POST", url))
-    monkeypatch.setattr("llmwiki.models.router.httpx.post", fake_post)
+    monkeypatch.setattr("corpusmith.models.router.httpx.post", fake_post)
 
     with pytest.raises(ModelUnavailable):
         ModelRouter(_settings(tmp_path)).complete("oi", privacy="local_only")
@@ -126,8 +126,8 @@ def test_ollama_no_ar_sem_modelo_levanta_model_unavailable(
 def test_ollama_offline_levanta_model_unavailable(tmp_path, monkeypatch):
     def boom(url, *a, **k):
         raise httpx.ConnectError("connection refused")
-    monkeypatch.setattr("llmwiki.models.router.httpx.get", boom)
-    monkeypatch.setattr("llmwiki.models.router.httpx.post", boom)
+    monkeypatch.setattr("corpusmith.models.router.httpx.get", boom)
+    monkeypatch.setattr("corpusmith.models.router.httpx.post", boom)
     with pytest.raises(ModelUnavailable):
         ModelRouter(_settings(tmp_path)).complete("oi", privacy="local_only")
 
@@ -146,7 +146,7 @@ def test_resposta_vazia_nao_passa_por_sintese(tmp_path, monkeypatch):
             200, json={"response": "", "thinking": "Okay, the user...",
                        "done_reason": "length"},
             request=httpx.Request("POST", url))
-    monkeypatch.setattr("llmwiki.models.router.httpx.post", fake_post)
+    monkeypatch.setattr("corpusmith.models.router.httpx.post", fake_post)
 
     with pytest.raises(ModelUnavailable, match="vazia"):
         ModelRouter(_settings(tmp_path)).complete(
@@ -158,7 +158,7 @@ def test_embed_falha_soft(tmp_path, monkeypatch):
     def fake_post(url, *a, **k):
         return httpx.Response(404, json={"error": "not found"},
                               request=httpx.Request("POST", url))
-    monkeypatch.setattr("llmwiki.models.router.httpx.post", fake_post)
+    monkeypatch.setattr("corpusmith.models.router.httpx.post", fake_post)
     with pytest.raises(ModelUnavailable):
         ModelRouter(_settings(tmp_path)).embed(["texto"])
 
@@ -170,7 +170,7 @@ def test_resolucao_nao_dispara_download(tmp_path, monkeypatch):
 
     def forbidden(*a, **k):
         raise AssertionError("resolução não pode fazer POST (nem pull)")
-    monkeypatch.setattr("llmwiki.models.router.httpx.post", forbidden)
+    monkeypatch.setattr("corpusmith.models.router.httpx.post", forbidden)
     assert ModelRouter(_settings(tmp_path)).resolve_chat() == "qwen3-vl:4b"
 
 
@@ -187,7 +187,7 @@ def test_via_reporta_o_modelo_efetivamente_usado(tmp_path, monkeypatch):
         seen.update(k.get("json") or {})
         return httpx.Response(200, json={"response": "ok"},
                               request=httpx.Request("POST", url))
-    monkeypatch.setattr("llmwiki.models.router.httpx.post", fake_post)
+    monkeypatch.setattr("corpusmith.models.router.httpx.post", fake_post)
 
     out = ModelRouter(_settings(tmp_path)).complete("oi", privacy="local_only")
     assert seen["model"] == "qwen3-vl:4b"
@@ -198,13 +198,13 @@ def test_ask_degrada_para_extrativo_sem_modelo(settings, kb, monkeypatch):
     """Ponta a ponta: sem modelo utilizável, /ask responde extrativo em
     vez de estourar. É a promessa do docs/12 §6 valendo também no estado
     'Ollama de pé com modelo errado'."""
-    from llmwiki.facades.memory import MemoryFacade
-    from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-    from llmwiki.okf.writer import BundleWriter
-    from llmwiki.retrieval.fts import rebuild_index
+    from corpusmith.facades.memory import MemoryFacade
+    from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+    from corpusmith.okf.writer import BundleWriter
+    from corpusmith.retrieval.fts import rebuild_index
 
     monkeypatch.setattr(
-        "llmwiki.models.router.ModelRouter.resolve_chat", lambda self: None)
+        "corpusmith.models.router.ModelRouter.resolve_chat", lambda self: None)
     doc = OKFDocument(
         rel_path="pages/kubernetes.md",
         body="Kubernetes orquestra contêineres em cluster.",

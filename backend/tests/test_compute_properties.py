@@ -6,13 +6,13 @@ from __future__ import annotations
 import random
 import pytest
 from hypothesis import given, settings as hsettings, strategies as st
-from llmwiki.compute.graph_cache import cached_graph, invalidate
-from llmwiki.compute.python_kernel import PythonComputeKernel
-from llmwiki.kernel.graphwalk import personalized_pagerank
-from llmwiki.kernel.sketch import bands, hamming, simhash
+from corpusmith.compute.graph_cache import cached_graph, invalidate
+from corpusmith.compute.python_kernel import PythonComputeKernel
+from corpusmith.kernel.graphwalk import personalized_pagerank
+from corpusmith.kernel.sketch import bands, hamming, simhash
 
 try:
-    import llmwiki_native as native
+    import corpusmith_native as native
 except ImportError:                       # fallback: propriedades só Python
     native = None
 
@@ -191,7 +191,7 @@ def test_giant_document_respects_limit():
 def test_selection_and_fallback_are_observable(settings, monkeypatch):
     """auto→rust quando disponível; indisponível ⇒ python com MOTIVO;
     rust exigido sem fallback ⇒ erro explícito (nunca silencioso)."""
-    from llmwiki.compute import select
+    from corpusmith.compute import select
     kernel = select.get_kernel(settings, refresh=True)
     report = select.selection_report()
     if native:

@@ -4,13 +4,13 @@ CurationProjection e métricas cognitivas."""
 from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.cognitive.progress import (depth_progress, exercise_prompt,
+from corpusmith.api.system import build_app
+from corpusmith.cognitive.progress import (depth_progress, exercise_prompt,
                                         new_analogy)
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token="t")
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t"})
+        c.headers.update({"x-corpusmith-auth": "t"})
         yield c
 
 
@@ -56,9 +56,9 @@ def test_exercise_prompts_are_deterministic():
 
 # ------------------------------------------------------------ jornada HTTP
 def test_v20_endpoints_full_flow(client, settings, kb):
-    from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-    from llmwiki.okf.writer import BundleWriter
-    from llmwiki.retrieval.fts import rebuild_index
+    from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+    from corpusmith.okf.writer import BundleWriter
+    from corpusmith.retrieval.fts import rebuild_index
     BundleWriter(kb).write(
         [OKFDocument(rel_path="concepts/es.md",
                      body="# ES\n\nlog de eventos.",
@@ -122,9 +122,9 @@ def test_v20_endpoints_full_flow(client, settings, kb):
 
 
 def test_curation_projection_is_read_only_and_aligned(client, settings, kb):
-    from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-    from llmwiki.okf.writer import BundleWriter
-    from llmwiki.retrieval.fts import rebuild_index
+    from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+    from corpusmith.okf.writer import BundleWriter
+    from corpusmith.retrieval.fts import rebuild_index
     BundleWriter(kb).write([
         OKFDocument(rel_path="concepts/alvo.md", body="# A\n\ncorpo.",
                     meta=OKFFrontMatter(type="concept", title="Alvo",
@@ -144,7 +144,7 @@ def test_curation_projection_is_read_only_and_aligned(client, settings, kb):
     assert by_page["questions/duvida.md"]["aligned_with_focus"] is False
     assert all(i["reason"] for i in cur["items"])
     # leitura pura: nada mudou no canônico
-    from llmwiki.okf.bundle import BundleReader
+    from corpusmith.okf.bundle import BundleReader
     meta = BundleReader(kb / "bundle").load("concepts/alvo.md") \
         .meta.model_dump(exclude_none=True)
     assert meta["stale_as_of"] == "abc1234"

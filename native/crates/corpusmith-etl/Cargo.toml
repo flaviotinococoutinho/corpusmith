@@ -1,0 +1,10 @@
+[package]
+name = "corpusmith-etl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+corpusmith-types = { path = "../corpusmith-types" }
+serde = { workspace = true }
+serde_json = { workspace = true }

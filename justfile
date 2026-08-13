@@ -1,4 +1,4 @@
-# LLM Wiki — automação de montagem (Parte V §10.4)
+# Corpusmith — automação de montagem (Parte V §10.4)
 
 default:
     @just --list
@@ -10,7 +10,7 @@ bootstrap PY="python3":
     cd backend && {{PY}} -m venv .venv && \
       .venv/bin/pip install -U pip && \
       .venv/bin/pip install -e ".[dev]"
-    chmod +x backend/scripts/llmwiki backend/scripts/llmwikictl \
+    chmod +x backend/scripts/corpusmith backend/scripts/corpusmithctl \
       backend/scripts/pull_models.sh backend/scripts/install_daemon.sh
 
 # instalação completa validada (backend + desktop + smoke) — docs/12-instalacao.md
@@ -24,7 +24,7 @@ verify:
     cd desktop && npx tsc --noEmit
     cd desktop && npm test
     docker compose config -q
-    cd backend && .venv/bin/python -m llmwiki.cli epistemics lint
+    cd backend && .venv/bin/python -m corpusmith.cli epistemics lint
 
 # baixa modelos locais (Ollama)
 models:
@@ -32,7 +32,7 @@ models:
 
 # sobe o daemon em foreground
 daemon:
-    backend/.venv/bin/python -m llmwiki.daemon
+    backend/.venv/bin/python -m corpusmith.daemon
 
 # testes de contrato (golden bundles)
 test:
@@ -40,11 +40,11 @@ test:
 
 # lint do bundle (mesma fonte do painel Qualidade)
 lint:
-    backend/scripts/llmwiki okf lint
+    backend/scripts/corpusmith okf lint
 
 # reconstrói o index.db
 index:
-    backend/scripts/llmwiki okf index
+    backend/scripts/corpusmith okf index
 
 # empacota o sidecar (PyInstaller onedir)
 sidecar:

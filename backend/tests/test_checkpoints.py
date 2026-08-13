@@ -18,15 +18,15 @@ construção — só a cadeia declarada.
 """
 from __future__ import annotations
 import pytest
-from llmwiki.kernel.checkpoints import (DERIVATIONS, Checkpoint, ancestors,
+from corpusmith.kernel.checkpoints import (DERIVATIONS, Checkpoint, ancestors,
                                         descendants, evaluate)
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.checkpoints import load, record, verify
-from llmwiki.runtime.db import SCHEMA_VERSIONS, connect
-from llmwiki.usecases.detect_communities import DetectCommunities
-from llmwiki.usecases.diagnose import DiagnoseSystem
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.checkpoints import load, record, verify
+from corpusmith.runtime.db import SCHEMA_VERSIONS, connect
+from corpusmith.usecases.detect_communities import DetectCommunities
+from corpusmith.usecases.diagnose import DiagnoseSystem
 
 
 # ============================================== a cadeia (puro)

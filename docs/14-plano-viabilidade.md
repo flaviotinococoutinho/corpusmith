@@ -74,7 +74,7 @@ primeiro não é bravata: é a única ordem que não obriga a refazer o resto.
 ## 1. Veredito de viabilidade
 
 **Hoje o produto é viável para exatamente um perfil: o autor.** Alguém que
-tem o repo, sabe Python, roda `llmwiki` no terminal, conhece o SPEC OKF e
+tem o repo, sabe Python, roda `corpusmith` no terminal, conhece o SPEC OKF e
 aceita que **toda resolução aconteça fora do app** (abrir o `.md` no
 editor, editar YAML à mão, `git revert` quando algo se perde). Para esse
 perfil ele já é notável: gate de escrita inescapável, reconciliação
@@ -150,7 +150,7 @@ undone_by)` → `rebuild_index` incremental. `execute(dry_run)` segue como
 perdedora é **supersedida, nunca removida**; cluster de candidatos vem do
 SimHash/NCD que já existe), `UndoCurationAct` (`GitStore.revert`, o undo
 registrado como **novo** ato). Superfície: facade + `POST /cockpit/curate`
-com `dry_run` + `llmwiki curate …` + **deep-link da fila** (o item já
+com `dry_run` + `corpusmith curate …` + **deep-link da fila** (o item já
 carrega `target`/`pages`/`src`/`dst`; hoje o Dashboard os descarta em
 `DashboardPanel.tsx:12-13`).
 

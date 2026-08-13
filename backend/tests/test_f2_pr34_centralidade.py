@@ -19,13 +19,13 @@ valores persistidos são **idênticos** aos que o request calculava. Sem ele,
 """
 from __future__ import annotations
 import pytest
-from llmwiki.kernel.topology import betweenness_centrality
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval import observatory
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import SCHEMA_VERSIONS, connect
-from llmwiki.usecases.detect_communities import DetectCommunities
+from corpusmith.kernel.topology import betweenness_centrality
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval import observatory
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import SCHEMA_VERSIONS, connect
+from corpusmith.usecases.detect_communities import DetectCommunities
 
 EDGE_WEIGHT = {"extracted": 1.0, "inferred": 0.5, "ambiguous": 0.15}
 
@@ -109,7 +109,7 @@ def test_o_request_nao_calcula_mais_brandes(base, monkeypatch):
     alguém volta a chamar o kernel puro no caminho quente e a suíte, que roda
     em bundles pequenos, continuaria verde."""
     DetectCommunities(base).execute()
-    import llmwiki.kernel.topology as topo
+    import corpusmith.kernel.topology as topo
     chamou = []
     monkeypatch.setattr(topo, "betweenness_centrality",
                         lambda *a, **k: chamou.append(1) or {})
@@ -157,7 +157,7 @@ def test_falha_do_kernel_nao_derruba_o_job(base, monkeypatch):
     """A centralidade é enfeite do mapa, não o mapa (ADR-39 §22: ausência de
     camada nativa é comportamento suportado). O job entrega comunidades e
     pontes, e declara `none`."""
-    import llmwiki.compute as compute
+    import corpusmith.compute as compute
 
     def explode(*a, **k):
         raise RuntimeError("kernel indisponível")
@@ -195,7 +195,7 @@ def test_index_migra_de_v7_para_v8_sem_perder_o_carimbo(base):
         r["name"] for r in idx.execute("PRAGMA table_info(graph_snapshot)")}
     idx.close()
     # reabrir dispara o _migrate; o job seguinte escreve sem falhar
-    from llmwiki.runtime.db import _INITIALIZED
+    from corpusmith.runtime.db import _INITIALIZED
     _INITIALIZED.discard(str(caminho.resolve()))
     out = DetectCommunities(base).execute()
     assert out["centrality_backend"] in ("python", "rust", "none")

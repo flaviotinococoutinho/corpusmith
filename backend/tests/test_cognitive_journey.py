@@ -5,14 +5,14 @@ from __future__ import annotations
 import hashlib
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
+from corpusmith.api.system import build_app
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token="t")
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t"})
+        c.headers.update({"x-corpusmith-auth": "t"})
         yield c
 
 
@@ -182,7 +182,7 @@ def test_full_journey_preserves_canonical_memory(client, settings, kb):
     assert _bundle_fingerprint(kb) == before_bundle
     assert _index_fingerprint(settings) == before_index
     # e a falha de recuperação NÃO mexeu na confiança epistemológica
-    from llmwiki.okf.bundle import BundleReader
+    from corpusmith.okf.bundle import BundleReader
     doc = BundleReader(kb / "bundle").load("concepts/cqrs.md")
     meta = doc.meta.model_dump(exclude_none=True)
     assert "confidence" not in meta or meta["confidence"] != "ambiguous"

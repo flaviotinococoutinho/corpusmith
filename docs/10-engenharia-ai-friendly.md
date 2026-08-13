@@ -596,7 +596,7 @@ Hoje o gate roda por comandos (§ AGENTS.md §2 e `architecture.toml
 cd backend && .venv/bin/python -m pytest tests -q     # 248 testes
 cd desktop && npx tsc --noEmit                         # typecheck
 docker compose config -q                               # compose
-cd backend && .venv/bin/python -m llmwiki.cli doctor   # invariantes
+cd backend && .venv/bin/python -m corpusmith.cli doctor   # invariantes
 ```
 
 Alvo: um `just verify` que encadeie architecture/unit/integration/golden/
@@ -865,7 +865,7 @@ ADRs e testes do próprio repositório são a fonte primária de comportamento.*
 
 ## 26. Veredito arquitetural
 
-O Brain Compiler já está acima da média em disciplina arquitetural. O risco
+O Corpusmith já está acima da média em disciplina arquitetural. O risco
 principal não é falta de padrões; é **adicionar padrões demais e perder a
 clareza local-first**. A direção correta:
 

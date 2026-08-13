@@ -1,11 +1,11 @@
 from __future__ import annotations
 from pathlib import Path
 import pytest
-from llmwiki.okf.bootstrap import ensure_bundle
-from llmwiki.okf.bundle import BundleReader
-from llmwiki.okf.git_store import GitStore
-from llmwiki.harness.runner import HarnessRunner
-from llmwiki.settings import Settings
+from corpusmith.okf.bootstrap import ensure_bundle
+from corpusmith.okf.bundle import BundleReader
+from corpusmith.okf.git_store import GitStore
+from corpusmith.harness.runner import HarnessRunner
+from corpusmith.settings import Settings
 
 
 @pytest.fixture(autouse=True)
@@ -20,13 +20,13 @@ def _local_models_offline(monkeypatch) -> None:
     docs/12 §6. Testes que exercitam o roteador substituem `httpx`
     diretamente e ficam imunes a este redirecionamento.
     """
-    monkeypatch.setattr("llmwiki.models.router.ModelRouter._ollama_base",
+    monkeypatch.setattr("corpusmith.models.router.ModelRouter._ollama_base",
                         lambda self: "http://127.0.0.1:1")
 
 
 @pytest.fixture
 def settings(tmp_path: Path) -> Settings:
-    return Settings(home=tmp_path / "llmwiki")
+    return Settings(home=tmp_path / "corpusmith")
 
 
 @pytest.fixture

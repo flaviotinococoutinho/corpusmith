@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Instalação validada do LLM Wiki (backend Python + cockpit Electron).
+# Instalação validada do Corpusmith (backend Python + cockpit Electron).
 # Guia completo e solução de problemas: docs/12-instalacao.md
 #
 # Uso:
@@ -81,8 +81,8 @@ cd "$BACKEND"
 [ -d .venv ] || "$PY" -m venv .venv
 .venv/bin/pip install -q -U pip
 .venv/bin/pip install -q -e ".[dev]"
-chmod +x scripts/llmwiki scripts/llmwikictl scripts/pull_models.sh scripts/install_daemon.sh
-ok "llmwiki $(.venv/bin/python -c 'import llmwiki; print(llmwiki.__version__)') instalado em backend/.venv"
+chmod +x scripts/corpusmith scripts/corpusmithctl scripts/pull_models.sh scripts/install_daemon.sh
+ok "corpusmith $(.venv/bin/python -c 'import corpusmith; print(corpusmith.__version__)') instalado em backend/.venv"
 
 # ---------------------------------------------------------------- desktop
 if [ "$BACKEND_ONLY" -eq 0 ]; then
@@ -112,7 +112,7 @@ if [ "$WITH_DOCKER" -eq 1 ]; then
   fi
   docker info >/dev/null 2>&1 || die "daemon Docker não está rodando"
   $COMPOSE config -q && ok "compose config válido"
-  $COMPOSE build && ok "imagem brain-compiler-llmwiki construída"
+  $COMPOSE build && ok "imagem corpusmith-corpusmith construída"
 fi
 
 # ---------------------------------------------------------------- testes (opcional)
@@ -125,28 +125,28 @@ fi
 
 # ---------------------------------------------------------------- smoke (opcional)
 if [ "$WITH_SMOKE" -eq 1 ]; then
-  say "Smoke em HOME temporário (não toca ~/llmwiki)"
-  SMOKE_HOME="$(mktemp -d)/llmwiki-home"
-  export LLMWIKI_HOME="$SMOKE_HOME"
+  say "Smoke em HOME temporário (não toca ~/corpusmith)"
+  SMOKE_HOME="$(mktemp -d)/corpusmith-home"
+  export CORPUSMITH_HOME="$SMOKE_HOME"
   cd "$ROOT"
-  backend/scripts/llmwiki okf bootstrap
-  backend/scripts/llmwiki seed
-  backend/scripts/llmwiki okf lint
-  backend/scripts/llmwiki doctor
-  backend/scripts/llmwiki epistemics lint
+  backend/scripts/corpusmith okf bootstrap
+  backend/scripts/corpusmith seed
+  backend/scripts/corpusmith okf lint
+  backend/scripts/corpusmith doctor
+  backend/scripts/corpusmith epistemics lint
   rm -rf "$(dirname "$SMOKE_HOME")"
-  unset LLMWIKI_HOME
+  unset CORPUSMITH_HOME
   ok "bootstrap+seed+lint+doctor+epistemics verdes"
 fi
 
 # ---------------------------------------------------------------- próximos passos
 say "Instalação concluída — próximos passos"
 cat <<'EOF'
-   1. backend/scripts/llmwiki okf bootstrap   # cria ~/llmwiki (bundle Git)
-   2. backend/scripts/llmwiki seed            # dados pré-definidos (idempotente)
-   3. backend/.venv/bin/python -m llmwiki.daemon &   # API em 127.0.0.1:8377
-      backend/scripts/llmwikictl status              # confere o daemon
+   1. backend/scripts/corpusmith okf bootstrap   # cria ~/corpusmith (bundle Git)
+   2. backend/scripts/corpusmith seed            # dados pré-definidos (idempotente)
+   3. backend/.venv/bin/python -m corpusmith.daemon &   # API em 127.0.0.1:8377
+      backend/scripts/corpusmithctl status              # confere o daemon
    4. cd desktop && npm run dev               # cockpit Electron
-   Token do handshake: ~/llmwiki/state/daemon.json (header x-llmwiki-auth)
+   Token do handshake: ~/corpusmith/state/daemon.json (header x-corpusmith-auth)
    Guia completo + solução de problemas: docs/12-instalacao.md
 EOF

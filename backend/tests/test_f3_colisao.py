@@ -13,11 +13,11 @@ máquina que funde frontmatter em vez de reconstruí-lo do zero.
 """
 from __future__ import annotations
 import pytest
-from llmwiki.harness.runner import HarnessRejection
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.usecases.base import DraftPage, MachinePageUseCase
-from llmwiki.usecases.promote_memory import PromoteToMemory
+from corpusmith.harness.runner import HarnessRejection
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.usecases.base import DraftPage, MachinePageUseCase
+from corpusmith.usecases.promote_memory import PromoteToMemory
 
 from conftest import write_page
 

@@ -58,7 +58,7 @@ para Rust/subprocesso e detectar regressão — não SLA.
 
 ## topology.* (origem: bench graph; por execução de bench)
 
-Brandes/PPR/components são medidos pelo `llmwiki bench graph`
+Brandes/PPR/components são medidos pelo `corpusmith bench graph`
 (p50/p95/mean por backend + nodes/edges/iterations implícitos na
 semente). O observatório (/cockpit/gaps) consome os mesmos kernels.
 

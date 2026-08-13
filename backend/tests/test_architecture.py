@@ -7,7 +7,7 @@ import ast
 import inspect
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parent.parent / "src" / "llmwiki"
+SRC = Path(__file__).resolve().parent.parent / "src" / "corpusmith"
 
 # o núcleo imutável não pode tocar I/O, rede, processo, framework, schema
 FORBIDDEN_IN_PURE = {"sqlite3", "httpx", "subprocess", "fastapi", "uvicorn",
@@ -43,9 +43,9 @@ def _relative_imports(path: Path) -> set[str]:
 
 
 def _internal_imports(path: Path) -> set[str]:
-    """Pacotes de llmwiki alcançados por QUALQUER forma de import —
+    """Pacotes de corpusmith alcançados por QUALQUER forma de import —
     relativo (`from ..facades import X`) ou absoluto
-    (`from llmwiki.facades import X` / `import llmwiki.facades`).
+    (`from corpusmith.facades import X` / `import corpusmith.facades`).
 
     T7 (docs/18 §5.2): INV-ARCH-003/004 só olhavam os relativos, então
     reescrever a violação em forma absoluta passava verde — o cético
@@ -57,12 +57,12 @@ def _internal_imports(path: Path) -> set[str]:
             parts = (node.module or "").split(".")
             if node.level > 0:
                 found.add(parts[0])
-            elif parts[0] == "llmwiki" and len(parts) > 1:
+            elif parts[0] == "corpusmith" and len(parts) > 1:
                 found.add(parts[1])
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 parts = alias.name.split(".")
-                if parts[0] == "llmwiki" and len(parts) > 1:
+                if parts[0] == "corpusmith" and len(parts) > 1:
                     found.add(parts[1])
     return found
 
@@ -109,7 +109,7 @@ def test_usecases_do_not_reach_outward():
         absolute = _absolute_imports(module)
         assert "fastapi" not in absolute, f"{module}: use case importou fastapi"
         # T7: _internal_imports vê relativo E absoluto — reescrever
-        # `from ..facades` como `from llmwiki.facades` não escapa mais
+        # `from ..facades` como `from corpusmith.facades` não escapa mais
         assert not _internal_imports(module) & {"facades", "api", "jobs"}, \
             f"{module}: use case importou camada mais externa"
 
@@ -128,15 +128,15 @@ def test_api_speaks_only_to_facades():
 def test_every_usecase_has_single_public_method():
     """Object Calisthenics: a intenção está no NOME da classe; a única
     porta é execute(). Hooks são protegidos (_underscore)."""
-    import llmwiki.usecases.base as base
-    import llmwiki.usecases as usecases_pkg
+    import corpusmith.usecases.base as base
+    import corpusmith.usecases as usecases_pkg
     import importlib
     import pkgutil
     # walk_packages, não iter_modules (F1-PR1): iter_modules NÃO desce em
     # subpacotes, então um ato em `usecases/curate/supersede.py` ficaria
     # fora de INV-ARCH-005 — exatamente a camada que este PR inaugura
     for info in pkgutil.walk_packages(usecases_pkg.__path__,
-                                      prefix="llmwiki.usecases."):
+                                      prefix="corpusmith.usecases."):
         module = importlib.import_module(info.name)
         for name, cls in inspect.getmembers(module, inspect.isclass):
             if not issubclass(cls, base.UseCase) or cls is base.UseCase:
@@ -165,10 +165,10 @@ def test_domain_is_free_of_framework_and_transport():
 def test_machine_page_template_is_closed_for_modification():
     """Template Method: nenhuma subclasse pode REDEFINIR o esqueleto
     execute() — só preencher hooks (OCP/LSP)."""
-    from llmwiki.usecases.base import MachinePageUseCase
-    from llmwiki.usecases.compile_source import CompileSource
-    from llmwiki.usecases.weekly_review import PublishWeeklyReview
-    from llmwiki.usecases.detect_communities import _CommunitySummaryPage
+    from corpusmith.usecases.base import MachinePageUseCase
+    from corpusmith.usecases.compile_source import CompileSource
+    from corpusmith.usecases.weekly_review import PublishWeeklyReview
+    from corpusmith.usecases.detect_communities import _CommunitySummaryPage
     for subclass in (CompileSource, PublishWeeklyReview,
                      _CommunitySummaryPage):
         assert "execute" not in vars(subclass), \

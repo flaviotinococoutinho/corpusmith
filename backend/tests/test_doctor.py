@@ -1,12 +1,12 @@
 """v1.4 (DATA-1) — doctor de invariantes + reject-newer + ledger."""
 from __future__ import annotations
 import pytest
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import SCHEMA_VERSIONS, SchemaTooNewError, connect
-from llmwiki.settings import Settings
-from llmwiki.usecases.diagnose import DiagnoseSystem
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import SCHEMA_VERSIONS, SchemaTooNewError, connect
+from corpusmith.settings import Settings
+from corpusmith.usecases.diagnose import DiagnoseSystem
 
 
 def _doc(rel, title, body="corpo.", **meta):
@@ -129,7 +129,7 @@ def test_review_semanal_nao_deixa_o_doctor_vermelho(settings, kb):
     reindexar — INV-002 error até o próximo rebuild. Mesma classe do bug
     do `leiden`, corrigido no F2 ("o job não deixa o doctor vermelho");
     o ramo semanal do Scheduler nunca tinha sido exercitado num smoke."""
-    from llmwiki.jobs import REGISTRY
+    from corpusmith.jobs import REGISTRY
     BundleWriter(kb).write([_doc("concepts/a.md", "A")],
                            log_kind="Creation", log_message="m",
                            commit_message="c")

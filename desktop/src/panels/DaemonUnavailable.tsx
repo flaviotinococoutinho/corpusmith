@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { client } from "../lib/client";
 import type { SidecarFailure } from "../lib/daemonClient";
 
-export const DAEMON_CMD = "cd backend && .venv/bin/python -m llmwiki.daemon";
+export const DAEMON_CMD = "cd backend && .venv/bin/python -m corpusmith.daemon";
 
 const SIDECAR_HINT: Record<SidecarFailure["reason"], string> = {
   "no-venv": "o ambiente Python do backend não foi encontrado — rode "
@@ -31,7 +31,7 @@ export function DaemonUnavailable(
   useEffect(() => {
     // o motivo vem do processo principal do Electron: sem ele, o usuário
     // veria só "não respondeu" sem saber que falta o venv
-    window.llmwiki?.sidecarFailure?.().then(setSidecar).catch(() => {});
+    window.corpusmith?.sidecarFailure?.().then(setSidecar).catch(() => {});
   }, []);
   const motivo = error instanceof Error ? error.message : String(error);
   const retry = () => {

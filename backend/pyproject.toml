@@ -1,7 +1,7 @@
 [project]
-name = "llmwiki"
-version = "1.9.0"
-description = "LLM Wiki — knowledge base OKF local-first com cockpit de memória agêntica"
+name = "corpusmith"
+version = "2.0.0"
+description = "Corpusmith — knowledge base OKF local-first com cockpit de memória agêntica"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.111",
@@ -22,7 +22,7 @@ ml = ["sqlite-vec>=0.1", "igraph>=0.11", "leidenalg>=0.10"]
 dev = ["pytest>=8.0", "hypothesis>=6.100"]   # property tests (ADR-39 §15)
 
 [project.scripts]
-llmwiki = "llmwiki.cli:main"
+corpusmith = "corpusmith.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

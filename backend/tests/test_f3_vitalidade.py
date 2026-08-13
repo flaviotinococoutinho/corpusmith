@@ -18,19 +18,19 @@ Os testes abaixo cobrem os três níveis do P-3: veredito sobre objeto canônico
 from __future__ import annotations
 import time
 import pytest
-from llmwiki.harness.local_policy import check_corpus
-from llmwiki.harness.runner import HarnessRejection
-from llmwiki.kernel.vitality import aposentada, vivas
-from llmwiki.kernel.verdicts import pattern_key, suprime, Verdict
-from llmwiki.okf.bundle import BundleReader
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.verdicts import load, record, suppressed_keys
-from llmwiki.usecases.curate import CloseQuestion
-from llmwiki.usecases.next_actions import bridge_items, contradiction_items
-from llmwiki.usecases.plan_attention import gap_items, review_items
+from corpusmith.harness.local_policy import check_corpus
+from corpusmith.harness.runner import HarnessRejection
+from corpusmith.kernel.vitality import aposentada, vivas
+from corpusmith.kernel.verdicts import pattern_key, suprime, Verdict
+from corpusmith.okf.bundle import BundleReader
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.verdicts import load, record, suppressed_keys
+from corpusmith.usecases.curate import CloseQuestion
+from corpusmith.usecases.next_actions import bridge_items, contradiction_items
+from corpusmith.usecases.plan_attention import gap_items, review_items
 
 
 def _doc(rel, title, body, **meta):

@@ -2,9 +2,9 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 import pytest
-from llmwiki.harness.runner import HarnessRejection
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
+from corpusmith.harness.runner import HarnessRejection
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
 
 
 def _promoted(title="Padrão saga"):

@@ -55,16 +55,16 @@ inferência emocional/diagnóstico/perfil auto-reescrito (ADR-19/31).
 | ID | P | Problema (evidência da auditoria) | Aceite |
 |---|---|---|---|
 | ~~REL-1~~ (v1.6.1) | P0 | compile_source criava ModelRouter SEM governor ⇒ furava orçamento e ledger (idem consolidate/leiden/ask enfileirado) | `JobContext.gov` → adapters → facades → usecases; `test_rel1_governor.py` (fiação worker→router + ledger) |
-| ~~DATA-1~~ (v1.4) | P0 | sem verificação/repair de invariantes em runtime | `llmwiki doctor`: INV-001/002/003 + config×history; repair=rebuild |
+| ~~DATA-1~~ (v1.4) | P0 | sem verificação/repair de invariantes em runtime | `corpusmith doctor`: INV-001/002/003 + config×history; repair=rebuild |
 | ~~REL-2~~ (v1.7) | P1 | ~~heartbeat/timeout/cancel cooperativo (v1.4)~~; ~~hard-kill (v1.7: subprocesso com kill real, atrás de compute.process_isolation)~~ | `runtime/procjobs.py` + `jobs_proc`; `test_worker_isolation.py` (9 testes: timeout mata, cancel mata, kill-9 ⇒ transitório) |
 | ~~REL-3~~ (v1.4) | P1 | recuperação de órfãos só preguiçosa | sweep no boot do daemon; teste |
-| ~~QA-1~~ (v1.6.3) | P1 | golden_eval.jsonl não era distribuído; eval era no-op out-of-the-box; sem Recall@K/MRR | `llmwiki seed` → `seed_golden_eval` (7 páginas + 12 casos, 5 categorias, 12/12 local); recall@5 + MRR por caso e média no envelope; `test_qa1_eval_seed.py` |
+| ~~QA-1~~ (v1.6.3) | P1 | golden_eval.jsonl não era distribuído; eval era no-op out-of-the-box; sem Recall@K/MRR | `corpusmith seed` → `seed_golden_eval` (7 páginas + 12 casos, 5 categorias, 12/12 local); recall@5 + MRR por caso e média no envelope; `test_qa1_eval_seed.py` |
 | ~~QA-3~~ (v1.6.2) | P1 | /ask não validava [n]→evidência (só header, só api:) | `_invalid_citations` em ask_memory (local: E api:); citação fabricada degrada p/ extrativo; `test_qa3_citations.py` |
 | UX-1 | P1 | 8 superfícies concorrentes de "o que fazer agora" | UMA fila unificada com origem explicada |
 | UX-2 | P1 | 12 abas planas; jargão (BLA/Hedge/gate/trace) exposto | 3 níveis (essencial/análise/avançado); glossário aplicado |
 | UX-3 | P1 | onboarding inexistente; bundle vazio = becos | workspace de exemplo removível + tutorial |
 | ~~UX-4~~ (v1.6.5) | P1 | presets não existiam | 3 presets (fabrica·precisao·exploracao) aplicados PELA linhagem (`TuneConfig`, source=preset:<nome>, guard+rollback); `GET/POST /cockpit/config/preset*`; botões 🎚 no card Linhagem da Curadoria; `test_ux4_presets.py` (10 testes) |
-| ~~QA-2~~ (v1.6.4) | P2 | claims 92×/29× sem harness reprodutível | `llmwiki.bench` (bundle sintético determinístico, JSON schema 1): gazetteer frio×quente 236×@150/636×@500 (claim 92× era conservador); índice incremental 4–5× (1 pág) e 11–13× (no-op) — **claim 29× não reproduzido**, ADRs corrigidos; `test_qa2_bench.py` |
+| ~~QA-2~~ (v1.6.4) | P2 | claims 92×/29× sem harness reprodutível | `corpusmith.bench` (bundle sintético determinístico, JSON schema 1): gazetteer frio×quente 236×@150/636×@500 (claim 92× era conservador); índice incremental 4–5× (1 pág) e 11–13× (no-op) — **claim 29× não reproduzido**, ADRs corrigidos; `test_qa2_bench.py` |
 | ~~QA-4~~ (suíte, v1.6.3) | P2 | constantes de decisão sem teste de sensibilidade | `test_qa4_sensitivity.py` (17 testes, dois lados de cada fronteira): clamp Hedge, overlay 1.15/0.8 na fusão, abstain_threshold, orçamento do Governor, hamming ≤ 8, dígitos de citação; LSH/backoff já cobertos |
 | UX-5 | P2 | analogias/~~métricas~~/curation-projection sem UI | métricas ✅ (v1.6.6): recall@5/MRR/taxa no `/cockpit/eval`+`/cockpit/quality` e no painel Qualidade (fonte: envelope mais recente). RESTAM analogias e curation-projection: superfícies mínimas ou remoção do anúncio |
 | ~~A-06~~ (v1.5) | P2 | jitter de retry usava `hash()` do Python (randomizado por processo) | `_stable_jitter` blake2b; teste `test_retry_jitter_is_process_stable` |

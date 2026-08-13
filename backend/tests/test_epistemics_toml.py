@@ -7,7 +7,7 @@ quebra — o registro epistêmico fica preso à realidade.
 """
 from __future__ import annotations
 import inspect
-from llmwiki.harness.epistemics import load_registry
+from corpusmith.harness.epistemics import load_registry
 
 
 def _params(mechanism_id: str) -> dict[str, str]:
@@ -24,7 +24,7 @@ def test_rrf_hedge_nao_alega_regret_no_regime_bandit():
     (medido: 1.0→1.284→1.649→2.0). O MESMO kernel aplicado a estratégias
     declara `heuristic` — os dois usos devem alegar a mesma honestidade, e
     o peso saturável precisa estar nos failure modes declarados."""
-    from llmwiki.harness.epistemics import load_registry
+    from corpusmith.harness.epistemics import load_registry
     registry, _ = load_registry()
     contract = registry.get("retrieval_rrf_hedge")
     assert contract.guarantee.kind.value == "heuristic"
@@ -32,8 +32,8 @@ def test_rrf_hedge_nao_alega_regret_no_regime_bandit():
 
 
 def test_rrf_hedge_parameters_match_code():
-    from llmwiki.retrieval.streams import RRF_K
-    from llmwiki.kernel.information import hedge
+    from corpusmith.retrieval.streams import RRF_K
+    from corpusmith.kernel.information import hedge
     p = _params("retrieval_rrf_hedge")
     assert float(p["rrf_k"]) == RRF_K
     defaults = {k: v.default for k, v in
@@ -43,13 +43,13 @@ def test_rrf_hedge_parameters_match_code():
     assert float(p["hedge_clamp_floor"]) == defaults["floor"]
     assert float(p["hedge_clamp_ceiling"]) == defaults["ceiling"]
     # loss ±1 como em RecordOutcome._update_stream_credit
-    from llmwiki.usecases import record_outcome
+    from corpusmith.usecases import record_outcome
     src = inspect.getsource(record_outcome)
     assert 'loss = -1.0 if self._verdict == "useful" else 1.0' in src
     assert float(p["loss_useful"]) == -1.0
     assert float(p["loss_not_useful"]) == 1.0
     # boosts do overlay como em streams.fuse
-    from llmwiki.retrieval import streams
+    from corpusmith.retrieval import streams
     fuse_src = inspect.getsource(streams)
     assert '"preferred": 1.15' in fuse_src and '"low_yield": 0.8' in fuse_src
     assert float(p["overlay_preferred_boost"]) == 1.15
@@ -57,18 +57,18 @@ def test_rrf_hedge_parameters_match_code():
 
 
 def test_uncertainty_parameters_match_code():
-    from llmwiki.retrieval import streams
+    from corpusmith.retrieval import streams
     p = _params("retrieval_uncertainty")
     assert f"ordered[:{int(float(p['entropy_window_hits']))}]" \
         in inspect.getsource(streams)
-    from llmwiki import cli
+    from corpusmith import cli
     assert f"uncertainty > {float(p['ui_hedge_threshold'])}" \
         in inspect.getsource(cli)
 
 
 def test_abstention_parameters_match_code():
     import re
-    from llmwiki.usecases import ask_memory
+    from corpusmith.usecases import ask_memory
     p = _params("abstention")
     src = re.sub(r"\s+", " ", inspect.getsource(ask_memory))
     key, default = p["threshold_config_key"], float(p["threshold_default"])
@@ -76,8 +76,8 @@ def test_abstention_parameters_match_code():
 
 
 def test_reconciliation_parameters_match_code():
-    from llmwiki.usecases.reconcile_candidate import HI, LO, STRONG_IDS
-    from llmwiki.usecases import reconcile_candidate
+    from corpusmith.usecases.reconcile_candidate import HI, LO, STRONG_IDS
+    from corpusmith.usecases import reconcile_candidate
     p = _params("reconciliation")
     assert float(p["similarity_hi"]) == HI
     assert float(p["similarity_lo"]) == LO
@@ -97,9 +97,9 @@ def test_reconciliation_parameters_match_code():
 def test_cognitive_priority_components_match_code():
     """Os componentes declarados são EXATAMENTE os que a função real
     produz — inclusive expected_information_gain (proxy documentado)."""
-    from llmwiki.cognitive.model import KnowledgeItemView
-    from llmwiki.cognitive.policy import validate_policy
-    from llmwiki.cognitive.scoring import cognitive_priority
+    from corpusmith.cognitive.model import KnowledgeItemView
+    from corpusmith.cognitive.policy import validate_policy
+    from corpusmith.cognitive.scoring import cognitive_priority
     registry, _ = load_registry()
     contract = registry.get("cognitive_priority")
     view = KnowledgeItemView(page="c/x.md", degree=3, distance=1)
@@ -113,13 +113,13 @@ def test_cognitive_priority_components_match_code():
 
 
 def test_strategy_selection_matches_code():
-    from llmwiki.usecases.cognitive_state import STRATEGIES
+    from corpusmith.usecases.cognitive_state import STRATEGIES
     p = _params("adaptive_strategy_selection")
     assert tuple(p["strategies"].split(",")) == tuple(STRATEGIES)
 
 
 def test_metacog_parameters_match_code():
-    from llmwiki.usecases import metacognition
+    from corpusmith.usecases import metacognition
     p = _params("metacog_observation_mining")
     src = inspect.getsource(metacognition)
     key = p["min_support_config_key"]
@@ -141,8 +141,8 @@ def test_freeze_parameters_match_code():
     """O mecanismo mais destrutivo sem contrato (docs/17): 5 limiares
     decidindo o que sai da memória quente, nenhum sob cross-check."""
     import inspect
-    from llmwiki.kernel.activation import DECAY
-    from llmwiki.usecases import cold_memory
+    from corpusmith.kernel.activation import DECAY
+    from corpusmith.usecases import cold_memory
     p = _params("memory_freeze")
     assert float(p["actr_decay"]) == DECAY
     src = inspect.getsource(cold_memory)
@@ -157,15 +157,15 @@ def test_freeze_parameters_match_code():
 
 def test_consolidate_parameters_match_code():
     import inspect
-    from llmwiki.kernel.sketch import simhash
-    from llmwiki.usecases.consolidate_inbox import _Signature
+    from corpusmith.kernel.sketch import simhash
+    from corpusmith.usecases.consolidate_inbox import _Signature
     p = _params("consolidate_inbox")
     assert int(p["near_duplicate_hamming"]) == \
         _Signature.NEAR_DUPLICATE_HAMMING
     assert int(p["simhash_shingle"]) == \
         inspect.signature(simhash).parameters["shingle"].default
     src = inspect.getsource(
-        __import__("llmwiki.usecases.consolidate_inbox",
+        __import__("corpusmith.usecases.consolidate_inbox",
                    fromlist=["x"]))
     assert f"text[:{int(p['text_window_chars']):_}]".replace("_", "_") \
         in src.replace("100_000", "100000") \
@@ -176,7 +176,7 @@ def test_freeze_declara_proxy_e_efeito_colateral_do_recycle():
     """docs/17: P(recall) mede HEAT DE LEITURA, não valor; e com
     auto_recycle uma CONSULTA escreve no bundle. Os dois têm de estar
     declarados — omiti-los é o que fazia o mecanismo parecer coberto."""
-    from llmwiki.harness.epistemics import load_registry
+    from corpusmith.harness.epistemics import load_registry
     registry, _ = load_registry()
     c = registry.get("memory_freeze")
     texto = " ".join(m.text for m in c.known_failure_modes).lower()
@@ -193,8 +193,8 @@ def test_freeze_declara_proxy_e_efeito_colateral_do_recycle():
 def test_sufficiency_components_e_parametros_match_code():
     """P-4 (ADR-52): as parcelas declaradas são EXATAMENTE as que o
     kernel produz, e as saturações de projeto ficam sob cross-check."""
-    from llmwiki.kernel import sufficiency
-    from llmwiki.harness.epistemics import load_registry
+    from corpusmith.kernel import sufficiency
+    from corpusmith.harness.epistemics import load_registry
     registry, _ = load_registry()
     contract = registry.get("evidence_sufficiency")
     out = sufficiency.evidence_support(1, 1, 0.5, 0.5)

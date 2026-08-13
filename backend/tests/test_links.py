@@ -20,11 +20,11 @@ from __future__ import annotations
 import pathlib
 import tempfile
 import pytest
-from llmwiki.normalize.engine import analyze, rewrite
-from llmwiki.normalize.masking import is_protected, protected_spans
-from llmwiki.okf.authorities import load_gazetteer
-from llmwiki.okf.bundle import BundleReader
-from llmwiki.okf.links import (MD_LINK, is_internal, md_link, parse_links,
+from corpusmith.normalize.engine import analyze, rewrite
+from corpusmith.normalize.masking import is_protected, protected_spans
+from corpusmith.okf.authorities import load_gazetteer
+from corpusmith.okf.bundle import BundleReader
+from corpusmith.okf.links import (MD_LINK, is_internal, md_link, parse_links,
                                resolve, safe_link_text)
 
 # o regex ANTES deste PR — a referência de não-regressão

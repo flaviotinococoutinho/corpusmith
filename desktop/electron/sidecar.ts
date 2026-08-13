@@ -1,5 +1,5 @@
 // Ciclo de vida do sidecar (Parte II §2.1 + handshake Parte V §2.1).
-// Empacotado: resources/backend/llmwiki-server (PyInstaller onedir).
+// Empacotado: resources/backend/corpusmith-server (PyInstaller onedir).
 // Dev: usa o daemon já rodando OU sobe via venv do backend.
 import { ChildProcess, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -16,7 +16,7 @@ export interface Handshake {
 let child: ChildProcess | null = null;
 
 export function handshakePath(): string {
-  const home = process.env.LLMWIKI_HOME ?? path.join(homedir(), "llmwiki");
+  const home = process.env.CORPUSMITH_HOME ?? path.join(homedir(), "corpusmith");
   return path.join(home, "state", "daemon.json");
 }
 
@@ -67,7 +67,7 @@ export async function startSidecar(
     lastFailure = null;
     return null;
   }
-  const packaged = path.join(resourcesPath, "backend", "llmwiki-server");
+  const packaged = path.join(resourcesPath, "backend", "corpusmith-server");
   let bin: string;
   let args: string[];
   if (existsSync(packaged)) {
@@ -80,7 +80,7 @@ export async function startSidecar(
       return fail({ reason: "no-venv", detail: venv });
     }
     bin = venv;
-    args = ["-m", "llmwiki.daemon"];
+    args = ["-m", "corpusmith.daemon"];
   }
   try {
     child = spawn(bin, args, { stdio: "ignore" });

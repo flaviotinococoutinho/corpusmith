@@ -4,13 +4,13 @@ e contrato HTTP (seed builtin, salvar, rodar, filme dos runs)."""
 from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.kernel import identity
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.usecases.run_pipeline import (DEFAULT_PIPELINES, DeletePipeline,
+from corpusmith.api.system import build_app
+from corpusmith.kernel import identity
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.usecases.run_pipeline import (DEFAULT_PIPELINES, DeletePipeline,
                                            RunPipeline, SavePipeline,
                                            list_pipelines, pipeline_runs,
                                            seed_default_pipelines,
@@ -23,7 +23,7 @@ def client(settings, kb):
     app = build_app(settings, JobQueue(rt), Governor(settings, rt),
                     EventBus(rt), token="t")
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": "t"})
+        c.headers.update({"x-corpusmith-auth": "t"})
         yield c
 
 
@@ -168,8 +168,8 @@ def test_http_contract_seeds_saves_runs(client):
 
 
 def test_pipeline_job_is_registered_and_heavy():
-    from llmwiki.jobs import REGISTRY
-    from llmwiki.runtime.slots import HEAVY
+    from corpusmith.jobs import REGISTRY
+    from corpusmith.runtime.slots import HEAVY
     assert "pipeline" in REGISTRY
     assert "pipeline" in HEAVY
     # os builtin só referenciam jobs que existem de verdade

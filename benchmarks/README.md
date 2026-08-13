@@ -8,13 +8,13 @@ frio×quente, full×incremental) são o que os ADRs alegam.
 
 ```bash
 cd backend
-.venv/bin/python -m llmwiki.bench core                    # QA-2 (frio×quente, full×incremental)
-.venv/bin/python -m llmwiki.bench ask --pages 150         # /ask por estágio
-.venv/bin/python -m llmwiki.bench graph --nodes 5000      # PPR/Brandes python×rust
-.venv/bin/python -m llmwiki.bench consolidate             # SimHash/candidatos python×rust
-.venv/bin/python -m llmwiki.bench compare                 # tudo + speedups
-.venv/bin/python -m llmwiki.bench generate-fixture small  # materializa fixture
-# ou: .venv/bin/python -m llmwiki.cli bench <verbo> ...
+.venv/bin/python -m corpusmith.bench core                    # QA-2 (frio×quente, full×incremental)
+.venv/bin/python -m corpusmith.bench ask --pages 150         # /ask por estágio
+.venv/bin/python -m corpusmith.bench graph --nodes 5000      # PPR/Brandes python×rust
+.venv/bin/python -m corpusmith.bench consolidate             # SimHash/candidatos python×rust
+.venv/bin/python -m corpusmith.bench compare                 # tudo + speedups
+.venv/bin/python -m corpusmith.bench generate-fixture small  # materializa fixture
+# ou: .venv/bin/python -m corpusmith.cli bench <verbo> ...
 ```
 
 Saída: JSON schema 1 (`--json arquivo`). Fixtures são determinísticas

@@ -6,16 +6,16 @@ Aceite do backlog: gov injetado; ledger reflete compile; teste. A fiação
 from __future__ import annotations
 import time
 import pytest
-from llmwiki.facades.compiler import CompilerFacade
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.runtime.slots import Slots
-from llmwiki.runtime.worker import JobContext, Worker
-from llmwiki.usecases.compile_source import CompileSource
-from llmwiki.usecases.consolidate_inbox import ConsolidateInbox, _ConsolidatedPage
-from llmwiki.usecases.detect_communities import DetectCommunities
+from corpusmith.facades.compiler import CompilerFacade
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.runtime.slots import Slots
+from corpusmith.runtime.worker import JobContext, Worker
+from corpusmith.usecases.compile_source import CompileSource
+from corpusmith.usecases.consolidate_inbox import ConsolidateInbox, _ConsolidatedPage
+from corpusmith.usecases.detect_communities import DetectCommunities
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def test_jobcontext_carrega_o_governor(rt, gov):
 
 def test_worker_entrega_o_governor_aos_handlers(settings, rt, gov, monkeypatch):
     """Fiação real: um job de sonda roda no Worker e enxerga ctx.gov."""
-    from llmwiki.jobs import REGISTRY
+    from corpusmith.jobs import REGISTRY
     seen: dict = {}
 
     def probe(s, payload, emit):
@@ -89,15 +89,15 @@ def test_facade_propaga_gov_ao_compile(settings, gov, monkeypatch):
         def execute(self):
             return {}
 
-    monkeypatch.setattr("llmwiki.facades.compiler.CompileSource", Spy)
+    monkeypatch.setattr("corpusmith.facades.compiler.CompileSource", Spy)
     CompilerFacade(settings, gov=gov).compile("raw/x.md")
     assert captured["gov"] is gov
 
 
 @pytest.mark.parametrize("module,method", [
-    ("llmwiki.jobs.compile", "compile"),
-    ("llmwiki.jobs.consolidate", "consolidate_inbox"),
-    ("llmwiki.jobs.leiden", "detect_communities"),
+    ("corpusmith.jobs.compile", "compile"),
+    ("corpusmith.jobs.consolidate", "consolidate_inbox"),
+    ("corpusmith.jobs.leiden", "detect_communities"),
 ])
 def test_adapters_leem_gov_do_contexto(settings, monkeypatch, module, method):
     import importlib
@@ -125,7 +125,7 @@ def test_adapters_leem_gov_do_contexto(settings, monkeypatch, module, method):
 
 
 def test_adapter_ask_le_gov_do_contexto(settings, monkeypatch):
-    from llmwiki.jobs import ask as ask_job
+    from corpusmith.jobs import ask as ask_job
     captured: dict = {}
 
     class SpyFacade:
@@ -135,7 +135,7 @@ def test_adapter_ask_le_gov_do_contexto(settings, monkeypatch):
         def ask(self, *a, **k):
             return {}
 
-    monkeypatch.setattr("llmwiki.jobs.ask.MemoryFacade", SpyFacade)
+    monkeypatch.setattr("corpusmith.jobs.ask.MemoryFacade", SpyFacade)
 
     class Ctx:
         gov = "governor-sentinela"
@@ -152,7 +152,7 @@ def test_ledger_registra_gasto_quando_router_tem_gov(settings, rt, gov,
                                                      monkeypatch):
     """Com o gov injetado, a chamada de API do caminho de compile grava
     no ledger e o orçamento diário enxerga o gasto (aceite REL-1)."""
-    from llmwiki.models.router import ModelRouter
+    from corpusmith.models.router import ModelRouter
 
     class FakeResp:
         def raise_for_status(self):
@@ -163,7 +163,7 @@ def test_ledger_registra_gasto_quando_router_tem_gov(settings, rt, gov,
                     "content": [{"text": "resumo"}]}
 
     monkeypatch.setenv("ANTHROPIC_API_KEY", "chave-teste")
-    monkeypatch.setattr("llmwiki.models.router.httpx.post",
+    monkeypatch.setattr("corpusmith.models.router.httpx.post",
                         lambda *a, **k: FakeResp())
     router = ModelRouter(settings, gov)
     out = router._api("prompt", None, 64)

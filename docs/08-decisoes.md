@@ -54,7 +54,7 @@ subproduto natural: mudou o schema, o lint lista quem não conforma.
 **Contexto**: gazetteer/schemas varriam o bundle inteiro a cada
 ask/lint/compile. **Decisão**: cache de 1 entrada keyed por `(kb, HEAD)`
 — toda escrita commita, logo o HEAD é chave de invalidação perfeita.
-Medido (harness reprodutível `python -m llmwiki.bench`, QA-2/v1.6.4):
+Medido (harness reprodutível `python -m corpusmith.bench`, QA-2/v1.6.4):
 236× no hit a 150 páginas sintéticas e 636× a 500 — frio cresce linear,
 quente é constante; o ~92× anterior (medição de sessão) era
 CONSERVADOR. Sem HEAD legível ⇒ sem cache (correto por construção).
@@ -110,7 +110,7 @@ TencentDB→pipeline local, Zep→bi-temporal, LongMemEval→eval).
 (relacionadas determinísticas), índice incremental por sha+fingerprint
 (o conceito de layout de Arrow/FlatBuffers/LSM reduzido ao nosso
 invariante "índice derivado" — medido no harness reprodutível
-(`llmwiki.bench`, QA-2/v1.6.4): 4–5× com 1 página alterada e 11–13× no
+(`corpusmith.bench`, QA-2/v1.6.4): 4–5× com 1 página alterada e 11–13× no
 no-op, a 150–500 páginas sintéticas; o 29× anterior era medição de
 sessão NÃO reproduzida — o custo fixo do caminho incremental
 (gazetteer pós-commit + passada de grafo) domina nessa escala), SimHash
@@ -430,7 +430,7 @@ maiores via import (CSV→payload).
 **Decisão**: (1) Docker Compose com daemon empacotado (bootstrap+seed
 no boot, healthcheck em /health, porta publicada só em 127.0.0.1 —
 local-first vale no container; perfil `ml` opcional com Ollama em rede
-interna); (2) migração de dados pré-definidos: `llmwiki seed`
+interna); (2) migração de dados pré-definidos: `corpusmith seed`
 idempotente (referência do mundo via db/seeds/reference_seed.json +
 pipelines builtin — nunca sobrescreve dado do usuário); (3) backlog
 auditado e FECHADO em docs/09-backlog.md — entregue × porta-por-volume
@@ -513,7 +513,7 @@ as fatíveis-e-testáveis aqui.
 - `connect()` REJEITA banco de schema mais novo (`SchemaTooNewError`) —
   o acesso direto agora tem a proteção que só o restore tinha; ledger
   `schema_migrations(from→to, applied_at)` — trilha auditável;
-- `llmwiki doctor [--repair]` (backlog DATA-1): INV-001 (índice órfão),
+- `corpusmith doctor [--repair]` (backlog DATA-1): INV-001 (índice órfão),
   INV-002 (geração/HEAD do índice), INV-003 (supersedida sem marca),
   PIPE (job inexistente), COG (acessibilidade órfã); repair reconstrói
   a projeção (FULL) — nunca toca o canônico; reverifica após reparar;
@@ -587,7 +587,7 @@ regime avaliado (por humano E por IA).
   arquitetura atualizada (architecture.toml [pure]);
 - loader ÚNICO em `harness/epistemics.py` (a única checagem com
   filesystem: existência dos implementation_refs); CLI
-  (`llmwiki epistemics lint|list|show|evaluations`), API
+  (`corpusmith epistemics lint|list|show|evaluations`), API
   (3 GETs `/cockpit/epistemics*` via CurationFacade) e painel Qualidade
   consomem a mesma fonte;
 - **Generalization Envelope**: `evaluation_envelopes` no runtime.db
@@ -629,7 +629,7 @@ Python.
 **Fase 0 — medir primeiro (tudo REAL, nada estimado)**:
 - instrumentação por estágio (`runtime/stages.py`; declaração completa
   em `benchmarks/METRICS.md`) em /ask, rebuild_index e consolidação;
-- harness estendido: `llmwiki bench ask|index|graph|consolidate|compare|
+- harness estendido: `corpusmith bench ask|index|graph|consolidate|compare|
   generate-fixture` (fixtures determinísticas por semente; JSON schema 1;
   baseline versionada em `benchmarks/baseline.json`).
 **Correções Python ANTES de culpar a linguagem (§19, medidas)**:
@@ -643,23 +643,23 @@ Python.
   runtime.db por /ask (eram 3); top-k por heap.
 **Porta ComputeKernel** (`compute/`, domínio sem transporte):
 `PythonComputeKernel` é a REFERÊNCIA e fallback (sempre presente);
-`RustComputeKernel` via PyO3 (`llmwiki_native`, abi3-py311, GIL liberado,
+`RustComputeKernel` via PyO3 (`corpusmith_native`, abi3-py311, GIL liberado,
 SoA — nunca list[dict] gigante); seleção `compute.backend`
 auto|python|rust com fallback OBSERVÁVEL (motivo registrado; rust
 exigido + allow_fallback=false ⇒ erro explícito). Cache de grafo por
 geração (snapshot imutável, swap atômico, hit/miss/build expostos).
-**Workspace `native/`** (Cargo): braincore-types (protocolo v1, erros
-fechados) · braincore-graph (interning u32, CSR offsets/targets/weights,
+**Workspace `native/`** (Cargo): corpusmith-types (protocolo v1, erros
+fechados) · corpusmith-graph (interning u32, CSR offsets/targets/weights,
 PPR com nó virtual p/ seeds fora do grafo — equivalência provada,
-union-find, Brandes) · braincore-sketch (SimHash 64 blake2b
+union-find, Brandes) · corpusmith-sketch (SimHash 64 blake2b
 digest_size=8, 9 bandas round(i·64/9), pares candidatos, paridade
-BIT-A-BIT com kernel/sketch.py) · braincore-text/etl (Fases 3/4:
-tipos+plano fechado, zero lógica canônica) · llmwiki-native-python
-(bindings) · llmwiki-native-worker (manifesto v1 campos fechados,
+BIT-A-BIT com kernel/sketch.py) · corpusmith-text/etl (Fases 3/4:
+tipos+plano fechado, zero lógica canônica) · corpusmith-native-python
+(bindings) · corpusmith-native-worker (manifesto v1 campos fechados,
 eventos NDJSON, report.json, exit codes estáveis; NUNCA escreve bundle
 nem troca index.db — swap é decisão do Python, Fase 4).
 **Isolamento de processo (REL-2b, atrás de `compute.process_isolation`,
-default false)**: jobs pesados rodam em `python -m llmwiki.jobs_proc`
+default false)**: jobs pesados rodam em `python -m corpusmith.jobs_proc`
 com hard timeout REAL (kill no prazo), cancelamento REAL
 (terminate→grace 2s→kill) e crash ⇒ `WorkerCrashed(OSError)` =
 transitório na fila (lease/at-least-once). Governor herdado no filho
@@ -790,7 +790,7 @@ dependentes TMS) → `_apply()` → UMA chamada ao `BundleWriter` com
 - **Superfícies**: `CurationActsFacade` em arquivo próprio (a
   `CurationFacade` já tem ~20 métodos e a fase acrescenta sete atos);
   `api/curation.py` montado à parte (`api/cockpit.py` já tem 640 linhas e é
-  tocado por quase todo pacote da fase); `llmwiki curate <ato>
+  tocado por quase todo pacote da fase); `corpusmith curate <ato>
   chave=valor [--dry-run]`. `dry_run` é OBRIGATÓRIO no corpo — sem default
   silencioso;
 - **G-7 (transversal)**: handler único de `HarnessRejection` → **422** com
@@ -879,7 +879,7 @@ difícil não é escrever o link: é o `unlink` distinguir o link que o ATO pôs
 do que o HUMANO escreveu na prosa. Remover o do humano seria reescrever
 prosa (v0.8 §1.2).
 **Decisão**: proveniência por **região sentinelada**
-(`<!-- llmwiki:relacionados -->` … `<!-- /llmwiki:relacionados -->`, em
+(`<!-- corpusmith:relacionados -->` … `<!-- /corpusmith:relacionados -->`, em
 `okf/relations.py`). Tudo entre as sentinelas é território do ato; tudo
 fora é do autor, e o ato **não olha**. Quando isso significa que a aresta
 SOBREVIVE ao unlink (porque a prosa também cita o alvo), o preview
@@ -1151,7 +1151,7 @@ cujos pesos **caibam** em `memory_fraction` (default `0.6`) da RAM total.
   para o extrativo em vez de propagar vazio como se fosse síntese. A
   escada prefere as variantes `-instruct`, que não gastam orçamento
   raciocinando;
-- **a decisão é inspecionável**: `llmwiki models` mostra o resolvido, o
+- **a decisão é inspecionável**: `corpusmith models` mostra o resolvido, o
   orçamento e por que cada candidato foi recusado (`ausente` × `nao_cabe`);
   exit 1 quando nada é utilizável. `--recommend` alimenta o instalador.
 
@@ -1166,7 +1166,7 @@ válida (coberto por teste). Instalações que dependiam de
 `qwen2.5:7b-instruct` seguem funcionando — ele é a última entrada da
 escada.
 
-**Verificado nesta máquina**: `llmwiki models` resolvendo `qwen3-vl:4b`
+**Verificado nesta máquina**: `corpusmith models` resolvendo `qwen3-vl:4b`
 com o `8b-instruct` marcado `ausente`; `complete()` real devolvendo
 `via: local:qwen3-vl:4b`; o 404 de modelo ausente virando
 `ModelUnavailable` e o `/ask` respondendo extrativo em vez de 500; jobs
@@ -1484,7 +1484,7 @@ fresco) → **usuário escreve sem reindexar** (índice `stale`, mapa e
 centralidade `stale_upstream`, temas `stale_upstream` por dois saltos) →
 reindexar (mapa e centralidade passam a `stale` direto, temas seguem
 transitivos) → recomputar (tudo fresco).
-`llmwiki checkpoints` lista a cadeia e sai com código 1 quando algo está
+`corpusmith checkpoints` lista a cadeia e sai com código 1 quando algo está
 atrás — inspecionável, não só verificável.
 16 testes novos; **635 no total**.
 
@@ -1493,10 +1493,10 @@ atrás — inspecionável, não só verificável.
 rodar.** A auditoria (`docs/17`, G-1) verificou que `pyinstaller build.spec`
 *construía* e parou aí. Construir o artefato e executá-lo são perguntas
 diferentes, e a distância entre elas era o produto inteiro: nenhum terceiro
-jamais teve um `llmwiki-server` que subisse. Reproduzidos, em ordem de morte:
+jamais teve um `corpusmith-server` que subisse. Reproduzidos, em ordem de morte:
 
 1. `EXE(...)` sem `exclude_binaries=True` → `ValueError: Resource
-   '.../llmwiki-server' is not a valid file!`. O `just sidecar` **não
+   '.../corpusmith-server' is not a valid file!`. O `just sidecar` **não
    construía**; o binário que `sidecar.ts` procura no app empacotado nunca
    existiu;
 2. `collect_dynamic_libs("sqlite_vec")` com o `search_patterns` default
@@ -1509,10 +1509,10 @@ jamais teve um `llmwiki-server` que subisse. Reproduzidos, em ordem de morte:
    `ImportError: attempted relative import with no known parent package`. Um
    `packaging_entry.py` com import absoluto resolve, e diz por quê;
 4. recursos resolvidos por `Path(__file__).parents[N]` →
-   `FileNotFoundError: .../llmwiki-server/db/schema_runtime.sql`, com o arquivo
+   `FileNotFoundError: .../corpusmith-server/db/schema_runtime.sql`, com o arquivo
    em `.../_internal/db/`. O daemon morria antes de abrir a porta.
 
-**Decisão em duas partes, e a segunda é a que dura.** `llmwiki/paths.py`
+**Decisão em duas partes, e a segunda é a que dura.** `corpusmith/paths.py`
 centraliza a resolução (`_MEIPASS` quando congelado, `source_root` explícito
 na árvore) — quem chama declara de onde contar, em vez de esconder a contagem
 num `parents[4]` que ninguém revalida quando o módulo muda de lugar. E o job
@@ -1835,3 +1835,19 @@ calibrar as saturações do `support` contra o golden quando houver
 amostra; o legado de `valid_at` (~toda página de máquina existente) fica
 INALTERADO até o ato em lote da F4-PR3 — reescrever frontmatter em massa
 sem preview seria exatamente o que o produto proíbe.
+
+### ADR-53 — Corpusmith: o nome, a categoria e o que o produto pode alegar (v2.0.0)
+**Documento completo em [`docs/21`](21-adr-categoria-corpusmith.md).** Quatro
+identidades concorrentes (Brain Compiler, LLM Wiki, `llmwiki`, `braincore-*`)
+unificadas em **Corpusmith — o compilador local e governado de conhecimento**.
+A categoria antes do nome: *outras memórias ajudam agentes a recordar;
+Corpusmith governa o que humanos e agentes podem tratar como conhecimento.*
+Rename mecânico completo (pacote, CLI, binário, header, env vars, preload,
+appId, crates, módulo PyO3) com **compatibilidade deliberada**: `LLMWIKI_*`
+aceito como fallback e `~/llmwiki` com dados vence `~/corpusmith` vazio —
+verificado no binário empacotado. Versão **2.0.0** porque o rename é breaking.
+A fronteira de honestidade fica fixada por escrito: a alegação atual é
+*"máquinas escrevem sob políticas; humanos governam, revisam e podem
+reverter"* — "Agents propose… Git remembers" é visão-alvo, e "source of
+truth"/"zero hallucination"/"somente humanos escrevem" são alegações
+proibidas no estado atual.

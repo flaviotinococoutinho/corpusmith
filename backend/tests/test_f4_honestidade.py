@@ -4,12 +4,12 @@ P-9: valid_at sem default de escrita (tempo de MUNDO ≠ tempo de registro).
 P-4: `support` ao lado de `uncertainty` — base rasa deixa de virar
 certeza máxima."""
 from __future__ import annotations
-from llmwiki.okf.bundle import BundleReader
-from llmwiki.usecases.compile_source import CompileSource
-from llmwiki.usecases.ask_memory import AskMemory
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
+from corpusmith.okf.bundle import BundleReader
+from corpusmith.usecases.compile_source import CompileSource
+from corpusmith.usecases.ask_memory import AskMemory
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
 
 
 def _write(settings, kb, *docs):

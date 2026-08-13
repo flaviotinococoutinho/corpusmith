@@ -20,17 +20,17 @@ from __future__ import annotations
 import inspect
 import pytest
 from fastapi.testclient import TestClient
-from llmwiki.api.system import build_app
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.git_store import GitStore
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.runtime.events import EventBus
-from llmwiki.runtime.governor import Governor
-from llmwiki.runtime.queue import JobQueue
-from llmwiki.usecases.curate import ACTS
-from llmwiki.usecases.next_actions import NextActions, acts_for
+from corpusmith.api.system import build_app
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.git_store import GitStore
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.runtime.events import EventBus
+from corpusmith.runtime.governor import Governor
+from corpusmith.runtime.queue import JobQueue
+from corpusmith.usecases.curate import ACTS
+from corpusmith.usecases.next_actions import NextActions, acts_for
 
 TOKEN = "t6"
 KINDS = ["review", "question", "low_yield", "stale", "inbox", "bridge",
@@ -65,7 +65,7 @@ def client(base):
     app = build_app(base, JobQueue(rt), Governor(base, rt), EventBus(rt),
                     token=TOKEN)
     with TestClient(app) as c:
-        c.headers.update({"x-llmwiki-auth": TOKEN})
+        c.headers.update({"x-corpusmith-auth": TOKEN})
         yield c
 
 

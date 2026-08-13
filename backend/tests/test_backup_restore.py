@@ -5,15 +5,15 @@ from __future__ import annotations
 import hashlib
 import zipfile
 import pytest
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import SCHEMA_VERSIONS, connect
-from llmwiki.settings import Settings
-from llmwiki.usecases.backup_restore import (CreateBackup, RestoreBackup,
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import SCHEMA_VERSIONS, connect
+from corpusmith.settings import Settings
+from corpusmith.usecases.backup_restore import (CreateBackup, RestoreBackup,
                                              list_backups, verify_backup)
-from llmwiki.usecases.cognitive_state import DeclareCognitiveState
-from llmwiki.usecases.manage_reference import seed_reference
+from corpusmith.usecases.cognitive_state import DeclareCognitiveState
+from corpusmith.usecases.manage_reference import seed_reference
 
 
 def _seed(settings, kb):
@@ -96,7 +96,7 @@ def test_disaster_restore_into_fresh_home(settings, kb, tmp_path):
                        ).fetchone()["c"] >= 4      # referência sobreviveu
     ref.close()
     # projeção reconstruída: /ask do lar novo encontra a página
-    from llmwiki.retrieval import fts
+    from corpusmith.retrieval import fts
     hits = fts.search(fresh, "eventos", limit=3)
     assert any(h["page"] == "concepts/es.md" for h in hits)
 
@@ -149,9 +149,9 @@ def test_backup_e_agendado_semanalmente(settings):
     """P-14 (docs/18 §3): "backup excelente, nunca automático". Segunda-
     feira o Scheduler enfileira `backup` com dedupe semanal e a MENOR
     prioridade do agendador — durabilidade não compete com o usuário."""
-    from llmwiki.jobs import REGISTRY
-    from llmwiki.runtime.queue import JobQueue
-    from llmwiki.runtime.scheduler import Scheduler
+    from corpusmith.jobs import REGISTRY
+    from corpusmith.runtime.queue import JobQueue
+    from corpusmith.runtime.scheduler import Scheduler
     assert "backup" in REGISTRY, "o job precisa existir para ser agendado"
     db = connect(settings.app_support / "runtime.db")
     fila = JobQueue(db)
@@ -180,7 +180,7 @@ def test_job_de_backup_cria_verifica_e_reporta(settings, kb):
     """O job não é só o CreateBackup: um backup automático que ninguém
     verifica é fé, não durabilidade — o run VERIFICA cada sha256."""
     from pathlib import Path
-    from llmwiki.jobs import REGISTRY
+    from corpusmith.jobs import REGISTRY
     _seed(settings, kb)
     out = REGISTRY["backup"](settings, {}, lambda *a, **k: None)
     assert out["verify"]["ok"] is True
@@ -193,7 +193,7 @@ def test_retencao_poda_o_antigo_so_depois_de_verificar_o_novo(settings, kb):
     A poda vem DEPOIS da verificação — um zip novo inválido nunca
     justifica apagar o anterior que verificou."""
     import time as _t
-    from llmwiki.jobs import REGISTRY
+    from corpusmith.jobs import REGISTRY
     _seed(settings, kb)
     primeiro = REGISTRY["backup"](settings, {"keep": 1},
                                   lambda *a, **k: None)

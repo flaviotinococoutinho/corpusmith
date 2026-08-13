@@ -21,9 +21,9 @@ import sqlite3
 import tomllib
 from pathlib import Path
 import pytest
-from llmwiki import __version__
-from llmwiki.bench import DEFAULT_TOLERANCE, compare_against
-from llmwiki.runtime.db import SCHEMA_VERSIONS, _columns, connect, \
+from corpusmith import __version__
+from corpusmith.bench import DEFAULT_TOLERANCE, compare_against
+from corpusmith.runtime.db import SCHEMA_VERSIONS, _columns, connect, \
     reset_initialized
 
 _ROOT = Path(__file__).resolve().parents[2]

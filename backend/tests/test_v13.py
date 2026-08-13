@@ -2,15 +2,15 @@
 índice incremental (espírito LSM/Arrow), SimHash (Charikar) e páginas
 relacionadas (A-mem)."""
 from __future__ import annotations
-from llmwiki.kernel.graphwalk import personalized_pagerank
-from llmwiki.kernel.sketch import hamming, simhash
-from llmwiki.facades import CompilerFacade
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.retrieval.related import related_pages
-from llmwiki.runtime.db import connect
-from llmwiki.usecases.ask_memory import AskMemory
+from corpusmith.kernel.graphwalk import personalized_pagerank
+from corpusmith.kernel.sketch import hamming, simhash
+from corpusmith.facades import CompilerFacade
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.retrieval.related import related_pages
+from corpusmith.runtime.db import connect
+from corpusmith.usecases.ask_memory import AskMemory
 
 
 def _doc(rel, title, body, **meta):
@@ -186,7 +186,7 @@ def test_related_pages_suggest_missing_links(settings, kb):
 
 # ----------------------------------------------- v0.14: lacunas fechadas
 def test_promoted_page_is_immediately_askable(settings, kb):
-    from llmwiki.facades import CurationFacade
+    from corpusmith.facades import CurationFacade
     CurationFacade(settings).promote(
         kind="semantic", title="Baleias jubarte",
         content="As baleias jubarte migram para águas quentes no inverno.")
@@ -196,7 +196,7 @@ def test_promoted_page_is_immediately_askable(settings, kb):
 
 
 def test_stale_flag_reaches_index_immediately(settings, kb):
-    from llmwiki.facades import CurationFacade
+    from corpusmith.facades import CurationFacade
     CurationFacade(settings).promote(
         kind="semantic", title="Antiga técnica",
         content="técnica antiga de cache")
@@ -209,8 +209,8 @@ def test_stale_flag_reaches_index_immediately(settings, kb):
 def test_recycle_refuses_when_page_is_live_again(settings, kb):
     import pytest as _pytest
     import time as _time
-    from llmwiki.facades import CurationFacade
-    from llmwiki.usecases.cold_memory import RecycleMemory
+    from corpusmith.facades import CurationFacade
+    from corpusmith.usecases.cold_memory import RecycleMemory
     CurationFacade(settings).promote(
         kind="semantic", title="Repromovida", content="versão um")
     rt = connect(settings.app_support / "runtime.db")
@@ -231,7 +231,7 @@ def test_recycle_refuses_when_page_is_live_again(settings, kb):
 
 
 def test_jobs_list_includes_payload_for_retry(settings, kb):
-    from llmwiki.runtime.queue import JobQueue
+    from corpusmith.runtime.queue import JobQueue
     rt = connect(settings.app_support / "runtime.db")
     queue = JobQueue(rt)
     queue.enqueue("compile_source", {"path": "raw/x.md"})

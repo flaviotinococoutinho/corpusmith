@@ -7,10 +7,10 @@ só o que é claramente citação ([n] de 1–2 dígitos fora de link markdown)
 é validado — [2024] é ano, não citação."""
 from __future__ import annotations
 import pytest
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.usecases.ask_memory import AskMemory, _invalid_citations
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.usecases.ask_memory import AskMemory, _invalid_citations
 
 
 # ------------------------------------------------------------- helper puro
@@ -55,7 +55,7 @@ def test_sintese_com_citacao_fabricada_degrada_para_extrativo(
         settings, kb, monkeypatch):
     _indexed_page(settings, kb)
     monkeypatch.setattr(
-        "llmwiki.models.router.ModelRouter.complete",
+        "corpusmith.models.router.ModelRouter.complete",
         _fake_complete("Kubernetes faz X [7].\n\n# Citations\n[7] inventada.md"))
     out = AskMemory(settings, "kubernetes scheduler").execute()
     assert out["abstained"] is False and out["evidence"]
@@ -67,7 +67,7 @@ def test_sintese_com_citacao_fabricada_degrada_para_extrativo(
 def test_sintese_com_citacao_valida_passa_intacta(settings, kb, monkeypatch):
     _indexed_page(settings, kb)
     monkeypatch.setattr(
-        "llmwiki.models.router.ModelRouter.complete",
+        "corpusmith.models.router.ModelRouter.complete",
         _fake_complete("Kubernetes orquestra [1].\n\n# Citations\n"
                        "[1] concepts/kubernetes.md"))
     out = AskMemory(settings, "kubernetes scheduler").execute()

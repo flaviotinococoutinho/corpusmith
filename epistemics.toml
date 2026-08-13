@@ -4,7 +4,7 @@
 # como architecture.toml é a fonte dos contratos estruturais. NÃO é
 # decorativo: `backend/tests/test_epistemics_toml.py` cruza os parâmetros
 # declarados aqui com as constantes reais do código, e
-# `llmwiki epistemics lint` (mesma implementação da API e do painel)
+# `corpusmith epistemics lint` (mesma implementação da API e do painel)
 # valida as regras obrigatórias — contrato que mente sobre o código quebra
 # a suíte.
 #
@@ -28,10 +28,10 @@ version = "1.9.1"   # F4-PR2 (ADR-52): overlay contested → low_yield (valor, c
 title = "Retrieval multi-stream com fusão RRF ponderada por crédito Hedge"
 decision = "ordenar evidências candidatas do bundle para responder uma consulta"
 implementation_refs = [
-  "backend/src/llmwiki/retrieval/streams.py",
-  "backend/src/llmwiki/usecases/ask_memory.py",
-  "backend/src/llmwiki/kernel/information.py",
-  "backend/src/llmwiki/usecases/record_outcome.py",
+  "backend/src/corpusmith/retrieval/streams.py",
+  "backend/src/corpusmith/usecases/ask_memory.py",
+  "backend/src/corpusmith/kernel/information.py",
+  "backend/src/corpusmith/usecases/record_outcome.py",
 ]
 inductive_biases = [
   "evidência relevante tende a aparecer bem posicionada em pelo menos um stream (fts, dense, entity, graph, descend, global)",
@@ -90,8 +90,8 @@ overlay_low_yield_penalty = 0.8
 title = "Suficiência de evidência (support 2D ao lado da dispersão)"
 decision = "quantificar QUANTA evidência sustenta a resposta do /ask — o eixo que a uncertainty (dispersão) não mede e inverte na base rasa"
 implementation_refs = [
-  "backend/src/llmwiki/kernel/sufficiency.py",
-  "backend/src/llmwiki/usecases/ask_memory.py",
+  "backend/src/corpusmith/kernel/sufficiency.py",
+  "backend/src/corpusmith/usecases/ask_memory.py",
 ]
 inductive_biases = [
   "mais páginas distintas corroborando = sustentação maior (satura em 3: além disso é redundância, não suficiência)",
@@ -135,8 +135,8 @@ streams_saturation = 3
 title = "Incerteza de retrieval por entropia normalizada da fusão"
 decision = "quantificar a DISPERSÃO da evidência fundida (sinal para hedging na UI e insumo da abstenção)"
 implementation_refs = [
-  "backend/src/llmwiki/retrieval/streams.py",
-  "backend/src/llmwiki/kernel/information.py",
+  "backend/src/corpusmith/retrieval/streams.py",
+  "backend/src/corpusmith/kernel/information.py",
 ]
 inductive_biases = [
   "massa de score espalhada entre muitos chunks indica que o sistema não sabe onde está a resposta (parente do semantic entropy de Kuhn et al. 2023)",
@@ -178,7 +178,7 @@ ui_hedge_threshold = 0.85
 title = "Abstenção com fallback determinístico para a base fria"
 decision = "responder OU confessar ausência de cobertura (custo de silêncio < custo de resposta fabricada)"
 implementation_refs = [
-  "backend/src/llmwiki/usecases/ask_memory.py",
+  "backend/src/corpusmith/usecases/ask_memory.py",
 ]
 inductive_biases = [
   "evidência vazia ou top_score abaixo do limiar indica ausência de cobertura, não resposta difícil",
@@ -220,8 +220,8 @@ threshold_default = 0.0
 title = "Esquecimento por congelamento ACT-R (freeze para a base fria; recycle de volta)"
 decision = "remover uma página da memória QUENTE (retrieval padrão) para a base fria — e reidratá-la quando cold_matches casarem com a pergunta"
 implementation_refs = [
-  "backend/src/llmwiki/usecases/cold_memory.py",
-  "backend/src/llmwiki/kernel/activation.py",
+  "backend/src/corpusmith/usecases/cold_memory.py",
+  "backend/src/corpusmith/kernel/activation.py",
 ]
 inductive_biases = [
   "a ativação de nível-base do ACT-R (Anderson et al. 2004) prevê recuperabilidade a partir do histórico de USO — o que foi lido tende a ser pedido de novo",
@@ -267,8 +267,8 @@ actr_decay = 0.5
 title = "Consolidação do inbox por clusters SimHash"
 decision = "agrupar notas cruas near-duplicadas e compilar UMA página por cluster (uma chamada de LLM por cluster, não uma por nota)"
 implementation_refs = [
-  "backend/src/llmwiki/usecases/consolidate_inbox.py",
-  "backend/src/llmwiki/kernel/sketch.py",
+  "backend/src/corpusmith/usecases/consolidate_inbox.py",
+  "backend/src/corpusmith/kernel/sketch.py",
 ]
 inductive_biases = [
   "textos near-duplicados compartilham a maioria dos shingles de 3 palavras — SimHash (Charikar 2002) aproxima essa sobreposição em 64 bits",
@@ -308,9 +308,9 @@ text_window_chars = 100000
 title = "Reconciliação ADD/UPDATE/SUPERSEDE/NOOP/RECYCLE por escada determinística"
 decision = "decidir se um candidato compilado é novo (ADD), atualiza (UPDATE), substitui (SUPERSEDE), nada acrescenta (NOOP) ou reidrata memória fria (RECYCLE)"
 implementation_refs = [
-  "backend/src/llmwiki/usecases/reconcile_candidate.py",
-  "backend/src/llmwiki/usecases/promote_memory.py",
-  "backend/src/llmwiki/kernel/information.py",
+  "backend/src/corpusmith/usecases/reconcile_candidate.py",
+  "backend/src/corpusmith/usecases/promote_memory.py",
+  "backend/src/corpusmith/kernel/information.py",
 ]
 inductive_biases = [
   "identificador forte compartilhado (doi, isbn, issn, arxiv, git_sha) identifica o mesmo objeto do mundo — determinístico, precede tudo",
@@ -370,10 +370,10 @@ chunk_limit = 64
 title = "Fila única de próxima ação (ranking por densidade valor/custo)"
 decision = "ordenar o que merece a atenção do curador agora, unificando revisão espaçada, lacunas, inbox, pontes frágeis e contradições candidatas"
 implementation_refs = [
-  "backend/src/llmwiki/usecases/next_actions.py",
-  "backend/src/llmwiki/usecases/plan_attention.py",
-  "backend/src/llmwiki/kernel/vitality.py",
-  "backend/src/llmwiki/kernel/attention.py",
+  "backend/src/corpusmith/usecases/next_actions.py",
+  "backend/src/corpusmith/usecases/plan_attention.py",
+  "backend/src/corpusmith/kernel/vitality.py",
+  "backend/src/corpusmith/kernel/attention.py",
 ]
 inductive_biases = [
   "densidade valor/custo (VoI por minuto) ordena melhor que valor absoluto — item caríssimo de valor alto não deve afogar cinco baratos",
@@ -434,7 +434,7 @@ review_gain_floor = 0.3
 title = "Prioridade cognitiva decomposta (o que estudar/validar agora)"
 decision = "ordenar itens de conhecimento por prioridade de atenção dentro de um objetivo declarado"
 implementation_refs = [
-  "backend/src/llmwiki/cognitive/scoring.py",
+  "backend/src/corpusmith/cognitive/scoring.py",
 ]
 inductive_biases = [
   "cada componente é um PROXY observável: foco declarado, distância no grafo, lacuna de profundidade, grau de conexão, agenda espaçada, calor de acesso, custo estimado",
@@ -481,8 +481,8 @@ cost_penalty_saturation_min = 30.0
 title = "Seleção adaptativa da estratégia de explicação (segundo Hedge)"
 decision = "escolher COMO explicar a resposta (direta, analogia-primeiro, exemplo-primeiro, teoria-primeiro, decomposição)"
 implementation_refs = [
-  "backend/src/llmwiki/usecases/ask_memory.py",
-  "backend/src/llmwiki/usecases/record_outcome.py",
+  "backend/src/corpusmith/usecases/ask_memory.py",
+  "backend/src/corpusmith/usecases/record_outcome.py",
 ]
 inductive_biases = [
   "estratégias com histórico de desfechos úteis tendem a continuar úteis para a mesma pessoa",
@@ -520,8 +520,8 @@ strategies = "direta,analogia-primeiro,exemplo-primeiro,teoria-primeiro,decompos
 title = "Mineração metacognitiva de hipóteses (monitoramento → controle gateado)"
 decision = "propor HIPÓTESES sobre o uso da memória (estratégia melhor, correlação carga×erro, excesso de confiança) — nunca rótulos, nunca auto-aplicar"
 implementation_refs = [
-  "backend/src/llmwiki/usecases/metacognition.py",
-  "backend/src/llmwiki/kernel/calibration.py",
+  "backend/src/corpusmith/usecases/metacognition.py",
+  "backend/src/corpusmith/kernel/calibration.py",
 ]
 inductive_biases = [
   "padrões determinísticos (SQL + aritmética, sem LLM) sobre ask_context × ask_outcomes × estado declarado carregam sinal sobre o convívio",
@@ -566,9 +566,9 @@ overconfidence_threshold = 0.2
 title = "Graph Kernel nativo (CSR + PPR + Brandes + componentes em Rust)"
 decision = "calcular SINAIS de grafo (rankings PPR, centralidade, componentes) — o significado (quais páginas viram evidência) é decidido pelo Python"
 implementation_refs = [
-  "native/crates/braincore-graph/src/lib.rs",
-  "backend/src/llmwiki/compute/rust_kernel.py",
-  "backend/src/llmwiki/compute/python_kernel.py",
+  "native/crates/corpusmith-graph/src/lib.rs",
+  "backend/src/corpusmith/compute/rust_kernel.py",
+  "backend/src/corpusmith/compute/python_kernel.py",
 ]
 inductive_biases = [
   "a mesma matemática da referência Python (damping, dangling, normalização) produz os mesmos sinais — só mais rápido",
@@ -606,8 +606,8 @@ protocol_version = 1
 title = "Sketch Kernel nativo (SimHash 64 + bandas LSH + candidatos em Rust)"
 decision = "calcular sketches e pares candidatos de near-duplicata em lote — quem converge/consolida é decidido pelo Python"
 implementation_refs = [
-  "native/crates/braincore-sketch/src/lib.rs",
-  "backend/src/llmwiki/compute/rust_kernel.py",
+  "native/crates/corpusmith-sketch/src/lib.rs",
+  "backend/src/corpusmith/compute/rust_kernel.py",
 ]
 inductive_biases = [
   "paridade BIT-A-BIT com kernel/sketch.py: mesmo \\w do CPython (categorias Unicode L*∪N*∪'_'), mesmo blake2b(digest_size=8), mesmas 9 bandas round(i·64/9)",
@@ -642,7 +642,7 @@ max_hamming_exact = 8
 title = "Cache de grafo por geração (snapshot imutável)"
 decision = "reutilizar o snapshot do grafo entre consultas enquanto (bundle_head, index_generation) não mudar"
 implementation_refs = [
-  "backend/src/llmwiki/compute/graph_cache.py",
+  "backend/src/corpusmith/compute/graph_cache.py",
 ]
 inductive_biases = [
   "o grafo só muda quando a geração do índice muda — reconstruí-lo a cada pergunta é trabalho repetido",
@@ -675,9 +675,9 @@ human_review_available = false
 title = "Isolamento de jobs pesados por processo (hard kill real)"
 decision = "executar classes pesadas fora do processo da API, com timeout e cancelamento que MATAM o processo (não apenas sinalizam)"
 implementation_refs = [
-  "backend/src/llmwiki/runtime/procjobs.py",
-  "backend/src/llmwiki/jobs_proc.py",
-  "native/crates/llmwiki-native-worker/src/main.rs",
+  "backend/src/corpusmith/runtime/procjobs.py",
+  "backend/src/corpusmith/jobs_proc.py",
+  "native/crates/corpusmith-native-worker/src/main.rs",
 ]
 inductive_biases = [
   "thread não dá hard-kill para CPU-bound síncrono (limitação registrada no ADR-36) — processo dá",
@@ -715,7 +715,7 @@ grace_seconds = 2.0
 title = "Extração de texto nativa (Fase 3 — PLANEJADA, sem implementação)"
 decision = "NENHUMA nesta entrega: chunking/links/masking/Aho-Corasick continuam no Python de referência (normalize/)"
 implementation_refs = [
-  "native/crates/braincore-text/src/lib.rs",
+  "native/crates/corpusmith-text/src/lib.rs",
 ]
 inductive_biases = [
   "plano fechado (PHASE3_PLAN no crate): chunking → links → masking → aho-corasick → extratores; entrada condicionada a hotspot MEDIDO na Fase 0 e byte-identidade diferencial",
@@ -743,10 +743,10 @@ human_review_available = false
 
 [mechanisms.native_index_builder]
 title = "Native Index Builder (Fase 4 — PLANEJADA, sem implementação)"
-decision = "NENHUMA nesta entrega: o rebuild continua no Python; o protocolo (manifesto v1, index.db.next, swap decidido pelo Python) está especificado em braincore-etl"
+decision = "NENHUMA nesta entrega: o rebuild continua no Python; o protocolo (manifesto v1, index.db.next, swap decidido pelo Python) está especificado em corpusmith-etl"
 implementation_refs = [
-  "native/crates/braincore-etl/src/lib.rs",
-  "native/crates/llmwiki-native-worker/src/main.rs",
+  "native/crates/corpusmith-etl/src/lib.rs",
+  "native/crates/corpusmith-native-worker/src/main.rs",
 ]
 inductive_biases = [
   "o worker constrói index.db.next e DEVOLVE artefato; validação (schema, quick_check, geração, HEAD) e swap atômico são SEMPRE do Python — o worker nunca substitui index.db sozinho",
@@ -777,8 +777,8 @@ human_review_available = false
 title = "Snapshot da camada de padrões: partição repetível, datada e com backend declarado"
 decision = "atribui cada página a uma comunidade e elege as pontes frágeis; NÃO decide nome de tema (isso é o theme_id da F2-PR2) e NÃO invalida nada"
 implementation_refs = [
-  "backend/src/llmwiki/usecases/detect_communities.py",
-  "backend/src/llmwiki/retrieval/observatory.py",
+  "backend/src/corpusmith/usecases/detect_communities.py",
+  "backend/src/corpusmith/retrieval/observatory.py",
   "backend/db/schema_index.sql",
 ]
 inductive_biases = [
@@ -825,8 +825,8 @@ human_review_available = false
 title = "Identidade de tema por casamento de partições (Jaccard + forma do casamento)"
 decision = "decide se duas partições descrevem O MESMO tema e qual evento aconteceu; disso decorre UPDATE vs SUPERSEDE de pagina canonica em communities/. NAO decide o rotulo legivel (isso e do LLM e e cosmetico)"
 implementation_refs = [
-  "backend/src/llmwiki/kernel/themes.py",
-  "backend/src/llmwiki/usecases/detect_communities.py",
+  "backend/src/corpusmith/kernel/themes.py",
+  "backend/src/corpusmith/usecases/detect_communities.py",
   "docs/16-rfc-theme-id.md",
 ]
 inductive_biases = [

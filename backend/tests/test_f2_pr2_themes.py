@@ -18,13 +18,13 @@ dela mudaram o desenho e por isso viram teste:
 from __future__ import annotations
 import json
 import pytest
-from llmwiki.kernel.themes import EVENTS, TAU, ThemeEvent, jaccard, match
-from llmwiki.kernel.themes import theme_id as tid_de
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import SCHEMA_VERSIONS, connect
-from llmwiki.usecases.detect_communities import DetectCommunities
+from corpusmith.kernel.themes import EVENTS, TAU, ThemeEvent, jaccard, match
+from corpusmith.kernel.themes import theme_id as tid_de
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import SCHEMA_VERSIONS, connect
+from corpusmith.usecases.detect_communities import DetectCommunities
 
 
 def _pgs(prefixo: str, n: int, inicio: int = 0) -> set[str]:
@@ -281,7 +281,7 @@ def test_o_llm_nao_decide_identidade(base, monkeypatch):
     """RFC §4.4: nenhum campo que decida UPDATE/SUPERSEDE pode vir do modelo.
     Com o roteador devolvendo rótulo ABSURDO e diferente a cada chamada, o
     `theme_id` e o `rel_path` têm de sair idênticos."""
-    from llmwiki.models.router import ModelRouter
+    from corpusmith.models.router import ModelRouter
     contador = {"n": 0}
 
     def falso(self, *a, **k):
@@ -316,7 +316,7 @@ def _legado(kb, nome, membros):
         "source_sha256: " + "a" * 64 + "\n---\n\n"
         "# " + nome + "\n\nTema antigo.\n\n## Membros centrais\n"
         + "\n".join(f"- [{m}](/{m})" for m in membros) + "\n")
-    from llmwiki.okf.git_store import GitStore
+    from corpusmith.okf.git_store import GitStore
     GitStore(kb).commit(f"página de tema no formato antigo: {nome}")
 
 
@@ -356,7 +356,7 @@ def test_pagina_antiga_malformada_nao_bloqueia_as_outras(base, kb):
                     "privacy: local_only\ngenerated_via: local:leiden\n---\n\n"
                     "# ruim\n\n## Membros centrais\n"
                     + "\n".join(f"- [{m}](/{m})" for m in membros) + "\n")
-    from llmwiki.okf.git_store import GitStore
+    from corpusmith.okf.git_store import GitStore
     GitStore(kb).commit("página de tema malformada")
     DetectCommunities(base).execute()
     assert "superseded_by: communities/thm_" in \
@@ -387,7 +387,7 @@ def test_sumario_identico_nao_move_o_head(base, kb):
     derivado é o mesmo — reescrevê-lo movia o HEAD a cada job semanal,
     enchendo o Git canônico de commits sem informação. Segunda execução
     sem mudança no bundle: zero sumários escritos, HEAD imóvel."""
-    from llmwiki.okf.git_store import GitStore
+    from corpusmith.okf.git_store import GitStore
     DetectCommunities(base).execute()
     head = GitStore(kb).repo.head.commit.hexsha
     segunda = DetectCommunities(base).execute()
@@ -401,7 +401,7 @@ def test_inv005_acusa_duas_paginas_vivas_para_um_tema(base, kb):
     """Invariante do RFC §5 sem verificador seria promessa. ERROR e não warn:
     ao contrário de mapa velho (INV-004, servível com aviso), duas verdades
     vivas sobre o mesmo tema não têm leitura correta."""
-    from llmwiki.usecases.diagnose import DiagnoseSystem
+    from corpusmith.usecases.diagnose import DiagnoseSystem
     DetectCommunities(base).execute()
     assert not [f for f in DiagnoseSystem(base).execute()["findings"]
                 if f["inv"] == "INV-005"], "bundle são acusado à toa"
@@ -427,7 +427,7 @@ def test_o_job_nao_deixa_o_doctor_vermelho(base):
 
     Reindexar aqui só é seguro porque a D-E foi paga no F2-PR1:
     `communities/` está fora da construção do grafo."""
-    from llmwiki.usecases.diagnose import DiagnoseSystem
+    from corpusmith.usecases.diagnose import DiagnoseSystem
     assert DiagnoseSystem(base).execute()["ok"], "cenário já sujo"
     DetectCommunities(base).execute()
     rel = DiagnoseSystem(base).execute()

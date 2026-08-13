@@ -34,12 +34,12 @@ def test_toml_transport_matches_enforced_set():
 
 
 def test_toml_product_version_matches_package():
-    from llmwiki import __version__
+    from corpusmith import __version__
     assert _load()["product_version"] == __version__  # versão única
 
 
 def test_toml_databases_match_schema_versions():
-    from llmwiki.runtime.db import SCHEMA_VERSIONS
+    from corpusmith.runtime.db import SCHEMA_VERSIONS
     declared = {d["name"]: d["schema_version"]
                 for d in _load()["database"]}
     assert declared == SCHEMA_VERSIONS               # nem sobra, nem falta

@@ -14,11 +14,11 @@ uma constatação do comportamento ATUAL (sem seed), não uma garantia.
 """
 from __future__ import annotations
 import pytest
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.usecases.detect_communities import DetectCommunities
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.usecases.detect_communities import DetectCommunities
 
 pytestmark = pytest.mark.ml
 

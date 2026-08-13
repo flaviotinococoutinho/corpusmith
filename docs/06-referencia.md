@@ -38,7 +38,7 @@ Ausência de `# Citations` e de reservados **nunca** gera finding
 | `policy.quotation_attribution` | warn (só lint, corpus) | citação conhecida do reference.db presente no corpo sem o sobrenome do autor em lugar nenhum do texto — sem atribuição ou mal-atribuída (v1.2; normas pré-computadas, custo medido < 2s na suíte) |
 | `policy.contradiction_candidate` | warn (só lint, corpus) | mesmo identificador forte (doi/isbn/issn/arxiv) em 2+ páginas sem sucessão (`superseded_by`/`supersedes` no grupo ou `invalid_at`); o finding nomeia a página mais entrincheirada (humana > máquina) |
 
-## 2. Endpoints (API local, auth header `x-llmwiki-auth` OU `?auth=`)
+## 2. Endpoints (API local, auth header `x-corpusmith-auth` OU `?auth=`)
 
 ```
 GET  /                           (sem auth; raiz HATEOAS: mapa _links de todo o serviço)
@@ -251,7 +251,7 @@ embed + consolidate_inbox. O job `pipeline` injeta o REGISTRY no
 ## 5. Configuração (`config/default.yaml` + Settings)
 
 ```yaml
-home: ~/llmwiki                 # LLMWIKI_HOME sobrepõe
+home: ~/corpusmith                 # CORPUSMITH_HOME sobrepõe
 privacy: {default: local_only, rules: [{pattern, privacy}...]}
 budget:  {daily_usd: 2.0}
 policy:  {citation_required: true}
@@ -348,15 +348,15 @@ MachinePageUseCase      subclasses não sobrescrevem execute
 
 ## 10. Use cases e facades
 
-CLI ganha (v0.14): `llmwiki cold` · `llmwiki freeze <page> [--force]` ·
-`llmwiki recycle <page>`; `ask` exibe incerteza alta e memórias frias
+CLI ganha (v0.14): `corpusmith cold` · `corpusmith freeze <page> [--force]` ·
+`corpusmith recycle <page>`; `ask` exibe incerteza alta e memórias frias
 compatíveis na abstenção. CLI (v1.6):
-`llmwiki epistemics lint|list|show <id>|evaluations <id>` — contratos
+`corpusmith epistemics lint|list|show <id>|evaluations <id>` — contratos
 epistemológicos (ADR-38; lint sai 1 com erros, mesma fonte do painel).
-CLI (v1.7, ADR-39): `llmwiki bench core|ask|index|graph|consolidate|
+CLI (v1.7, ADR-39): `corpusmith bench core|ask|index|graph|consolidate|
 compare|generate-fixture` — harness reprodutível (fixtures por semente;
 JSON schema 1; baseline versionada em `benchmarks/baseline.json`).
-CLI (v1.9, ADR-42): `llmwiki models [--recommend]` — resolução do modelo
+CLI (v1.9, ADR-42): `corpusmith models [--recommend]` — resolução do modelo
 local: qual entrada da escada `models.local.chat` ganhou, o orçamento de
 memória (`memory_fraction` × RAM) e por que cada candidato foi recusado
 (`ausente` × `nao_cabe`). Sai 1 quando nada é utilizável; `--recommend`
@@ -395,7 +395,7 @@ recriada quando o CHECK antigo não aceita `RECYCLE` (dados preservados).
 Derivados do bundle (gazetteer + schemas de tipo) são cacheados por
 `(kb, HEAD)` em `okf/authorities.py` — toda escrita commita, então o
 HEAD é chave de invalidação perfeita (236× no hit a 150 páginas,
-636× a 500 — harness reprodutível `python -m llmwiki.bench`, QA-2).
+636× a 500 — harness reprodutível `python -m corpusmith.bench`, QA-2).
 
 ## 11. Constantes calibráveis
 

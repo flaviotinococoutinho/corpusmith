@@ -1,6 +1,6 @@
 ---
 name: ship-pr
-description: Entregar uma mudança do LLM Wiki como PR seguindo o protocolo normativo do AGENTS.md — teste que falha antes, menor mudança, gate completo, PR com invariantes declarados e evidência executável, CI verde, merge e limpeza de branch. Usar sempre que uma mudança de código estiver pronta para sair do working tree.
+description: Entregar uma mudança do Corpusmith como PR seguindo o protocolo normativo do AGENTS.md — teste que falha antes, menor mudança, gate completo, PR com invariantes declarados e evidência executável, CI verde, merge e limpeza de branch. Usar sempre que uma mudança de código estiver pronta para sair do working tree.
 ---
 
 # ship-pr — do working tree ao main sem quebrar o contrato

@@ -9,10 +9,10 @@
 
 | Componente | Onde | O quê |
 |---|---|---|
-| backend (`llmwiki`) | `backend/.venv` | daemon FastAPI + CLI (`llmwiki`, `llmwikictl`) |
+| backend (`corpusmith`) | `backend/.venv` | daemon FastAPI + CLI (`corpusmith`, `corpusmithctl`) |
 | desktop (cockpit) | `desktop/node_modules` | Electron + Vite + React |
-| dados do usuário | `~/llmwiki` (ou `$LLMWIKI_HOME`) | bundle Git + 5 bancos SQLite + handshake |
-| Docker (opcional) | imagem `brain-compiler-llmwiki` | daemon containerizado, dados no volume |
+| dados do usuário | `~/corpusmith` (ou `$CORPUSMITH_HOME`) | bundle Git + 5 bancos SQLite + handshake |
+| Docker (opcional) | imagem `corpusmith-corpusmith` | daemon containerizado, dados no volume |
 
 ## 1. Requisitos (versões validadas)
 
@@ -45,15 +45,15 @@ cd backend
 python3.12 -m venv .venv                # ver §7.1 antes de usar python3
 .venv/bin/pip install -U pip
 .venv/bin/pip install -e ".[dev]"
-chmod +x scripts/llmwiki scripts/llmwikictl scripts/pull_models.sh scripts/install_daemon.sh
+chmod +x scripts/corpusmith scripts/corpusmithctl scripts/pull_models.sh scripts/install_daemon.sh
 
-# primeira execução (cria ~/llmwiki; use LLMWIKI_HOME para outro lugar)
-scripts/llmwiki okf bootstrap           # → "bundle criado"
-scripts/llmwiki seed                    # → seed ok: {'terms': 7, 'quotations': 3, 'facts': 11} (+pipelines)
+# primeira execução (cria ~/corpusmith; use CORPUSMITH_HOME para outro lugar)
+scripts/corpusmith okf bootstrap           # → "bundle criado"
+scripts/corpusmith seed                    # → seed ok: {'terms': 7, 'quotations': 3, 'facts': 11} (+pipelines)
 
 # daemon
-.venv/bin/python -m llmwiki.daemon &    # → "llmwiki daemon em http://127.0.0.1:8377"
-scripts/llmwikictl status               # → pending_jobs, budget, instance
+.venv/bin/python -m corpusmith.daemon &    # → "corpusmith daemon em http://127.0.0.1:8377"
+scripts/corpusmithctl status               # → pending_jobs, budget, instance
 
 # desktop (outro terminal)
 cd desktop && npm ci && npm run dev     # cockpit conecta via handshake
@@ -67,7 +67,7 @@ AGPL — fica fora do binário) e `".[ml]"` (sqlite-vec, igraph/leiden).
 ```bash
 docker compose config -q     # valida o arquivo
 docker compose up -d         # build + daemon; bootstrap+seed automáticos no boot
-docker compose exec llmwiki cat /data/state/daemon.json   # host/porta/token
+docker compose exec corpusmith cat /data/state/daemon.json   # host/porta/token
 docker compose --profile ml up -d   # + Ollama em rede interna
 ```
 
@@ -94,22 +94,22 @@ o modelo da config ausente.
 Smoke de runtime (não destrutivo — use um HOME descartável):
 
 ```bash
-export LLMWIKI_HOME=/tmp/llmwiki-smoke
-backend/scripts/llmwiki okf bootstrap    # bundle criado
-backend/scripts/llmwiki seed             # seed ok (idempotente)
-backend/scripts/llmwiki okf lint         # 0 finding(s), 0 erro(s)
-backend/scripts/llmwiki doctor           # {"ok": true, ...}
-backend/scripts/llmwiki epistemics lint  # 7 mecanismo(s), 0 finding(s)
+export CORPUSMITH_HOME=/tmp/corpusmith-smoke
+backend/scripts/corpusmith okf bootstrap    # bundle criado
+backend/scripts/corpusmith seed             # seed ok (idempotente)
+backend/scripts/corpusmith okf lint         # 0 finding(s), 0 erro(s)
+backend/scripts/corpusmith doctor           # {"ok": true, ...}
+backend/scripts/corpusmith epistemics lint  # 7 mecanismo(s), 0 finding(s)
 ```
 
 Smoke da API (daemon rodando):
 
 ```bash
-TOKEN=$(python3 -c "import json,os;print(json.load(open(os.path.expandvars('$LLMWIKI_HOME/state/daemon.json')))['token'])")
-curl -s -H "x-llmwiki-auth: $TOKEN" http://127.0.0.1:8377/health/full | head
+TOKEN=$(python3 -c "import json,os;print(json.load(open(os.path.expandvars('$CORPUSMITH_HOME/state/daemon.json')))['token'])")
+curl -s -H "x-corpusmith-auth: $TOKEN" http://127.0.0.1:8377/health/full | head
 # → {"ok": true, "instance": {...}, "stacks": {"runtime.db": {"integrity": "ok", ...}}}
 
-curl -s -X POST -H "x-llmwiki-auth: $TOKEN" -H "Content-Type: application/json" \
+curl -s -X POST -H "x-corpusmith-auth: $TOKEN" -H "Content-Type: application/json" \
      -d '{"query":"pergunta sem cobertura"}' http://127.0.0.1:8377/ask
 # → {"answer": null, "abstained": true, "gaps": [...]}  ← abstenção honesta é o esperado
 ```
@@ -117,7 +117,7 @@ curl -s -X POST -H "x-llmwiki-auth: $TOKEN" -H "Content-Type: application/json" 
 ## 6. Daemon como serviço (macOS) e modelos locais
 
 ```bash
-backend/scripts/install_daemon.sh    # launchd agent (com.llmwiki.daemon)
+backend/scripts/install_daemon.sh    # launchd agent (com.corpusmith.daemon)
 backend/scripts/pull_models.sh       # baixa o modelo adequado A ESTA máquina
 ```
 
@@ -146,7 +146,7 @@ Duas regras deliberadas:
 Inspecione a decisão (e por que cada candidato foi recusado):
 
 ```bash
-backend/scripts/llmwiki models
+backend/scripts/corpusmith models
 # → {"resolved_chat": "qwen3-vl:4b", "ram_total_gb": 8.59,
 #    "memory_budget_gb": 5.15,
 #    "ladder": [{"candidate": "qwen3-vl:8b-instruct", "status": "ausente"}, ...]}
@@ -203,9 +203,9 @@ docker compose version    # → Docker Compose version 5.x
 
 ### 7.3 API responde `401 {"detail": "token inválido"}`
 
-O header de auth é **`x-llmwiki-auth: <token>`** (ou `?auth=<token>` —
+O header de auth é **`x-corpusmith-auth: <token>`** (ou `?auth=<token>` —
 existe porque EventSource não envia headers), **não** `Authorization:
-Bearer`. O token efêmero vive em `$LLMWIKI_HOME/state/daemon.json` e muda
+Bearer`. O token efêmero vive em `$CORPUSMITH_HOME/state/daemon.json` e muda
 a cada boot do daemon.
 
 ### 7.4 `POST /ask` responde `422`
@@ -224,7 +224,7 @@ O bundle é um repo Git e o bootstrap faz o commit inicial — configure
 ### 7.6 Porta 8377 ocupada
 
 Só existe UMA instância por HOME (`state/daemon.json` é o handshake).
-Pare a antiga (`launchctl unload ~/Library/LaunchAgents/com.llmwiki.daemon.plist`
+Pare a antiga (`launchctl unload ~/Library/LaunchAgents/com.corpusmith.daemon.plist`
 ou mate o processo) ou mude `server.port` via override de config.
 
 ### 7.7 `/ask` se abstém em base recém-instalada
@@ -241,7 +241,7 @@ Sintoma (encontrado nesta máquina): jobs `embed` falhando em série e
 mas o modelo pedido nunca foi baixado. Diagnostique com:
 
 ```bash
-backend/scripts/llmwiki models            # resolved_chat: null ⇒ nada utilizável
+backend/scripts/corpusmith models            # resolved_chat: null ⇒ nada utilizável
 curl -s http://127.0.0.1:11434/api/tags   # o que existe de fato
 ```
 
@@ -259,11 +259,11 @@ Sintoma: `doctor` com `ok: false` e `INV-002 … índice de geração antiga
 então o reparo é seguro:
 
 ```bash
-backend/scripts/llmwiki backup create    # opcional, mas barato
-backend/scripts/llmwiki doctor --repair  # → ok: true
+backend/scripts/corpusmith backup create    # opcional, mas barato
+backend/scripts/corpusmith doctor --repair  # → ok: true
 ```
 
 Depois de atualizar, **reinicie o daemon** — o processo antigo continua
 com o código velho em memória e pode responder 500 ao ler dados já
-migrados: `launchctl kickstart -k gui/$(id -u)/com.llmwiki.daemon`.
+migrados: `launchctl kickstart -k gui/$(id -u)/com.corpusmith.daemon`.
 Confirme com `curl -s .../health` que `version` é a esperada.

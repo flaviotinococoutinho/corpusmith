@@ -3,15 +3,15 @@ consolidação por recorrência (CLS), contradição determinística (AGM) e
 schemas por tipo (DTT lite)."""
 from __future__ import annotations
 import json
-from llmwiki.facades import CompilerFacade, CurationFacade
-from llmwiki.kernel.activation import base_level_activation, logistic
-from llmwiki.okf.authorities import load_gazetteer, load_type_schemas
-from llmwiki.okf.bundle import BundleReader
-from llmwiki.okf.document import OKFDocument, OKFFrontMatter
-from llmwiki.okf.writer import BundleWriter
-from llmwiki.retrieval.fts import rebuild_index
-from llmwiki.runtime.db import connect
-from llmwiki.usecases.reflect_usage import ReflectOnUsage
+from corpusmith.facades import CompilerFacade, CurationFacade
+from corpusmith.kernel.activation import base_level_activation, logistic
+from corpusmith.okf.authorities import load_gazetteer, load_type_schemas
+from corpusmith.okf.bundle import BundleReader
+from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+from corpusmith.okf.writer import BundleWriter
+from corpusmith.retrieval.fts import rebuild_index
+from corpusmith.runtime.db import connect
+from corpusmith.usecases.reflect_usage import ReflectOnUsage
 
 
 def _doc(rel="concepts/x.md", body="# X\n\ncorpo", **meta):
@@ -234,7 +234,7 @@ def test_machine_page_emits_stage_events(settings, kb):
 
 
 def test_ingest_source_sanitizes_and_dedupes(settings, kb):
-    from llmwiki.usecases.ingest_source import IngestSource
+    from corpusmith.usecases.ingest_source import IngestSource
     import pytest as _pytest
     first = IngestSource(settings, filename="Água & Fogo.md",
                          content="# a").execute()

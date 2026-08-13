@@ -1,4 +1,4 @@
-# Brain Compiler
+# Corpusmith
 
 **`AGENTS.md` é a fonte normativa deste repositório. Leia-o antes de qualquer
 alteração** — as regras lá são MUST/MUST NOT (RFC 2119) e este arquivo não as
@@ -31,9 +31,9 @@ entre máquinas); é guarda de mesma-máquina/nightly.
 ## Ferramentas de operação (não são testes)
 
 ```bash
-cd backend && .venv/bin/python -m llmwiki.cli doctor            # invariantes INV-*
-cd backend && .venv/bin/python -m llmwiki.cli epistemics lint   # contratos epistêmicos
-cd backend && .venv/bin/python -m llmwiki.cli backup create     # backup verificável
+cd backend && .venv/bin/python -m corpusmith.cli doctor            # invariantes INV-*
+cd backend && .venv/bin/python -m corpusmith.cli epistemics lint   # contratos epistêmicos
+cd backend && .venv/bin/python -m corpusmith.cli backup create     # backup verificável
 ```
 
 ## Forma do projeto
