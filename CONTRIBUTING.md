@@ -26,8 +26,9 @@ scripts/install.sh --with-tests --with-smoke
 ```
 
 Também é possível instalar somente o backend com `--backend-only`. Python
-3.11+, Node.js 20+, Git e, para o gate completo, Docker e Rust são os
-pré-requisitos principais.
+3.11+, Node.js 20+ e Git são os pré-requisitos principais. O `just verify`
+também usa Docker Compose; Rust é necessário para reproduzir localmente o job
+nativo da CI.
 
 ## Fazendo a mudança
 
@@ -41,16 +42,18 @@ pré-requisitos principais.
 
 ## Verificação
 
-Rode o gate local antes de abrir o pull request:
+Rode o conjunto automatizado de verificações locais antes de abrir o pull
+request:
 
 ```bash
 just verify
 ```
 
-A CI também verifica backend, contratos epistêmicos e operacionais, frontend,
-Docker Compose, kernels Rust e o binário empacotado. Se uma perna opcional não
-puder ser executada localmente, explique isso no pull request e confirme as
-demais.
+Esse comando cobre a suíte do backend, typecheck e smoke do frontend, Docker
+Compose e os contratos epistêmicos. A CI completa o gate com a perna ML,
+invariantes operacionais, build do frontend, kernels Rust e execução do binário
+empacotado. Se uma perna não puder ser reproduzida localmente, explique isso no
+pull request e confirme as demais.
 
 ## Pull requests
 
