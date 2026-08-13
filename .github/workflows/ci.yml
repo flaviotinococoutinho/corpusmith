@@ -1,5 +1,11 @@
 name: ci
 on: [push, pull_request]
+
+# Menor privilégio explícito: todos os jobs deste workflow apenas leem o
+# repositório. A release declara `contents: write` isoladamente no próprio job.
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
