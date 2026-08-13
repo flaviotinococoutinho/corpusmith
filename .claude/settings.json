@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(just *)",
+      "Bash(cargo test*)",
+      "Bash(cargo check*)",
+      "Bash(cargo fmt*)",
+      "Bash(npx tsc --noEmit*)",
+      "Bash(docker compose config*)",
+      "Bash(backend/.venv/bin/python *)"
+    ]
+  }
+}
