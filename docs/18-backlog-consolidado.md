@@ -183,7 +183,7 @@ nenhum produtor.
 | # | O quê | Evidência | Estado |
 |---|---|---|---|
 | **O-1** | **Perda de ratificação silenciosa na fusão** — a regra nova derruba `human_approved` quando só um lado o tem (correto), mas derrubava sem registro; e a chave `confidence` AUSENTE no rascunho herdava a ratificação da residente pela regra genérica de fusão ("o que falta vem da fonte") | 🔴 medido (dois testes reprovando antes das correções) | ✅ **RESOLVIDO**: `kernel/ontology.py:ratificacao_perdida` + declaração no preview do MergePages (eixo humano) e em `page.stage`/resultado (eixo de máquina); `merge_meta` aplica o default documentado `extracted` à chave ausente |
-| **O-2** | **`contested` não tem escritor.** O vocabulário fechado declara o valor; nada no produto o produz. A fila nunca proporá resolução de contestação | 🟡 declarado (`ontology.toml`, RFC-004 §5.1) | ⏭️ pago pelo **F4-PR3**: `policy.factual_conflict` (docs/14 §P-5: mesma entidade quantity/date, mesma dimensão, fora de tolerância, sem sucessão nem ordenação temporal, unidade idêntica + span nas duas — precisão > recall) detecta; a marca `contested` nas páginas envolvidas vira item de fila com destino (herda P-1). **Exige RFC** (regra nova com limiar no caminho de escrita, precedente RFC-003) |
+| **O-2** | **`contested` não tem escritor.** O vocabulário fechado declara o valor; nada no produto o produz. A fila nunca proporá resolução de contestação | 🟡 declarado (`ontology.toml`, RFC-004 §5.1) | 🟨 **meio pago**: `classificar(em_conflito=True)` produz o valor (F4-PR3a, RFC-005 §5.3); falta o detector que passa `True` (F4-PR3b). Pago pelo **F4-PR3**: `policy.factual_conflict` (docs/14 §P-5: mesma entidade quantity/date, mesma dimensão, fora de tolerância, sem sucessão nem ordenação temporal, unidade idêntica + span nas duas — precisão > recall) detecta; a marca `contested` nas páginas envolvidas vira item de fila com destino (herda P-1). **Exige RFC** (regra nova com limiar no caminho de escrita, precedente RFC-003) |
 | **O-3** | **Isolamento multi-escritor está fora do envelope.** O produto depende do gate único + rito serializado; escritas concorrentes de vários agentes não têm resposta (a classe de anomalia que arXiv:2606.06240 tipifica) | 🟡 declarado (`docs/26` §4) | fica declarado; só entra no roadmap se o produto ganhar multi-agente — condição, não plano |
 | **O-4** | **Os sentidos numéricos de `confidence` seguem no mesmo nome** (autorrelato `confidence_before`, taxas da metacognição, intervalos de avaliação) | 🔴 medido (`docs/22` §2.1) | deriva `open` em `ontology.toml [drift.confidence]`, lint confere os marcadores; rename é decisão própria (não acompanha F4-PR3) |
 | **O-5** | **`Assertion` como entidade** — a unidade epistêmica atômica | 🟡 declarado (RFC-004 §6) | **quatro condições de reentrada**, a primeira é MEDIR uma consulta que a página responde errado; arte prévia citada (nanopubs/micropubs/CRMinf) |
@@ -199,4 +199,37 @@ nenhum produtor.
 3. **F7** (P-11 resíduo de custo) — `temporal_partition` paga a terceira;
 4. **C6** (campo de efeito colateral no `EpistemicContract`) — pequeno, exige
    mudança de modelo, sem dependências.
+
+### 9.1 · F4-PR3 partido em dois (RFC-005)
+
+O levantamento para o `policy.factual_conflict` encontrou um problema de
+desenho que muda a forma do pacote, e um achado colateral que vira
+pré-requisito.
+
+**O problema de desenho.** `docs/14` §P-5 pede "mesma entidade de kind
+`quantity` com valores fora de tolerância", e isso **não é implementável**:
+`quantities.py:67` faz `canonical = f"{value:g} {disp}"`, então o `canonical`
+de uma quantidade É o valor — duas quantidades em conflito são entidades
+*diferentes*, e não existe coluna ligando uma quantidade ao sujeito de que
+ela é predicado. Sem sujeito, o detector compararia toda quantidade com toda
+quantidade e inundaria a fila justamente no item de maior VoI (0.85).
+[RFC-005](27-rfc-conflito-factual.md) resolve fazendo o detector um
+**refinamento** de `contradiction_candidate` — o sujeito é o grupo de
+identificador forte que já existe, e a precisão passa a ser por construção.
+
+| # | Pacote | O quê | Estado |
+|---|---|---|---|
+| **F4-PR3a** | o instrumento | `kernel/factual.py` (puro, com a guarda de faixa que o plano não previa), `TOLERANCIA_RELATIVA = 0.01` declarada como NÃO calibrada, `classificar(em_conflito=)` produzindo `contested` | ✅ entregue |
+| **F4-PR3b** | a obra | `check_corpus` emite `policy.factual_conflict`; fila distingue conflito factual de coexistência; `[mechanisms.factual_conflict]` em `epistemics.toml` com o nome MOVIDO de `PROMISED` para `EXPECTED`; código novo em `docs/06` §1 | ⏭️ próximo |
+| **F4-PR3c** | o resíduo do P-9 | ato em lote com preview do `valid_at` legado | ⏭️ |
+
+**Duas cláusulas de `docs/14` §P-5 caem, e a razão fica registrada**:
+*unidade idêntica* (descartava `12 km` vs `12000 m`, exatamente o caso que a
+normalização SI existe para pegar) e *sem ordenação temporal* (os candidatos
+são `valid_at`, declarado corrompido pelo P-9 cuja limpeza é o F4-PR3c — usar
+antes seria circular).
+
+| # | Achado colateral | Evidência | Estado |
+|---|---|---|---|
+| **O-6** | **O renomeio `contested → low_yield` (ADR-52) está INCOMPLETO em duas saídas user-facing**: `cognitive_journey.py:537` emite o sinal literal `"contested"` em `GET /cognitive/curation`, e `cognitive/scoring.py:66` escreve *"⚔ contestada no canônico — há disputa aberta"* na UI a partir de `view.low_yield`. Nenhuma quebra o gate — não há teste sobre o vocabulário de saída de `curation_projection` nem sobre as `reasons` de `scoring.py` | 🔴 medido | **pré-requisito do F4-PR3b**: enquanto a API emitir `contested` significando "deu beco", nenhum consumidor pode confiar no `contested` que significa "há divergência factual". E um `grep` cego destruiria o vocabulário novo do ADR-54 — a separação tem de ser manual |
 

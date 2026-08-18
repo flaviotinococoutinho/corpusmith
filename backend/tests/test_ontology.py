@@ -325,3 +325,148 @@ def test_preview_da_fusao_humana_declara_a_perda(settings, kb):
     # (humana é ratificada e é a vencedora: perde mesmo assim — o conteúdo
     # muda com a absorção; a regra é sobre a FUSÃO, não sobre quem vence)
     assert "PERDE a ratificação" in out2["preview"]["note"]
+
+
+# ================================== RFC-005 · conflito factual (F4-PR3a)
+# O núcleo puro do detector. Ele NÃO está ligado a nenhum caminho ainda
+# (isso é F4-PR3b): estes testes fixam a REGRA antes da obra, que é o mesmo
+# padrão do PR-0 e do F3-PR0.
+
+def test_divergencia_alem_da_tolerancia_e_conflito():
+    from corpusmith.kernel import factual
+    out = factual.divergencias({
+        "a.md": [{"dim": "len", "si": 12000.0, "unit": "km", "surface": "12 km"}],
+        "b.md": [{"dim": "len", "si": 20000.0, "unit": "km", "surface": "20 km"}]})
+    assert len(out) == 1
+    assert out[0]["dim"] == "len"
+    assert set(out[0]["pages"]) == {"a.md", "b.md"}
+    assert out[0]["spread"] > 0.01
+
+
+def test_mesmo_valor_em_unidades_diferentes_NAO_e_conflito():
+    """I-4: a cláusula 'unidade idêntica' de docs/14 §P-5 foi REMOVIDA
+    justamente por descartar o caso que a normalização SI existe para
+    resolver. 12 km e 12000 m são o mesmo valor — e o detector precisa
+    saber disso, senão compra falso positivo no lugar do falso negativo."""
+    from corpusmith.kernel import factual
+    assert factual.divergencias({
+        "a.md": [{"dim": "len", "si": 12000.0, "unit": "km", "surface": "12 km"}],
+        "b.md": [{"dim": "len", "si": 12000.0, "unit": "m", "surface": "12000 m"}],
+    }) == []
+
+
+def test_diferenca_dentro_da_tolerancia_e_arredondamento():
+    from corpusmith.kernel import factual
+    # 0.08% — transcrição, não divergência
+    assert factual.divergencias({
+        "a.md": [{"dim": "len", "si": 12500.0, "unit": "km", "surface": "12.5 km"}],
+        "b.md": [{"dim": "len", "si": 12510.0, "unit": "km", "surface": "12.51 km"}],
+    }) == []
+
+
+def test_pagina_que_afirma_dois_valores_e_faixa_nao_conflito():
+    """I-2, a guarda de precisão que o plano de docs/14 não previa: uma
+    página que menciona 12 km E 20 km descreve faixa ou comparação. Comparar
+    o extremo dela com o de outra página seria ler mal o texto.
+
+    Falsificável: sem a guarda, este caso vira conflito (12000 vs 20000)."""
+    from corpusmith.kernel import factual
+    assert factual.divergencias({
+        "a.md": [{"dim": "len", "si": 12000.0, "unit": "km", "surface": "12 km"},
+                 {"dim": "len", "si": 20000.0, "unit": "km", "surface": "20 km"}],
+        "b.md": [{"dim": "len", "si": 90000.0, "unit": "km", "surface": "90 km"}],
+    }) == []
+
+
+def test_temperatura_e_porcentagem_ficam_fora_e_a_exclusao_e_declarada():
+    """I-3. `temp` porque quantities.py:65 suprime o payload SI (não há
+    conversão afim °C↔°F); `ratio` porque porcentagem não é dimensão física
+    e 50% vs 80% podem ser percentuais DE COISAS DIFERENTES."""
+    from corpusmith.kernel import factual
+    assert set(factual.EXCLUIDAS) == {"temp", "ratio"}
+    for dim in factual.EXCLUIDAS:
+        assert factual.divergencias({
+            "a.md": [{"dim": dim, "si": 10.0, "unit": "x", "surface": "10"}],
+            "b.md": [{"dim": dim, "si": 90.0, "unit": "x", "surface": "90"}],
+        }) == [], dim
+
+
+def test_uma_voz_so_nao_e_divergencia():
+    from corpusmith.kernel import factual
+    assert factual.divergencias({
+        "a.md": [{"dim": "len", "si": 1.0, "unit": "m", "surface": "1 m"},
+                 {"dim": "mass", "si": 5.0, "unit": "kg", "surface": "5 kg"}],
+    }) == []
+
+
+def test_medida_sem_payload_si_e_ignorada():
+    """Temperatura chega assim do detector real (si suprimido). O módulo não
+    pode explodir nem inventar comparação — ignora e segue."""
+    from corpusmith.kernel import factual
+    assert factual.divergencias({
+        "a.md": [{"dim": "len", "unit": "km", "surface": "12 km"}],
+        "b.md": [{"dim": "len", "si": 20000.0, "unit": "km", "surface": "20 km"}],
+    }) == []
+
+
+def test_dimensoes_distintas_nao_se_misturam():
+    from corpusmith.kernel import factual
+    assert factual.divergencias({
+        "a.md": [{"dim": "len", "si": 10.0, "unit": "m", "surface": "10 m"}],
+        "b.md": [{"dim": "mass", "si": 900.0, "unit": "kg", "surface": "900 kg"}],
+    }) == []
+
+
+def test_saida_e_estavel_e_ordenada_por_dimensao():
+    """`meta` é contrato de fato da fila (next_actions usa meta['pages']
+    como chave de supressão). Saída instável quebraria a supressão em
+    silêncio, que é o defeito que a supressão existe para evitar."""
+    from corpusmith.kernel import factual
+    medidas = {
+        "b.md": [{"dim": "mass", "si": 1.0, "unit": "kg", "surface": "1 kg"},
+                 {"dim": "len", "si": 1.0, "unit": "m", "surface": "1 m"}],
+        "a.md": [{"dim": "mass", "si": 9.0, "unit": "kg", "surface": "9 kg"},
+                 {"dim": "len", "si": 9.0, "unit": "m", "surface": "9 m"}]}
+    out = factual.divergencias(medidas)
+    assert [d["dim"] for d in out] == ["len", "mass"]
+    assert list(out[0]["pages"]) == ["a.md", "b.md"]
+    assert factual.divergencias(medidas) == out          # determinístico
+
+
+def test_resumo_mostra_a_superficie_nao_o_si():
+    """Quem vai conferir procura no TEXTO o que está escrito — mostrar o
+    valor convertido mandaria a pessoa procurar algo que não existe lá."""
+    from corpusmith.kernel import factual
+    d = factual.divergencias({
+        "a.md": [{"dim": "len", "si": 12000.0, "unit": "km", "surface": "12 km"}],
+        "b.md": [{"dim": "len", "si": 20000.0, "unit": "km", "surface": "20 km"}]})[0]
+    texto = factual.resumo(d)
+    assert "12 km" in texto and "20 km" in texto
+    assert "12000" not in texto
+
+
+def test_tolerancia_e_declarada_e_nao_calibrada():
+    """RFC-005 §5.2: primeiro limiar numérico do Harness, e não há golden
+    set. O docstring precisa DIZER isso — chamar de calibrado o que não foi
+    medido é a alegação que ADR-53 §3 proíbe."""
+    from corpusmith.kernel import factual
+    assert factual.TOLERANCIA_RELATIVA == 0.01
+    assert "não é calibrado" in factual.__doc__ .lower() \
+        or "Não é calibrado" in __import__("inspect").getsource(factual)
+
+
+def test_contested_so_aparece_com_conflito_declarado():
+    """I-5 e o primeiro produtor do valor: `contested` estava no vocabulário
+    fechado sem nenhum escritor (docs/18 O-2)."""
+    assert onto.classificar({})["resolution_status"] == "resolved"
+    assert onto.classificar(
+        {}, em_conflito=True)["resolution_status"] == "contested"
+    assert onto.valido("resolution_status", "contested")
+
+
+def test_conflito_vence_ambiguidade_da_leitura():
+    """`ambiguous` diz que ESTA leitura não foi assentada; `contested` diz
+    que duas páginas se contradizem. A segunda é a que tem destino na fila,
+    e é a mais cara de perder."""
+    assert onto.classificar({"confidence": "ambiguous"},
+                            em_conflito=True)["resolution_status"] == "contested"

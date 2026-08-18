@@ -122,8 +122,16 @@ _LEGACY_AXES: dict[str, dict[str, str | None]] = {
 }
 
 
-def classificar(meta: dict) -> dict[str, str]:
+def classificar(meta: dict, *, em_conflito: bool = False) -> dict[str, str]:
     """Eixos de uma página, lidos do frontmatter que já existe.
+
+    `em_conflito` é o PRIMEIRO produtor de `contested` (RFC-005 §5.3): o
+    detector de conflito factual passa `True` quando a página diverge
+    numericamente de outra do mesmo grupo de identificador forte. Isso não
+    viola a restrição declarada do eixo em `ontology.toml` — *"só um ato
+    posterior desata"* — porque `contested` é exatamente o estado NÃO
+    assentado. Marcar registra que o nó existe; assentar seria escolher um
+    lado, e o detector não escolhe.
 
     Função de LEITURA: não escreve, não exige campo novo e não inventa
     eixo que a página não sustenta. Onde o campo legado cala, a resposta
@@ -147,6 +155,12 @@ def classificar(meta: dict) -> dict[str, str]:
     via = str(meta.get("generated_via") or "")
     out.setdefault("derivation_method",
                    "asserted" if via.startswith("human:") else "extracted")
+    # Conflito factual VENCE a leitura do campo legado: `ambiguous` diz que
+    # ESTA leitura não foi assentada, `contested` diz que duas páginas se
+    # contradizem. A segunda é a informação mais cara de perder, e é a que
+    # tem destino na fila.
+    if em_conflito:
+        out["resolution_status"] = "contested"
     out.setdefault("resolution_status", "resolved")
 
     # Governança tem precedência de ciclo de vida: aposentar é o gesto mais

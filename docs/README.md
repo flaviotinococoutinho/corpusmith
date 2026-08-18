@@ -85,6 +85,7 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 | [19-rfc-escada-reconciliacao.md](19-rfc-escada-reconciliacao.md) | **RFC-002** — a escada de reconciliação volta a ter três degraus (B1: o degrau de similaridade era código morto; árbitro LLM segue atrás de flag desligada) |
 | [20-rfc-colisao-de-caminho.md](20-rfc-colisao-de-caminho.md) | **RFC-003** — colisão de caminho entre promoção humana e compilação de máquina (P-7) |
 | [21-adr-categoria-corpusmith.md](21-adr-categoria-corpusmith.md) | **ADR-53** — Corpusmith: o nome, a categoria (*governed knowledge compiler*) e a **fronteira de honestidade** — o que o produto pode e não pode alegar hoje |
+| [27-rfc-conflito-factual.md](27-rfc-conflito-factual.md) | **RFC-005** — conflito factual como REFINAMENTO da contradição candidata (o `canonical` de uma quantidade é o próprio valor, então o sujeito tem de vir do grupo de identificador); a primeira tolerância numérica do Harness, declarada NÃO calibrada; e o primeiro produtor de `contested` |
 | [22-rfc-ontologia-da-assercao.md](22-rfc-ontologia-da-assercao.md) | **RFC-004** — a ontologia da asserção: os eixos que `confidence` fundia (com a assimetria medida na fusão), o registro de deriva, e `Assertion`/`EvidenceLink`/`AuthorityGrant` como proposta com condições de reentrada |
 
 ## Guia rápido de roteamento (para não misturar especialidades)
