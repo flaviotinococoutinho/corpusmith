@@ -121,6 +121,25 @@ class MergePages(CurationAct):
                   f"declarada de {self._into} (nenhuma prosa é reescrita) e "
                   f"{self._page} passa a apontar para {self._into} — nada é "
                   "apagado, as duas seguem no histórico"]
+        # RFC-004 / docs/26 §3: a ratificação cobre um CONTEÚDO, e a fusão
+        # produz outro — perder a cobertura é correto, perdê-la em silêncio
+        # é *audit erasure*. O preview declara a perda ANTES do efeito, que
+        # é o contrato de todo ato de curadoria.
+        from ...kernel.ontology import ratificacao_perdida
+        perda = ratificacao_perdida(
+            str(self._writer.reader.load(self._into).meta.model_dump()
+                .get("confidence") or "extracted"),
+            str(self._writer.reader.load(self._page).meta.model_dump()
+                .get("confidence") or "extracted"))
+        if perda:
+            quem = self._into if perda["ratified_side"] == "alvo" \
+                else self._page
+            partes.append(
+                f"esta fusão PERDE a ratificação de {quem}: o resultado sai "
+                f"como `{perda['merged_confidence']}` "
+                "(a aprovação humana cobria o conteúdo anterior, não o "
+                "fundido) — se a página fundida merece ratificação, ela "
+                "volta por um ato de edição registrado, nunca por herança")
         if antes:
             depois = self._identificadores_compartilhados(docs)
             ids = ", ".join(str(f["identifier"]) for f in antes)

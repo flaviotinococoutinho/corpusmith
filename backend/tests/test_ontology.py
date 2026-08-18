@@ -207,3 +207,121 @@ def test_overview_expoe_a_mesma_fonte_da_cli():
     assert data["ok"] is True
     assert {a["axis"] for a in data["axes"]} >= set(onto.AXES)
     assert data["version"]
+
+
+# ================================ a perda de ratificação é DECLARADA
+# docs/26 §3: a regra nova de fusão derruba a ratificação quando só um
+# lado a tem — correto (ela cobria outro conteúdo), mas derrubá-la em
+# silêncio é *audit erasure* no eixo de governança. O produto protege o
+# CONTEÚDO contra apagamento (A-2); estes testes estendem a proteção ao
+# atributo epistêmico: toda perda aparece no preview (eixo humano) ou no
+# resultado/evento (eixo de máquina).
+
+def test_ratificacao_perdida_diz_qual_lado_a_tinha():
+    perda = onto.ratificacao_perdida("human_approved", "extracted")
+    assert perda == {"axis": "governance_status", "before": "ratified",
+                     "after": "proposed", "ratified_side": "alvo",
+                     "merged_confidence": "inferred"}
+    assert onto.ratificacao_perdida(
+        "extracted", "human_approved")["ratified_side"] == "fonte"
+
+
+def test_ratificacao_perdida_none_quando_nao_ha_perda():
+    # ambos ratificados: a fusão PRESERVA — nada a declarar
+    assert onto.ratificacao_perdida("human_approved",
+                                    "human_approved") is None
+    # nenhum ratificado: não havia o que perder
+    assert onto.ratificacao_perdida("extracted", "inferred") is None
+    assert onto.ratificacao_perdida("ambiguous", "extracted") is None
+
+
+def test_update_de_maquina_declara_a_ratificacao_perdida(settings, kb):
+    """O caminho que o produto percorre SOZINHO: recompilação de máquina
+    sobre página promovida (human_approved). A fusão derruba a
+    ratificação — e o resultado tem de dizer isso, não só o diff.
+
+    Falsificável: sem o rastreio em `_merged_with_resident`, o resultado
+    sai sem `ratification_lost` e a primeira asserção reprova."""
+    from corpusmith.okf.writer import BundleWriter
+    from corpusmith.usecases.base import DraftPage, MachinePageUseCase
+    from corpusmith.usecases.promote_memory import PromoteToMemory
+
+    PromoteToMemory(settings, kind="semantic", title="Docker",
+                    content="anotação humana ratificada").execute()
+
+    class _Compilador(MachinePageUseCase):
+        MODULE = "compile"
+
+        def _produce(self):
+            return DraftPage(
+                rel_path="concepts/rascunho.md", title="Docker",
+                body="# Docker\n\nCorpo recompilado.\n",
+                meta={"generated_via": "local:test",
+                      "source_sha256": "0" * 64})
+
+        def _reconcile(self, document, report):
+            return {"op": "UPDATE", "target": "concepts/docker.md"}
+
+    resultado = _Compilador(settings).execute()
+    perda = resultado.get("ratification_lost")
+    assert perda, "a perda de ratificação foi silenciosa (audit erasure)"
+    assert perda["axis"] == "governance_status"
+    assert perda["ratified_side"] == "fonte"      # a residente promovida
+    meta = BundleWriter(settings.path("knowledge")).reader.load(
+        "concepts/docker.md").meta
+    assert meta.model_dump().get("confidence") == "inferred", (
+        "a fusão devia rebaixar para inferred (RFC-004 §5.4)")
+
+
+def test_add_de_maquina_nao_inventa_perda(settings, kb):
+    """Página nova (ADD): não há residente, não há ratificação, não pode
+    haver declaração de perda — senão o sinal vira ruído."""
+    from corpusmith.usecases.base import DraftPage, MachinePageUseCase
+
+    class _Compilador(MachinePageUseCase):
+        MODULE = "compile"
+
+        def _produce(self):
+            return DraftPage(
+                rel_path="concepts/pagina-nova.md", title="Nova",
+                body="# Nova\n\nCorpo.\n",
+                meta={"generated_via": "local:test",
+                      "source_sha256": "0" * 64})
+
+    resultado = _Compilador(settings).execute()
+    assert resultado["op"] == "ADD"
+    assert "ratification_lost" not in resultado
+
+
+def test_preview_da_fusao_humana_declara_a_perda(settings, kb):
+    """Eixo humano: o contrato de todo ato é preview ANTES do efeito. Uma
+    fusão que perde ratificação tem de dizê-lo no preview — e dizer de
+    QUAL página a aprovação era."""
+    from corpusmith.okf.document import OKFDocument, OKFFrontMatter
+    from corpusmith.okf.writer import BundleWriter
+    from corpusmith.usecases.curate import MergePages
+
+    BundleWriter(kb).write(
+        [OKFDocument(rel_path="concepts/maquina.md",
+                     body="# Máquina\n\ncorpo compilado.\n",
+                     meta=OKFFrontMatter(type="concept", title="Máquina",
+                                         privacy="local_only",
+                                         confidence="extracted")),
+         OKFDocument(rel_path="concepts/humana.md",
+                     body="# Humana\n\nanotação aprovada.\n",
+                     meta=OKFFrontMatter(type="concept", title="Humana",
+                                         privacy="local_only",
+                                         confidence="human_approved"))],
+        log_kind="Creation", log_message="m", commit_message="c")
+
+    out = MergePages(settings, page="concepts/humana.md",
+                     into="concepts/maquina.md").execute(dry_run=True)
+    nota = out["preview"]["note"]
+    assert "PERDE a ratificação" in nota
+    assert "concepts/humana.md" in nota, "o preview tem de dizer QUAL página"
+    # e quando nenhum lado é ratificado, o preview NÃO menciona perda
+    out2 = MergePages(settings, page="concepts/maquina.md",
+                      into="concepts/humana.md").execute(dry_run=True)
+    # (humana é ratificada e é a vencedora: perde mesmo assim — o conteúdo
+    # muda com a absorção; a regra é sobre a FUSÃO, não sobre quem vence)
+    assert "PERDE a ratificação" in out2["preview"]["note"]

@@ -216,3 +216,33 @@ def merge_confidence(alvo: str, fonte: str) -> str:
             else "resolved"),
         "governance_status": "ratified" if ambos_ratificados else "proposed",
     })
+
+
+def ratificacao_perdida(alvo: str, fonte: str) -> dict | None:
+    """A fusão desfaz uma ratificação? Se sim, QUAL lado a tinha.
+
+    A regra de `merge_confidence` está certa em derrubar a ratificação
+    quando só um lado a tem — mas derrubar em SILÊNCIO é a falha que a
+    literatura chama de *audit erasure* (docs/26 §3): o produto sempre
+    protegeu o CONTEÚDO contra apagamento (axioma A-2), e não protegia o
+    atributo de governança. Esta função existe para que todo chamador da
+    fusão possa DECLARAR a perda — no preview, antes do efeito, no eixo
+    humano; no evento e no resultado, no eixo de máquina.
+
+    Devolve `None` quando não há perda (nenhum lado ratificado, ou ambos)
+    e, quando há, um dict estável para preview/evento/log:
+    `{"axis", "before", "after", "ratified_side", "merged_confidence"}` —
+    `ratified_side` ∈ {"alvo", "fonte"} diz qual página carregava o ato
+    que a fusão deixa de cobrir."""
+    a, b = classificar({"confidence": alvo}), classificar({"confidence": fonte})
+    resultado = merge_confidence(alvo, fonte)
+    depois = classificar({"confidence": resultado})["governance_status"]
+    if depois == "ratified":
+        return None
+    lados = [nome for nome, eixos in (("alvo", a), ("fonte", b))
+             if eixos["governance_status"] == "ratified"]
+    if not lados:
+        return None
+    return {"axis": "governance_status", "before": "ratified",
+            "after": depois, "ratified_side": lados[0],
+            "merged_confidence": resultado}

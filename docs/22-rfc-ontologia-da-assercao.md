@@ -170,7 +170,26 @@ Ratificação é ato sobre um conteúdo; a fusão produz outro conteúdo, que ni
 ratificou. Se a fusão merece ratificação, ela volta por um ato humano registrado
 em `curation_acts` — não por herança silenciosa.
 
-### 5.4 A perda que fica registrada
+### 5.4 A perda é DECLARADA, nunca silenciosa
+
+Derrubar a ratificação é correto; derrubá-la sem registro é a falha que a
+literatura chama de *audit erasure* ([`docs/26`](26-pesquisa-da-camada-epistemica.md) §3).
+`kernel/ontology.py:ratificacao_perdida` diz se a fusão desfaz uma ratificação
+e de qual lado ela era, e os dois eixos de escrita a consomem:
+
+- **humano** — o preview do `MergePages` declara *"esta fusão PERDE a
+  ratificação de X"* antes do efeito, que é o contrato de todo ato;
+- **máquina** — o evento `page.stage` (etapa `write`) e o resultado do use
+  case carregam `ratification_lost` quando um UPDATE/RECYCLE derruba a
+  aprovação da residente.
+
+E a porta lateral fechada junto: um rascunho **sem** a chave `confidence`
+herdava `human_approved` da residente pela regra genérica de fusão ("o que
+falta vem da fonte"). Ausência tem default documentado (`extracted`, o
+`COALESCE` de toda leitura), então `merge_meta` agora funde a chave com o
+default aplicado — medido por teste que reprovava antes.
+
+### 5.5 A perda de expressividade que fica registrada
 
 O vocabulário legado não tem casa para o par (`asserted`, `proposed`) — que é
 justamente o que sobra quando a fusão desfaz a cobertura de uma ratificação. A
@@ -179,7 +198,7 @@ reescrita desce para `inferred`: também não é exato, mas erra para o lado que
 do lado que **inventa proveniência**. Esta perda não se conserta reescrevendo
 melhor; ela é o argumento concreto da §6.
 
-### 5.5 O registro de deriva não pode apodrecer
+### 5.6 O registro de deriva não pode apodrecer
 
 `ontology.toml` §3 lista as derivas com `markers`: pares (arquivo, string) que,
 existindo, provam que aquele sentido está no código. `corpusmith ontology lint`

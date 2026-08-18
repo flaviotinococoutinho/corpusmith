@@ -90,9 +90,23 @@ def merge_meta(target: dict, source: dict) -> dict:
     fraqueza. A tabela tinha três valores e o produto escreve quatro, de
     modo que `human_approved` caía no `default=0` e a mesma situação de
     governança saía ratificada ou não conforme o OUTRO lado da fusão. A
-    regra passa a morar em `kernel/ontology.py`, decidida eixo a eixo."""
+    regra passa a morar em `kernel/ontology.py`, decidida eixo a eixo.
+
+    `confidence` também NÃO segue a regra genérica de chave ausente
+    ("o que falta vem da fonte"): ausência tem default documentado —
+    `extracted`, o mesmo `COALESCE(confidence,'extracted')` de toda
+    leitura — e herdar o valor da fonte reintroduziria a ratificação
+    herdada pela porta lateral (rascunho de máquina sem a chave fundido
+    com residente `human_approved` sairia ratificado). Medido no teste
+    de UPDATE de máquina antes desta cláusula."""
     out = dict(target)
+    if "confidence" in target or "confidence" in source:
+        out["confidence"] = merge_confidence(
+            str(target.get("confidence") or "extracted"),
+            str(source.get("confidence") or "extracted"))
     for chave, valor in source.items():
+        if chave == "confidence":
+            continue                       # já decidido acima, eixo a eixo
         if chave not in out or out[chave] in (None, [], ""):
             out[chave] = valor
             continue
@@ -103,8 +117,6 @@ def merge_meta(target: dict, source: dict) -> dict:
                 if item not in visto:
                     visto.append(item)
             out[chave] = visto
-        elif chave == "confidence":
-            out[chave] = merge_confidence(str(atual), str(valor))
         elif chave == "valid_at":
             out[chave] = min(atual, valor)      # o fato vale desde o + antigo
     return out

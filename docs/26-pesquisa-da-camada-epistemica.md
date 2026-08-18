@@ -195,7 +195,7 @@ argumento de por que `governance_status` **não pode** morar no mesmo campo que
 |---|---|
 | capta ≠ data | a proibição de "fonte da verdade" é classificação, não modéstia — vale reescrever assim em material de produto |
 | discordância é estrutural | `contested` fica; e a fila de atenção deveria, no futuro, **propor** revisão de contestações em vez de esperar que sejam resolvidas |
-| replay inconsistency / audit erasure | o axioma A-2 vale **eixo a eixo**: mudança de eixo epistêmico devia ser registrada como ato, não só como diff — candidato a próximo PR |
+| replay inconsistency / audit erasure | o axioma A-2 vale **eixo a eixo** — ✅ **pago**: `ratificacao_perdida` declara a perda no preview do MergePages e no evento/resultado do fluxo de máquina; a chave ausente deixou de herdar ratificação (`merge_meta`) |
 | nanopubs/micropubs como arte prévia | RFC-004 §6 deve **começar** citando-os; a contribuição é o lugar de morada, não a entidade |
 | isolamento multi-escritor | está **fora** do envelope atual e deve ser dito assim, não omitido |
 

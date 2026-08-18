@@ -148,9 +148,10 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 
 ## 8. Ordem sugerida, e por quê
 
-> **Estado em 2026-08**: os itens 1 e 2 estão **entregues** (ADR-47; RFC-002 +
-> ADR-48). A ordem abaixo fica como registro do raciocínio — e porque os itens
-> 3 a 5 seguem valendo.
+> **Estado em 2026-08 (atualizado após RFC-004)**: itens 1 a 4 **entregues**
+> (ADR-47; RFC-002 + ADR-48; ADR-49; RFC-003 + ADR-50/51). F4-PR1 e PR2 também
+> (ADR-52). A ordem abaixo fica como registro do raciocínio; a fila corrente
+> mora na seção 9.
 
 1. ✅ **PR-0.1** — sem release executável, nada do que foi construído chega a um
    terceiro. E é o único item cujo custo **cresce** com o tempo (cada PR novo
@@ -161,10 +162,41 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
    para impedir;
 3. ✅ **F-UI** — converte sete capacidades já pagas em produto. Depende de um
    smoke de UI, que é o pré-requisito real;
-4. **F3** (P-3 + P-7) — a fila para de mentir;
-5. **F-EPIST** em paralelo, a qualquer momento: itens independentes e baratos.
+4. ✅ **F3** (P-3 + P-7) — a fila para de mentir;
+5. ✅ **F-EPIST** (exceto C6) em paralelo: itens independentes e baratos.
 
 > **O que NÃO fazer**: corrigir o B1 sem RFC. É uma linha, é tentador, e ativa
 > decisão de modelo generativo sobre o canônico por efeito colateral de um
 > conserto. — *cumprido: `docs/19` (RFC-002) precedeu a correção, e a flag
 > `reconcile.llm_arbiter` continua desligada por default.*
+
+---
+
+## 9. Trilha ontológica (RFC-004) e a fila corrente
+
+O RFC-004 (`docs/22`) e a leitura de literatura (`docs/26`) abriram uma trilha
+própria e **mudaram a forma do F4-PR3**: o detector `policy.factual_conflict`
+deixa de ser só "o conflito real que faltava" e passa a ser **o primeiro
+escritor do eixo `resolution_status`** — hoje `contested` é valor declarado sem
+nenhum produtor.
+
+| # | O quê | Evidência | Estado |
+|---|---|---|---|
+| **O-1** | **Perda de ratificação silenciosa na fusão** — a regra nova derruba `human_approved` quando só um lado o tem (correto), mas derrubava sem registro; e a chave `confidence` AUSENTE no rascunho herdava a ratificação da residente pela regra genérica de fusão ("o que falta vem da fonte") | 🔴 medido (dois testes reprovando antes das correções) | ✅ **RESOLVIDO**: `kernel/ontology.py:ratificacao_perdida` + declaração no preview do MergePages (eixo humano) e em `page.stage`/resultado (eixo de máquina); `merge_meta` aplica o default documentado `extracted` à chave ausente |
+| **O-2** | **`contested` não tem escritor.** O vocabulário fechado declara o valor; nada no produto o produz. A fila nunca proporá resolução de contestação | 🟡 declarado (`ontology.toml`, RFC-004 §5.1) | ⏭️ pago pelo **F4-PR3**: `policy.factual_conflict` (docs/14 §P-5: mesma entidade quantity/date, mesma dimensão, fora de tolerância, sem sucessão nem ordenação temporal, unidade idêntica + span nas duas — precisão > recall) detecta; a marca `contested` nas páginas envolvidas vira item de fila com destino (herda P-1). **Exige RFC** (regra nova com limiar no caminho de escrita, precedente RFC-003) |
+| **O-3** | **Isolamento multi-escritor está fora do envelope.** O produto depende do gate único + rito serializado; escritas concorrentes de vários agentes não têm resposta (a classe de anomalia que arXiv:2606.06240 tipifica) | 🟡 declarado (`docs/26` §4) | fica declarado; só entra no roadmap se o produto ganhar multi-agente — condição, não plano |
+| **O-4** | **Os sentidos numéricos de `confidence` seguem no mesmo nome** (autorrelato `confidence_before`, taxas da metacognição, intervalos de avaliação) | 🔴 medido (`docs/22` §2.1) | deriva `open` em `ontology.toml [drift.confidence]`, lint confere os marcadores; rename é decisão própria (não acompanha F4-PR3) |
+| **O-5** | **`Assertion` como entidade** — a unidade epistêmica atômica | 🟡 declarado (RFC-004 §6) | **quatro condições de reentrada**, a primeira é MEDIR uma consulta que a página responde errado; arte prévia citada (nanopubs/micropubs/CRMinf) |
+
+**Fila corrente, em ordem:**
+
+1. **F4-PR3** — `policy.factual_conflict` (**com RFC**, e agora com o papel
+   duplo: detector de conflito + escritor de `contested`) e o ato em lote com
+   preview do `valid_at` legado (P-9 resíduo). Paga a primeira promessa de
+   `PROMISED_MECHANISMS` (`factual_conflict`);
+2. **F5** (P-10 entidade↔página) e **F6** (P-8 rastro de abstenção) — na ordem
+   do `docs/14`; `inferred_cooccurrence_edges` (P-6) paga a segunda promessa;
+3. **F7** (P-11 resíduo de custo) — `temporal_partition` paga a terceira;
+4. **C6** (campo de efeito colateral no `EpistemicContract`) — pequeno, exige
+   mudança de modelo, sem dependências.
+
