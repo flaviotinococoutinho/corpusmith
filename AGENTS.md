@@ -159,6 +159,7 @@ Lista completa: `docs/10` §23.
 
 - **Produto** (o que é, para quem): `docs/01-conceitos.md`
 - **Ciência & teoria** (papers, cognição, informação): `docs/03-teoria.md`
+- **Pesquisa da camada epistêmica** (asserção, proveniência, contradição; arte prévia): `docs/26-pesquisa-da-camada-epistemica.md`
 - **Epistemologia operacional** (o que cada mecanismo pode alegar): `docs/11-epistemic-contracts.md` + `epistemics.toml`
 - **Léxico** (o que cada palavra significa e o que ela NÃO pode significar): `docs/23-ontologia-e-etimologia.md` + `ontology.toml`
 - **Axiomas e óticas** (o que o produto assume, e por quantos ângulos olha): `docs/24-axiomas-e-oticas.md`

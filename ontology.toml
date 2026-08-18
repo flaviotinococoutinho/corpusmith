@@ -91,6 +91,13 @@ not_means = "gerar conteúdo, sintetizar do nada"
 constrains = "o produto não inventa conhecimento; ele compila fontes — e quando não há fonte suficiente, abstém"
 lives_in = ["backend/src/corpusmith/kernel/sufficiency.py"]
 
+[terms.capta]
+roots = "lat. capta, particípio de capere, 'tomar' — em oposição a data, particípio de dare, 'dar'"
+means = "o que foi APREENDIDO e afirmado por um agente cognitivo: atribuição, datação, classificação, interpretação"
+not_means = "dado objetivo, medida independente de observador"
+constrains = "para capta, quem afirmou e sob que autoridade é constitutivo, não metadado — e por isso um corpus de capta que se anuncie 'fonte da verdade' está errado sobre o próprio material, não apenas exagerando (Drucker 2011; Vitali & Pasqual 2026 — docs/26)"
+lives_in = ["docs/26-pesquisa-da-camada-epistemica.md"]
+
 [terms.canon]
 roots = "gr. kanṓn, 'régua, vara de medir' (de kánna, 'cana')"
 means = "aquilo com que se mede o resto: o bundle é a régua contra a qual toda projeção é conferida"

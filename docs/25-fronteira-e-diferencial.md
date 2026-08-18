@@ -96,6 +96,11 @@ ratify, Git remembers* — e é visão-alvo, não descrição do comportamento a
 | gestão de documentos | guardar, versionar, encontrar | *isto pode contar como conhecimento?* — não há gate, nem política, nem abstenção |
 | wiki / PKM | escrever e ligar bem | *de onde veio cada parte?* — proveniência é por documento, quando existe |
 
+O contraste no nível do **mecanismo de contradição** — o que cada sistema faz
+com o fato perdedor, medido por um levantamento independente — está em
+[`26`](26-pesquisa-da-camada-epistemica.md) §4, junto com o que a escolha do
+Corpusmith custa em troca.
+
 A pergunta do Corpusmith — *"o que foi aceito como conhecimento, com base em
 quê, por quem, em qual período e sob quais limites?"* — **contém** as outras:
 para respondê-la é preciso recuperar, representar e guardar. Nenhuma das outras

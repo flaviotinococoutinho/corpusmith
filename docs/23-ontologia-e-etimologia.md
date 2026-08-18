@@ -103,9 +103,23 @@ de fontes, sob regras, de forma repetível. Não é resumir nem reescrever. A me
 fonte sob as mesmas regras produz o mesmo artefato: determinismo antes de
 modelo, com o LLM como estágio cercado.
 
+**capta** · lat. *capta*, particípio de *capere*, "tomar" — em oposição a
+**data**, particípio de *dare*, "dar". A oposição carrega o argumento inteiro:
+*data* é **o que é dado** (estados de coisas independentes de observador);
+*capta* é **o que é tomado** — apreendido, selecionado e afirmado por um agente.
+Atribuição de autoria, datação, classificação: nada disso é medida, é resultado
+de análise. Para *data*, a proveniência é informativa; para *capta*, ela é
+**constitutiva** — quem afirmou, quando e sob que autoridade faz parte do que a
+afirmação é (Drucker 2011; [`26`](26-pesquisa-da-camada-epistemica.md) §1).
+
 **canon** · gr. *kanṓn*, "régua, vara de medir" (de *kánna*, "cana") — aquilo com
 que se mede o resto. **Não** é aquilo que é verdadeiro. O registro diz o que foi
 *aceito*, e por quem; aceitação não é veracidade.
+
+> As duas raízes se sustentam mutuamente, e juntas fecham o argumento de
+> ADR-53 §3: um corpus é feito de *capta*, e o canônico é a **régua** com que
+> essa *capta* é medida. Um registro de *capta* que se anuncia "fonte da
+> verdade" não está sendo imodesto — está **errado sobre o próprio material**.
 
 **index** · lat. *index*, "o dedo indicador" — a projeção consultável que
 **aponta** para o canônico, e nunca o conteúdo apontado. Apagá-lo não perde

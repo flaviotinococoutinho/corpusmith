@@ -199,6 +199,24 @@ o documento inteiro.
 
 Esta seção é decisão pendente. Nada dela existe em código.
 
+**Arte prévia, antes de qualquer coisa.** Empacotar uma asserção com sua
+proveniência não é invenção nossa e é anterior a este produto por mais de uma
+década: **nanopublications** (Groth, Gibson & Velterop, 2010) separam
+*assertion*, *provenance* e *publication info* em grafos distintos;
+**micropublications** (Clark, Ciccarese & Goble, 2014) acrescentam evidência,
+suporte, contestação e estrutura de argumento; **CRMinf** modela *belief
+adoption* como evento de um agente no tempo; **PROV-O**, **Wikidata** (ranks e
+referências por statement) e o modelo bitemporal de **Snodgrass**/SQL:2011
+cobrem o resto. Apresentar a §6 como novidade seria exatamente a alegação que
+ADR-53 §3 proíbe. O levantamento completo, com o que cada um resolve melhor que
+nós, está em [`docs/26`](26-pesquisa-da-camada-epistemica.md).
+
+**A contribuição possível não é a entidade — é o LUGAR DE MORADA dela**, e essa
+é a única parte desta seção que não tem precedente confortável: nanopubs,
+micropubs e RDF-star colocam a asserção num grafo ao lado do documento; aqui ela
+teria de ser **lida do Markdown**, por região, porque um grafo paralelo editável
+seria um segundo lugar onde o conhecimento mora e o axioma A-1 cairia.
+
 **O problema.** A unidade epistêmica hoje é a **página**, e a página é boa
 unidade *editorial* e má unidade *epistêmica*: uma página sobre Docker pode
 conter uma linha extraída de um PDF de 2019 (válida até 2022), uma inferência
@@ -226,7 +244,10 @@ conhecimento mora — e o axioma A-1 cai.
    errado, **medida**, não imaginada;
 2. o custo de anotação por asserção não recair sobre o humano no caminho comum;
 3. `EvidenceLink` ser reconstruível do bundle sozinho — se precisar de estado
-   próprio, a proposta está errada.
+   próprio, a proposta está errada;
+4. haver resposta a *"por que não adotar nanopublications e pronto?"* que não
+   seja preferência — a resposta candidata é a condição 3 aplicada ao formato,
+   e ela precisa ser demonstrada, não afirmada.
 
 Enquanto as três não forem verdade, a §6 continua proposta. Implementá-la antes
 disso seria fazer o que este RFC acusa: inventar estrutura onde falta evidência.

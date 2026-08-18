@@ -35,6 +35,7 @@ Fundamentos teóricos e científicos, com papers. Não descreve código.
 | Doc | Conteúdo |
 |---|---|
 | [03-teoria.md](03-teoria.md) | Teoria da informação (NCD, entropia, surprisal, Hedge), topologia (persistência 0-dim, centralidade de Brandes), heurísticas de coordenação (RRF, heat, escada de reconciliação), fundamentos cognitivos (CLS, BLA) |
+| [26-pesquisa-da-camada-epistemica.md](26-pesquisa-da-camada-epistemica.md) | **A pesquisa da camada epistêmica**: `capta` vs `data`, discordância como traço estrutural, as anomalias de escrita que a literatura tipifica (e que encontramos por mutação), como os vizinhos resolvem contradição, e **onde o Corpusmith não é novo** — nanopublications, micropublications, CRMinf, PROV-O |
 
 ### ⚙️ Engenharia, algoritmos & paradigmas — COMO se constrói
 Disciplina de software, técnicas de algoritmo, padrões e paradigmas.
@@ -101,6 +102,8 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 - É **se o produto deveria fazer isto** (fronteira, escopo, concorrência)?
   → `25`.
 - É **por que uma técnica funciona** (prova, paper, matemática)? → `03`.
+- É **o que a literatura já resolveu sobre asserção, proveniência e
+  contradição** (e o que aqui é adoção, não invenção)? → `26`.
 - É **como o software é organizado** (camada, tipo, padrão, algoritmo)? → `10`, `02`, `04`.
 - É **o que um mecanismo heurístico pode ALEGAR / onde foi avaliado**? → `11` + `epistemics.toml`.
 - É **quanto/quão rápido/quão durável** (CAP, SLO, escala, segurança)? → `10` §5–17.
