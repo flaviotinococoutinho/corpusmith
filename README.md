@@ -42,7 +42,12 @@ O espaço que Corpusmith ocupa não é nenhum desses elementos isolado — é a
 - **contratos epistêmicos executáveis** — [`epistemics.toml`](epistemics.toml)
   declara pressupostos, garantias *relativas*, modos de falha e fallback de
   cada mecanismo heurístico, e a suíte **quebra** quando um contrato mente
-  sobre o código.
+  sobre o código;
+- **léxico com fronteira** — [`ontology.toml`](ontology.toml) declara os eixos
+  independentes de uma afirmação (*como derivou · foi assentada? · quem
+  autorizou*) e, para cada termo, a raiz etimológica e o que a palavra **não**
+  pode passar a significar. Um valor que responda a duas perguntas quebra a
+  suíte ([`docs/23`](docs/23-ontologia-e-etimologia.md)).
 
 **A alegação honesta de governança, hoje**: máquinas escrevem sob políticas
 (gate único de escrita, colisão vira decisão humana, heurística cercada por
@@ -65,6 +70,13 @@ reguladas.
 história inteira do zero: o problema, a categoria, a tese de compilação, **um
 fato seguido do PDF até a resposta**, quem pode mudar o quê, e o que o
 produto **não** alega. Se você só vai ler um documento, leia esse.
+
+Depois dele, três páginas curtas explicam por que o produto é assim:
+[`23`](docs/23-ontologia-e-etimologia.md) (o léxico e o que cada raiz proíbe),
+[`24`](docs/24-axiomas-e-oticas.md) (os oito axiomas, cada um com a asserção
+executável que o paga, e as oito óticas sobre o mesmo corpus) e
+[`25`](docs/25-fronteira-e-diferencial.md) (as três fronteiras que o produto
+recusa cruzar).
 
 ---
 

@@ -57,7 +57,7 @@ lives_in = ["backend/src/corpusmith/kernel/ontology.py"]
 question = "quem autorizou isto a contar como conhecimento?"
 values = ["proposed", "ratified", "retired"]
 applies_to = "assertion"
-etymology = "gr. kybernân, 'pilotar' — quem governa conduz e responde pelo rumo, não possui o navio"
+etymology = "lat. gubernare ← gr. kybernân, 'pilotar' — quem governa conduz e responde pelo rumo, não possui o navio"
 constrains = "ratificação é ATO datado e atribuído; ausência de ato é `proposed`, jamais silêncio a favor"
 lives_in = ["backend/src/corpusmith/kernel/ontology.py"]
 
@@ -85,7 +85,7 @@ constrains = "operação que não preserva a integridade do todo não é operaç
 lives_in = ["backend/src/corpusmith/okf/bundle.py"]
 
 [terms.smith]
-roots = "proto-germ. smiþaz, 'aquele que trabalha com ferramenta'"
+roots = "ing. ant. smiþ ← proto-germ. *smiþaz, 'artesão, o que trabalha o metal'"
 means = "ofício sobre material que já existe: forjar é dar forma, não criar matéria"
 not_means = "gerar conteúdo, sintetizar do nada"
 constrains = "o produto não inventa conhecimento; ele compila fontes — e quando não há fonte suficiente, abstém"
@@ -155,7 +155,7 @@ constrains = "veredito suprime COM MOTIVO e com `until`; jamais apaga o objeto c
 lives_in = ["backend/src/corpusmith/kernel/verdicts.py"]
 
 [terms.stale]
-roots = "germ., dito de líquido 'que ficou parado tempo demais'"
+roots = "fr. ant. estale, 'parado, estagnado' (dito de líquido), de origem germânica"
 means = "parado desde uma referência de código — pode precisar de revisão"
 not_means = "falso, inválido, vencido no mundo"
 constrains = "`stale_as_of` é tempo de CÓDIGO e não toca `invalid_at`, que é tempo de MUNDO; confundi-los depreca fato que continua valendo"
@@ -190,7 +190,7 @@ constrains = "a mesma fonte sob as mesmas regras produz o mesmo artefato — det
 lives_in = ["backend/src/corpusmith/usecases/base.py"]
 
 [terms.ontology]
-roots = "gr. ónta, 'as coisas que são' + lógos, 'discurso'"
+roots = "gr. ón, óntos, 'aquilo que é' + -logía, 'discurso sobre'"
 means = "o discurso sobre O QUE EXISTE no sistema: quais entidades há e quais eixos as descrevem"
 not_means = "uma ontologia formal com semântica lógica"
 constrains = "declarar que algo existe não é alegar que é verdadeiro; ADR-53 §3 proíbe 'ontologia formal' e este arquivo não a introduz"

@@ -13,7 +13,7 @@ confirma.**
 | **agente de IA / mantenedor fazendo mudança** | [`../AGENTS.md`](../AGENTS.md) → [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md) |
 | **revisor de arquitetura** | [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md) + [`../architecture.toml`](../architecture.toml) |
 | **entendendo o produto pela primeira vez** | [`00-o-que-e-corpusmith.md`](00-o-que-e-corpusmith.md) — a explicação inteira, do zero |
-| **procurando o vocabulário exato** | [`01-conceitos.md`](01-conceitos.md) |
+| **procurando o vocabulário exato** | [`01-conceitos.md`](01-conceitos.md) — e [`23`](23-ontologia-e-etimologia.md) para a raiz e a fronteira de cada termo |
 | **procurando uma regra/endpoint/tabela** | [`06-referencia.md`](06-referencia.md) |
 
 ## Mapa por especialidade
@@ -25,6 +25,9 @@ Conceitos do sistema como produto, sem detalhe de implementação.
 |---|---|
 | [00-o-que-e-corpusmith.md](00-o-que-e-corpusmith.md) | **A explicação completa, do zero**: o problema, a categoria (governar ≠ recordar), a tese de compilação, **um fato seguido do PDF à resposta**, o modelo de autoridade, o que torna as alegações verificáveis e o que o produto NÃO alega |
 | [01-conceitos.md](01-conceitos.md) | OKF, camadas de memória, bi-temporalidade, escala de confiança, controle de autoridade, epistemologia (abstenção, desfecho, eval) |
+| [23-ontologia-e-etimologia.md](23-ontologia-e-etimologia.md) | **O léxico**: os quatro eixos de uma afirmação, 17 verbetes com raiz etimológica e o que a raiz PROÍBE, a deriva semântica ainda aberta e os falsos amigos do mercado |
+| [24-axiomas-e-oticas.md](24-axiomas-e-oticas.md) | **Os oito axiomas** (cada um com a asserção executável que o paga) e as **oito óticas** sobre o mesmo corpus, com unidade e frescor de cada uma |
+| [25-fronteira-e-diferencial.md](25-fronteira-e-diferencial.md) | **As três fronteiras que o produto não cruza** (coletor, publicador, agente), o lugar dele na cadeia adquirir→compilar→publicar e a evidência de que o método generaliza |
 
 ### 🔬 Ciência & teoria — POR QUE funciona
 Fundamentos teóricos e científicos, com papers. Não descreve código.
@@ -58,6 +61,7 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 | [06-referencia.md](06-referencia.md) | Todas as regras do Harness, endpoints, tabelas dos 5 bancos, jobs, flags, tipos OKF, frontmatter |
 | [../architecture.toml](../architecture.toml) | Contrato de arquitetura legível-por-máquina (preso a `test_architecture_toml.py`) |
 | [../epistemics.toml](../epistemics.toml) | Contratos epistemológicos legíveis-por-máquina (presos a `test_epistemics_toml.py`; lint em `corpusmith epistemics lint`) |
+| [../ontology.toml](../ontology.toml) | Eixos, léxico com etimologia e registro de deriva semântica (presos a `test_ontology.py`; lint em `corpusmith ontology lint`) |
 
 ### 🔄 Fluxos operacionais — QUANDO / ONDE
 | Doc | Conteúdo |
@@ -80,6 +84,7 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 | [19-rfc-escada-reconciliacao.md](19-rfc-escada-reconciliacao.md) | **RFC-002** — a escada de reconciliação volta a ter três degraus (B1: o degrau de similaridade era código morto; árbitro LLM segue atrás de flag desligada) |
 | [20-rfc-colisao-de-caminho.md](20-rfc-colisao-de-caminho.md) | **RFC-003** — colisão de caminho entre promoção humana e compilação de máquina (P-7) |
 | [21-adr-categoria-corpusmith.md](21-adr-categoria-corpusmith.md) | **ADR-53** — Corpusmith: o nome, a categoria (*governed knowledge compiler*) e a **fronteira de honestidade** — o que o produto pode e não pode alegar hoje |
+| [22-rfc-ontologia-da-assercao.md](22-rfc-ontologia-da-assercao.md) | **RFC-004** — a ontologia da asserção: os eixos que `confidence` fundia (com a assimetria medida na fusão), o registro de deriva, e `Assertion`/`EvidenceLink`/`AuthorityGrant` como proposta com condições de reentrada |
 
 ## Guia rápido de roteamento (para não misturar especialidades)
 
@@ -87,6 +92,14 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 - É **o que o usuário vê / por que o produto existe**? → `00`, depois `01`.
 - É **o que o produto pode ou NÃO pode alegar** (categoria, fronteira de
   honestidade, nomes históricos)? → `21`.
+- É **o que uma palavra significa** (e o que ela não pode passar a
+  significar)? → `23` + `ontology.toml`.
+- É **uma suposição de base** que o produto assume? → `24` (axiomas), e se
+  precisar violá-la, é RFC, não PR.
+- É **por qual ângulo estou olhando** (editorial, epistêmico, temporal,
+  topológico…)? → `24` §2.
+- É **se o produto deveria fazer isto** (fronteira, escopo, concorrência)?
+  → `25`.
 - É **por que uma técnica funciona** (prova, paper, matemática)? → `03`.
 - É **como o software é organizado** (camada, tipo, padrão, algoritmo)? → `10`, `02`, `04`.
 - É **o que um mecanismo heurístico pode ALEGAR / onde foi avaliado**? → `11` + `epistemics.toml`.

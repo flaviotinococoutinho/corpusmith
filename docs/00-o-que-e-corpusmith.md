@@ -211,8 +211,13 @@ Estas alegações são **proibidas** no estado atual ([ADR-53](21-adr-categoria-
 **Limite conhecido e registrado**: a unidade epistêmica hoje é a **página**,
 e a página é boa unidade *editorial* mas não é unidade *epistêmica atômica*
 — uma página pode conter duas afirmações de fontes diferentes, com validades
-diferentes. Tratar `Assertion` como entidade de primeira classe é trilha
-futura, e exigirá RFC próprio.
+diferentes. O RFC próprio que isso exigia existe:
+[RFC-004](22-rfc-ontologia-da-assercao.md). A parte dele que separa os
+**eixos** de uma afirmação (como derivou · foi assentada? · quem autorizou)
+está implementada; tratar `Assertion` como entidade de primeira classe
+continua **proposto**, com três condições de reentrada explícitas — a
+primeira sendo medir uma consulta que a granularidade de página responde
+errado, em vez de imaginá-la.
 
 ## 8. Para onde ir agora
 
@@ -225,3 +230,6 @@ futura, e exigirá RFC próprio.
 | contribuir / mudar código | [`../AGENTS.md`](../AGENTS.md) |
 | o que ainda falta, com evidência | [`18-backlog-consolidado.md`](18-backlog-consolidado.md) |
 | a identidade e a categoria, por escrito | [`21-adr-categoria-corpusmith.md`](21-adr-categoria-corpusmith.md) |
+| o que cada palavra significa, e o que ela proíbe | [`23-ontologia-e-etimologia.md`](23-ontologia-e-etimologia.md) |
+| as suposições de base e os ângulos de leitura | [`24-axiomas-e-oticas.md`](24-axiomas-e-oticas.md) |
+| por que o produto recusa fazer certas coisas | [`25-fronteira-e-diferencial.md`](25-fronteira-e-diferencial.md) |
