@@ -68,6 +68,11 @@ multiplica a contribuição RRF na próxima fusão.
 
 ## 2. Topologia (`kernel/topology.py`)
 
+> **A leitura epistêmica** de cada mecanismo abaixo — que pergunta de
+> *qualidade* ele responde, e o que ele explicitamente NÃO diz (comunidade ≠
+> tema, centralidade ≠ importância, lacuna ≠ contradição) — está em
+> [`28-escada-de-abstracao-e-topologia.md`](28-escada-de-abstracao-e-topologia.md) §3–4.
+
 ### 2.1 Persistência 0-dimensional sobre filtração de pesos
 **Edelsbrunner, Letscher & Zomorodian, "Topological Persistence and
 Simplification", Discrete & Computational Geometry, 2002.** Varremos as

@@ -26,6 +26,7 @@ Conceitos do sistema como produto, sem detalhe de implementação.
 | [00-o-que-e-corpusmith.md](00-o-que-e-corpusmith.md) | **A explicação completa, do zero**: o problema, a categoria (governar ≠ recordar), a tese de compilação, **um fato seguido do PDF à resposta**, o modelo de autoridade, o que torna as alegações verificáveis e o que o produto NÃO alega |
 | [01-conceitos.md](01-conceitos.md) | OKF, camadas de memória, bi-temporalidade, escala de confiança, controle de autoridade, epistemologia (abstenção, desfecho, eval) |
 | [23-ontologia-e-etimologia.md](23-ontologia-e-etimologia.md) | **O léxico**: os quatro eixos de uma afirmação, 17 verbetes com raiz etimológica e o que a raiz PROÍBE, a deriva semântica ainda aberta e os falsos amigos do mercado |
+| [28-escada-de-abstracao-e-topologia.md](28-escada-de-abstracao-e-topologia.md) | **A escada de abstração** (offset → menção → região → afirmação → página → tema → grafo, com o nível 3 vazio), **erro de nível como classe de defeito** (os três defeitos mais caros do repositório são o mesmo erro) e a **topologia como instrumento epistêmico**: a pergunta de qualidade que cada mecanismo responde, e o que ele NÃO diz |
 | [24-axiomas-e-oticas.md](24-axiomas-e-oticas.md) | **Os oito axiomas** (cada um com a asserção executável que o paga) e as **oito óticas** sobre o mesmo corpus, com unidade e frescor de cada uma |
 | [25-fronteira-e-diferencial.md](25-fronteira-e-diferencial.md) | **As três fronteiras que o produto não cruza** (coletor, publicador, agente), o lugar dele na cadeia adquirir→compilar→publicar e a evidência de que o método generaliza |
 
@@ -100,6 +101,8 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
   precisar violá-la, é RFC, não PR.
 - É **por qual ângulo estou olhando** (editorial, epistêmico, temporal,
   topológico…)? → `24` §2.
+- É **em que NÍVEL isto é verdade** (menção? região? página? corpus?), ou o
+  que a topologia pode e não pode dizer sobre qualidade? → `28`.
 - É **se o produto deveria fazer isto** (fronteira, escopo, concorrência)?
   → `25`.
 - É **por que uma técnica funciona** (prova, paper, matemática)? → `03`.

@@ -147,6 +147,12 @@ que faz um painel acender alarme sobre uma coisa apontando para outra.
 | 7 | **de atenção** | o que merece trabalho agora? | item de fila | calor, revisão espaçada, lacunas | `index` |
 | 8 | **de avaliação** | o quanto isto foi medido? | mecanismo | envelopes em `runtime.db` | execução do eval |
 
+> As óticas dizem **por qual ângulo** se olha. O nível em que cada coisa é
+> verdade — e por que "erro de nível" é a classe de defeito mais cara do
+> repositório — está em
+> [`28-escada-de-abstracao-e-topologia.md`](28-escada-de-abstracao-e-topologia.md),
+> junto com o que a ótica topológica pode e não pode afirmar sobre qualidade.
+
 ### O que se ganha em separá-las
 
 **O doctor sabe qual elo está atrás.** Porque a ótica topológica declara sua
