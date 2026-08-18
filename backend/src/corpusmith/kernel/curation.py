@@ -15,6 +15,7 @@ calcular diff é operação pura por natureza.
 from __future__ import annotations
 import difflib
 from datetime import datetime, timezone
+from .ontology import merge_confidence
 
 
 class UndoNotExpressible(RuntimeError):
@@ -83,8 +84,13 @@ def merge_meta(target: dict, source: dict) -> dict:
     """União DECLARADA de frontmatter numa fusão (usado pelo MergePages e
     pela fusão de UPDATE): o alvo manda, o que falta vem da fonte, listas
     se unem sem duplicar e a confiança cai para a MAIS FRACA — fundir não
-    pode promover a qualidade do que se afirma."""
-    fraqueza = {"extracted": 0, "inferred": 1, "ambiguous": 2}
+    pode promover a qualidade do que se afirma.
+
+    RFC-004: `confidence` deixa de ser decidido por uma tabela local de
+    fraqueza. A tabela tinha três valores e o produto escreve quatro, de
+    modo que `human_approved` caía no `default=0` e a mesma situação de
+    governança saía ratificada ou não conforme o OUTRO lado da fusão. A
+    regra passa a morar em `kernel/ontology.py`, decidida eixo a eixo."""
     out = dict(target)
     for chave, valor in source.items():
         if chave not in out or out[chave] in (None, [], ""):
@@ -98,7 +104,7 @@ def merge_meta(target: dict, source: dict) -> dict:
                     visto.append(item)
             out[chave] = visto
         elif chave == "confidence":
-            out[chave] = max(atual, valor, key=lambda c: fraqueza.get(c, 0))
+            out[chave] = merge_confidence(str(atual), str(valor))
         elif chave == "valid_at":
             out[chave] = min(atual, valor)      # o fato vale desde o + antigo
     return out

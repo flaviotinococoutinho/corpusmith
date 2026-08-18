@@ -98,12 +98,20 @@ schema_version = 1
 # comportamento — com o `onClick` do reparo desligado ele sai 0 e o smoke
 # reprova. Era a única lacuna de processo que um ADR nomeava (41.3) e que
 # não estava em G-1..G-10, portanto não entrou em fase nenhuma.
+# RFC-004: `ontology lint` entra no gate pelo mesmo motivo que `epistemics
+# lint` entrou — um registro normativo que ninguém executa não é normativo.
+# Ele é o único guarda de que `ontology.toml` continua descrevendo o código:
+# sem o token, um eixo pode ganhar valor novo sem verbete e a suíte segue
+# verde no que importa (o lint tem findings que os testes de unidade não
+# alcançam: refs de `lives_in` e marcadores de deriva vivem no filesystem).
 ci_enforced = ["pytest", "tsc --noEmit", "npm test",
                "docker compose config",
-               "cargo test", "epistemics lint", "doctor", "backup",
+               "cargo test", "epistemics lint", "ontology lint",
+               "doctor", "backup",
                "pyinstaller build.spec"]
 verify_enforced = ["pytest", "tsc --noEmit", "npm test",
-                   "docker compose config", "epistemics lint"]
+                   "docker compose config", "epistemics lint",
+                   "ontology lint"]
 
 # --- comandos de verificação (o gate único da spec §14.4). ---
 [commands]
@@ -113,6 +121,7 @@ compose_check = "docker compose config -q"
 doctor = "cd backend && .venv/bin/python -m corpusmith.cli doctor"
 backup = "cd backend && .venv/bin/python -m corpusmith.cli backup create"
 epistemics_lint = "cd backend && .venv/bin/python -m corpusmith.cli epistemics lint"
+ontology_lint = "cd backend && .venv/bin/python -m corpusmith.cli ontology lint"
 models_resolve = "cd backend && .venv/bin/python -m corpusmith.cli models"
 bench = "cd backend && .venv/bin/python -m corpusmith.cli bench compare"
 native_tests = "cargo test --workspace --manifest-path native/Cargo.toml"

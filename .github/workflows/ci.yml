@@ -29,6 +29,8 @@ jobs:
       - run: pip install -e "backend[dev]"
       - name: contratos epistêmicos (INV-EPI-001)
         run: cd backend && python -m corpusmith.cli epistemics lint
+      - name: registro ontológico (RFC-004)
+        run: cd backend && python -m corpusmith.cli ontology lint
       - name: HOME sintético para as ferramentas de operação
         run: python -c "from pathlib import Path; from corpusmith.bench import synthetic_bundle; synthetic_bundle(Path.home()/'corpusmith-ci', 40)"
       - name: invariantes INV-* reparáveis

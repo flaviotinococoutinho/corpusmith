@@ -176,3 +176,10 @@ class CurationFacade:
     def epistemics_lint(self) -> dict:
         from ..harness.epistemics import lint
         return lint()
+
+    # ------------------------------------ registro ontológico (RFC-004)
+    def ontology_overview(self) -> dict:
+        """Eixos, termos e deriva semântica + lint — a MESMA fonte de
+        CLI, API e testes (nenhuma releitura paralela do TOML)."""
+        from ..harness.ontology import overview
+        return overview()

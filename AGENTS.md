@@ -43,6 +43,7 @@ Integridade em runtime (não são testes, são ferramentas de operação):
 cd backend && .venv/bin/python -m corpusmith.cli doctor          # invariantes INV-*
 cd backend && .venv/bin/python -m corpusmith.cli backup create   # backup verificável
 cd backend && .venv/bin/python -m corpusmith.cli epistemics lint # contratos epistêmicos
+cd backend && .venv/bin/python -m corpusmith.cli ontology lint   # eixos, termos e deriva
 cd backend && .venv/bin/python -m corpusmith.cli bench compare   # speedups python×rust MEDIDOS
 ```
 
@@ -88,6 +89,7 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | INV-OPS-001 | config aplicada tem linhagem, validação e rollback | `test_v16.py` |
 | INV-OPS-002 | todo job termina em estado terminal ou permanece recuperável | `test_jobs_reliability.py` |
 | INV-EPI-001 | mecanismo heurístico tem contrato em `epistemics.toml`: sem garantia universal, com vieses/failure modes/fallback declarados e sem autocertificação | `test_epistemics.py`, `test_epistemics_toml.py`, `corpusmith epistemics lint` |
+| INV-ONT-001 | todo valor de eixo epistêmico responde a UMA pergunta: vocabulário fechado em `kernel/ontology.py`, declarado em `ontology.toml`, e nenhum termo em dois eixos | `test_ontology.py`, `corpusmith ontology lint` |
 
 ## 5. Caminhos PROIBIDOS (MUST NOT)
 
@@ -113,6 +115,7 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | experiência cognitiva | `cognitive.db` | relatórios |
 | referência do mundo | `reference.db` | gazetteer (cache) |
 | contratos epistêmicos | `epistemics.toml` (raiz) | CLI/API/painel (mesma fonte); envelopes em `runtime.db` |
+| significado dos termos | `ontology.toml` (raiz) + `kernel/ontology.py` | CLI/painel; o TOML descreve o kernel e o lint prova |
 | claims de performance | `benchmarks/baseline.json` (+METRICS.md) | ADRs citam DAQUI — ganho sem medição registrada é proibido |
 
 `index.db` NUNCA participa da transação canônica; converge para

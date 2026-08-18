@@ -1,0 +1,282 @@
+# ontology.toml — ONTOLOGIA E ETIMOLOGIA DO CORPUSMITH (RFC-004, v2.1).
+#
+# Terceiro contrato legível-por-máquina do produto, ao lado de
+# `architecture.toml` (o que o software PODE depender de quê) e
+# `epistemics.toml` (o que um mecanismo PODE alegar). Este responde a
+# pergunta que faltava: **o que cada palavra do produto SIGNIFICA, e o que
+# ela não pode passar a significar**.
+#
+# NÃO é decorativo. `backend/tests/test_ontology.py` cruza os vocabulários
+# declarados aqui com as constantes reais de `kernel/ontology.py`, e
+# `corpusmith ontology lint` (mesma implementação da API e dos testes)
+# verifica que cada `lives_in` existe e que cada deriva registrada em
+# `[drift.*]` ainda é verdade no código. Termo que mente sobre o código
+# quebra a suíte; deriva que já foi consertada e continua aberta aqui vira
+# finding — o registro não pode apodrecer em nenhuma das duas direções.
+#
+# POR QUE ETIMOLOGIA. Não é ornamento culto: a raiz de uma palavra é o
+# argumento de por que ela foi escolhida e, sobretudo, **o que ela
+# proíbe**. `canon` vem de "régua de medir" — por isso canônico é o que
+# mede, não o que é verdadeiro, e ADR-53 §3 pode proibir "fonte da
+# verdade" sem que isso pareça modéstia arbitrária. `index` vem de "dedo
+# indicador" — por isso o índice APONTA e nunca é a coisa apontada, que é
+# o axioma A-1 inteiro em uma etimologia. Cada verbete abaixo carrega o
+# campo `constrains`: a regra operacional que a raiz impõe.
+schema_version = 1
+
+[ontology]
+version = "1.0.0"
+
+# =====================================================================
+# 1. EIXOS — as perguntas independentes sobre uma afirmação
+# =====================================================================
+# Um eixo é uma pergunta cuja resposta não determina a resposta das
+# outras. O teste de que um valor está no eixo certo é conseguir
+# responder a pergunta DESTE eixo com ele, e não a de outro. Foi
+# exatamente esse teste que `confidence` reprovou: `extracted` responde
+# "como derivou", `ambiguous` responde "resolveu?" e `human_approved`
+# responde "quem autorizou" — três perguntas, um campo.
+
+[axes.derivation_method]
+question = "COMO esta afirmação passou a existir?"
+values = ["extracted", "inferred", "asserted", "imported"]
+applies_to = "assertion"
+etymology = "lat. derivare, 'desviar água do rio' (de + rivus) — o curso vem de outro lugar e o percurso é rastreável"
+constrains = "o valor descreve o PERCURSO, nunca a qualidade do resultado nem quem o aprovou"
+lives_in = ["backend/src/corpusmith/kernel/ontology.py"]
+
+[axes.resolution_status]
+question = "as leituras concorrentes foram assentadas?"
+values = ["resolved", "ambiguous", "contested"]
+applies_to = "assertion"
+etymology = "lat. resolvere, 'desatar' (re + solvere) — desfazer o nó, não cortá-lo"
+constrains = "só um ato posterior desata; nenhuma fusão, recompilação ou reindexação pode assentar sozinha o que ninguém assentou"
+lives_in = ["backend/src/corpusmith/kernel/ontology.py"]
+
+[axes.governance_status]
+question = "quem autorizou isto a contar como conhecimento?"
+values = ["proposed", "ratified", "retired"]
+applies_to = "assertion"
+etymology = "gr. kybernân, 'pilotar' — quem governa conduz e responde pelo rumo, não possui o navio"
+constrains = "ratificação é ATO datado e atribuído; ausência de ato é `proposed`, jamais silêncio a favor"
+lives_in = ["backend/src/corpusmith/kernel/ontology.py"]
+
+# O quarto eixo JÁ EXISTE, fechado e validado — mas aplicado a mecanismo,
+# não a afirmação. Declará-lo de novo aqui criaria a segunda definição do
+# mesmo termo, que é o defeito que este arquivo combate. Fica registrado
+# com a fonte real e com o vão explícito.
+[axes.evaluation_status]
+question = "o quanto isto foi medido, e em que regime?"
+values = ["unevaluated", "partially_evaluated", "evaluated", "drifted", "invalidated"]
+applies_to = "mechanism"
+etymology = "lat. ex + valere, 'extrair o valor' — medir é extrair, e o que não foi medido não tem valor extraído"
+constrains = "hoje cobre MECANISMO; nenhuma afirmação do bundle carrega este eixo, e RFC-004 §6 é onde isso muda"
+lives_in = ["backend/src/corpusmith/epistemic/model.py"]
+
+# =====================================================================
+# 2. TERMOS — o vocabulário do produto, com o que a raiz proíbe
+# =====================================================================
+
+[terms.corpus]
+roots = "lat. corpus, 'corpo'"
+means = "o conjunto trabalhado como UM: tem partes, fronteira e integridade verificável"
+not_means = "uma pilha de arquivos, um bucket, um diretório"
+constrains = "operação que não preserva a integridade do todo não é operação de corpus — por isso toda escrita passa por um gate só"
+lives_in = ["backend/src/corpusmith/okf/bundle.py"]
+
+[terms.smith]
+roots = "proto-germ. smiþaz, 'aquele que trabalha com ferramenta'"
+means = "ofício sobre material que já existe: forjar é dar forma, não criar matéria"
+not_means = "gerar conteúdo, sintetizar do nada"
+constrains = "o produto não inventa conhecimento; ele compila fontes — e quando não há fonte suficiente, abstém"
+lives_in = ["backend/src/corpusmith/kernel/sufficiency.py"]
+
+[terms.canon]
+roots = "gr. kanṓn, 'régua, vara de medir' (de kánna, 'cana')"
+means = "aquilo com que se mede o resto: o bundle é a régua contra a qual toda projeção é conferida"
+not_means = "aquilo que é verdadeiro"
+constrains = "canônico ≠ verdadeiro — o registro diz o que foi ACEITO e por quem; é esta raiz que sustenta a proibição de 'fonte da verdade' em ADR-53 §3"
+lives_in = ["backend/src/corpusmith/kernel/checkpoints.py"]
+
+[terms.index]
+roots = "lat. index, 'o dedo indicador; aquele que aponta'"
+means = "a projeção consultável que APONTA para o canônico"
+not_means = "o conteúdo apontado"
+constrains = "índice não decide sobre o canônico; apagá-lo não perde conhecimento (INV-001/002, e o defeito que RFC-002 corrigiu foi exatamente uma projeção decidindo)"
+lives_in = ["backend/src/corpusmith/retrieval/fts.py"]
+
+[terms.evidence]
+roots = "lat. evidentia, de videre, 'ver' — 'aquilo que se dá a ver'"
+means = "o trecho exato que se pode olhar: página, span, offset"
+not_means = "a alegação de que existe suporte"
+constrains = "evidência que não pode ser EXIBIDA não conta como evidência — daí spans com offset, e não apenas nome de página"
+lives_in = ["backend/src/corpusmith/kernel/sufficiency.py", "backend/src/corpusmith/okf/regions.py"]
+
+[terms.provenance]
+roots = "lat. provenire, 'vir de' (pro + venire)"
+means = "o caminho percorrido desde a fonte, região a região"
+not_means = "um rótulo de origem colado na página inteira"
+constrains = "proveniência é por REGIÃO, não por elemento nem por documento — uma página com duas fontes tem duas proveniências"
+lives_in = ["backend/src/corpusmith/okf/regions.py", "backend/src/corpusmith/okf/absorbed.py"]
+
+[terms.authority]
+roots = "lat. auctoritas, de auctor ← augere, 'fazer crescer, originar'"
+means = "quem pode fazer o corpus crescer, e responde por isso"
+not_means = "quem tem razão"
+constrains = "autoridade é sobre PERMISSÃO de escrita e origem, nunca sobre acerto; o termo carrega cinco sentidos no código e [drift.authority] registra quais"
+lives_in = ["backend/src/corpusmith/okf/authorities.py"]
+
+[terms.curation]
+roots = "lat. curare ← cura, 'cuidado, zelo'"
+means = "responder pelo estado do corpus ao longo do tempo"
+not_means = "controlar, aprovar, filtrar"
+constrains = "todo ato de curadoria tem preview antes do efeito e é reversível — cuidado sem possibilidade de desfazer é controle"
+lives_in = ["backend/src/corpusmith/usecases/curate/base.py"]
+
+[terms.assertion]
+roots = "lat. asserere, ad + serere, 'atar a si' (mesma raiz de 'série')"
+means = "uma afirmação atada a quem a sustenta e à evidência que a prende"
+not_means = "uma frase, um chunk, um fato solto"
+constrains = "quem afirma fica atado: nenhuma asserção existe sem sustentação identificável — e é por isto que a página, que pode conter duas asserções de fontes diferentes, não serve como unidade epistêmica (RFC-004 §2)"
+lives_in = ["docs/22-rfc-ontologia-da-assercao.md"]
+
+[terms.ratification]
+roots = "lat. ratus, 'calculado, fixado' + facere, 'fazer' — 'tornar fixo'"
+means = "o ato datado que fixa uma proposta como aceita"
+not_means = "concordar, achar bom, não contestar"
+constrains = "ratificação é evento com autor e data em `curation_acts`; ela cobre um CONTEÚDO, e conteúdo alterado perde a cobertura (kernel/ontology.py:merge_confidence)"
+lives_in = ["backend/src/corpusmith/kernel/ontology.py", "backend/src/corpusmith/usecases/curate/base.py"]
+
+[terms.verdict]
+roots = "lat. vere dictum, 'dito com verdade'"
+means = "o juízo humano sobre um objeto computado, com prazo declarado"
+not_means = "o resultado do cálculo"
+constrains = "veredito suprime COM MOTIVO e com `until`; jamais apaga o objeto computado"
+lives_in = ["backend/src/corpusmith/kernel/verdicts.py"]
+
+[terms.stale]
+roots = "germ., dito de líquido 'que ficou parado tempo demais'"
+means = "parado desde uma referência de código — pode precisar de revisão"
+not_means = "falso, inválido, vencido no mundo"
+constrains = "`stale_as_of` é tempo de CÓDIGO e não toca `invalid_at`, que é tempo de MUNDO; confundi-los depreca fato que continua valendo"
+lives_in = ["backend/src/corpusmith/usecases/mark_stale.py"]
+
+[terms.harness]
+roots = "ant. fr. herneis, 'arreio, equipamento'"
+means = "o que prende e habilita ao mesmo tempo: o caminho único de escrita"
+not_means = "um validador opcional"
+constrains = "não há escrita fora do arreio; regra de conformidade OKF e regra de política local ficam em camadas SEPARADAS, para que o produto nunca invente exigência do SPEC"
+lives_in = ["backend/src/corpusmith/harness/local_policy.py"]
+
+[terms.vitality]
+roots = "lat. vita, 'vida'"
+means = "estar vivo = aceitar trabalho novo"
+not_means = "existir, estar presente, ser recuperável"
+constrains = "aposentar não apaga: a página sucedida continua no bundle, no Git e no índice, e só deixa de ser endereço de trabalho"
+lives_in = ["backend/src/corpusmith/kernel/vitality.py"]
+
+[terms.epistemic]
+roots = "gr. epistḗmē, 'conhecimento', em oposição a dóxa, 'opinião'"
+means = "a fronteira entre o que se sabe e o que se acha, marcada explicitamente"
+not_means = "certeza, rigor, formalidade"
+constrains = "toda garantia é RELATIVA a um regime declarado; `universal_guarantee = true` é proibido pelo lint"
+lives_in = ["epistemics.toml", "backend/src/corpusmith/epistemic/validate.py"]
+
+[terms.compile]
+roots = "lat. compilare, 'juntar em monte'"
+means = "montar um artefato a partir de fontes, sob regras, de forma repetível"
+not_means = "resumir, reescrever, gerar"
+constrains = "a mesma fonte sob as mesmas regras produz o mesmo artefato — determinismo antes de modelo, com o LLM como estágio cercado"
+lives_in = ["backend/src/corpusmith/usecases/base.py"]
+
+[terms.ontology]
+roots = "gr. ónta, 'as coisas que são' + lógos, 'discurso'"
+means = "o discurso sobre O QUE EXISTE no sistema: quais entidades há e quais eixos as descrevem"
+not_means = "uma ontologia formal com semântica lógica"
+constrains = "declarar que algo existe não é alegar que é verdadeiro; ADR-53 §3 proíbe 'ontologia formal' e este arquivo não a introduz"
+lives_in = ["ontology.toml", "backend/src/corpusmith/kernel/ontology.py"]
+
+# =====================================================================
+# 3. DERIVA SEMÂNTICA — onde uma palavra ainda responde a duas perguntas
+# =====================================================================
+# Registro VIVO, não confissão decorativa. Cada `marker` é uma string que,
+# existindo no arquivo apontado, prova que AQUELE SENTIDO está no código.
+# O que muda com o `status` é o que a ausência significa:
+#   marker some + status "open"     -> ontology.drift_sense_gone (warn):
+#       o sentido saiu do código; se a deriva foi paga, pare de cobrá-la;
+#   marker some + status "resolved" -> ontology.drift_regressed (error):
+#       a separação perdeu um de seus nomes distintos — regressão.
+# Assim a deriva não apodrece aqui nem volta ao código em silêncio. Foi
+# assim que `confidence` passou de "todo mundo sabe" a defeito com
+# correção datada.
+
+[drift.confidence]
+field = "confidence"
+status = "open"
+senses = [
+  "derivação da aresta/página: extracted|inferred (compute/python_kernel.py)",
+  "resolução da leitura: ambiguous (usecases/reconcile_candidate.py)",
+  "governança: human_approved (usecases/promote_memory.py)",
+  "autorrelato preditivo em [0,1]: confidence_before (usecases/cognitive_journey.py)",
+  "taxa estatística e lacuna de calibração: rate, hi_rate - lo_rate, gap (usecases/metacognition.py)",
+  "intervalo de avaliação: confidence_intervals (epistemic/model.py)",
+]
+markers = [
+  ["backend/src/corpusmith/compute/python_kernel.py", "EDGE_WEIGHT = {\"extracted\": 1.0"],
+  ["backend/src/corpusmith/usecases/promote_memory.py", "\"confidence\": \"human_approved\""],
+  ["backend/src/corpusmith/usecases/cognitive_journey.py", "confidence_before"],
+  ["backend/src/corpusmith/usecases/metacognition.py", "\"confidence\": rate"],
+  ["backend/src/corpusmith/epistemic/model.py", "confidence_intervals"],
+]
+paid = "kernel/ontology.py separa os três eixos do frontmatter e corrige merge_meta; os sentidos numéricos (autorrelato, taxa, intervalo) seguem no mesmo nome e são RFC-004 §6"
+
+[drift.authority]
+field = "authority / autoridade"
+status = "open"
+senses = [
+  "autoridade de NOME: o gazetteer curado decide a grafia canônica (okf/authorities.py)",
+  "autoridade de ARMAZENAMENTO: o bundle + Git manda sobre as projeções (kernel/checkpoints.py)",
+  "autoridade de DECISÃO: quem pode ratificar e reverter (usecases/curate/base.py)",
+  "autoridade de REFERÊNCIA: baseline medido que arbitra regressão (bench.py)",
+  "tipo de página protegida contra congelamento: authority_record (usecases/cold_memory.py)",
+]
+markers = [
+  ["backend/src/corpusmith/okf/authorities.py", "\"authority\": r[\"kind\"]"],
+  ["backend/src/corpusmith/kernel/checkpoints.py", "\"bundle\": None"],
+  ["backend/src/corpusmith/bench.py", "a autoridade DECLARADA de performance"],
+  ["backend/src/corpusmith/usecases/cold_memory.py", "PROTECTED_TYPES = {\"authority_record\""],
+]
+paid = "nenhum ainda — os cinco sentidos convivem; docs/23 §3 nomeia cada um e RFC-004 §6 propõe os qualificadores"
+
+[drift.evidence]
+field = "evidence"
+status = "open"
+senses = [
+  "de QUALIDADE do mecanismo: como ele foi validado (epistemics.toml, vocabulário fechado)",
+  "de SUPORTE da resposta: os trechos que sustentam o que foi respondido (usecases/ask_memory.py)",
+  "de OBSERVAÇÃO: os registros por trás de uma proposta metacognitiva (usecases/metacognition.py)",
+]
+markers = [
+  ["epistemics.toml", "evidence = "],
+  ["backend/src/corpusmith/usecases/ask_memory.py", "evidence_support"],
+  ["backend/src/corpusmith/usecases/metacognition.py", "json.dumps(prop[\"evidence\"])"],
+]
+paid = "nenhum — os três sentidos são legítimos e distintos; falta o qualificador no nome"
+
+# Entrada RESOLVIDA: fica registrada para que a separação não regrida. Os
+# quatro tempos já têm nomes distintos, e o lint acusa se algum sumir.
+[drift.time]
+field = "tempo"
+status = "resolved"
+senses = [
+  "tempo de MUNDO — quando o fato passou a valer: valid_at / invalid_at",
+  "tempo de REGISTRO — quando escrevemos: timestamp",
+  "tempo de CÓDIGO — desde que commit isto pode estar parado: stale_as_of",
+  "tempo de GOVERNANÇA — quando o curador fechou: resolved_at",
+]
+markers = [
+  ["backend/src/corpusmith/okf/document.py", "valid_at: datetime | None = None"],
+  ["backend/src/corpusmith/okf/document.py", "resolved_at: datetime | None = None"],
+  ["backend/src/corpusmith/usecases/mark_stale.py", "meta[\"stale_as_of\"] = head"],
+]
+paid = "v0.8 §6.3 (bi-temporalidade) e F3-PR2 (resolved_at) — a entrada existe para impedir regressão, não para cobrar dívida"

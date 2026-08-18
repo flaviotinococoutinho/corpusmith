@@ -390,6 +390,37 @@ def cmd_epistemics(s: Settings, args) -> int:
     return 2
 
 
+def cmd_ontology(s: Settings, args) -> int:
+    """ontology lint|axes|terms|drift — o registro ontológico (RFC-004),
+    a MESMA implementação do painel e dos testes (harness.ontology)."""
+    data = CurationFacade(s).ontology_overview()
+    if args.op == "axes":
+        for a in data["axes"]:
+            print(f"{a['axis']:20s} [{a['applies_to']:10s}] "
+                  f"{a['question']}\n{'':20s} {', '.join(a['values'])}")
+        return 0
+    if args.op == "terms":
+        for t in data["terms"]:
+            print(f"{t['term']:14s} {t['roots']}\n"
+                  f"{'':14s} é: {t['means']}\n"
+                  f"{'':14s} não é: {t['not_means']}")
+        return 0
+    if args.op == "drift":
+        for d in data["drift"]:
+            print(f"{d['status']:9s} {d['field']} "
+                  f"({len(d['senses'])} sentidos)")
+            for sentido in d["senses"]:
+                print(f"{'':11s}· {sentido}")
+        return 0
+    for f in data["findings"]:
+        where = f["mechanism_id"] or "<registro>"
+        print(f"{f['severity']:5s} {f['code']:28s} {where}: {f['message']}")
+    print(f"\n{len(data['axes'])} eixo(s), {len(data['terms'])} termo(s), "
+          f"{len(data['drift'])} deriva(s), "
+          f"{len(data['findings'])} finding(s)")
+    return 0 if data["ok"] else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="corpusmith")
     ap.add_argument("--config", help="caminho de config YAML alternativo")
@@ -438,6 +469,10 @@ def main(argv: list[str] | None = None) -> int:
                                            "evaluations"])
     epistemics.add_argument("mechanism", nargs="?", default=None)
     epistemics.set_defaults(fn=cmd_epistemics)
+    ontology = sub.add_parser(
+        "ontology", help="eixos, termos e deriva semântica (ontology.toml)")
+    ontology.add_argument("op", choices=["lint", "axes", "terms", "drift"])
+    ontology.set_defaults(fn=cmd_ontology)
     seed = sub.add_parser("seed", help="dados pré-definidos (idempotente)")
     seed.add_argument("--file", default=None)
     seed.set_defaults(fn=cmd_seed)

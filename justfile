@@ -25,6 +25,7 @@ verify:
     cd desktop && npm test
     docker compose config -q
     cd backend && .venv/bin/python -m corpusmith.cli epistemics lint
+    cd backend && .venv/bin/python -m corpusmith.cli ontology lint
 
 # baixa modelos locais (Ollama)
 models:
