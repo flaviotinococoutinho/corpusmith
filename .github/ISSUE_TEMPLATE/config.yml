@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Relatar uma vulnerabilidade
+    url: https://github.com/flaviotinococoutinho/corpusmith/security/advisories/new
+    about: Envie vulnerabilidades de forma privada; não abra uma issue pública.
+  - name: Documentação
+    url: https://github.com/flaviotinococoutinho/corpusmith/tree/main/docs
+    about: Consulte conceitos, instalação, arquitetura e fluxos operacionais.
