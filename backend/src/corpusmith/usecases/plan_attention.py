@@ -82,7 +82,7 @@ def review_items(settings: Settings) -> list[dict]:
 def gap_items(settings: Settings) -> list[dict]:
     reader = BundleReader(settings.path("knowledge") / "bundle")
     idx = connect(settings.app_support / "index.db")
-    contested = {r["page"] for r in idx.execute(
+    low_yield = {r["page"] for r in idx.execute(
         "SELECT page FROM page_overlay WHERE status = 'low_yield'")}
     idx.close()
     out = []
@@ -96,7 +96,7 @@ def gap_items(settings: Settings) -> list[dict]:
             continue
         if doc.meta.type == "question":
             kind, reason = "question", "pergunta aberta na sua memória"
-        elif doc.rel_path in contested:
+        elif doc.rel_path in low_yield:
             kind, reason = "low_yield", ("página de baixo rendimento — "
                                          "os desfechos dizem beco; editar "
                                          "ou aposentar vale mais que reler")

@@ -189,7 +189,7 @@ def insights(settings: Settings) -> dict:
     pages = _pages_meta(settings)
     graph = graph_data(settings)
     idx = connect(settings.app_support / "index.db")
-    contested = [r["page"] for r in idx.execute(
+    low_yield = [r["page"] for r in idx.execute(
         "SELECT page FROM page_overlay WHERE status='low_yield'")]
     bridge_rows = [dict(r) for r in idx.execute(
         "SELECT src, dst, weight FROM graph_bridges ORDER BY weight LIMIT 5")]
@@ -247,7 +247,7 @@ def insights(settings: Settings) -> dict:
         "gaps": {
             "questions": [p["page"] for p in pages if p["type"] == "question"],
             "orphans": [n["page"] for n in graph["nodes"] if n["orphan"]][:20],
-            "low_yield": contested,
+            "low_yield": low_yield,
             "stale": [p["page"] for p in pages if p["stale"]][:20],
             "cold_count": cold_count,
             "eval": eval_rows,

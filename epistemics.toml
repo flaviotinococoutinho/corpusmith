@@ -379,7 +379,7 @@ inductive_biases = [
   "densidade valor/custo (VoI por minuto) ordena melhor que valor absoluto — item caríssimo de valor alto não deve afogar cinco baratos",
   "custo é leitura estimada a 150 palavras/min com piso de 2 min",
   "revisão vale mais na zona de esforço produtivo: review_gain(p) = 4p(1−p) (Bjork 1994) — o trivial e o perdido rendem pouco",
-  "valor por tipo é fixo e declarado (contradição 0.85 > pergunta 0.9 > contestada 0.8 > stale 0.6 > inbox 0.5), não aprendido",
+  "valor por tipo é fixo e declarado (pergunta 0.9 > contradição 0.85 > baixo rendimento 0.8 > stale 0.6 > inbox 0.5), não aprendido",
 ]
 assumptions = [
   "page_heat (leituras e citações) aproxima o uso real da página",

@@ -63,7 +63,13 @@ def cognitive_priority(view: KnowledgeItemView, goal: dict,
     if view.stale:
         reasons.append("⚠ marcada stale no canônico — ler com reserva")
     if view.low_yield:
-        reasons.append("⚔ contestada no canônico — há disputa aberta")
+        # O-6: o campo já era `low_yield`, o TEXTO ainda dizia "disputa".
+        # `low_yield` é DESFECHO DE USO (ADR-52 §P-5: "os desfechos dizem
+        # beco"), não juízo sobre o conteúdo — quem afirma disputa é o
+        # eixo `resolution_status = contested` (ADR-54), e são coisas
+        # diferentes. Mesma redação honesta de `plan_attention.gap_items`.
+        reasons.append("↓ baixo rendimento — os desfechos dizem beco; "
+                       "editar ou aposentar rende mais que reler")
     if not reasons:
         reasons.append(f"a {view.distance} salto(s) do raiz, "
                        f"custo {view.cost_min:.0f} min")
