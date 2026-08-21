@@ -220,7 +220,30 @@ identificador forte que já existe, e a precisão passa a ser por construção.
 | # | Pacote | O quê | Estado |
 |---|---|---|---|
 | **F4-PR3a** | o instrumento | `kernel/factual.py` (puro, com a guarda de faixa que o plano não previa), `TOLERANCIA_RELATIVA = 0.01` declarada como NÃO calibrada, `classificar(em_conflito=)` produzindo `contested` | ✅ entregue |
-| **F4-PR3b** | a obra | `check_corpus` emite `policy.factual_conflict`; fila distingue conflito factual de coexistência; `[mechanisms.factual_conflict]` em `epistemics.toml` com o nome MOVIDO de `PROMISED` para `EXPECTED`; código novo em `docs/06` §1 | ⏭️ próximo |
+| **F4-PR3b** | a obra | `check_corpus` emite `policy.factual_conflict`; fila distingue conflito factual de coexistência; `[mechanisms.factual_conflict]` em `epistemics.toml` com o nome MOVIDO de `PROMISED` para `EXPECTED`; código novo em `docs/06` §1 | ✅ entregue — com **três achados** que mudaram o desenho (abaixo) |
+
+**Os três achados do F4-PR3b.** Nenhum estava no plano; os três vieram de
+medir em vez de presumir.
+
+1. **`check_corpus` tinha DOIS consumidores que não filtravam por regra** —
+   `next_actions.contradiction_items` e `MergePages._identificadores_
+   compartilhados`. Era seguro enquanto a função emitia um código só. Sem o
+   despacho, o conflito factual entraria na fila **disfarçado** de
+   coexistência (mesmo rótulo, mesmo custo, mesma chave de supressão) e a
+   entrega "a fila distingue os dois" sairia não-entregue **com a suíte
+   verde**, porque nenhuma fixture existente tem quantidades divergentes.
+2. **Fundir SILENCIA o conflito em vez de resolvê-lo.** `merge` era o clique
+   principal do item. A fusão põe os dois valores na mesma página, a guarda
+   de faixa de `kernel/factual.py` descarta a dimensão inteira, e o finding
+   some **sem que o número tenha sido corrigido** — enquanto o preview do
+   `MergePages` declararia resolvido. `edit` passou a vir primeiro, e o
+   preview declara a perda (mesma disciplina de `ratificacao_perdida`).
+3. **A densidade sobe pelo CUSTO, não pelo valor.** O plano previa valor
+   maior para o conflito factual. Subir o valor poria a tolerância de 1% —
+   explicitamente NÃO calibrada — a governar o item de maior VoI do produto
+   inteiro. O valor fica em 0.85 (igual ao genérico: o detector não mede
+   importância) e o custo cai de 8 para 3 min, que é o que a evidência
+   sustenta: conferir dois spans não custa ler duas páginas.
 | **F4-PR3c** | o resíduo do P-9 | ato em lote com preview do `valid_at` legado | ⏭️ |
 
 **Duas cláusulas de `docs/14` §P-5 caem, e a razão fica registrada**:

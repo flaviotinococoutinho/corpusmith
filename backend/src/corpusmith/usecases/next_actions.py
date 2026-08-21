@@ -36,6 +36,24 @@ _BRIDGE_COST = 3.0            # editar um link é barato
 _CONTRADICTION_VALUE = 0.85  # duas versões da mesma verdade convivendo
 _CONTRADICTION_COST = 8.0    # ler ambas e decidir supersede/merge
 
+# F4-PR3b (RFC-005): o conflito factual é MAIS acionável que a coexistência
+# genérica — há um número nomeado, com span, para conferir. A densidade
+# valor/custo (o critério real de ordenação) sobe pelo CUSTO, não pelo
+# valor: conferir `12 km` contra `20 km` em dois spans não custa o que
+# custa ler duas páginas inteiras e decidir sucessão. Subir o VALOR acima
+# de 0.85 poria um limiar explicitamente NÃO calibrado (a tolerância de 1%)
+# a governar o item de maior VoI do produto inteiro — alegar mais do que se
+# mediu. O custo é a parcela que a evidência sustenta.
+_FACTUAL_VALUE = 0.85        # o MESMO: o detector não mede importância
+_FACTUAL_COST = 3.0          # conferir um número em dois spans
+
+# desde o F4-PR3b `check_corpus` emite DOIS códigos; quem itera precisa
+# despachar por regra. Fail-closed: regra desconhecida não vira item.
+_KIND_POR_REGRA = {"policy.contradiction_candidate": "contradiction",
+                   "policy.factual_conflict": "factual_conflict"}
+_VOI_POR_KIND = {"contradiction": (_CONTRADICTION_VALUE, _CONTRADICTION_COST),
+                 "factual_conflict": (_FACTUAL_VALUE, _FACTUAL_COST)}
+
 # origem legível por tipo de item (a interface rotula sem reinterpretar)
 _ORIGIN = {
     "review": "revisão espaçada",
@@ -45,6 +63,7 @@ _ORIGIN = {
     "inbox": "captura não absorvida",
     "bridge": "ponte frágil no grafo",
     "contradiction": "contradição candidata",
+    "factual_conflict": "conflito factual",
 }
 # o que o clique faz — a interface roteia por `action.type`, não decide
 _ACTION_TYPE = {
@@ -88,7 +107,7 @@ def acts_for(item: dict) -> list[dict]:
                 {"act": "link", "params": {"src": dst, "dst": src},
                  "needs": [], "label": f"Linkar {_titleize(dst)} → "
                                        f"{_titleize(src)}"}]
-    if kind == "contradiction":
+    if kind in ("contradiction", "factual_conflict"):
         pages = [p for p in (action.get("pages") or []) if p]
         alvo = item.get("target")
         ofertas = [{"act": "invalidate", "params": {"page": alvo},
@@ -114,6 +133,19 @@ def acts_for(item: dict) -> list[dict]:
                 "needs": ["page"],
                 "label": "Fundir uma das páginas nesta",
                 "options": {"page": outras}})
+        if kind == "factual_conflict":
+            # F4-PR3b: para um NÚMERO divergente, fundir é a saída errada e
+            # `merge` era o clique principal. A fusão põe os dois valores na
+            # mesma página, e a guarda de faixa de `kernel/factual.py` então
+            # descarta a dimensão inteira: a divergência deixa de ser
+            # DETECTÁVEL sem ter sido corrigida. Corrigir o corpo (`edit`)
+            # é o gesto certo — não afirma nada sobre o mundo, só conserta o
+            # texto. Vai à frente; `merge` continua na lista, porque duas
+            # versões da mesma fonte às vezes são isso mesmo, e o preview do
+            # MergePages passa a declarar a perda (RFC-005 §5.3).
+            ofertas.insert(0, {
+                "act": "edit", "params": {"page": alvo}, "needs": [],
+                "label": "Corrigir o número nesta página"})
         return ofertas
     if kind in ("low_yield", "stale"):
         # F1-PR3: o ato que estes kinds pediam existe agora. Corrigir o
@@ -194,29 +226,59 @@ def bridge_items(settings: Settings) -> list[dict]:
 
 
 def contradiction_items(settings: Settings) -> list[dict]:
-    """Contradições candidatas (AGM, `check_corpus`): o mesmo identificador
-    forte em 2+ páginas sem relação de sucessão. Alto valor epistêmico; a
-    resolução (supersede/merge) é sempre humana. Reusa exatamente a mesma
-    detecção do painel Qualidade — fonte única, sem heurística nova."""
+    """Contradições candidatas e conflitos factuais (AGM, `check_corpus`).
+
+    O candidato genérico diz *"estas páginas citam a mesma fonte e ninguém
+    declarou sucessão"* — o curador abre as duas e frequentemente conclui
+    que não há conflito. O conflito factual (F4-PR3b, RFC-005) diz *"este
+    número diverge, nestes spans"*: é o mesmo sujeito com evidência
+    apontada, e por isso item PRÓPRIO.
+
+    **Despacho por regra, fail-closed.** Até o F4-PR3b `check_corpus`
+    emitia um código só e iterar sem olhar `f.rule` era seguro. Deixou de
+    ser: sem o despacho, o conflito factual entraria na fila DISFARÇADO de
+    coexistência — mesmo rótulo, mesmo custo, mesma chave de supressão — e
+    a entrega "a fila distingue os dois" sairia não-entregue com a suíte
+    verde."""
     reader = BundleReader(settings.path("knowledge") / "bundle")
     docs = list(reader.iter_concepts())
-    suprimidos = suppressed_keys(settings, "contradiction")
-    out = []
+    # NAMESPACE POR KIND, sem herança. `suppressed_keys` é chaveado por
+    # (kind, pattern_key), então o item novo já nasce com silêncio próprio.
+    # Herdar o silêncio do candidato genérico seria repetir a dívida do
+    # ADR-41.5 que o F3-PR2 pagou: um veredito sobre UMA relação apagando
+    # outra que ninguém julgou. Rejeitar "estas páginas coexistem" é juízo
+    # sobre a convivência; não diz nada sobre o número divergente.
+    suprimidos = {k: suppressed_keys(settings, k) for k in _VOI_POR_KIND}
+    itens: list[dict] = []
     for f in check_corpus(docs, reader):
+        kind = _KIND_POR_REGRA.get(f.rule)
+        if kind is None:
+            continue                      # regra nova não vira item sozinha
+        pages = f.meta.get("pages", [f.path])
         # F3-PR2: "já olhei, é falso positivo" precisa CALAR o item — senão
         # a contradição de maior VoI volta ao topo da fila toda vez e ensina
         # o usuário a ignorar a fila inteira
-        if pattern_key(f.meta.get("pages", [f.path])) in suprimidos:
+        if pattern_key(pages) in suprimidos[kind]:
             continue
-        out.append({
-            "kind": "contradiction", "target": f.path,
-            "title": _titleize(f.path), "origin": _ORIGIN["contradiction"],
-            "value": _CONTRADICTION_VALUE, "cost_min": _CONTRADICTION_COST,
+        valor, custo = _VOI_POR_KIND[kind]
+        itens.append({
+            "kind": kind, "target": f.path,
+            "title": _titleize(f.path), "origin": _ORIGIN[kind],
+            "value": valor, "cost_min": custo,
             "reason": f.message,
-            "action": {"type": "resolve-contradiction",
-                       "pages": f.meta.get("pages", [f.path]),
+            "action": {"type": "resolve-contradiction", "pages": pages,
                        "identifier": f.meta.get("identifier")}})
-    return out
+    # Mesmas páginas, dois itens: o factual é estritamente mais informativo
+    # (traz o número, a dimensão e os spans) e abre o mesmo repertório de
+    # atos. Deixar os dois põe o MESMO trabalho duas vezes no topo da fila.
+    # Quando as divergentes são um SUBCONJUNTO do grupo, as chaves diferem e
+    # os dois ficam — e isso é correto: a coexistência com a terceira página
+    # não foi tratada por nada.
+    factuais = {pattern_key(i["action"]["pages"]) for i in itens
+                if i["kind"] == "factual_conflict"}
+    return [i for i in itens
+            if i["kind"] != "contradiction"
+            or pattern_key(i["action"]["pages"]) not in factuais]
 
 
 class NextActions(UseCase):

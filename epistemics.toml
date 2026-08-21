@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.9.1"   # F4-PR2 (ADR-52): overlay contested → low_yield (valor, chave e rótulo)
+version = "1.10.0"  # F4-PR3b (RFC-005): `factual_conflict` entra — PROMISED → EXPECTED
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -396,6 +396,7 @@ known_failure_modes = [
   "custo por palavras/min ignora dificuldade — 300 palavras de matemática não custam o mesmo que 300 de prosa",
   "medido no F3-PR2: sem filtro de vitalidade a fila propunha revisar página aposentada e página inexistente, porque page_heat é chaveado por caminho e ninguém o confrontava com a autoridade",
   "veredito humano sobre padrão computado (ponte, contradição) precisa de pattern_verdicts com until: apagar a linha do padrão seria desfeito na próxima recomputação do job",
+  "F4-PR3b: `contradiction` e `factual_conflict` têm namespaces de supressão SEPARADOS, sem herança — rejeitar a coexistência não julga o número divergente, e herdar o silêncio repetiria a dívida do ADR-41.5 (um veredito sobre UMA relação apagando outra que ninguém julgou). O custo é que o curador pode ver o mesmo PAR duas vezes se rejeitar só um dos dois",
 ]
 guarantee_kind = "heuristic"
 guarantee_relative_to = "ordenação por densidade valor/custo sobre as fontes declaradas, com alvo verificado vivo; NÃO otimalidade da atenção nem completude das fontes"
@@ -406,7 +407,7 @@ feedback_signal = ""
 composite = true
 composite_components = [
   "review", "question", "low_yield", "stale", "inbox", "bridge",
-  "contradiction",
+  "contradiction", "factual_conflict",
 ]
 evidence = ["deterministic_check", "property_test"]
 misinterpretations = [
@@ -427,7 +428,71 @@ value_stale = 0.6
 value_inbox = 0.5
 value_bridge_base = 0.7
 value_contradiction = 0.85
+value_factual_conflict = 0.85
+cost_factual_conflict = 3.0
 review_gain_floor = 0.3
+
+# ============================== conflito factual (F4-PR3b, RFC-005)
+# O PRIMEIRO limiar numérico do Harness. Até aqui as regras usavam só
+# cardinalidades (`< 2`) e truncamentos de mensagem — este é o primeiro
+# número que decide, e por isso o contrato existe antes da calibração.
+[mechanisms.factual_conflict]
+title = "Conflito factual entre páginas do mesmo grupo de identificador forte"
+decision = "apontar divergência numérica, na mesma dimensão SI, entre páginas que já convivem sob o mesmo identificador forte — PROPOR conferência humana, nunca escolher um lado"
+implementation_refs = [
+  "backend/src/corpusmith/kernel/factual.py",
+  "backend/src/corpusmith/harness/local_policy.py",
+  "backend/src/corpusmith/usecases/next_actions.py",
+]
+inductive_biases = [
+  "o SUJEITO da divergência é o grupo de identificador forte que `policy.contradiction_candidate` já forma — duas páginas que citam o mesmo DOI falam da mesma fonte; duas páginas sem nada em comum que dizem `250 ms` são coincidência léxica",
+  "comparação em SI, não em unidade idêntica: `12 km` e `12000 m` são o MESMO valor, e exigir unidade igual só compraria falso negativo",
+  "dispersão RELATIVA ao valor de maior magnitude — 1% de 12 km e 1% de 12 GB são erros de grandeza comparável; um limiar absoluto não seria",
+  "precisão > recall: uma página que afirma DOIS valores da mesma dimensão está descrevendo faixa ou comparação, e a dimensão inteira sai do exame",
+]
+assumptions = [
+  "`TOLERANCIA_RELATIVA = 0.01` NÃO é calibrada: não existe golden set de conflitos factuais neste repositório, e é ponto de partida DECLARADO — a calibração é condição de reentrada, não promessa cumprida",
+  "quantidade detectada no corpo da página é afirmação DA PÁGINA sobre a fonte do grupo — o produto não tem nível de asserção (docs/28 §1, nível 3), e esse salto é o pressuposto mais forte deste mecanismo",
+  "o payload SI de `normalize/detectors/quantities.py` está correto para as unidades que ele mapeia",
+]
+validity_scope = [
+  "SÓ dentro de grupos de identificador forte (doi/isbn/issn/arxiv). Divergência entre páginas que não compartilham identificador forte é invisível POR CONSTRUÇÃO — um corpus de notas sem DOI detecta zero conflitos",
+  "páginas VIVAS do grupo, sem relação de sucessão entre os blocos e sem invalid_at — o refinamento herda todas as guardas do candidato genérico",
+  "quantidades de dimensão física com payload SI: comprimento, massa, tempo, dados, frequência, potência, energia, tensão, volume",
+  "`docs/14` §P-5 pediu quantity E date; `date` está FORA (RFC-005 §4) — a dívida sai de PROMISED paga em parte, e esta linha é o registro de qual parte",
+  "só lint de corpus (`check_corpus`) e a fila de atenção — jamais o gate de escrita, jamais severidade error",
+]
+known_failure_modes = [
+  "temperatura fica FORA: `quantities.py:65` suprime o payload SI para dim=temp porque não há conversão afim °C↔°F; conflito de temperatura não é detectado",
+  "porcentagem fica FORA: `%` não é dimensão física, e `50%` numa página contra `80%` noutra podem ser percentuais DE COISAS DIFERENTES — compará-los seria inventar o sujeito que o mecanismo se recusa a inventar",
+  "faixa contra valor único não é detectada: a guarda de precisão descarta a dimensão inteira quando uma página afirma dois valores (falso negativo declarado, o preço da precisão por construção)",
+  "unidade composta (`km/h`) não é detectada: o regex casa uma chave de UNITS por vez",
+  "tolerância alta demais deixa passar conflito real; baixa demais enche os grupos — o limiar não foi medido contra nenhum conjunto rotulado",
+  "herda os falsos positivos do grupo: identificador citado por engano em duas páginas produz um sujeito que não existe, e a divergência dentro dele não significa nada",
+  "FUNDIR as páginas em conflito torna a divergência INDETECTÁVEL: os dois valores passam a conviver na mesma página e a guarda de faixa descarta a dimensão — o número errado continua no corpus, sem alarme. O preview do MergePages declara isso antes do efeito, mas nada impede o ato",
+  "o desfecho 'as duas estão certas em períodos diferentes' NÃO tem ato: escrever `valid_at` só ganha caminho humano depois do F4-PR3c (o legado do P-9 ainda está sujo)",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "divergência numérica acima da tolerância DECLARADA, entre páginas do mesmo grupo de identificador forte; NÃO que uma das páginas esteja errada, NÃO que o corpus esteja livre de conflitos factuais, NÃO que o número tenha sido calibrado"
+universal_guarantee = false
+fallback = ["request_human_review"]
+adaptive = false
+feedback_signal = ""
+composite = false
+evidence = ["deterministic_check", "property_test"]
+misinterpretations = [
+  "o finding NÃO marca a página como `contested` no canônico — o eixo `resolution_status` continua SEM escritor persistente (O-2 aberto). O que existe é o SINAL, recomputado a cada leitura; a marca exigiria o nível 3 da escada, que não existe",
+  "`contested` NÃO significa 'uma das páginas é falsa' — significa que a divergência não foi assentada; assentar é ato humano posterior",
+  "ausência de finding NÃO é ausência de conflito: temperatura, porcentagem, data, unidade composta, faixa e todo par sem identificador forte comum estão fora do escopo por decisão declarada",
+  "1% NÃO é limiar calibrado — é ponto de partida; ler o número como 'validado' é a alegação que este contrato existe para impedir",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.factual_conflict.parameters]
+relative_tolerance = 0.01
+excluded_dimensions = "temp,ratio"
+subject_identifiers = "arxiv,doi,isbn,issn"
 
 # ============================================================ cognição
 [mechanisms.cognitive_priority]

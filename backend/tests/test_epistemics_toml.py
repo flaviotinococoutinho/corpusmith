@@ -202,3 +202,38 @@ def test_sufficiency_components_e_parametros_match_code():
     p = dict(contract.parameters)
     assert int(p["pages_saturation"]) == sufficiency._PAGES_SATURATION
     assert int(p["streams_saturation"]) == sufficiency._STREAMS_SATURATION
+
+
+def test_factual_conflict_parameters_match_code():
+    """F4-PR3b (RFC-005) — o PRIMEIRO limiar numérico do Harness sob
+    cross-check.
+
+    Neste repositório o cruzamento parâmetro↔código é MANUAL e por
+    mecanismo: não existe verificação genérica. Sem esta função o contrato
+    poderia declarar 1% enquanto o código corta em 10%, e a suíte ficaria
+    verde — a evidência do mecanismo seria puramente auto-relatada, que é
+    o que A-5 proíbe (`evidence` só com `self_reported`).
+
+    Falsificável: mude `TOLERANCIA_RELATIVA` sem mexer no TOML (ou o
+    contrário) e este teste reprova."""
+    from corpusmith.harness.local_policy import CONTRADICTION_IDS
+    from corpusmith.kernel.factual import EXCLUIDAS, TOLERANCIA_RELATIVA
+    from corpusmith.usecases import next_actions
+    p = _params("factual_conflict")
+    assert float(p["relative_tolerance"]) == TOLERANCIA_RELATIVA
+    assert tuple(p["excluded_dimensions"].split(",")) == EXCLUIDAS
+    # o RECALL do mecanismo é limitado por esta tupla, e o `validity_scope`
+    # o declara — se o conjunto crescer sem o contrato acompanhar, a
+    # limitação declarada passa a mentir
+    assert tuple(p["subject_identifiers"].split(",")) == \
+        tuple(sorted(CONTRADICTION_IDS))
+    # os pesos de FILA moram no contrato da fila, não neste — dois donos do
+    # mesmo número é o defeito que `kernel/ontology.py` combate
+    q = _params("attention_queue")
+    assert float(q["value_factual_conflict"]) == next_actions._FACTUAL_VALUE
+    assert float(q["cost_factual_conflict"]) == next_actions._FACTUAL_COST
+    # a densidade valor/custo é o critério REAL de ordenação: o conflito
+    # factual sobe por ser mais barato de conferir, NÃO por valer mais —
+    # subir o valor poria um limiar não calibrado a governar o topo da fila
+    assert next_actions._FACTUAL_VALUE == next_actions._CONTRADICTION_VALUE
+    assert next_actions._FACTUAL_COST < next_actions._CONTRADICTION_COST

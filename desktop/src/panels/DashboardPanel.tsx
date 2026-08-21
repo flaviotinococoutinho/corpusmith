@@ -19,7 +19,11 @@ const navigate = (tab: string) =>
 // Padrões COMPUTADOS: relações derivadas que o job recomputa, não páginas.
 // Veredito sobre página é ato de curadoria (vai ao frontmatter); veredito
 // sobre padrão vai para `pattern_verdicts`, com `until` e sem DELETE.
-const PADROES = new Set(["bridge", "contradiction"]);
+// F4-PR3b: `factual_conflict` é padrão computado como os outros dois, e
+// PRECISA estar aqui — sem isto o item de maior densidade da fila nasce sem
+// botão de adiar/rejeitar, e "o produto escuta" regride justo no item novo.
+// `NextActionItem.kind` é `string`, então `tsc --noEmit` NÃO acusa a falta.
+const PADROES = new Set(["bridge", "contradiction", "factual_conflict"]);
 
 function NextActionsQueue({ onApplied }: { onApplied(): void }) {
   const [q, setQ] = useState<NextActionsQueue | null>(null);

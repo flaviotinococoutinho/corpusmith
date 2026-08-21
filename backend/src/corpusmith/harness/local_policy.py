@@ -1,6 +1,7 @@
 from __future__ import annotations
 import re
 from .findings import Finding
+from ..kernel.factual import divergencias, resumo
 from ..normalize import analyze, findings as norm_findings
 from ..normalize.detectors.identifiers import RE_GIT_SHA_CTX as COMMIT_REF
 from ..okf.authorities import load_gazetteer, load_type_schemas
@@ -176,6 +177,39 @@ def _blocos_de_sucessao(group, pages: set[str]) -> list[set[str]]:
     return list(blocos.values())
 
 
+def _entrincheirada(itens):
+    """A página que sobrevive à resolução: humana > máquina, empate por
+    `rel_path`. UMA definição — o finding factual a aplica ao SUBCONJUNTO
+    que diverge, não ao grupo inteiro, e duas cópias divergiriam."""
+    return sorted(itens, key=lambda item: (
+        not str(item[1].get("generated_via", "")).startswith("human:"),
+        item[0].rel_path))[0][0]
+
+
+def _medidas(report) -> list[dict]:
+    """`NormReport` → a forma mínima que `kernel.factual.divergencias` pede.
+
+    ACHATA o payload SI. `quantities.py:69` entrega `si` como DICT
+    (`{"value", "unit"}`) e `factual.py:85` testa `isinstance(si, (int,
+    float))` — sem o achatamento TODA quantidade seria descartada em
+    silêncio e o detector nasceria inerte. É o modo de falha que este
+    enxerto mais arrisca, e por isso a mutação que o teste executa.
+
+    `dim == "temp"` já sai sem `si` na origem (`quantities.py:65`, não há
+    conversão afim °C↔°F) e cai fora aqui. `ratio` cai no kernel, onde a
+    exclusão é declarada com o motivo — repetir a lista aqui criaria dois
+    donos da mesma decisão epistêmica."""
+    out = []
+    for m in report.by_kind("quantity"):
+        si = m.data.get("si")
+        if not isinstance(si, dict):
+            continue
+        out.append({"dim": m.data.get("dim"), "si": float(si["value"]),
+                    "unit": m.data.get("unit"), "surface": m.surface,
+                    "span": [m.start, m.end]})
+    return out
+
+
 def check_corpus(docs, reader) -> list[Finding]:
     """Detecção AGM-inspirada de CONTRADIÇÃO candidata (v0.10, só no lint):
     o mesmo identificador forte em 2+ páginas sem relação de sucessão
@@ -183,12 +217,23 @@ def check_corpus(docs, reader) -> list[Finding]:
     conflito no tempo) sugere duas versões da mesma verdade convivendo.
     A resolução NUNCA é automática — o finding nomeia a página mais
     ENTRINCHEIRADA (humana > máquina; mais desfechos úteis viriam depois)
-    e o humano/SUPERSEDE decide. Warn, nunca error."""
+    e o humano/SUPERSEDE decide. Warn, nunca error.
+
+    **F4-PR3b (RFC-005)**: dentro de cada grupo já formado, mede também o
+    CONFLITO FACTUAL — divergência numérica na mesma dimensão SI. É
+    refinamento, não detector paralelo: o sujeito é o grupo de
+    identificador forte que já existe, e por construção o detector não
+    pode produzir mais grupos que o candidato genérico. Quem itera esta
+    função **precisa filtrar por `f.rule`** — desde este PR ela emite dois
+    códigos."""
     by_id: dict[str, list] = {}
+    medidas: dict[str, list[dict]] = {}
     gaz = load_gazetteer(reader)
     for d in docs:
         x = d.meta.model_dump(exclude_none=True)
-        for m in analyze(d.body, gaz=gaz).matches:
+        report = analyze(d.body, gaz=gaz)     # MESMA passada de antes
+        medidas[d.rel_path] = _medidas(report)
+        for m in report.matches:
             if m.kind == "identifier" and m.subkind in CONTRADICTION_IDS \
                     and m.valid is not False:
                 by_id.setdefault(m.canonical, []).append((d, x))
@@ -212,16 +257,32 @@ def check_corpus(docs, reader) -> list[Finding]:
         if len(_blocos_de_sucessao(vivas_no_grupo, pages)) < 2:
             continue
         group = vivas_no_grupo
-        entrenched = sorted(
-            group, key=lambda item: (
-                not str(item[1].get("generated_via", "")).startswith("human:"),
-                item[0].rel_path))[0][0]
+        entrenched = _entrincheirada(group)
         out.append(Finding(
             "warn", "policy.contradiction_candidate", entrenched.rel_path,
             f"identificador {ident} em {len(pages)} páginas sem sucessão: "
             f"{sorted(pages)} — mais entrincheirada: {entrenched.rel_path}; "
             "resolva com supersede/invalid_at ou funda as páginas",
             meta={"identifier": ident, "pages": sorted(pages)}))
+
+        # RFC-005 §3 — REFINAMENTO, não detector paralelo. Só chega aqui o
+        # grupo que já passou pelas três guardas acima (invalid_at, len<2,
+        # blocos de sucessão): a precisão é por construção, e o detector
+        # NÃO PODE produzir mais grupos que o candidato genérico. Emitido
+        # DEPOIS do candidato de propósito — há testes que indexam
+        # `findings[0]` e a ordem por grupo é contrato de fato.
+        for div in divergencias({p: medidas.get(p, []) for p in pages}):
+            envolvidas = [it for it in group if it[0].rel_path in div["pages"]]
+            alvo = _entrincheirada(envolvidas)
+            out.append(Finding(
+                "warn", "policy.factual_conflict", alvo.rel_path,
+                f"conflito factual sob o identificador {ident} — "
+                f"{resumo(div)}; confira o número nas duas páginas",
+                meta={"identifier": ident,
+                      "pages": sorted(div["pages"]),
+                      "dim": div["dim"], "spread": div["spread"],
+                      "tolerance": div["tolerance"],
+                      "measurements": div["pages"]}))
     return out
 
 
