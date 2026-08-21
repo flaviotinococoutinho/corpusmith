@@ -78,8 +78,9 @@ def test_paginas_do_mesmo_doi_que_discordam_do_numero_viram_finding(
 
     f = _findings(kb, "policy.factual_conflict")[0]
     assert f.severity == "warn"          # check_corpus NUNCA é error
-    assert f.meta["dim"] == "len"
-    assert f.meta["spread"] > f.meta["tolerance"] == 0.01
+    assert f.meta["dims"] == ["len"]
+    assert f.meta["tolerance"] == 0.01
+    assert f.meta["divergences"][0]["spread"] > 0.01
     assert f.meta["pages"] == ["concepts/a.md", "concepts/b.md"]
     assert f.meta["identifier"] == DOI
     # a mensagem mostra a SUPERFÍCIE, não o SI: quem confere procura no
@@ -274,3 +275,89 @@ def test_temperatura_fica_fora_e_o_contrato_declara(settings, kb):
              _doc("concepts/a.md", "A", f"# A\n\nFerve a 100 °C. doi:{DOI}."),
              _doc("concepts/b.md", "B", f"# B\n\nFerve a 50 °C. doi:{DOI}."))
     assert _findings(kb, "policy.factual_conflict") == []
+
+
+# ============================ os defeitos que o QA adversarial encontrou
+def test_unidade_composta_nao_vira_medida_espuria(settings, kb):
+    """`RE_QTY` casa UMA chave de `UNITS` por vez, e o `/h` de `12 km/h` é
+    engolido em silêncio: o match sai `surface='12 km'`, `dim=len`,
+    `si=12000 m` — uma VELOCIDADE lida como COMPRIMENTO.
+
+    O contrato dizia "unidade composta não é detectada". A premissa estava
+    certa e a conclusão errada: ela É detectada, como outra dimensão. Dois
+    defeitos reais saíam disso, e os dois estão travados aqui.
+
+    Falsificável: sem a guarda `corpo[m.end] == "/"` em `_medidas`, as duas
+    asserções reprovam."""
+    # (a) falso POSITIVO com dimensão errada — e a mensagem citaria `12 km`,
+    #     texto que não existe na página (está escrito `12 km/h`)
+    _escreve(settings, kb,
+             _doc("concepts/a.md", "A", f"# A\n\nA 12 km/h. doi:{DOI}."),
+             _doc("concepts/b.md", "B", f"# B\n\nA 90 km/h. doi:{DOI}."))
+    assert _findings(kb, "policy.factual_conflict") == [], \
+        "velocidade não pode virar conflito de comprimento"
+
+
+def test_unidade_composta_nao_mascara_conflito_real(settings, kb):
+    """(b) falso NEGATIVO por mascaramento — o pior dos dois.
+
+    A velocidade mal lida (`90 km/h` → `90 km`) faz a página parecer
+    declarar FAIXA (`12 km` e `90 km`), a guarda de faixa descarta `len`
+    inteiro, e o conflito VERDADEIRO (12 km vs 40 km) some.
+
+    Falsificável: sem a guarda, `_findings` devolve [] e a asserção
+    reprova."""
+    _escreve(settings, kb,
+             _doc("concepts/a.md", "A",
+                  f"# A\n\nA 90 km/h o trajeto de 12 km. doi:{DOI}."),
+             _doc("concepts/b.md", "B",
+                  f"# B\n\nO trajeto de 40 km. doi:{DOI}."))
+    f = _findings(kb, "policy.factual_conflict")
+    assert len(f) == 1, "o conflito real de comprimento não pode ser mascarado"
+    assert "12 km" in f[0].message and "40 km" in f[0].message
+
+
+def test_duas_dimensoes_no_mesmo_par_sao_UM_item_de_fila(settings, kb):
+    """Granularidade: UM finding por CONJUNTO DE PÁGINAS, não por dimensão.
+
+    Medido no desenho anterior (um finding por dimensão): dois itens de
+    fila com o MESMO `pattern_key` — a chave só olha páginas — e rejeitar
+    um CALAVA o outro, enquanto o candidato genérico, que o dedup escondia,
+    RESSURGIA. A fila seguia com um item e nada parecia errado. É a dívida
+    do ADR-41.5 que o F3-PR2 pagou, reintroduzida DENTRO do kind.
+
+    A granularidade certa é a das páginas porque é a dos ATOS: `edit`,
+    `supersede`, `merge` e `invalidate` operam sobre página, nunca sobre
+    dimensão — ninguém resolve "o comprimento" e deixa "o tempo" pendente.
+
+    Falsificável: emitindo um finding por dimensão, saem dois itens com
+    chave idêntica e as duas primeiras asserções reprovam."""
+    from corpusmith.runtime.verdicts import pattern_key, record
+    from corpusmith.usecases.next_actions import contradiction_items
+    _escreve(settings, kb,
+             _doc("concepts/a.md", "A",
+                  f"# A\n\nSão 12 km e 30 min. doi:{DOI}."),
+             _doc("concepts/b.md", "B",
+                  f"# B\n\nSão 20 km e 90 min. doi:{DOI}."))
+    achados = _findings(kb, "policy.factual_conflict")
+    assert len(achados) == 1, "um par de páginas é UM item de trabalho"
+    assert sorted(achados[0].meta["dims"]) == ["len", "time"]
+    # as duas divergências aparecem na mensagem — o curador vê as duas
+    assert "12 km" in achados[0].message and "30 min" in achados[0].message
+
+    itens = contradiction_items(settings)
+    assert len(itens) == 1 and itens[0]["kind"] == "factual_conflict"
+
+    # O veredito cala o item factual INTEIRO — as duas dimensões de uma vez,
+    # que é o ponto: uma chave, um item, um juízo.
+    record(settings, "factual_conflict", itens[0]["action"]["pages"],
+           "rejected")
+    depois = contradiction_items(settings)
+    assert [i["kind"] for i in depois] == ["contradiction"], (
+        "o candidato genérico RESSURGE, e isso é correto: rejeitar `os "
+        "números divergem` não responde `duas versões da mesma fonte "
+        "convivem sem sucessão` — pergunta que ninguém julgou. O dedup "
+        "esconde o genérico enquanto o factual está vivo; não o resolve.")
+    # e a chave dele é a mesma do par, no namespace do OUTRO kind
+    assert pattern_key(depois[0]["action"]["pages"]) == \
+        pattern_key(["concepts/a.md", "concepts/b.md"])

@@ -186,7 +186,7 @@ def _entrincheirada(itens):
         item[0].rel_path))[0][0]
 
 
-def _medidas(report) -> list[dict]:
+def _medidas(report, corpo: str) -> list[dict]:
     """`NormReport` → a forma mínima que `kernel.factual.divergencias` pede.
 
     ACHATA o payload SI. `quantities.py:69` entrega `si` como DICT
@@ -198,12 +198,30 @@ def _medidas(report) -> list[dict]:
     `dim == "temp"` já sai sem `si` na origem (`quantities.py:65`, não há
     conversão afim °C↔°F) e cai fora aqui. `ratio` cai no kernel, onde a
     exclusão é declarada com o motivo — repetir a lista aqui criaria dois
-    donos da mesma decisão epistêmica."""
+    donos da mesma decisão epistêmica.
+
+    DESCARTA UNIDADE COMPOSTA. `RE_QTY` casa uma chave de `UNITS` por vez e
+    o `/h` de `12 km/h` é engolido em silêncio: o match sai com
+    `surface='12 km'`, `dim=len`, `si=12000 m` — uma VELOCIDADE lida como
+    COMPRIMENTO. Sem esta guarda o detector produzia dois defeitos reais
+    (medidos): falso positivo com dimensão errada, citando na mensagem um
+    texto que não existe na página (`12 km` onde está escrito `12 km/h`), e
+    falso NEGATIVO por mascaramento — a velocidade mal lida faz a página
+    parecer declarar faixa, a guarda de faixa descarta a dimensão inteira e
+    o conflito verdadeiro some.
+
+    A correção é aqui e não em `quantities.py` de propósito: aquele
+    detector alimenta `page_entities` e o gazetteer, e mudar a extração
+    teria raio de explosão muito maior que o deste pacote. O que este
+    módulo pode afirmar é mais estreito — *para comparação numérica entre
+    páginas*, quantidade seguida de `/` não é medida confiável."""
     out = []
     for m in report.by_kind("quantity"):
         si = m.data.get("si")
         if not isinstance(si, dict):
             continue
+        if corpo[m.end:m.end + 1] == "/":
+            continue                       # 12 km/h, 30 mg/L, 5 MB/s …
         out.append({"dim": m.data.get("dim"), "si": float(si["value"]),
                     "unit": m.data.get("unit"), "surface": m.surface,
                     "span": [m.start, m.end]})
@@ -232,7 +250,7 @@ def check_corpus(docs, reader) -> list[Finding]:
     for d in docs:
         x = d.meta.model_dump(exclude_none=True)
         report = analyze(d.body, gaz=gaz)     # MESMA passada de antes
-        medidas[d.rel_path] = _medidas(report)
+        medidas[d.rel_path] = _medidas(report, d.body)
         for m in report.matches:
             if m.kind == "identifier" and m.subkind in CONTRADICTION_IDS \
                     and m.valid is not False:
@@ -271,18 +289,33 @@ def check_corpus(docs, reader) -> list[Finding]:
         # NÃO PODE produzir mais grupos que o candidato genérico. Emitido
         # DEPOIS do candidato de propósito — há testes que indexam
         # `findings[0]` e a ordem por grupo é contrato de fato.
+        #
+        # UM finding por CONJUNTO DE PÁGINAS, não por dimensão. O primeiro
+        # desenho emitia um por dimensão e isso era erro de granularidade
+        # com consequência medida: dois findings do mesmo par produzem dois
+        # itens de fila com o MESMO `pattern_key` (a chave só olha páginas),
+        # e rejeitar um calava o outro — a dívida do ADR-41.5 que o F3-PR2
+        # pagou, reintroduzida dentro do kind. A granularidade certa é a das
+        # PÁGINAS porque é a dos ATOS: `edit`, `supersede`, `merge` e
+        # `invalidate` operam sobre página, nunca sobre dimensão. Ninguém
+        # resolve "o comprimento" e deixa "o tempo" pendente.
+        por_paginas: dict[tuple, list[dict]] = {}
         for div in divergencias({p: medidas.get(p, []) for p in pages}):
-            envolvidas = [it for it in group if it[0].rel_path in div["pages"]]
+            por_paginas.setdefault(tuple(sorted(div["pages"])), []).append(div)
+        for envolvidas_paths, divs in sorted(por_paginas.items()):
+            envolvidas = [it for it in group
+                          if it[0].rel_path in envolvidas_paths]
             alvo = _entrincheirada(envolvidas)
             out.append(Finding(
                 "warn", "policy.factual_conflict", alvo.rel_path,
                 f"conflito factual sob o identificador {ident} — "
-                f"{resumo(div)}; confira o número nas duas páginas",
+                + "; ".join(resumo(d) for d in divs)
+                + "; confira o(s) número(s) nas duas páginas",
                 meta={"identifier": ident,
-                      "pages": sorted(div["pages"]),
-                      "dim": div["dim"], "spread": div["spread"],
-                      "tolerance": div["tolerance"],
-                      "measurements": div["pages"]}))
+                      "pages": list(envolvidas_paths),
+                      "dims": [d["dim"] for d in divs],
+                      "tolerance": divs[0]["tolerance"],
+                      "divergences": divs}))
     return out
 
 

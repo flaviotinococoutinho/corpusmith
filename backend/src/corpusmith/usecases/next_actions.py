@@ -5,7 +5,7 @@ economia de atenção — `PlanAttention`), tudo o que o núcleo já sabe que
 merece a atenção do curador e hoje mora em superfícies concorrentes (UX-1):
 
 - REVISÕES espaçadas vencidas (ACT-R, zona de esforço produtivo);
-- LACUNAS do Harness (perguntas abertas, páginas contestadas, stale);
+- LACUNAS do Harness (perguntas abertas, páginas de baixo rendimento, stale);
 - INBOX a consolidar (captura barata ainda não absorvida);
 - PONTES FRÁGEIS do grafo (persistência 0-dim: dois blocos reais por um
   fio fraco — "linke estes temas");
@@ -86,10 +86,10 @@ _ACTION_TYPE = {
 # Silêncio deliberado: kinds sem ato saem com lista VAZIA em vez de uma
 # oferta que falharia — `question`, `inbox` e `review` continuam navegando.
 # E o que se RECUSA a oferecer é decisão semântica, não técnica (em todos
-# os casos os parâmetros fechariam): `invalidate` para stale/contested
+# os casos os parâmetros fechariam): `invalidate` para stale/low_yield
 # afirmaria que o fato EXPIROU NO MUNDO, coisa que "precisa de revisão" e
 # "deu beco" nunca declararam; `unlink` para ponte destruiria justamente o
-# fio que o item pede para reforçar. Desde o F1-PR3, stale e contested
+# fio que o item pede para reforçar. Desde o F1-PR3, stale e low_yield
 # oferecem `edit` — corrigir o corpo não afirma nada sobre o mundo.
 def acts_for(item: dict) -> list[dict]:
     """Ofertas de ato para um item da fila (lista vazia = só navegação)."""

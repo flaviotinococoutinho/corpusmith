@@ -178,3 +178,56 @@ def test_o_ato_entra_no_registro_fechado_e_ganha_undo(sujo, kb):
     # o carimbo VOLTA — o ato em lote é reversível como qualquer outro
     assert _valid_at(kb, "concepts/m1.md") == AGORA
     assert _valid_at(kb, "concepts/m2.md") == AGORA
+
+
+# ============================ os defeitos que o QA adversarial encontrou
+def test_folga_de_relogio_nao_pode_apagar_valid_at_verdadeiro(settings, kb):
+    """`TOLERANCIA_COLAPSO = timedelta(0)` estava DECLARADA e INGUARDADA.
+
+    Medido pelo QA: a suíte inteira ficava verde com a janela em `seconds=1`,
+    `minutes=5`, `hours=1`, `days=1`, `days=30` — só reprovava a partir de
+    `days=365`, porque a única fixture de "alegação real" estava a um ano do
+    `timestamp`. O erro plausível (alguém acrescentar folga de relógio
+    "porque os carimbos podem não bater exatamente") passava inteiro, e o
+    efeito é apagar `valid_at` VERDADEIRO — a coisa que a constante existe
+    para impedir.
+
+    Esta fixture põe a alegação real a UM SEGUNDO do timestamp: qualquer
+    folga não-zero a destrói.
+
+    Falsificável: `TOLERANCIA_COLAPSO = timedelta(seconds=1)` reprova."""
+    quase = AGORA - timedelta(seconds=1)
+    _escreve(settings, kb,
+             _doc("concepts/quase.md", "Quase", timestamp=AGORA,
+                  valid_at=quase))
+    assert valid_at_e_legado({"generated_via": "local:promote",
+                              "timestamp": AGORA, "valid_at": quase}) is False
+    ClearLegacyValidAt(settings).execute()
+    assert _valid_at(kb, "concepts/quase.md") == quase, (
+        "um segundo de diferença é ALEGAÇÃO, não colapso: `base._document` "
+        "usava o MESMO objeto `now` nos dois campos, então o legado é "
+        "igualdade EXATA")
+
+
+def test_o_teto_de_lote_default_e_ele_proprio_uma_garantia(settings, kb):
+    """`LOTE_MAXIMO = 50` estava INGUARDADO: o único teste passava
+    `limit=2` explícito, exercitando o parâmetro e nunca o default.
+
+    Medido pelo QA: `LOTE_MAXIMO = 100000` deixava a suíte inteira verde —
+    e o commit dedica uma decisão inteira a sustentar que o teto é a
+    garantia central do eixo humano ("preview que ninguém consegue ler não
+    é preview"). Uma garantia que some sem quebrar nada não é garantia.
+
+    Falsificável: subir `LOTE_MAXIMO` reprova a primeira asserção; descer
+    para 1 reprova a segunda."""
+    _escreve(settings, kb, *[
+        _doc(f"concepts/m{i:03d}.md", f"M{i}", valid_at=AGORA,
+             timestamp=AGORA) for i in range(60)])
+    preview = ClearLegacyValidAt(settings).execute(dry_run=True)["preview"]
+    assert len(preview["pages"]) == 50, (
+        "o default tem de ser legível por um humano: 60 sujas, 50 no lote")
+    assert "10 página(s)" in preview["note"]
+    # e o teto é TETO: pedir mais não o levanta
+    grande = ClearLegacyValidAt(settings, limit=10_000) \
+        .execute(dry_run=True)["preview"]
+    assert len(grande["pages"]) == 50

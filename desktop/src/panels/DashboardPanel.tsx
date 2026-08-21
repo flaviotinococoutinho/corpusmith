@@ -29,7 +29,7 @@ function NextActionsQueue({ onApplied }: { onApplied(): void }) {
   const [q, setQ] = useState<NextActionsQueue | null>(null);
   // F1-PR6: o clique abre o ATO quando o item declara ofertas; quando não
   // declara (question/inbox/review/stale/low_yield), continua navegando —
-  // trocar tudo por dialog regrediria 5 dos 7 kinds para "sem destino".
+  // trocar tudo por dialog regrediria 5 dos 8 kinds para "sem destino".
   const [aberto, setAberto] = useState<CurationActOffer | null>(null);
   // F0/P-11: antes, pendente E erro caíam no MESMO `null` ⇒ a única
   // chamada-para-ação do produto desaparecia em silêncio enquanto o

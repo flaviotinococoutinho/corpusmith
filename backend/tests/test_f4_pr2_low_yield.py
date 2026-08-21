@@ -175,3 +175,44 @@ def test_contrato_da_fila_nao_chama_baixo_rendimento_de_contestada():
     assert "contestada" not in prosa and "contested" not in prosa
     # e o valor continua declarado, só que pelo nome certo
     assert float(dict(fila.parameters)["value_low_yield"]) == 0.8
+
+
+def test_nenhum_contested_no_sentido_ANTIGO_no_fonte_de_producao():
+    """O-6, o guarda que faltava — e a razão de ele faltar.
+
+    O renomeio do ADR-52 ficou incompleto DUAS vezes: primeiro em cinco
+    superfícies, depois (medido por QA adversarial) em mais quatro linhas de
+    PROSA de fonte, três delas em `next_actions.py`, que é
+    `implementation_refs` do contrato `factual_conflict`. Em nenhuma das
+    duas vezes um teste pegou, porque nenhum teste varria o FONTE.
+
+    A varredura é por sentido, não por palavra: `contested` é vocabulário
+    VIVO do eixo `resolution_status` (ADR-54), e um `grep` cego o destruiria.
+    Por isso a lista de exceções é explícita e cada uma tem dono declarado —
+    acrescentar uma linha aqui é uma decisão, não um descuido.
+
+    Falsificável: escrever "páginas contestadas" em qualquer docstring de
+    `usecases/` ou `cognitive/` reprova."""
+    import pathlib
+    import re
+    raiz = pathlib.Path(__file__).resolve().parents[1] / "src" / "corpusmith"
+    # ficheiros que são DONOS legítimos da palavra, com o motivo:
+    donos = {
+        "kernel/ontology.py",       # o eixo do ADR-54 — o sentido NOVO
+        "runtime/db.py",            # migração 9→10 precisa ler o valor antigo
+        "cognitive/policy.py",      # chave legada em snapshots persistidos
+    }
+    # linhas que EXPLICAM a separação dos dois sentidos (O-6) são legítimas
+    explica = re.compile(r"ADR-54|resolution_status|nome antigo|O-6")
+    achados = []
+    for py in sorted(raiz.rglob("*.py")):
+        rel = str(py.relative_to(raiz))
+        if rel in donos:
+            continue
+        for n, linha in enumerate(py.read_text().splitlines(), 1):
+            if re.search(r"contestad|contested", linha, re.I) \
+                    and not explica.search(linha):
+                achados.append(f"{rel}:{n}: {linha.strip()}")
+    assert not achados, (
+        "`contested` no sentido ANTIGO (desfecho de uso) voltou ao fonte — "
+        "use `low_yield`:\n" + "\n".join(achados))

@@ -303,9 +303,18 @@ antes seria circular).
 | 8 | `docs/06:408` | *"Overlay boost … contested ×0.8"* — o código diz `low_yield` (`retrieval/streams.py:71`) | referência |
 | 9 | `usecases/curate/edit.py:9-12` | *"o ato que resolve `contested`"* no sentido ANTIGO, no docstring do ato que o F4-PR3b quer oferecer para o sentido NOVO | docstring |
 
-Mais cinco identificadores INTERNOS (`_candidate_views`, `plan_attention`,
+Mais quatro identificadores INTERNOS (`_candidate_views`, `plan_attention`,
 `reflect_usage`, `observatory`) renomeados junto, para que a próxima leitura
 não reintroduza a confusão.
+
+**E o renomeio ficou incompleto uma SEGUNDA vez.** Um QA adversarial achou
+mais quatro linhas de PROSA de fonte no sentido antigo — três delas em
+`next_actions.py`, que é `implementation_refs` do contrato
+`factual_conflict`, o arquivo onde a ambiguidade custa mais caro. Nas duas
+vezes nenhum teste pegou, porque nenhum teste varria o FONTE. Agora varre
+(`test_nenhum_contested_no_sentido_ANTIGO_no_fonte_de_producao`), por
+SENTIDO e não por palavra: a lista de donos legítimos é explícita, porque
+`contested` é vocabulário vivo do eixo `resolution_status`.
 
 **PRESERVADOS de propósito**, porque são do outro dono ou são ponte para o
 legado: `kernel/ontology.py` (o eixo do ADR-54), `runtime/db.py` (a migração

@@ -466,7 +466,7 @@ known_failure_modes = [
   "temperatura fica FORA: `quantities.py:65` suprime o payload SI para dim=temp porque não há conversão afim °C↔°F; conflito de temperatura não é detectado",
   "porcentagem fica FORA: `%` não é dimensão física, e `50%` numa página contra `80%` noutra podem ser percentuais DE COISAS DIFERENTES — compará-los seria inventar o sujeito que o mecanismo se recusa a inventar",
   "faixa contra valor único não é detectada: a guarda de precisão descarta a dimensão inteira quando uma página afirma dois valores (falso negativo declarado, o preço da precisão por construção)",
-  "unidade composta (`km/h`) não é detectada: o regex casa uma chave de UNITS por vez",
+  "unidade composta (`km/h`, `mg/L`) é LIDA COMO A UNIDADE-BASE pelo detector de quantidades — `12 km/h` sai como `dim=len, si=12000 m` — e por isso o adaptador do Harness DESCARTA quantidade seguida de `/`: sem esse descarte a velocidade viraria conflito de comprimento (falso positivo com dimensão errada, citando na mensagem texto que não existe na página) e mascararia conflito real pela guarda de faixa. O custo declarado é que conflito REAL em unidade composta não é detectado",
   "tolerância alta demais deixa passar conflito real; baixa demais enche os grupos — o limiar não foi medido contra nenhum conjunto rotulado",
   "herda os falsos positivos do grupo: identificador citado por engano em duas páginas produz um sujeito que não existe, e a divergência dentro dele não significa nada",
   "FUNDIR as páginas em conflito torna a divergência INDETECTÁVEL: os dois valores passam a conviver na mesma página e a guarda de faixa descarta a dimensão — o número errado continua no corpus, sem alarme. O preview do MergePages declara isso antes do efeito, mas nada impede o ato",

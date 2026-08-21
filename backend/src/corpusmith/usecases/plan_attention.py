@@ -5,7 +5,7 @@ Três fontes de candidatos, todas explicáveis:
 - REVISÃO: páginas quentes cujo P(recall) ACT-R está na zona de esforço
   produtivo — valor = review_gain(p) = 4p(1−p) (dificuldade desejável,
   Bjork 1994); revisar o trivial ou o perdido rende pouco.
-- LACUNAS: perguntas abertas, páginas contestadas e stale — o trabalho
+- LACUNAS: perguntas abertas, páginas de baixo rendimento e stale — o trabalho
   epistêmico pendente que o próprio Harness aponta.
 - INBOX: fontes ainda não compiladas (captura barata esperando
   consolidação — o lado hipocampal do CLS).
