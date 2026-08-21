@@ -21,3 +21,10 @@ desktop/release/
 *.db-shm
 .write.lock
 *.egg-info/
+
+# Worktrees efêmeros de agente (`.claude/worktrees/<id>/`): são CHECKOUTS do
+# próprio repositório, criados por ferramenta para isolar execução e
+# removidos quando o agente termina. Versioná-los comitaria uma cópia
+# aninhada da árvore inteira. As skills e o settings.json de `.claude/`
+# seguem versionados — o ignore é só do diretório de worktrees.
+.claude/worktrees/
