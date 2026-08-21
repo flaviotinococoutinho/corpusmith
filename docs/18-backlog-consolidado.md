@@ -244,7 +244,40 @@ medir em vez de presumir.
    inteiro. O valor fica em 0.85 (igual ao genérico: o detector não mede
    importância) e o custo cai de 8 para 3 min, que é o que a evidência
    sustenta: conferir dois spans não custa ler duas páginas.
-| **F4-PR3c** | o resíduo do P-9 | ato em lote com preview do `valid_at` legado | ⏭️ |
+| **F4-PR3c** | o resíduo do P-9 | ato em lote com preview do `valid_at` legado | ✅ entregue — `ClearLegacyValidAt` |
+
+**F4-PR3c: por que este pacote NÃO tem contrato epistêmico.** A assinatura
+da corrupção é **igualdade**, não limiar: página de máquina cujo `valid_at`
+é exatamente o `timestamp` (`base._document` usava o MESMO objeto `now` nos
+dois campos). Não há número escolhido, logo não há garantia relativa a
+declarar nem calibração a fazer — a diferença exata em relação ao
+`factual_conflict`, que carrega 1% e por isso precisa de contrato.
+
+Três decisões que o plano não trazia:
+
+- **o ato REMOVE, não corrige.** Ausência de `valid_at` significa "nenhuma
+  alegação", e o filtro `as_of` já tratava a ausência como "passa".
+  Recuperar *quando* o fato passou a valer exigiria a FONTE. Apresentar-se
+  como "conserta o `valid_at` legado" seria vender o que não se entrega;
+- **página HUMANA fica de fora** mesmo com os carimbos iguais: `valid_at`
+  humano vem de um ato com `when` declarado, e coincidir com a escrita é
+  possível e legítimo. O default automático só existia no eixo de máquina;
+- **teto de lote declarado.** ADR-52 diz que o legado é *"~toda página de
+  máquina existente"*. Um preview com milhares de diffs torna a garantia
+  central do eixo humano NOMINAL — ninguém lê 3.000 diffs, e "preview
+  obrigatório" vira teatro. O lote tem limite, o preview diz quantas
+  ficaram de fora, e repetir o ato avança o resto.
+
+**O preview é o instrumento de medida.** Não há corpus real neste
+repositório para dimensionar o estrago, e não precisa haver:
+`execute(dry_run=True)` é puro, não escreve byte nenhum e não move o HEAD —
+rodá-lo no corpus do usuário responde exatamente quantas páginas estão
+sujas e mostra o diff de cada uma.
+
+**Fora de escopo, declarado**: a outra metade do P-9 (`docs/14`) — *"o
+detector de datas propõe candidatos com span sob gate"* — é heurística nova
+no caminho de escrita e exige RFC próprio. Apagar um carimbo errado e
+propor um carimbo novo são atos diferentes.
 
 **Duas cláusulas de `docs/14` §P-5 caem, e a razão fica registrada**:
 *unidade idêntica* (descartava `12 km` vs `12000 m`, exatamente o caso que a

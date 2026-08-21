@@ -14,7 +14,7 @@ calcular diff é operação pura por natureza.
 """
 from __future__ import annotations
 import difflib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from .ontology import merge_confidence
 
 
@@ -51,6 +51,51 @@ def invalidated_meta(meta: dict, when: datetime,
     if reason:
         out["description"] = reason[:200]
     return out
+
+
+#: Fuso-tolerância do carimbo colapsado. `base._document` fazia
+#: `now = datetime.now(...)` UMA vez e usava o MESMO objeto nos dois
+#: campos — a igualdade é exata por construção, não aproximada. O zero
+#: aqui é a afirmação disso: qualquer folga transformaria uma coincidência
+#: (fato que realmente passou a valer no instante da escrita) em legado, e
+#: apagar alegação verdadeira é pior que deixar alegação falsa.
+TOLERANCIA_COLAPSO = timedelta(0)
+
+
+def valid_at_e_legado(meta: dict) -> bool:
+    """A página carrega o `valid_at` que o P-9 (ADR-52) carimbou sozinho?
+
+    A assinatura da corrupção é DETERMINÍSTICA e local: página de MÁQUINA
+    cujo `valid_at` é exatamente o `timestamp`. `base._document` defaultava
+    `valid_at = now` junto com `timestamp = now`, colapsando o eixo de
+    tempo de MUNDO no de ESCRITA — e o filtro `as_of`, que existe e é
+    testado, passou a re-ranquear sobre um carimbo sem significado.
+
+    Não é heurística e não tem limiar: é igualdade. Por isso este pacote
+    não precisa de contrato epistêmico nem de calibração — ao contrário do
+    detector de conflito factual, que carrega um número escolhido.
+
+    Página HUMANA fica de fora mesmo com os carimbos iguais: `valid_at`
+    humano vem de um ato com `when` declarado, e coincidir com a escrita é
+    possível e legítimo. O default automático só existia no eixo de
+    máquina."""
+    via = str(meta.get("generated_via") or "")
+    if not via.startswith(("api:", "local:")):
+        return False
+    valid_at, timestamp = meta.get("valid_at"), meta.get("timestamp")
+    if not isinstance(valid_at, datetime) or \
+            not isinstance(timestamp, datetime):
+        return False
+    return abs(valid_at - timestamp) <= TOLERANCIA_COLAPSO
+
+
+def sem_valid_at_legado(meta: dict) -> dict:
+    """Remove o carimbo colapsado. REMOVE, não corrige: ausência de
+    `valid_at` significa "nenhuma alegação sobre quando o fato passou a
+    valer no mundo", e o filtro `as_of` já trata a ausência como "passa"
+    (era o comportamento desde sempre). Recuperar o tempo de mundo real
+    exigiria a FONTE, e isso não é este ato."""
+    return {k: v for k, v in meta.items() if k != "valid_at"}
 
 
 # Chaves que NÃO entram na união de uma fusão (F1-PR5). Todas dizem algo

@@ -143,9 +143,11 @@ feito.
 
 Você diz se a resposta foi útil. Isso alimenta os pesos de stream, o calor
 das páginas, a fila de revisão espaçada — e, quando algo está errado,
-**você tem o gesto para consertar**: oito atos de curadoria (`edit`,
+**você tem o gesto para consertar**: nove atos de curadoria (`edit`,
 `supersede`, `invalidate`, `merge`, `link`, `unlink`, `close_question`,
-`undo`), todos com **preview antes do efeito** e todos reversíveis.
+`clear_legacy_valid_at`, `undo`), todos com **preview antes do efeito** e
+todos reversíveis — inclusive o único que opera em LOTE, e que por isso
+declara um teto: preview que ninguém consegue ler não é preview.
 
 ## 5. Quem pode mudar o quê — o modelo de autoridade
 
