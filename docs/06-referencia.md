@@ -120,7 +120,7 @@ POST /cognitive/experiences      ({type∈11 tipos Efklides, intensity 1..5,
                                   session_id?, item?, note?})
 POST/GET /cognitive/analogies    (contrato exige mappings E breaks; 400 sem ruptura)
 POST /cognitive/analogies/{id}/promote  (gate humano → PromoteToMemory)
-GET  /cognitive/curation         (CurationProjection: stale/contested/questions
+GET  /cognitive/curation         (CurationProjection: stale/low_yield/questions
                                   sob a ótica dos objetivos ativos; leitura pura)
 GET  /cognitive/metrics          (Brier, delayed recall, apply/transfer, recorrência,
                                   review completion, latência de retomada)
@@ -215,7 +215,7 @@ frozen_at, frozen_commit, activation, recall_p, recycles)` · `cold_fts`
 **index.db** (derivado): `chunks(+valid_at,invalid_at)` · `chunks_fts` ·
 `graph_edges(+confidence)` · `communities` · `embeddings` · `entities` ·
 `page_entities(confidence,data)` · `page_levels(level∈0,1)` ·
-`fts_levels` · `page_overlay(status∈preferred|tentative|contested)` ·
+`fts_levels` · `page_overlay(status∈preferred|tentative|low_yield)` ·
 `graph_bridges(src,dst,weight,small_side,large_side)` ·
 `page_index_state(page,sha)` + `index_meta` (índice INCREMENTAL v0.13:
 só páginas com sha alterado reindexam; fingerprint do gazetteer força
@@ -405,7 +405,7 @@ HEAD é chave de invalidação perfeita (236× no hit a 150 páginas,
 | Reconcile HI / LO | 0.82 / 0.55 | usecases/reconcile_candidate.py |
 | Pesos reconcile | 0.4 rank · 0.3 jaccard · 0.3 (1−NCD) | idem |
 | Hedge η / clamp | 0.25 / [0.5, 2.0] | kernel/information.py |
-| Overlay boost | preferred ×1.15 · contested ×0.8 | retrieval/streams.py |
+| Overlay boost | preferred ×1.15 · low_yield ×0.8 | retrieval/streams.py |
 | Heat (BLA) | 0.6·σ(BLA) + 0.2·min(1, cites/5) + 0.2·outcome; BLA ≈ ln(n/(1−d)) − d·ln(L), d=0.5 | usecases/reflect_usage.py + kernel/activation.py |
 | Candidatos reflect | promote > 0.6 · archive < 0.15 (e 90d sem uso) | usecases/reflect_usage.py |
 | Consolidação (CLS) | min_shared=2 entidades OU id forte; min_cluster=2 | usecases/consolidate_inbox.py |

@@ -183,7 +183,7 @@ nenhum produtor.
 | # | O quê | Evidência | Estado |
 |---|---|---|---|
 | **O-1** | **Perda de ratificação silenciosa na fusão** — a regra nova derruba `human_approved` quando só um lado o tem (correto), mas derrubava sem registro; e a chave `confidence` AUSENTE no rascunho herdava a ratificação da residente pela regra genérica de fusão ("o que falta vem da fonte") | 🔴 medido (dois testes reprovando antes das correções) | ✅ **RESOLVIDO**: `kernel/ontology.py:ratificacao_perdida` + declaração no preview do MergePages (eixo humano) e em `page.stage`/resultado (eixo de máquina); `merge_meta` aplica o default documentado `extracted` à chave ausente |
-| **O-2** | **`contested` não tem escritor.** O vocabulário fechado declara o valor; nada no produto o produz. A fila nunca proporá resolução de contestação | 🟡 declarado (`ontology.toml`, RFC-004 §5.1) | 🟨 **meio pago**: `classificar(em_conflito=True)` produz o valor (F4-PR3a, RFC-005 §5.3); falta o detector que passa `True` (F4-PR3b). Pago pelo **F4-PR3**: `policy.factual_conflict` (docs/14 §P-5: mesma entidade quantity/date, mesma dimensão, fora de tolerância, sem sucessão nem ordenação temporal, unidade idêntica + span nas duas — precisão > recall) detecta; a marca `contested` nas páginas envolvidas vira item de fila com destino (herda P-1). **Exige RFC** (regra nova com limiar no caminho de escrita, precedente RFC-003) |
+| **O-2** | **`contested` não tem escritor PERSISTENTE.** O vocabulário fechado declara o valor; nada no produto o grava no canônico | 🔴 **medido** (não mais só declarado) | 🟨 **o SINAL é pago; a MARCA não.** O F4-PR3b entrega `policy.factual_conflict`, que faz `contested` aparecer na fila e no painel — recomputado a cada leitura. A marca no canônico **não entra**, e a razão foi medida: o único campo epistêmico persistido é `confidence` (extensão privada), e `LEGACY_CONFIDENCE` não tem entrada para `contested` — `_legado` **apaga** (→ `extracted`), `classificar` na releitura **assenta** (→ `resolved`, violando `ontology.toml:53`) e `merge_confidence` **lava**. Não há análogo de `ratificacao_perdida` para declarar a perda. **O que falta não é o detector**: é ato humano de contestação e/ou o nível 3 (`docs/28` §1), porque o eixo declara `applies_to = "assertion"` e marcar a PÁGINA por um número dentro dela é o erro de nível do `docs/28` §2. Herda as condições de reentrada de O-5 |
 | **O-3** | **Isolamento multi-escritor está fora do envelope.** O produto depende do gate único + rito serializado; escritas concorrentes de vários agentes não têm resposta (a classe de anomalia que arXiv:2606.06240 tipifica) | 🟡 declarado (`docs/26` §4) | fica declarado; só entra no roadmap se o produto ganhar multi-agente — condição, não plano |
 | **O-4** | **Os sentidos numéricos de `confidence` seguem no mesmo nome** (autorrelato `confidence_before`, taxas da metacognição, intervalos de avaliação) | 🔴 medido (`docs/22` §2.1) | deriva `open` em `ontology.toml [drift.confidence]`, lint confere os marcadores; rename é decisão própria (não acompanha F4-PR3) |
 | **O-5** | **`Assertion` como entidade** — a unidade epistêmica atômica | 🟡 declarado (RFC-004 §6) | **quatro condições de reentrada**, a primeira é MEDIR uma consulta que a página responde errado; arte prévia citada (nanopubs/micropubs/CRMinf) |
@@ -231,5 +231,29 @@ antes seria circular).
 
 | # | Achado colateral | Evidência | Estado |
 |---|---|---|---|
-| **O-6** | **O renomeio `contested → low_yield` (ADR-52) está INCOMPLETO em duas saídas user-facing**: `cognitive_journey.py:537` emite o sinal literal `"contested"` em `GET /cognitive/curation`, e `cognitive/scoring.py:66` escreve *"⚔ contestada no canônico — há disputa aberta"* na UI a partir de `view.low_yield`. Nenhuma quebra o gate — não há teste sobre o vocabulário de saída de `curation_projection` nem sobre as `reasons` de `scoring.py` | 🔴 medido | **pré-requisito do F4-PR3b**: enquanto a API emitir `contested` significando "deu beco", nenhum consumidor pode confiar no `contested` que significa "há divergência factual". E um `grep` cego destruiria o vocabulário novo do ADR-54 — a separação tem de ser manual |
+| **O-6** | **O renomeio `contested → low_yield` (ADR-52) ficou INCOMPLETO.** O levantamento inicial contou DUAS saídas; a varredura completa achou **nove**, e a contagem errada é ela própria parte do achado — o guarda existia (`test_f4_pr2_low_yield.py`) mas cobria só `gap_items` | 🔴 medido | ✅ **RESOLVIDO** — ver a lista abaixo |
+
+**Os nove sítios, e por que o guarda não pegou.** Nenhum quebrava o gate: não havia teste sobre o vocabulário de SAÍDA de `curation_projection`, nem sobre as `reasons` de `scoring.py`, nem sobre a prosa dos contratos.
+
+| # | Sítio | O que dizia | Classe |
+|---|---|---|---|
+| 1 | `usecases/cognitive_journey.py:537` | sinal literal `("contested", 0.8)` em `GET /cognitive/curation` | API |
+| 2 | `cognitive/scoring.py:66` | *"⚔ contestada no canônico — há disputa aberta"* | UI |
+| 3 | `epistemics.toml:382` | prosa *"contestada 0.8"* — e, na mesma linha, *"contradição 0.85 > pergunta 0.9"*, aritmeticamente falso (os parâmetros são 0.9 e 0.85) | contrato |
+| 4 | `README.md:364` | overlay *"preferred/tentative/contested"* | README |
+| 5 | `README.md:492` | *"página `contested` afunda na fusão"* | README |
+| 6 | `docs/06:123` | *"CurationProjection: stale/contested/questions"* | referência |
+| 7 | `docs/06:218` | `page_overlay(status∈…|contested)` — **mentia sobre o schema**: o CHECK real é `('preferred','tentative','low_yield')` (`runtime/db.py:154`, schema 10) | referência |
+| 8 | `docs/06:408` | *"Overlay boost … contested ×0.8"* — o código diz `low_yield` (`retrieval/streams.py:71`) | referência |
+| 9 | `usecases/curate/edit.py:9-12` | *"o ato que resolve `contested`"* no sentido ANTIGO, no docstring do ato que o F4-PR3b quer oferecer para o sentido NOVO | docstring |
+
+Mais cinco identificadores INTERNOS (`_candidate_views`, `plan_attention`,
+`reflect_usage`, `observatory`) renomeados junto, para que a próxima leitura
+não reintroduza a confusão.
+
+**PRESERVADOS de propósito**, porque são do outro dono ou são ponte para o
+legado: `kernel/ontology.py` (o eixo do ADR-54), `runtime/db.py` (a migração
+9→10 precisa ler o valor antigo) e `cognitive/policy.py` (chave legada em
+snapshots persistidos). É a razão de a separação ter de ser manual: um `grep`
+cego destruiria o vocabulário novo.
 

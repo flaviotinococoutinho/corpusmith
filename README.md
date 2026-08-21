@@ -361,7 +361,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   particionamento; páginas `communities/*.md` (`community_summary`) geradas.
 - **Heat/outcomes/reflect**: `✅ útil · 🚫 beco · ✏️ corrigi` no chat →
   `ask_outcomes`; reflect semanal recalcula `page_heat` e o overlay
-  `preferred/tentative/contested` que ajusta a fusão RRF (+15%/−20%);
+  `preferred/tentative/low_yield` que ajusta a fusão RRF (+15%/−20%);
   correção vira memória nova no inbox (`raw/correcoes/`).
 - **Descida hierárquica** L0/L1 (`page_levels` + `fts_levels`) com
   `trajectory` visível no painel de evidências.
@@ -489,7 +489,7 @@ desktop/
       `abstained: true` com `gaps`
 - [x] `eval_memory` grava as categorias em `eval_runs`; painel Qualidade
       mostra as 5 barras; `abstain` só passa com abstenção real
-- [x] `reflect` popula `page_heat`/`page_overlay`; página `contested` afunda
+- [x] `reflect` popula `page_heat`/`page_overlay`; página `low_yield` afunda
       na fusão do `/ask`; Dashboard exibe candidatos
 - [x] migração idempotente: bancos v0.7 ganham `graph_edges.confidence` e
       `chunks.valid_at/invalid_at` no primeiro `connect()`

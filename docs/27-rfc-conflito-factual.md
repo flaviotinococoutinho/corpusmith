@@ -1,10 +1,16 @@
-# 27 · RFC-005 — Conflito factual: o primeiro limiar do Harness, e o primeiro escritor de `contested`
+# 27 · RFC-005 — Conflito factual: o primeiro limiar do Harness, e o primeiro leitor de `contested`
 
 > `AGENTS.md` §8 exige RFC para **heurística no caminho de escrita** e para
 > **termo novo em eixo epistêmico**. Este toca as duas: introduz a primeira
 > constante calibrável do Harness e produz o primeiro valor `contested` do eixo
 > `resolution_status`, que [RFC-004](22-rfc-ontologia-da-assercao.md) declarou
 > sem escritor.
+>
+> **Correção de alegação (§5.3).** O título dizia *"o primeiro **escritor** de
+> `contested`"*. É falso, e foi medido: `classificar` é função de LEITURA, e o
+> valor não sobrevive ao caminho de volta pelo campo legado — apaga, assenta ou
+> lava, conforme a rota. O que este RFC entrega é o primeiro **leitor**: o sinal
+> de conflito, recomputado, na fila e no painel. **O-2 continua aberto.**
 
 | | |
 |---|---|
@@ -139,17 +145,41 @@ reconciliação: **o valor é um ponto de partida declarado, não calibrado**. O
 contrato epistêmico (§6) dirá isso em `assumptions`, e a calibração é condição
 de reentrada, não promessa.
 
-### 5.3 `contested` ganha leitura — e marcar não é assentar
+### 5.3 `contested` ganha leitura — e a defesa protegia o risco errado
 
 `kernel/ontology.classificar(meta, *, em_conflito=False)` passa a devolver
 `resolution_status = "contested"`.
 
-`ontology.toml` diz do eixo: *"só um ato posterior desata; nenhuma fusão,
-recompilação ou reindexação pode assentar sozinha o que ninguém assentou"*. Um
-detector que marca `contested` **não viola** essa restrição, e vale dizer por
-quê: `contested` é precisamente o estado **não assentado**. Marcar é registrar
-que o nó existe; assentar seria escolher um lado. A restrição proíbe a segunda
-coisa, e o detector faz só a primeira.
+A redação original desta seção argumentava que marcar `contested` não viola a
+restrição do eixo (*"só um ato posterior desata; nenhuma fusão, recompilação ou
+reindexação pode assentar sozinha o que ninguém assentou"*), porque `contested`
+é precisamente o estado **não assentado** — marcar registra que o nó existe,
+assentar seria escolher um lado.
+
+**O argumento está certo e é irrelevante.** Ele defende contra marcar demais; o
+risco real está no caminho de volta. Medido nesta árvore, com o eixo persistido
+no único campo que existe (`confidence`, extensão privada do frontmatter):
+
+```
+_legado({... "resolution_status": "contested" ...})   -> 'extracted'   # apaga
+classificar({"confidence": "contested"})              -> resolution_status
+                                                         'resolved'    # ASSENTA
+merge_confidence("contested", "extracted")            -> 'extracted'   # lava
+```
+
+`LEGACY_CONFIDENCE` não tem entrada para `contested` — não há "casa para baixo"
+como a que `(asserted, proposed)` tem em `inferred`; há descarte. E a releitura
+**assenta sozinha** o que ninguém assentou, que é exatamente o que a restrição
+proíbe. Não há análogo de `ratificacao_perdida` para declarar a perda na fusão.
+
+**Consequência normativa**: o F4-PR3b entrega o **sinal** de conflito —
+recomputado a cada leitura, vivendo na fila e no painel Qualidade. Ele **não**
+marca o canônico, e **O-2 continua aberto**. A metade que falta não é o
+detector: é um ato humano de contestação e/ou o nível 3 da escada
+([`docs/28`](28-escada-de-abstracao-e-topologia.md) §1), porque o eixo declara
+`applies_to = "assertion"` e a asserção é justamente o nível que não existe.
+Marcar a **página** porque um número dentro dela diverge seria o erro de nível
+que `docs/28` §2 nomeia como a classe de defeito mais cara do repositório.
 
 ## 6. F4-PR3b — a obra (NÃO entregue neste PR)
 
@@ -171,23 +201,29 @@ riscos diferentes e merecem revisões diferentes.
 
 ## 7. Achado colateral: o renomeio de ADR-52 está incompleto
 
-O levantamento encontrou duas saídas **user-facing** que o rename não alcançou,
-e nenhuma quebra o gate:
+O levantamento inicial encontrou **duas** saídas user-facing que o rename não
+alcançou. **A varredura completa achou nove** — e a contagem errada é ela
+própria parte do achado: esta seção afirmou "duas" enquanto o `README.md`, a
+superfície mais pública do repositório, carregava a palavra em dois lugares, e
+`docs/06` a carregava em três, um deles **mentindo sobre o schema**
+(`page_overlay(status∈…|contested)`, quando o CHECK real é
+`('preferred','tentative','low_yield')` — `runtime/db.py:154`).
 
-| Onde | O que ainda diz |
-|---|---|
-| `usecases/cognitive_journey.py:537` | emite o sinal literal `("contested", 0.8)` em `GET /cognitive/curation` — derivado de `page_overlay.status = 'low_yield'` |
-| `cognitive/scoring.py:66` | escreve na UI *"⚔ contestada no canônico — há disputa aberta"* a partir de `view.low_yield` |
+A lista completa, com a classe de cada sítio, está em
+[`docs/18`](18-backlog-consolidado.md) §9.1 (O-6). Nenhum quebrava o gate:
+não havia teste sobre o vocabulário de SAÍDA de `curation_projection`, nem
+sobre as `reasons` de `scoring.py`, nem sobre a prosa dos contratos — e o
+guarda que existia (`test_f4_pr2_low_yield.py`) cobria uma superfície só.
 
-`docs/18` diz "rename entregue". **Está incompleto**, e agora é perigoso: a
+`docs/18` dizia "rename entregue". **Estava incompleto**, e ficou perigoso: a
 palavra passou a ter dois donos — o valor legado do overlay e o valor de
 primeira classe do eixo `resolution_status`. Um `grep` cego de `contested`
-destruiria o vocabulário novo.
+destruiria o vocabulário novo, e é por isso que a separação teve de ser manual.
 
-O conserto é **pré-requisito do F4-PR3b**, não parte dele: enquanto a API emitir
-`contested` significando "deu beco", nenhum consumidor pode confiar no
-`contested` que significa "há divergência factual". Registrado em `docs/18` como
-item próprio.
+O conserto foi **pré-requisito do F4-PR3b**, não parte dele: enquanto a API
+emitisse `contested` significando "deu beco", nenhum consumidor poderia confiar
+no `contested` que significa "há divergência factual". ✅ **Entregue**, com as
+três saídas travadas por teste falsificável.
 
 ## 8. Invariantes
 
