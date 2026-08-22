@@ -111,7 +111,7 @@ def test_version_e_o_conjunto_de_mecanismos_andam_juntos():
     digest = hashlib.sha256(
         ",".join(sorted(c.mechanism_id for c in registry.contracts))
         .encode()).hexdigest()[:12]
-    assert (registry.version, digest) == ("1.9.1", "f7d3447fa5f6"), (
+    assert (registry.version, digest) == ("1.12.0", "4047f71f13fb"), (
         "o conjunto de mecanismos mudou — bumpe [registry].version em "
         "epistemics.toml e atualize este par no mesmo commit")
 
@@ -122,7 +122,7 @@ def test_apagar_contrato_deixa_o_lint_vermelho(tmp_path):
     finding(s)", exit 0. Falsificável — sem `_completude`, isto passa."""
     mutado = lint(_sem_contrato("theme_identity_matching", tmp_path))
     assert mutado["ok"] is False
-    assert mutado["mechanisms"] == 18
+    assert mutado["mechanisms"] == 21
     erros = [f for f in mutado["findings"] if f["severity"] == "error"]
     assert [(f["code"], f["mechanism_id"]) for f in erros] == [
         ("epistemic.mechanism_missing", "theme_identity_matching")]
@@ -155,7 +155,10 @@ def test_promessa_cumprida_para_de_avisar(tmp_path):
     codigos = {(f["code"], f["mechanism_id"])
                for f in lint(escrito)["findings"]}
     assert ("epistemic.mechanism_promised", "attention_queue") not in codigos
-    assert ("epistemic.mechanism_promised", "factual_conflict") in codigos
+    # F4-PR3b: `factual_conflict` saiu de PROMISED (dívida paga em parte —
+    # `date` ficou fora, e o validity_scope do contrato diz qual parte).
+    # O exemplo passa a ser uma promessa que SEGUE aberta.
+    assert ("epistemic.mechanism_promised", "temporal_partition") in codigos
 
 
 def test_incompatible_schema_version_is_clear_error():
@@ -367,7 +370,7 @@ def test_cli_lint_exit_codes(settings, capsys):
     # exit 0 = nenhum ERRO. Desde o G-10 a saída lista as dívidas conhecidas
     # (contratos prometidos por docs/14 e ainda não escritos) como `warn` —
     # visíveis sem travar o gate.
-    assert "19 mecanismo(s)" in out
+    assert "22 mecanismo(s)" in out
     assert "error" not in out
     # registro quebrado ⇒ ok=False (exit 1 no comando)
     broken = lint(path=settings.home / "nao_existe.toml")

@@ -13,7 +13,7 @@ Continua [`13`](13-plano-experiencia-memoria.md) (cujas receitas R1+R3
 foram entregues na v1.8) e não o substitui: o `13` perguntou *"como tornar
 o sinal visível?"*; este pergunta *"o que falta para o produto ser usável
 por alguém que não é o autor?"*. Fontes internas: [`01`](01-conceitos.md) ·
-[`06`](06-dados.md) · [`08`](08-decisoes.md) ·
+[`06`](06-referencia.md) · [`08`](08-decisoes.md) ·
 [`10`](10-engenharia-ai-friendly.md) · [`11`](11-epistemic-contracts.md) ·
 `architecture.toml` · `epistemics.toml`.
 

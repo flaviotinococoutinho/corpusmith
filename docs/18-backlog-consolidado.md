@@ -1,6 +1,8 @@
 # 18 · Backlog consolidado — o que ainda falta
 
-> Estado em 2026-07-27, HEAD `83c5983`. Consolida `docs/14` (14 problemas de
+> Estado em 2026-07-27, HEAD `83c5983`; §9–§10 atualizados em 2026-08-22
+> (F4-PR3 entregue; fila reordenada pela re-mira do
+> [RFC-006](29-rfc-006-re-mira.md)). Consolida `docs/14` (14 problemas de
 > viabilidade), `docs/15` (plano, D-A…D-K, G-1…G-10), `docs/17` (auditoria
 > adversarial) e as medições desta sessão.
 
@@ -148,9 +150,10 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 
 ## 8. Ordem sugerida, e por quê
 
-> **Estado em 2026-08**: os itens 1 e 2 estão **entregues** (ADR-47; RFC-002 +
-> ADR-48). A ordem abaixo fica como registro do raciocínio — e porque os itens
-> 3 a 5 seguem valendo.
+> **Estado em 2026-08 (atualizado após RFC-004)**: itens 1 a 4 **entregues**
+> (ADR-47; RFC-002 + ADR-48; ADR-49; RFC-003 + ADR-50/51). F4-PR1 e PR2 também
+> (ADR-52). A ordem abaixo fica como registro do raciocínio; a fila corrente
+> mora na seção 9.
 
 1. ✅ **PR-0.1** — sem release executável, nada do que foi construído chega a um
    terceiro. E é o único item cujo custo **cresce** com o tempo (cada PR novo
@@ -161,10 +164,255 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
    para impedir;
 3. ✅ **F-UI** — converte sete capacidades já pagas em produto. Depende de um
    smoke de UI, que é o pré-requisito real;
-4. **F3** (P-3 + P-7) — a fila para de mentir;
-5. **F-EPIST** em paralelo, a qualquer momento: itens independentes e baratos.
+4. ✅ **F3** (P-3 + P-7) — a fila para de mentir;
+5. ✅ **F-EPIST** (exceto C6) em paralelo: itens independentes e baratos.
 
 > **O que NÃO fazer**: corrigir o B1 sem RFC. É uma linha, é tentador, e ativa
 > decisão de modelo generativo sobre o canônico por efeito colateral de um
 > conserto. — *cumprido: `docs/19` (RFC-002) precedeu a correção, e a flag
 > `reconcile.llm_arbiter` continua desligada por default.*
+
+---
+
+## 9. Trilha ontológica (RFC-004) e a fila corrente
+
+O RFC-004 (`docs/22`) e a leitura de literatura (`docs/26`) abriram uma trilha
+própria e **mudaram a forma do F4-PR3**: o detector `policy.factual_conflict`
+deixa de ser só "o conflito real que faltava" e passa a ser o primeiro
+**leitor** do eixo `resolution_status` — a versão inicial deste parágrafo
+dizia "escritor", e a correção foi medida (RFC-005 §5.3): o valor não
+sobrevive ao caminho de volta pelo campo legado, então o que se entrega é o
+SINAL recomputado, e O-2 segue aberta.
+
+| # | O quê | Evidência | Estado |
+|---|---|---|---|
+| **O-1** | **Perda de ratificação silenciosa na fusão** — a regra nova derruba `human_approved` quando só um lado o tem (correto), mas derrubava sem registro; e a chave `confidence` AUSENTE no rascunho herdava a ratificação da residente pela regra genérica de fusão ("o que falta vem da fonte") | 🔴 medido (dois testes reprovando antes das correções) | ✅ **RESOLVIDO**: `kernel/ontology.py:ratificacao_perdida` + declaração no preview do MergePages (eixo humano) e em `page.stage`/resultado (eixo de máquina); `merge_meta` aplica o default documentado `extracted` à chave ausente |
+| **O-2** | **`contested` não tem escritor PERSISTENTE.** O vocabulário fechado declara o valor; nada no produto o grava no canônico | 🔴 **medido** (não mais só declarado) | 🟨 **o SINAL é pago; a MARCA não.** O F4-PR3b entrega `policy.factual_conflict`, que faz `contested` aparecer na fila e no painel — recomputado a cada leitura. A marca no canônico **não entra**, e a razão foi medida: o único campo epistêmico persistido é `confidence` (extensão privada), e `LEGACY_CONFIDENCE` não tem entrada para `contested` — `_legado` **apaga** (→ `extracted`), `classificar` na releitura **assenta** (→ `resolved`, violando `ontology.toml:53`) e `merge_confidence` **lava**. Não há análogo de `ratificacao_perdida` para declarar a perda. **O que falta não é o detector**: é ato humano de contestação e/ou o nível 3 (`docs/28` §1), porque o eixo declara `applies_to = "assertion"` e marcar a PÁGINA por um número dentro dela é o erro de nível do `docs/28` §2. Herda as condições de reentrada de O-5 |
+| **O-3** | **Isolamento multi-escritor está fora do envelope.** O produto depende do gate único + rito serializado; escritas concorrentes de vários agentes não têm resposta (a classe de anomalia que arXiv:2606.06240 tipifica) | 🟡 declarado (`docs/26` §4) | fica declarado; só entra no roadmap se o produto ganhar multi-agente — condição, não plano |
+| **O-4** | **Os sentidos numéricos de `confidence` seguem no mesmo nome** (autorrelato `confidence_before`, taxas da metacognição, intervalos de avaliação) | 🔴 medido (`docs/22` §2.1) | deriva `open` em `ontology.toml [drift.confidence]`, lint confere os marcadores; rename é decisão própria (não acompanha F4-PR3) |
+| **O-5** | **`Assertion` como entidade** — a unidade epistêmica atômica | 🟡 declarado (RFC-004 §6) | **quatro condições de reentrada**, a primeira é MEDIR uma consulta que a página responde errado; arte prévia citada (nanopubs/micropubs/CRMinf) |
+
+**Fila corrente:** ✅ **F4-PR3 entregue inteiro** (a/b/c — §9.1 abaixo). A
+ordem que valia aqui (F5 → F6 → F7 → C6) foi **reordenada pela re-mira do
+[RFC-006](29-rfc-006-re-mira.md)** — a fila viva mora na **§10**.
+
+### 9.1 · F4-PR3 partido em dois (RFC-005)
+
+O levantamento para o `policy.factual_conflict` encontrou um problema de
+desenho que muda a forma do pacote, e um achado colateral que vira
+pré-requisito.
+
+**O problema de desenho.** `docs/14` §P-5 pede "mesma entidade de kind
+`quantity` com valores fora de tolerância", e isso **não é implementável**:
+`quantities.py:67` faz `canonical = f"{value:g} {disp}"`, então o `canonical`
+de uma quantidade É o valor — duas quantidades em conflito são entidades
+*diferentes*, e não existe coluna ligando uma quantidade ao sujeito de que
+ela é predicado. Sem sujeito, o detector compararia toda quantidade com toda
+quantidade e inundaria a fila justamente no item de maior VoI (0.85).
+[RFC-005](27-rfc-conflito-factual.md) resolve fazendo o detector um
+**refinamento** de `contradiction_candidate` — o sujeito é o grupo de
+identificador forte que já existe, e a precisão passa a ser por construção.
+
+| # | Pacote | O quê | Estado |
+|---|---|---|---|
+| **F4-PR3a** | o instrumento | `kernel/factual.py` (puro, com a guarda de faixa que o plano não previa), `TOLERANCIA_RELATIVA = 0.01` declarada como NÃO calibrada, `classificar(em_conflito=)` produzindo `contested` | ✅ entregue |
+| **F4-PR3b** | a obra | `check_corpus` emite `policy.factual_conflict`; fila distingue conflito factual de coexistência; `[mechanisms.factual_conflict]` em `epistemics.toml` com o nome MOVIDO de `PROMISED` para `EXPECTED`; código novo em `docs/06` §1 | ✅ entregue — com **três achados** que mudaram o desenho (abaixo) |
+
+**Os três achados do F4-PR3b.** Nenhum estava no plano; os três vieram de
+medir em vez de presumir.
+
+1. **`check_corpus` tinha DOIS consumidores que não filtravam por regra** —
+   `next_actions.contradiction_items` e `MergePages._identificadores_
+   compartilhados`. Era seguro enquanto a função emitia um código só. Sem o
+   despacho, o conflito factual entraria na fila **disfarçado** de
+   coexistência (mesmo rótulo, mesmo custo, mesma chave de supressão) e a
+   entrega "a fila distingue os dois" sairia não-entregue **com a suíte
+   verde**, porque nenhuma fixture existente tem quantidades divergentes.
+2. **Fundir SILENCIA o conflito em vez de resolvê-lo.** `merge` era o clique
+   principal do item. A fusão põe os dois valores na mesma página, a guarda
+   de faixa de `kernel/factual.py` descarta a dimensão inteira, e o finding
+   some **sem que o número tenha sido corrigido** — enquanto o preview do
+   `MergePages` declararia resolvido. `edit` passou a vir primeiro, e o
+   preview declara a perda (mesma disciplina de `ratificacao_perdida`).
+3. **A densidade sobe pelo CUSTO, não pelo valor.** O plano previa valor
+   maior para o conflito factual. Subir o valor poria a tolerância de 1% —
+   explicitamente NÃO calibrada — a governar o item de maior VoI do produto
+   inteiro. O valor fica em 0.85 (igual ao genérico: o detector não mede
+   importância) e o custo cai de 8 para 3 min, que é o que a evidência
+   sustenta: conferir dois spans não custa ler duas páginas.
+| **F4-PR3c** | o resíduo do P-9 | ato em lote com preview do `valid_at` legado | ✅ entregue — `ClearLegacyValidAt` |
+
+**F4-PR3c: por que este pacote NÃO tem contrato epistêmico.** A assinatura
+da corrupção é **igualdade**, não limiar: página de máquina cujo `valid_at`
+é exatamente o `timestamp` (`base._document` usava o MESMO objeto `now` nos
+dois campos). Não há número escolhido, logo não há garantia relativa a
+declarar nem calibração a fazer — a diferença exata em relação ao
+`factual_conflict`, que carrega 1% e por isso precisa de contrato.
+
+Três decisões que o plano não trazia:
+
+- **o ato REMOVE, não corrige.** Ausência de `valid_at` significa "nenhuma
+  alegação", e o filtro `as_of` já tratava a ausência como "passa".
+  Recuperar *quando* o fato passou a valer exigiria a FONTE. Apresentar-se
+  como "conserta o `valid_at` legado" seria vender o que não se entrega;
+- **página HUMANA fica de fora** mesmo com os carimbos iguais: `valid_at`
+  humano vem de um ato com `when` declarado, e coincidir com a escrita é
+  possível e legítimo. O default automático só existia no eixo de máquina;
+- **teto de lote declarado.** ADR-52 diz que o legado é *"~toda página de
+  máquina existente"*. Um preview com milhares de diffs torna a garantia
+  central do eixo humano NOMINAL — ninguém lê 3.000 diffs, e "preview
+  obrigatório" vira teatro. O lote tem limite, o preview diz quantas
+  ficaram de fora, e repetir o ato avança o resto.
+
+**O preview é o instrumento de medida.** Não há corpus real neste
+repositório para dimensionar o estrago, e não precisa haver:
+`execute(dry_run=True)` é puro, não escreve byte nenhum e não move o HEAD —
+rodá-lo no corpus do usuário responde exatamente quantas páginas estão
+sujas e mostra o diff de cada uma.
+
+**Fora de escopo, declarado**: a outra metade do P-9 (`docs/14`) — *"o
+detector de datas propõe candidatos com span sob gate"* — é heurística nova
+no caminho de escrita e exige RFC próprio. Apagar um carimbo errado e
+propor um carimbo novo são atos diferentes.
+
+**Duas cláusulas de `docs/14` §P-5 caem, e a razão fica registrada**:
+*unidade idêntica* (descartava `12 km` vs `12000 m`, exatamente o caso que a
+normalização SI existe para pegar) e *sem ordenação temporal* (os candidatos
+são `valid_at`, declarado corrompido pelo P-9 cuja limpeza é o F4-PR3c — usar
+antes seria circular).
+
+| # | Achado colateral | Evidência | Estado |
+|---|---|---|---|
+| **O-6** | **O renomeio `contested → low_yield` (ADR-52) ficou INCOMPLETO.** O levantamento inicial contou DUAS saídas; a varredura completa achou **nove**, e a contagem errada é ela própria parte do achado — o guarda existia (`test_f4_pr2_low_yield.py`) mas cobria só `gap_items` | 🔴 medido | ✅ **RESOLVIDO** — ver a lista abaixo |
+
+**Os nove sítios, e por que o guarda não pegou.** Nenhum quebrava o gate: não havia teste sobre o vocabulário de SAÍDA de `curation_projection`, nem sobre as `reasons` de `scoring.py`, nem sobre a prosa dos contratos.
+
+| # | Sítio | O que dizia | Classe |
+|---|---|---|---|
+| 1 | `usecases/cognitive_journey.py:537` | sinal literal `("contested", 0.8)` em `GET /cognitive/curation` | API |
+| 2 | `cognitive/scoring.py:66` | *"⚔ contestada no canônico — há disputa aberta"* | UI |
+| 3 | `epistemics.toml:382` | prosa *"contestada 0.8"* — e, na mesma linha, *"contradição 0.85 > pergunta 0.9"*, aritmeticamente falso (os parâmetros são 0.9 e 0.85) | contrato |
+| 4 | `README.md:364` | overlay *"preferred/tentative/contested"* | README |
+| 5 | `README.md:492` | *"página `contested` afunda na fusão"* | README |
+| 6 | `docs/06:123` | *"CurationProjection: stale/contested/questions"* | referência |
+| 7 | `docs/06:218` | `page_overlay(status∈…|contested)` — **mentia sobre o schema**: o CHECK real é `('preferred','tentative','low_yield')` (`runtime/db.py:154`, schema 10) | referência |
+| 8 | `docs/06:408` | *"Overlay boost … contested ×0.8"* — o código diz `low_yield` (`retrieval/streams.py:71`) | referência |
+| 9 | `usecases/curate/edit.py:9-12` | *"o ato que resolve `contested`"* no sentido ANTIGO, no docstring do ato que o F4-PR3b quer oferecer para o sentido NOVO | docstring |
+
+Mais quatro identificadores INTERNOS (`_candidate_views`, `plan_attention`,
+`reflect_usage`, `observatory`) renomeados junto, para que a próxima leitura
+não reintroduza a confusão.
+
+**E o renomeio ficou incompleto uma SEGUNDA vez.** Um QA adversarial achou
+mais quatro linhas de PROSA de fonte no sentido antigo — três delas em
+`next_actions.py`, que é `implementation_refs` do contrato
+`factual_conflict`, o arquivo onde a ambiguidade custa mais caro. Nas duas
+vezes nenhum teste pegou, porque nenhum teste varria o FONTE. Agora varre
+(`test_nenhum_contested_no_sentido_ANTIGO_no_fonte_de_producao`), por
+SENTIDO e não por palavra: a lista de donos legítimos é explícita, porque
+`contested` é vocabulário vivo do eixo `resolution_status`.
+
+**PRESERVADOS de propósito**, porque são do outro dono ou são ponte para o
+legado: `kernel/ontology.py` (o eixo do ADR-54), `runtime/db.py` (a migração
+9→10 precisa ler o valor antigo) e `cognitive/policy.py` (chave legada em
+snapshots persistidos). É a razão de a separação ter de ser manual: um `grep`
+cego destruiria o vocabulário novo.
+
+---
+
+## 10. A re-mira (RFC-006) e a fila reordenada
+
+O [RFC-006](29-rfc-006-re-mira.md) fixou a direção de produto — **do
+compilador de corpus ao instrumento de estudo** — e decompôs a demanda em
+seis capacidades (V1–V6), cada uma verificada contra o código. A fila
+abaixo substitui a ordem F5 → F6 → F7 → C6 da §9; a razão de cada
+movimento está no RFC-006 §6, e o critério é **dependência real, não
+preferência**.
+
+| # | Pacote | O quê | Movimento |
+|---|---|---|---|
+| 1 | **V3 estabilidade** ✅ **ENTREGUE** | `kernel/stability.py` (puro; 4 sentidos separados), `GitStore.edit_history`, `page_stability` no index.db, derivação `stability` em `DERIVATIONS` (doctor de graça), `MemoryFacade.stability()`, `corpusmith stability`, contrato `editorial_stability` (registro 1.11.0) — 11 testes + 5 mutações | dependência zero, cumprida |
+| 2 | **V1 mínimo** ✅ **ENTREGUE** | normas como sujeitos: iso/nbr/rfc/nist/ieee/eu_reg/**circular** (detector novo, precisão>recall) em `CONTRADICTION_IDS`; `regulator` FORA (referente ≠ documento); `STRONG_IDS` da reconciliação INTOCADO e congelado por teste — 7 testes + 3 mutações | pequeno e localizado, cumprido |
+| 3 | **F5 ⇒ V2** ✅ **ENTREGUE** | identidade-com-sentido: alias → LISTA de candidatos com precedência por camada (seed < reference < bundle), `sentido()`/`base()` lendo o qualificador do canônico (`Entropia (física)`), alias disputado vira `ambiguous` (não reescreve, não indexa, não liga páginas), `policy.alias_conflict` nomeando a edição que resolve, contrato `alias_conflict` (registro 1.12.0), fingerprint do gazetteer cobrindo todos os candidatos — 13 testes + 6 mutações | **promovida e cumprida** — era a fase mais estratégica |
+| 4 | **F6** | rastro de abstenção (P-8) | **promovida**: deixa de ser "deliberadamente depois" — é componente de V4 |
+| 5 | **V4 dificuldade** | índice "difícil de explicar": composição pura + contrato heurístico (sem detector novo) | novo; depende de F6 |
+| 6 | **V5 como medição** | aresta tipada "aplica-se-a" por ato humano + a consulta medida que RFC-004 §6 exige — o caminho legítimo até o nível 3 | novo; **O-2 ressignificada, não resolvida** |
+| 7 | **C6** | campo de efeito colateral no `EpistemicContract` | levemente **promovida**: pré-requisito barato do fact sheet de V6 |
+| 8 | **V6 fact sheet** | custo/tempo/trade-offs/ganhos como projeção de borda (LLM propõe prosa FORA do bundle, default desligado) | novo; por último — projeta o que 1–7 produzem |
+| 9 | **F7** | P-11 resíduo de custo; `temporal_partition` | **rebaixada**: performance, não visão; não bloqueia nada acima |
+
+Guarda transversal (RFC-006 §8): todo PR desta trilha é revisado primeiro
+contra as duas patologias já catalogadas — um nome carregando várias
+perguntas, e atributo afirmado no nível errado.
+
+**QA adversarial da V2 (3ª rodada) — e uma correção de alegação minha.**
+As 6 mutações declaradas foram re-executadas: nenhuma sobreviveu, mas
+**duas contagens da mensagem do commit estavam infladas** (declarei "4
+REPROVAM" e "7 REPROVAM"; o medido foi 3 e 2). O commit já estava
+publicado e não se reescreve histórico compartilhado — a correção fica
+aqui, que é onde o repositório registra alegação corrigida. A causa da
+primeira: o docstring do teste nomeava uma mutação que NÃO o mata
+(trocar só a marca para `extracted` não reescreve, porque `rewrite`
+também exige `canonical != surface` — são DUAS guardas). Corrigido.
+
+Sete defeitos reais achados e corrigidos no mesmo dia:
+
+1. **`aliases` escalar virava um alias por CARACTERE** — `aliases:
+   entropia` sem hífen no YAML produzia oito aliases de uma letra, e com
+   dois registros assim a V2 amplificava para findings de conflito sobre
+   vogais soltas. O frontmatter tolera extras sem validar tipo;
+2. **alias vazio** casava em toda fronteira de pontuação (spans de
+   comprimento zero), alcançável por um item `- ` solto;
+3. **o dedup deixava `qid`/`authority` serem decididos pela ordem do
+   arquivo** — o mesmo "último a escrever vence" que a V2 existe para
+   eliminar, sobrevivendo nos outros campos da identidade; e o
+   fingerprint era cego a isso, então renomear um registro trocaria o
+   `qid` servido pelo índice **sem** disparar rebuild;
+4. **o filtro `taken` descartava o termo de referência INTEIRO** — um
+   registro reivindicando só `entropia` apagava `entropy` e `entropie`,
+   que ninguém disputou, e de quebra fazia o degrau `TIER_REFERENCIA`
+   nunca engatar em produção (o gazetteer real só via as camadas [0, 2]);
+5. **"pesa 0.15 no grafo" era falso**, e estava no CONTRATO: aresta nasce
+   de LINK, não de entidade — o efeito real é o termo não ligar páginas.
+   Corrigido nos cinco lugares (contrato incluso);
+6. **conflito entre termos da referência prescrevia um ato impossível**
+   ("edite os registros" sem registro no bundle) — agora nomeia o ato que
+   existe: criar a curadoria, que vence por precedência;
+7. **`canonical` de tipo errado derrubava o `rebuild_index`** inteiro.
+
+Mais: `evidence` do contrato declarava `property_test` sem property test
+(removido); `docs/29` dizia ENTREGUE com o parágrafo seguinte descrevendo
+o comportamento antigo no presente (reescrito como diagnóstico + estado);
+`ambiguous_aliases` era exposto pela API e não renderizado em painel
+nenhum, apesar de o contrato dizer "painel" (agora aparece no Curadoria);
+e `INDEX_GENERATION` foi bumpado para `g5`, para o full rebuild da
+mudança de forma do fingerprint passar pelo knob declarado em vez de
+acontecer de carona no hash.
+
+Um dos testes novos **também era teatro** e a mutação provou: o guarda do
+filtro `taken` montava o gazetteer à mão e não exercitava
+`authorities.py`. Refeito pelo caminho real (`reference.db` →
+`_build_derived`), e aí a mutação morre.
+
+**QA adversarial da entrega (2ª rodada, worktree isolada).** As 8 mutações
+declaradas foram re-executadas de forma independente: todas reprovam. E o
+QA achou **cinco defeitos reais**, todos corrigidos no mesmo dia:
+
+1. caminho não-ASCII quebrava `edit_history` (`core.quotepath` escapa em
+   octal): "atenção.md" contava ZERO edições em silêncio — o pior tipo de
+   defeito num corpus pt-BR. Corrigido com `-c core.quotepath=false` +
+   teste com página acentuada;
+2. "Carta Circular 3.978" era lida como "Circular 3.978" — falso conflito
+   entre tipos documentais distintos. Lookbehinds + linhas negativas;
+3. numeração de circular não é global (SUSEP 100 ≠ BCB 100, mesmo
+   canônico) — declarado como failure mode; detecção de órgão fica fora;
+4. o contrato declarava um FP impossível (caixa-alta não casa numa regex
+   case-sensitive) e omitia o FN real — a linha foi reescrita para o que o
+   código FAZ (FP: Title Case; FN: CAIXA-ALTA oficial e órgão no meio);
+5. o docstring alegava falsificabilidade mais forte que a real (`re.I`
+   passava em silêncio) — ganhou a linha negativa que mata a mutação.
+
+Colateral corrigido junto: `ComputeStability` não inicializa mais
+`kb/.git` por efeito colateral em settings sem repositório (projeção é
+LEITURA); e o merge invisível ao `git log --name-only` entrou no contrato.
+

@@ -1,8 +1,10 @@
 [project]
 name = "corpusmith"
 version = "2.0.0"
-description = "Corpusmith — knowledge base OKF local-first com cockpit de memória agêntica"
+description = "Corpusmith — the local-first governed knowledge compiler"
 requires-python = ">=3.11"
+keywords = ["knowledge-management", "governance", "local-first", "okf",
+            "provenance", "rag", "epistemics", "curation"]
 dependencies = [
     "fastapi>=0.111",
     "uvicorn>=0.30",
@@ -23,6 +25,11 @@ dev = ["pytest>=8.0", "hypothesis>=6.100"]   # property tests (ADR-39 §15)
 
 [project.scripts]
 corpusmith = "corpusmith.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/flaviotinococoutinho/corpusmith"
+Documentation = "https://github.com/flaviotinococoutinho/corpusmith/blob/main/docs/00-o-que-e-corpusmith.md"
+Source = "https://github.com/flaviotinococoutinho/corpusmith"
 
 [build-system]
 requires = ["setuptools>=68"]

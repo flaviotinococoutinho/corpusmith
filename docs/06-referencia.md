@@ -36,7 +36,9 @@ Ausência de `# Citations` e de reservados **nunca** gera finding
 | `policy.temporal_order` | error | `invalid_at ≤ valid_at` |
 | `policy.schema_required_field` | error | campo obrigatório declarado por `collection_specification` (`applies_to`) ausente na página do tipo |
 | `policy.quotation_attribution` | warn (só lint, corpus) | citação conhecida do reference.db presente no corpo sem o sobrenome do autor em lugar nenhum do texto — sem atribuição ou mal-atribuída (v1.2; normas pré-computadas, custo medido < 2s na suíte) |
-| `policy.contradiction_candidate` | warn (só lint, corpus) | mesmo identificador forte (doi/isbn/issn/arxiv) em 2+ páginas sem sucessão (`superseded_by`/`supersedes` no grupo ou `invalid_at`); o finding nomeia a página mais entrincheirada (humana > máquina) |
+| `policy.contradiction_candidate` | warn (só lint, corpus) | mesmo identificador forte — acadêmico (doi/isbn/issn/arxiv) ou, desde a RFC-006 V1, **norma** (iso/nbr/rfc/nist/ieee/eu_reg/circular; `regulator` fica FORA: nomeia referente, não documento) — em 2+ páginas sem sucessão (`superseded_by`/`supersedes` no grupo ou `invalid_at`); o finding nomeia a página mais entrincheirada (humana > máquina) |
+| `policy.alias_conflict` | warn (só lint, corpus) | **RFC-006 V2**: um alias reivindicado por 2+ identidades da MESMA camada de precedência (seeds < reference.db < authority_record). O uso vira `confidence=ambiguous` — não é reescrito, não entra em `page_entities` e não lista no frontmatter; como aresta nasce de LINK, o termo deixa de ligar páginas. Alvo: o `authority_record` editável; a mensagem nomeia a edição que resolve (tirar o alias nu × declarar o sentido no canônico) e as páginas de uso. Ausência de finding **não** é vocabulário desambiguado — só vê o que alguém curou |
+| `policy.factual_conflict` | warn (só lint, corpus) | **refinamento** do anterior (RFC-005): dentro de um grupo que já rendeu `contradiction_candidate`, divergência numérica acima da tolerância declarada (1%, **NÃO calibrada**) na mesma dimensão SI. `temp`, `ratio`, `date`, unidade composta e faixa ficam de fora por decisão declarada; o alvo é a mais entrincheirada **entre as divergentes**. Não marca nada no canônico — o eixo `resolution_status` segue sem escritor persistente |
 
 ## 2. Endpoints (API local, auth header `x-corpusmith-auth` OU `?auth=`)
 
@@ -120,7 +122,7 @@ POST /cognitive/experiences      ({type∈11 tipos Efklides, intensity 1..5,
                                   session_id?, item?, note?})
 POST/GET /cognitive/analogies    (contrato exige mappings E breaks; 400 sem ruptura)
 POST /cognitive/analogies/{id}/promote  (gate humano → PromoteToMemory)
-GET  /cognitive/curation         (CurationProjection: stale/contested/questions
+GET  /cognitive/curation         (CurationProjection: stale/low_yield/questions
                                   sob a ótica dos objetivos ativos; leitura pura)
 GET  /cognitive/metrics          (Brier, delayed recall, apply/transfer, recorrência,
                                   review completion, latência de retomada)
@@ -215,11 +217,15 @@ frozen_at, frozen_commit, activation, recall_p, recycles)` · `cold_fts`
 **index.db** (derivado): `chunks(+valid_at,invalid_at)` · `chunks_fts` ·
 `graph_edges(+confidence)` · `communities` · `embeddings` · `entities` ·
 `page_entities(confidence,data)` · `page_levels(level∈0,1)` ·
-`fts_levels` · `page_overlay(status∈preferred|tentative|contested)` ·
+`fts_levels` · `page_overlay(status∈preferred|tentative|low_yield)` ·
 `graph_bridges(src,dst,weight,small_side,large_side)` ·
 `page_index_state(page,sha)` + `index_meta` (índice INCREMENTAL v0.13:
 só páginas com sha alterado reindexam; fingerprint do gazetteer força
-full automático; `rebuild_index(s, full=True)` disponível)
+full automático; `rebuild_index(s, full=True)` disponível) ·
+`page_stability(rel_path,edits,first_commit_at,last_edit_at,lifecycle,
+computed_from)` — RFC-006 V3: estabilidade EDITORIAL, projeção de
+bundle+Git (`corpusmith stability`; checkpoint `stability` em runtime.db;
+"estável" = quieto no eixo de edição, nunca "correto")
 
 Migrações em `runtime/db.py:_migrate`: `graph_edges.confidence`,
 `chunks.valid_at/invalid_at`, `page_heat.first_seen` (backfill =
@@ -405,7 +411,7 @@ HEAD é chave de invalidação perfeita (236× no hit a 150 páginas,
 | Reconcile HI / LO | 0.82 / 0.55 | usecases/reconcile_candidate.py |
 | Pesos reconcile | 0.4 rank · 0.3 jaccard · 0.3 (1−NCD) | idem |
 | Hedge η / clamp | 0.25 / [0.5, 2.0] | kernel/information.py |
-| Overlay boost | preferred ×1.15 · contested ×0.8 | retrieval/streams.py |
+| Overlay boost | preferred ×1.15 · low_yield ×0.8 | retrieval/streams.py |
 | Heat (BLA) | 0.6·σ(BLA) + 0.2·min(1, cites/5) + 0.2·outcome; BLA ≈ ln(n/(1−d)) − d·ln(L), d=0.5 | usecases/reflect_usage.py + kernel/activation.py |
 | Candidatos reflect | promote > 0.6 · archive < 0.15 (e 90d sem uso) | usecases/reflect_usage.py |
 | Consolidação (CLS) | min_shared=2 entidades OU id forte; min_cluster=2 | usecases/consolidate_inbox.py |

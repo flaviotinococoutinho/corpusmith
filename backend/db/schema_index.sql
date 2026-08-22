@@ -161,3 +161,17 @@ CREATE TABLE IF NOT EXISTS theme_epochs(
   members     TEXT,                  -- JSON dos membros nesta época
   related     TEXT);                 -- JSON: theme_id(s) envolvidos
 CREATE INDEX IF NOT EXISTS idx_epochs_theme ON theme_epochs(theme_id);
+
+-- RFC-006 V3: estabilidade EDITORIAL por página — projeção pura de
+-- bundle+Git (kernel/stability.py consolida; ComputeStability escreve).
+-- 'lifecycle' é o sentido de CICLO lido de vitality (viva | superseded_by
+-- | invalid_at); 'edits' é o sentido de EDIÇÃO. Uso e tema têm donos
+-- próprios (page_heat, theme_epochs) e NÃO entram aqui de propósito.
+-- Frescor: checkpoint 'stability' em runtime.db (sobrevive ao rebuild).
+CREATE TABLE IF NOT EXISTS page_stability(
+  rel_path        TEXT PRIMARY KEY,
+  edits           INTEGER NOT NULL,
+  first_commit_at REAL,
+  last_edit_at    REAL,
+  lifecycle       TEXT NOT NULL DEFAULT 'viva',
+  computed_from   TEXT NOT NULL);    -- HEAD do bundle na hora do cálculo

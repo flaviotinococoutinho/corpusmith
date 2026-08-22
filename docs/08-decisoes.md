@@ -1851,3 +1851,42 @@ A fronteira de honestidade fica fixada por escrito: a alegação atual é
 reverter"* — "Agents propose… Git remembers" é visão-alvo, e "source of
 truth"/"zero hallucination"/"somente humanos escrevem" são alegações
 proibidas no estado atual.
+
+### ADR-54 — Ontologia: um campo, um eixo (RFC-004, v2.1)
+**Documento completo em [`docs/22`](22-rfc-ontologia-da-assercao.md); léxico em
+[`docs/23`](23-ontologia-e-etimologia.md).** `confidence` respondia a seis
+perguntas, três delas dividindo literalmente o mesmo campo do frontmatter —
+`extracted`/`inferred` (como derivou), `ambiguous` (foi assentada?) e
+`human_approved` (quem autorizou) — e o Harness, que valida `privacy`, checksum,
+PII e sucessão, **não validava `confidence`**: sem vocabulário fechado, qualquer
+string passava.
+
+A conflação tinha consequência executável, não teórica: `merge_meta` ordenava por
+uma tabela de fraqueza de três valores num campo escrito com quatro, e
+`human_approved` caía no `default=0`. Medido: `merge("human_approved",
+"extracted")` devolvia `human_approved` e `merge("extracted", "human_approved")`
+devolvia `extracted` — a mesma fusão com dois resultados conforme a ordem dos
+argumentos, isto é, conforme qual página o curador clicou primeiro. Não é a regra
+errada; é a **ausência de regra**, com um acidente de dicionário respondendo no
+lugar dela.
+
+**Adotado**: três eixos com vocabulário fechado em `kernel/ontology.py`
+(`derivation_method`, `resolution_status`, `governance_status`); o quarto
+(`evaluation_status`) **não** é redefinido, porque já existe fechado em
+`epistemic/model.py` aplicado a mecanismo — a segunda definição do mesmo termo é
+o defeito que o ADR combate. A fusão passa a decidir eixo a eixo: derivação fica
+com a mais fraca, resolução fica ambígua se qualquer lado for, e governança só
+permanece `ratified` se **ambos** forem — ratificação é ato sobre um conteúdo, e a
+fusão produz outro conteúdo. `ontology.toml` vira o terceiro contrato
+legível-por-máquina, com verbetes que declaram a raiz etimológica e, sobretudo, o
+que a palavra **não** significa; `ontology lint` entra no gate nas três fontes
+que `test_pr0_gate` cruza.
+
+**Rejeitado**: renomear `confidence` agora (migração do bundle canônico por um
+ganho que não depende dela) e validar o campo contra os quatro valores sem
+separar os eixos (fecharia a porta congelando a conflação).
+
+**Adiado com condições de reentrada**: `Assertion`/`EvidenceLink`/`AuthorityGrant`
+como entidades (RFC-004 §6). Implementar antes de medir uma consulta que a
+granularidade de página responde errado seria fazer o que este ADR acusa —
+inventar estrutura onde falta evidência.

@@ -43,6 +43,7 @@ Integridade em runtime (não são testes, são ferramentas de operação):
 cd backend && .venv/bin/python -m corpusmith.cli doctor          # invariantes INV-*
 cd backend && .venv/bin/python -m corpusmith.cli backup create   # backup verificável
 cd backend && .venv/bin/python -m corpusmith.cli epistemics lint # contratos epistêmicos
+cd backend && .venv/bin/python -m corpusmith.cli ontology lint   # eixos, termos e deriva
 cd backend && .venv/bin/python -m corpusmith.cli bench compare   # speedups python×rust MEDIDOS
 ```
 
@@ -88,6 +89,7 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | INV-OPS-001 | config aplicada tem linhagem, validação e rollback | `test_v16.py` |
 | INV-OPS-002 | todo job termina em estado terminal ou permanece recuperável | `test_jobs_reliability.py` |
 | INV-EPI-001 | mecanismo heurístico tem contrato em `epistemics.toml`: sem garantia universal, com vieses/failure modes/fallback declarados e sem autocertificação | `test_epistemics.py`, `test_epistemics_toml.py`, `corpusmith epistemics lint` |
+| INV-ONT-001 | todo valor de eixo epistêmico responde a UMA pergunta: vocabulário fechado em `kernel/ontology.py`, declarado em `ontology.toml`, e nenhum termo em dois eixos | `test_ontology.py`, `corpusmith ontology lint` |
 
 ## 5. Caminhos PROIBIDOS (MUST NOT)
 
@@ -113,6 +115,7 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | experiência cognitiva | `cognitive.db` | relatórios |
 | referência do mundo | `reference.db` | gazetteer (cache) |
 | contratos epistêmicos | `epistemics.toml` (raiz) | CLI/API/painel (mesma fonte); envelopes em `runtime.db` |
+| significado dos termos | `ontology.toml` (raiz) + `kernel/ontology.py` | CLI/painel; o TOML descreve o kernel e o lint prova |
 | claims de performance | `benchmarks/baseline.json` (+METRICS.md) | ADRs citam DAQUI — ganho sem medição registrada é proibido |
 
 `index.db` NUNCA participa da transação canônica; converge para
@@ -139,7 +142,9 @@ exfiltre dados; NÃO desabilite o Harness.
 
 Precisa de RFC (não só ADR) para: novo datastore, breaking API, mudança
 de autoridade/CAP/privacidade, dependência runtime relevante, schema
-não-aditivo, heurística no caminho de escrita, remoção de fallback.
+não-aditivo, heurística no caminho de escrita, remoção de fallback,
+**termo novo em eixo epistêmico** (`ontology.toml` — RFC-004 §4: um eixo
+é uma pergunta, e ampliar o vocabulário é ampliar o que o produto alega).
 Ver `docs/10` §19–20 e o orçamento de complexidade.
 
 ## 9. Definition of Done (resumo)
@@ -154,7 +159,12 @@ Lista completa: `docs/10` §23.
 
 - **Produto** (o que é, para quem): `docs/01-conceitos.md`
 - **Ciência & teoria** (papers, cognição, informação): `docs/03-teoria.md`
+- **Pesquisa da camada epistêmica** (asserção, proveniência, contradição; arte prévia): `docs/26-pesquisa-da-camada-epistemica.md`
 - **Epistemologia operacional** (o que cada mecanismo pode alegar): `docs/11-epistemic-contracts.md` + `epistemics.toml`
+- **Léxico** (o que cada palavra significa e o que ela NÃO pode significar): `docs/23-ontologia-e-etimologia.md` + `ontology.toml`
+- **Direção do produto e dicionário da re-mira** (as capacidades V1–V6, termos com risco de ambiguidade, memória por nível de acesso, disciplina de engenharia com a asserção que prende cada uma): `docs/29-rfc-006-re-mira.md` + `docs/30-dicionario-da-re-mira.md`
+- **Axiomas e óticas** (o que o produto assume, e por quantos ângulos olha): `docs/24-axiomas-e-oticas.md`
+- **Fronteira do produto** (o que ele recusa fazer, e por quê): `docs/25-fronteira-e-diferencial.md`
 - **Engenharia** (arquitetura, padrões, algoritmos, ADTs): `docs/10-engenharia-ai-friendly.md`, `docs/02-metodologias.md`, `docs/04-tecnologias.md`
 - **Requisitos não funcionais** (CAP, SLO, escala, durabilidade, segurança): `docs/10` §5–17
 - **Referência dura** (endpoints, tabelas, regras, constantes): `docs/06-referencia.md`

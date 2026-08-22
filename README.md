@@ -42,7 +42,12 @@ O espaço que Corpusmith ocupa não é nenhum desses elementos isolado — é a
 - **contratos epistêmicos executáveis** — [`epistemics.toml`](epistemics.toml)
   declara pressupostos, garantias *relativas*, modos de falha e fallback de
   cada mecanismo heurístico, e a suíte **quebra** quando um contrato mente
-  sobre o código.
+  sobre o código;
+- **léxico com fronteira** — [`ontology.toml`](ontology.toml) declara os eixos
+  independentes de uma afirmação (*como derivou · foi assentada? · quem
+  autorizou*) e, para cada termo, a raiz etimológica e o que a palavra **não**
+  pode passar a significar. Um valor que responda a duas perguntas quebra a
+  suíte ([`docs/23`](docs/23-ontologia-e-etimologia.md)).
 
 **A alegação honesta de governança, hoje**: máquinas escrevem sob políticas
 (gate único de escrita, colisão vira decisão humana, heurística cercada por
@@ -58,6 +63,20 @@ alucinação", ontologia formal, nem prontidão para decisões clínicas ou
 reguladas.
 
 *Not another agent-memory database.*
+
+### 📖 Entenda em 15 minutos
+
+**[`docs/00-o-que-e-corpusmith.md`](docs/00-o-que-e-corpusmith.md)** conta a
+história inteira do zero: o problema, a categoria, a tese de compilação, **um
+fato seguido do PDF até a resposta**, quem pode mudar o quê, e o que o
+produto **não** alega. Se você só vai ler um documento, leia esse.
+
+Depois dele, três páginas curtas explicam por que o produto é assim:
+[`23`](docs/23-ontologia-e-etimologia.md) (o léxico e o que cada raiz proíbe),
+[`24`](docs/24-axiomas-e-oticas.md) (os oito axiomas, cada um com a asserção
+executável que o paga, e as oito óticas sobre o mesmo corpus) e
+[`25`](docs/25-fronteira-e-diferencial.md) (as três fronteiras que o produto
+recusa cruzar).
 
 ---
 
@@ -342,7 +361,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   particionamento; páginas `communities/*.md` (`community_summary`) geradas.
 - **Heat/outcomes/reflect**: `✅ útil · 🚫 beco · ✏️ corrigi` no chat →
   `ask_outcomes`; reflect semanal recalcula `page_heat` e o overlay
-  `preferred/tentative/contested` que ajusta a fusão RRF (+15%/−20%);
+  `preferred/tentative/low_yield` que ajusta a fusão RRF (+15%/−20%);
   correção vira memória nova no inbox (`raw/correcoes/`).
 - **Descida hierárquica** L0/L1 (`page_levels` + `fts_levels`) com
   `trajectory` visível no painel de evidências.
@@ -470,7 +489,7 @@ desktop/
       `abstained: true` com `gaps`
 - [x] `eval_memory` grava as categorias em `eval_runs`; painel Qualidade
       mostra as 5 barras; `abstain` só passa com abstenção real
-- [x] `reflect` popula `page_heat`/`page_overlay`; página `contested` afunda
+- [x] `reflect` popula `page_heat`/`page_overlay`; página `low_yield` afunda
       na fusão do `/ask`; Dashboard exibe candidatos
 - [x] migração idempotente: bancos v0.7 ganham `graph_edges.confidence` e
       `chunks.valid_at/invalid_at` no primeiro `connect()`

@@ -4,6 +4,11 @@
 > a implementação (`kernel/` — stdlib pura, protegida por teste de
 > arquitetura) e o ponto exato de uso. A seção final explica a disciplina
 > de transposição: como um resultado teórico vira mecanismo aqui.
+>
+> **Escopo**: aqui moram os fundamentos dos MECANISMOS. A pesquisa da camada
+> epistêmica — o que é uma asserção, como proveniência e contradição são
+> modeladas na literatura, e onde o Corpusmith adota em vez de inventar — está
+> em [`26-pesquisa-da-camada-epistemica.md`](26-pesquisa-da-camada-epistemica.md).
 
 ## 1. Teoria da informação (`kernel/information.py`)
 
@@ -62,6 +67,11 @@ Cadeia completa: `ask_provenance` registra página→stream na consulta;
 multiplica a contribuição RRF na próxima fusão.
 
 ## 2. Topologia (`kernel/topology.py`)
+
+> **A leitura epistêmica** de cada mecanismo abaixo — que pergunta de
+> *qualidade* ele responde, e o que ele explicitamente NÃO diz (comunidade ≠
+> tema, centralidade ≠ importância, lacuna ≠ contradição) — está em
+> [`28-escada-de-abstracao-e-topologia.md`](28-escada-de-abstracao-e-topologia.md) §3–4.
 
 ### 2.1 Persistência 0-dimensional sobre filtração de pesos
 **Edelsbrunner, Letscher & Zomorodian, "Topological Persistence and

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import re
 from .findings import Finding
+from ..kernel.factual import divergencias, resumo
 from ..normalize import analyze, findings as norm_findings
 from ..normalize.detectors.identifiers import RE_GIT_SHA_CTX as COMMIT_REF
 from ..okf.authorities import load_gazetteer, load_type_schemas
@@ -148,7 +149,89 @@ def check(docs, reader, git, mode: str = "write",
                                        f"release com link quebrado: {link.target}"))
     return out
 
-CONTRADICTION_IDS = ("doi", "isbn", "issn", "arxiv")
+# Subkinds que formam SUJEITO de contradição/conflito factual — duas
+# páginas que citam o mesmo identificador falam da mesma coisa.
+#
+# RFC-006 V1: as NORMAS entram (iso/nbr/rfc/nist/ieee/eu_reg/circular) —
+# um documento normativo identifica tão fortemente quanto um DOI, e é o
+# material de quem estuda padrões. `regulator` fica FORA de propósito:
+# "LGPD" ou "OWASP" nomeiam um REFERENTE (lei, organização), não um
+# documento — duas páginas que mencionam OWASP não estão falando "do mesmo
+# texto", e incluí-lo compraria o sujeito inventado que a RFC-005 §3
+# recusou. A reconciliação usa STRONG_IDS próprio (reconcile_candidate.py)
+# — ampliar AQUI não faz duas notas sobre a mesma ISO parecerem o mesmo
+# documento lá.
+CONTRADICTION_IDS = ("doi", "isbn", "issn", "arxiv",
+                     "iso", "nbr", "rfc", "nist", "ieee", "eu_reg",
+                     "circular")
+#: Kinds de Match cujos subkinds acima podem formar grupo. `identifier`
+#: cobre doi/isbn/issn/arxiv; `standard` cobre as normas.
+_KINDS_DE_SUJEITO = ("identifier", "standard")
+
+
+def _alias_conflitantes(gaz, usos: dict[str, set[str]]) -> list[Finding]:
+    """`policy.alias_conflict` — duas identidades curadas disputam o mesmo
+    alias (RFC-006 V2).
+
+    **Determinístico E contratado, e a distinção importa.** A detecção é
+    igualdade de alias entre registros da mesma camada — sem limiar, sem
+    calibração, como o `valid_at` legado do F4-PR3c. Mas aquele é um ATO
+    cuja assinatura é COMPLETA sobre o corpus (toda página de máquina com
+    os carimbos iguais é legado), enquanto este é um DETECTOR com lacuna
+    de recall: ele só enxerga a ambiguidade que alguém já CUROU em dois
+    registros. Um bundle sem `authority_record` tem zero conflitos e
+    vocabulário inteiramente por resolver — e ler esse silêncio como
+    "está desambiguado" é a inferência falsa que `[mechanisms.
+    alias_conflict]` existe para impedir.
+
+    A mensagem NOMEIA o ato que resolve, e ele depende do diagnóstico:
+    canônicos já qualificados por sentido pedem que o alias NU saia de um
+    dos registros (o alias curto não pode servir a dois donos); canônicos
+    sem qualificador pedem que o sentido seja declarado. Dizer só "há
+    conflito" deixaria o curador adivinhando qual das duas edições fazer."""
+    out: list[Finding] = []
+    for alias, cands in gaz.conflitos().items():
+        paginas_de_uso = sorted(usos.get(alias, ()))
+        alvo = next((c.page for c in cands if c.page), None) \
+            or (paginas_de_uso[0] if paginas_de_uso else None)
+        if alvo is None:
+            continue          # nem registro editável nem uso: nada a fazer
+        sentidos = [c.sentido for c in cands]
+        nomes = ", ".join(f"`{c.canonical}`" for c in cands)
+        if not any(c.page for c in cands):
+            # conflito entre termos do reference.db: não há registro no
+            # bundle para editar, e mandar "edite os registros" seria
+            # prescrever um ato impossível. O ato que existe é criar a
+            # curadoria — que vence por precedência de camada
+            comoresolver = ("as duas identidades vêm da referência "
+                            "importada, não do bundle — crie um "
+                            "`authority_record` reivindicando o alias com "
+                            "o sentido desejado (a curadoria vence o "
+                            "reference.db por precedência)")
+        elif all(sentidos):
+            comoresolver = (f"os sentidos já estão declarados ({', '.join(sentidos)}), "
+                            f"mas o alias `{alias}` continua servindo aos dois — "
+                            "tire-o de um dos registros ou qualifique o uso")
+        else:
+            comoresolver = ("declare o sentido no canônico de cada registro "
+                            "(ex.: `Entropia (física)` e `Entropia "
+                            "(informação)`) para que sejam identidades "
+                            "distintas")
+        onde = (f"; usado em {len(paginas_de_uso)} página(s): "
+                f"{paginas_de_uso[:3]}" if paginas_de_uso else
+                "; nenhuma página usa o alias hoje")
+        out.append(Finding(
+            "warn", "policy.alias_conflict", alvo,
+            f"o alias `{alias}` é reivindicado por {len(cands)} identidades "
+            f"({nomes}) — {comoresolver}{onde}. Enquanto durar, o termo é "
+            "lido como AMBÍGUO: não é reescrito, não entra no índice de "
+            "entidades e não liga páginas",
+            meta={"alias": alias,
+                  "candidates": [c.canonical for c in cands],
+                  "senses": sentidos,
+                  "records": [c.page for c in cands if c.page],
+                  "pages": paginas_de_uso}))
+    return out
 
 
 def _blocos_de_sucessao(group, pages: set[str]) -> list[set[str]]:
@@ -176,6 +259,57 @@ def _blocos_de_sucessao(group, pages: set[str]) -> list[set[str]]:
     return list(blocos.values())
 
 
+def _entrincheirada(itens):
+    """A página que sobrevive à resolução: humana > máquina, empate por
+    `rel_path`. UMA definição — o finding factual a aplica ao SUBCONJUNTO
+    que diverge, não ao grupo inteiro, e duas cópias divergiriam."""
+    return sorted(itens, key=lambda item: (
+        not str(item[1].get("generated_via", "")).startswith("human:"),
+        item[0].rel_path))[0][0]
+
+
+def _medidas(report, corpo: str) -> list[dict]:
+    """`NormReport` → a forma mínima que `kernel.factual.divergencias` pede.
+
+    ACHATA o payload SI. `quantities.py:69` entrega `si` como DICT
+    (`{"value", "unit"}`) e `factual.py:85` testa `isinstance(si, (int,
+    float))` — sem o achatamento TODA quantidade seria descartada em
+    silêncio e o detector nasceria inerte. É o modo de falha que este
+    enxerto mais arrisca, e por isso a mutação que o teste executa.
+
+    `dim == "temp"` já sai sem `si` na origem (`quantities.py:65`, não há
+    conversão afim °C↔°F) e cai fora aqui. `ratio` cai no kernel, onde a
+    exclusão é declarada com o motivo — repetir a lista aqui criaria dois
+    donos da mesma decisão epistêmica.
+
+    DESCARTA UNIDADE COMPOSTA. `RE_QTY` casa uma chave de `UNITS` por vez e
+    o `/h` de `12 km/h` é engolido em silêncio: o match sai com
+    `surface='12 km'`, `dim=len`, `si=12000 m` — uma VELOCIDADE lida como
+    COMPRIMENTO. Sem esta guarda o detector produzia dois defeitos reais
+    (medidos): falso positivo com dimensão errada, citando na mensagem um
+    texto que não existe na página (`12 km` onde está escrito `12 km/h`), e
+    falso NEGATIVO por mascaramento — a velocidade mal lida faz a página
+    parecer declarar faixa, a guarda de faixa descarta a dimensão inteira e
+    o conflito verdadeiro some.
+
+    A correção é aqui e não em `quantities.py` de propósito: aquele
+    detector alimenta `page_entities` e o gazetteer, e mudar a extração
+    teria raio de explosão muito maior que o deste pacote. O que este
+    módulo pode afirmar é mais estreito — *para comparação numérica entre
+    páginas*, quantidade seguida de `/` não é medida confiável."""
+    out = []
+    for m in report.by_kind("quantity"):
+        si = m.data.get("si")
+        if not isinstance(si, dict):
+            continue
+        if corpo[m.end:m.end + 1] == "/":
+            continue                       # 12 km/h, 30 mg/L, 5 MB/s …
+        out.append({"dim": m.data.get("dim"), "si": float(si["value"]),
+                    "unit": m.data.get("unit"), "surface": m.surface,
+                    "span": [m.start, m.end]})
+    return out
+
+
 def check_corpus(docs, reader) -> list[Finding]:
     """Detecção AGM-inspirada de CONTRADIÇÃO candidata (v0.10, só no lint):
     o mesmo identificador forte em 2+ páginas sem relação de sucessão
@@ -183,16 +317,38 @@ def check_corpus(docs, reader) -> list[Finding]:
     conflito no tempo) sugere duas versões da mesma verdade convivendo.
     A resolução NUNCA é automática — o finding nomeia a página mais
     ENTRINCHEIRADA (humana > máquina; mais desfechos úteis viriam depois)
-    e o humano/SUPERSEDE decide. Warn, nunca error."""
+    e o humano/SUPERSEDE decide. Warn, nunca error.
+
+    **F4-PR3b (RFC-005)**: dentro de cada grupo já formado, mede também o
+    CONFLITO FACTUAL — divergência numérica na mesma dimensão SI. É
+    refinamento, não detector paralelo: o sujeito é o grupo de
+    identificador forte que já existe, e por construção o detector não
+    pode produzir mais grupos que o candidato genérico. Quem itera esta
+    função **precisa filtrar por `f.rule`** — desde este PR ela emite dois
+    códigos."""
     by_id: dict[str, list] = {}
+    medidas: dict[str, list[dict]] = {}
+    usos_ambiguos: dict[str, set[str]] = {}
     gaz = load_gazetteer(reader)
     for d in docs:
         x = d.meta.model_dump(exclude_none=True)
-        for m in analyze(d.body, gaz=gaz).matches:
-            if m.kind == "identifier" and m.subkind in CONTRADICTION_IDS \
+        report = analyze(d.body, gaz=gaz)     # MESMA passada de antes
+        medidas[d.rel_path] = _medidas(report, d.body)
+        for m in report.matches:
+            if m.kind in _KINDS_DE_SUJEITO \
+                    and m.subkind in CONTRADICTION_IDS \
                     and m.valid is not False:
                 by_id.setdefault(m.canonical, []).append((d, x))
-    out: list[Finding] = []
+            elif m.kind == "entity" and m.confidence == "ambiguous" \
+                    and d.meta.type != "authority_record":
+                # mesma passada: onde o alias disputado é USADO. Sem isto o
+                # finding diria que há conflito e não onde ele dói.
+                # O próprio registro é DEFINIÇÃO, não uso — ele menciona o
+                # termo que define por construção, e contá-lo faria o
+                # finding apontar de volta para si mesmo
+                usos_ambiguos.setdefault(m.surface.lower(),
+                                         set()).add(d.rel_path)
+    out: list[Finding] = _alias_conflitantes(gaz, usos_ambiguos)
     for ident, group in by_id.items():
         # F3-PR2 paga a dívida declarada no ADR-41.5 e confirmada pela
         # auditoria: `resolved = any(...)` silenciava o GRUPO INTEIRO assim
@@ -212,16 +368,47 @@ def check_corpus(docs, reader) -> list[Finding]:
         if len(_blocos_de_sucessao(vivas_no_grupo, pages)) < 2:
             continue
         group = vivas_no_grupo
-        entrenched = sorted(
-            group, key=lambda item: (
-                not str(item[1].get("generated_via", "")).startswith("human:"),
-                item[0].rel_path))[0][0]
+        entrenched = _entrincheirada(group)
         out.append(Finding(
             "warn", "policy.contradiction_candidate", entrenched.rel_path,
             f"identificador {ident} em {len(pages)} páginas sem sucessão: "
             f"{sorted(pages)} — mais entrincheirada: {entrenched.rel_path}; "
             "resolva com supersede/invalid_at ou funda as páginas",
             meta={"identifier": ident, "pages": sorted(pages)}))
+
+        # RFC-005 §3 — REFINAMENTO, não detector paralelo. Só chega aqui o
+        # grupo que já passou pelas três guardas acima (invalid_at, len<2,
+        # blocos de sucessão): a precisão é por construção, e o detector
+        # NÃO PODE produzir mais grupos que o candidato genérico. Emitido
+        # DEPOIS do candidato de propósito — há testes que indexam
+        # `findings[0]` e a ordem por grupo é contrato de fato.
+        #
+        # UM finding por CONJUNTO DE PÁGINAS, não por dimensão. O primeiro
+        # desenho emitia um por dimensão e isso era erro de granularidade
+        # com consequência medida: dois findings do mesmo par produzem dois
+        # itens de fila com o MESMO `pattern_key` (a chave só olha páginas),
+        # e rejeitar um calava o outro — a dívida do ADR-41.5 que o F3-PR2
+        # pagou, reintroduzida dentro do kind. A granularidade certa é a das
+        # PÁGINAS porque é a dos ATOS: `edit`, `supersede`, `merge` e
+        # `invalidate` operam sobre página, nunca sobre dimensão. Ninguém
+        # resolve "o comprimento" e deixa "o tempo" pendente.
+        por_paginas: dict[tuple, list[dict]] = {}
+        for div in divergencias({p: medidas.get(p, []) for p in pages}):
+            por_paginas.setdefault(tuple(sorted(div["pages"])), []).append(div)
+        for envolvidas_paths, divs in sorted(por_paginas.items()):
+            envolvidas = [it for it in group
+                          if it[0].rel_path in envolvidas_paths]
+            alvo = _entrincheirada(envolvidas)
+            out.append(Finding(
+                "warn", "policy.factual_conflict", alvo.rel_path,
+                f"conflito factual sob o identificador {ident} — "
+                + "; ".join(resumo(d) for d in divs)
+                + "; confira o(s) número(s) nas duas páginas",
+                meta={"identifier": ident,
+                      "pages": list(envolvidas_paths),
+                      "dims": [d["dim"] for d in divs],
+                      "tolerance": divs[0]["tolerance"],
+                      "divergences": divs}))
     return out
 
 

@@ -112,12 +112,22 @@ def _purge_page(idx, page: str) -> None:
 
 
 def _gazetteer_fingerprint(gaz) -> str:
-    payload = json.dumps(sorted((alias, entry[0])
-                                for alias, entry in gaz.map.items()))
+    # V2: o fingerprint inclui TODOS os candidatos de cada alias. Guardar
+    # só o primeiro faria a introdução (ou a resolução) de um conflito
+    # passar despercebida, e o índice continuaria servindo a entidade que
+    # o gazetteer já não resolve mais — obsolescência silenciosa exatamente
+    # onde este carimbo existe para não haver.
+    payload = json.dumps(sorted(
+        (alias, [[c.canonical, c.authority, c.qid] for c in cands])
+        for alias, cands in gaz.map.items()))
     return hashlib.sha256(payload.encode()).hexdigest()
 
 
-INDEX_GENERATION = f"g4:chunk={CHUNK_CHARS}:espan:mdtitle"  # bump ⇒ full rebuild
+# bump ⇒ full rebuild. `g5`: a V2 mudou a FORMA do payload do fingerprint
+# (alias → lista de identidades, com authority e qid), então toda base
+# existente reindexa uma vez. A migração passa pelo knob DECLARADO em vez
+# de acontecer de carona no hash do gazetteer.
+INDEX_GENERATION = f"g5:chunk={CHUNK_CHARS}:espan:mdtitle:senses"
 
 
 def _git_changed_since(kb: Path, previous_head: str) -> set[str] | None:
