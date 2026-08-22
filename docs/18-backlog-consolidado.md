@@ -331,8 +331,8 @@ preferência**.
 
 | # | Pacote | O quê | Movimento |
 |---|---|---|---|
-| 1 | **V3 estabilidade** | projeção determinística "o que menos muda" (Git + sucessão + `theme_epochs`), registrada em `DERIVATIONS` | novo; dependência zero |
-| 2 | **V1 mínimo** | normas (ISO/RFC/ABNT/circulares) como sujeitos fortes: subkinds de `standard` em `CONTRADICTION_IDS` + filtro de kind + contrato | novo; pequeno e localizado |
+| 1 | **V3 estabilidade** ✅ **ENTREGUE** | `kernel/stability.py` (puro; 4 sentidos separados), `GitStore.edit_history`, `page_stability` no index.db, derivação `stability` em `DERIVATIONS` (doctor de graça), `MemoryFacade.stability()`, `corpusmith stability`, contrato `editorial_stability` (registro 1.11.0) — 11 testes + 5 mutações | dependência zero, cumprida |
+| 2 | **V1 mínimo** ✅ **ENTREGUE** | normas como sujeitos: iso/nbr/rfc/nist/ieee/eu_reg/**circular** (detector novo, precisão>recall) em `CONTRADICTION_IDS`; `regulator` FORA (referente ≠ documento); `STRONG_IDS` da reconciliação INTOCADO e congelado por teste — 7 testes + 3 mutações | pequeno e localizado, cumprido |
 | 3 | **F5 ⇒ V2** | **ressignificada**: de "entidade↔página na projeção" (P-10) para identidade-com-sentido — alias multi-candidato, `policy.alias_conflict`, colisão de autoridade como finding, qualificador de domínio no `authority_record` | **promovida** — a fase mais estratégica sob a re-mira |
 | 4 | **F6** | rastro de abstenção (P-8) | **promovida**: deixa de ser "deliberadamente depois" — é componente de V4 |
 | 5 | **V4 dificuldade** | índice "difícil de explicar": composição pura + contrato heurístico (sem detector novo) | novo; depende de F6 |

@@ -162,6 +162,7 @@ Lista completa: `docs/10` §23.
 - **Pesquisa da camada epistêmica** (asserção, proveniência, contradição; arte prévia): `docs/26-pesquisa-da-camada-epistemica.md`
 - **Epistemologia operacional** (o que cada mecanismo pode alegar): `docs/11-epistemic-contracts.md` + `epistemics.toml`
 - **Léxico** (o que cada palavra significa e o que ela NÃO pode significar): `docs/23-ontologia-e-etimologia.md` + `ontology.toml`
+- **Direção do produto e dicionário da re-mira** (as capacidades V1–V6, termos com risco de ambiguidade, memória por nível de acesso, disciplina de engenharia com a asserção que prende cada uma): `docs/29-rfc-006-re-mira.md` + `docs/30-dicionario-da-re-mira.md`
 - **Axiomas e óticas** (o que o produto assume, e por quantos ângulos olha): `docs/24-axiomas-e-oticas.md`
 - **Fronteira do produto** (o que ele recusa fazer, e por quê): `docs/25-fronteira-e-diferencial.md`
 - **Engenharia** (arquitetura, padrões, algoritmos, ADTs): `docs/10-engenharia-ai-friendly.md`, `docs/02-metodologias.md`, `docs/04-tecnologias.md`

@@ -81,6 +81,10 @@ tropeça de novo.
 
 ### V1 · Catálogo por natureza epistêmica (normas como sujeitos fortes)
 
+> **Estado: mínimo ENTREGUE** — normas em `CONTRADICTION_IDS` com
+> `regulator` fora e a reconciliação intocada (`docs/18` §10). O
+> "catálogo" como projeção segue aberto.
+
 **Já existe.** `normalize/detectors/standards.py` detecta ISO/NBR/RFC/NIST/
 IEEE/Regulamento UE com canônicos estáveis (`RFC 793` normalizado por
 `int()`, `ABNT NBR ISO…`, `:2022` como parte do canônico) e reguladores
@@ -142,6 +146,12 @@ uma coisa e guarda outra. Disciplina exige campo próprio com pergunta
 própria (INV-ONT-001).
 
 ### V3 · "O que menos muda" — estabilidade medida
+
+> **Estado: ENTREGUE** — `kernel/stability.py`, `page_stability`,
+> derivação `stability`, `corpusmith stability`, contrato
+> `editorial_stability` (`docs/18` §10). Os quatro sentidos ficaram
+> SEPARADOS, como a armadilha abaixo exigia; o dicionário (`docs/30`)
+> fixa o vocabulário.
 
 **Já existe.** Todos os insumos, nenhum cálculo: Git como autoridade com
 commit por escrita; leitura histórica read-only pronta (`parent_of`/

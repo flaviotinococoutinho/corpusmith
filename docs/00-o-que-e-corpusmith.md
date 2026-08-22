@@ -240,6 +240,7 @@ errado, em vez de imaginá-la.
 | contribuir / mudar código | [`../AGENTS.md`](../AGENTS.md) |
 | o que ainda falta, com evidência | [`18-backlog-consolidado.md`](18-backlog-consolidado.md) |
 | para onde o produto está mirando (o instrumento de estudo) | [`29-rfc-006-re-mira.md`](29-rfc-006-re-mira.md) |
+| os termos da re-mira sem ambiguidade, e a memória por nível de acesso | [`30-dicionario-da-re-mira.md`](30-dicionario-da-re-mira.md) |
 | a identidade e a categoria, por escrito | [`21-adr-categoria-corpusmith.md`](21-adr-categoria-corpusmith.md) |
 | o que cada palavra significa, e o que ela proíbe | [`23-ontologia-e-etimologia.md`](23-ontologia-e-etimologia.md) |
 | as suposições de base e os ângulos de leitura | [`24-axiomas-e-oticas.md`](24-axiomas-e-oticas.md) |
