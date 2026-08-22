@@ -472,7 +472,9 @@ known_failure_modes = [
   "herda os falsos positivos do grupo: identificador citado por engano em duas páginas produz um sujeito que não existe, e a divergência dentro dele não significa nada",
   "versão de norma É sujeito distinto: `ISO 9001` e `ISO 9001:2015` têm canônicos diferentes e NÃO agrupam — no regime normativo a edição muda o texto, então isso é meio-feature; o custo é que citar a mesma norma com e sem ano esconde o conflito entre as duas páginas",
   "norma citada pervasivamente (RFC 2119 aparece em quase todo documento técnico) forma grupo GIGANTE: o candidato genérico dispara para páginas que só compartilham o jargão, e o conflito factual herda o grupo — o custo é ruído de coexistência, não falso conflito (a divergência numérica ainda precisa existir)",
-  "o detector de circulares exige C maiúsculo e ponto de milhar ou marcador nº (precisão > recall): 'Circular 3.978' casa, 'circular interna 12' não — e um título em caixa-alta seguido de número pontuado ainda pode casar por engano",
+  "o detector de circulares exige C maiúsculo e ponto de milhar ou marcador nº, e ignora os prefixos compostos declarados (Carta Circular, Portaria Circular — tipos documentais distintos). O FP residual REAL é Title Case seguido de número pontuado ('Economia Circular 2.030' casa); os FN declarados são o cabeçalho oficial em CAIXA-ALTA ('CIRCULAR Nº 3.978' não casa) e o órgão entre a palavra e o número ('Circular BCB nº 3.978' não casa)",
+  "numeração de circular NÃO é global: 'Circular 100' da SUSEP e 'Circular 100' do BCB têm o MESMO canônico e formam um sujeito que não existe — detecção de órgão emissor está fora deste pacote, e o grupo herda o falso positivo",
+  "prefixo nacional não agrupa com o internacional: 'ABNT NBR ISO/IEC 27001:2022' e 'ISO/IEC 27001:2022' têm canônicos distintos e NÃO formam grupo — o mesmo custo declarado da versão com/sem ano, na dimensão do órgão adotante",
   "FUNDIR as páginas em conflito torna a divergência INDETECTÁVEL: os dois valores passam a conviver na mesma página e a guarda de faixa descarta a dimensão — o número errado continua no corpus, sem alarme. O preview do MergePages declara isso antes do efeito, mas nada impede o ato",
   "o desfecho 'as duas estão certas em períodos diferentes' NÃO tem ato: escrever `valid_at` só ganha caminho humano depois do F4-PR3c (o legado do P-9 ainda está sujo)",
 ]
@@ -964,6 +966,7 @@ known_failure_modes = [
   "rename quebra a continuidade (--no-renames declarado): reorganizar diretórios rejuvenesce a história de tudo que moveu",
   "história reescrita (rebase, squash) muda a contagem retroativamente — o Git é a autoridade e a projeção segue a autoridade, mesmo quando a autoridade foi editada",
   "página de máquina regenerada FORA da lista declarada de exclusões contaria como conteúdo volátil — a lista é fechada por caminho, não por natureza",
+  "commit de MERGE não lista arquivos no `git log --name-only`: o gesto de resolução de um merge é invisível para a contagem — página tocada em N commits dos quais um é merge conta N−1 (o fluxo normal do bundle é linear, mas histórico com merges subconta)",
 ]
 guarantee_kind = "deterministic"
 guarantee_relative_to = "contagem exata de commits que tocam cada página viva do bundle, excluídos os caminhos regenerados declarados; NÃO que página quieta esteja correta, aprovada ou importante — quietude editorial é o que se mede, assentamento é o que se espera e correção é o que NÃO se pode ler daqui"

@@ -54,12 +54,18 @@ class ComputeStability(UseCase):
         reader = BundleReader(kb / "bundle")
         frontmatter = {d.rel_path: d.meta.model_dump(exclude_none=True)
                        for d in reader.iter_concepts()}
-        git = GitStore(kb)
-        head = git.head()
-        historico = {
-            caminho[len(_PREFIXO_BUNDLE):]: registro
-            for caminho, registro in git.edit_history().items()
-            if caminho.startswith(_PREFIXO_BUNDLE)}
+        # projeção é LEITURA: sem repositório, a resposta é "sem história"
+        # — jamais `git init` por efeito colateral (GitStore.__init__
+        # inicializa; achado de QA adversarial)
+        if (kb / ".git").exists():
+            git = GitStore(kb)
+            head = git.head()
+            historico = {
+                caminho[len(_PREFIXO_BUNDLE):]: registro
+                for caminho, registro in git.edit_history().items()
+                if caminho.startswith(_PREFIXO_BUNDLE)}
+        else:
+            head, historico = None, {}
         ranking = consolidar(historico, frontmatter)
 
         if head is not None:

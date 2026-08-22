@@ -48,11 +48,18 @@ def _findings(kb, regra=None):
 
 # ================================================ o detector de circulares
 def test_circular_normativa_e_detectada_e_adjetivo_nao():
-    """Precisão > recall: "circular" é adjetivo comum em pt-BR, e o
-    detector exige C maiúsculo E (ponto de milhar OU marcador nº).
+    """Precisão > recall: "circular" é adjetivo comum em pt-BR. O detector
+    exige C maiúsculo, (ponto de milhar OU marcador nº) e ausência dos
+    prefixos compostos (Carta/Portaria Circular são tipos documentais
+    DISTINTOS — sem o lookbehind, "Carta Circular 3.978" e "Circular
+    3.978" formariam o mesmo sujeito: falso conflito entre documentos
+    diferentes, achado por QA adversarial).
 
-    Falsificável: relaxar qualquer uma das duas exigências faz as linhas
-    negativas reprovarem."""
+    Falsificável, mutação a mutação: `re.I` na regex faz a linha do
+    "circular nº 12" reprovar; nº opcional faz "Economia Circular 2030"
+    reprovar; lookbehind removido faz as linhas de Carta/Portaria
+    reprovarem. Os FN ficam DECLARADOS aqui e no contrato: caixa-alta
+    oficial e órgão entre a palavra e o número não casam."""
     achados = {m.canonical: m.subkind
                for m in detect("A Circular 3.978/2020 e a Circular nº 979 "
                                "regem o tema.")}
@@ -62,6 +69,13 @@ def test_circular_normativa_e_detectada_e_adjetivo_nao():
     assert detect("Evite referência circular no grafo.") == []
     assert detect("O plano Economia Circular 2030 foi lançado.") == []
     assert detect("a circular interna 12 do RH") == []
+    assert detect("a circular nº 12 do RH") == []          # mata o re.I
+    assert detect("A Carta Circular 3.978 exige retenção.") == []
+    assert detect("A Portaria Circular 1.234 dispõe.") == []
+    # FN DECLARADOS (contrato): mudar este comportamento é mudar o
+    # contrato no mesmo commit, não um ganho grátis
+    assert detect("CIRCULAR Nº 3.978") == []
+    assert detect("A Circular BCB nº 3.978 dispõe.") == []
 
 
 # ==================================== normas formam sujeito de contradição

@@ -78,8 +78,13 @@ class GitStore:
         bundle. O separador \\x01 evita colisão com nome de arquivo."""
         if not self._has_head():
             return {}
-        bruto = self.repo.git.log("--name-only", "--no-renames",
-                                  "--pretty=format:\x01%ct")
+        # core.quotepath=false: sem isso o Git escapa em octal qualquer
+        # caminho não-ASCII ("bundle/atenção.md" viraria a chave literal
+        # '"bundle/aten\\303\\247..."', que nunca casa com rel_path nenhum
+        # e faria a página acentuada contar ZERO edições em silêncio —
+        # defeito achado por QA adversarial num corpus pt-BR
+        bruto = self.repo.git(c="core.quotepath=false").log(
+            "--name-only", "--no-renames", "--pretty=format:\x01%ct")
         out: dict[str, dict] = {}
         quando = 0.0
         for linha in bruto.splitlines():

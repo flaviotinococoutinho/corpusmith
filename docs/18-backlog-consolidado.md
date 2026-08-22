@@ -345,3 +345,25 @@ Guarda transversal (RFC-006 §8): todo PR desta trilha é revisado primeiro
 contra as duas patologias já catalogadas — um nome carregando várias
 perguntas, e atributo afirmado no nível errado.
 
+**QA adversarial da entrega (2ª rodada, worktree isolada).** As 8 mutações
+declaradas foram re-executadas de forma independente: todas reprovam. E o
+QA achou **cinco defeitos reais**, todos corrigidos no mesmo dia:
+
+1. caminho não-ASCII quebrava `edit_history` (`core.quotepath` escapa em
+   octal): "atenção.md" contava ZERO edições em silêncio — o pior tipo de
+   defeito num corpus pt-BR. Corrigido com `-c core.quotepath=false` +
+   teste com página acentuada;
+2. "Carta Circular 3.978" era lida como "Circular 3.978" — falso conflito
+   entre tipos documentais distintos. Lookbehinds + linhas negativas;
+3. numeração de circular não é global (SUSEP 100 ≠ BCB 100, mesmo
+   canônico) — declarado como failure mode; detecção de órgão fica fora;
+4. o contrato declarava um FP impossível (caixa-alta não casa numa regex
+   case-sensitive) e omitia o FN real — a linha foi reescrita para o que o
+   código FAZ (FP: Title Case; FN: CAIXA-ALTA oficial e órgão no meio);
+5. o docstring alegava falsificabilidade mais forte que a real (`re.I`
+   passava em silêncio) — ganhou a linha negativa que mata a mutação.
+
+Colateral corrigido junto: `ComputeStability` não inicializa mais
+`kb/.git` por efeito colateral em settings sem repositório (projeção é
+LEITURA); e o merge invisível ao `git log --name-only` entrou no contrato.
+

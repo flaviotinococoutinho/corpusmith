@@ -109,6 +109,34 @@ def test_edit_history_em_repo_sem_head_e_vazio(tmp_path):
     assert GitStore(tmp_path / "novo").edit_history() == {}
 
 
+def test_edit_history_nao_quebra_com_caminho_acentuado(tmp_path):
+    """QA adversarial: sem `core.quotepath=false`, o Git escapa caminho
+    não-ASCII em octal e a chave vira a string literal com aspas —
+    "atenção.md" contaria ZERO edições em silêncio, num corpus pt-BR.
+
+    Falsificável: remova o `-c core.quotepath=false` e a chave limpa some."""
+    raiz = tmp_path / "kb"
+    g = GitStore(raiz)
+    (raiz / "bundle").mkdir()
+    (raiz / "bundle" / "atenção.md").write_text("v1")
+    g.commit("c1")
+    (raiz / "bundle" / "atenção.md").write_text("v2")
+    g.commit("c2")
+    hist = g.edit_history()
+    assert hist["bundle/atenção.md"]["edicoes"] == 2
+    assert not any(k.startswith('"') for k in hist)
+
+
+def test_projecao_sem_repositorio_nao_inicializa_git(settings):
+    """Projeção é LEITURA: settings recém-criado sem bundle versionado
+    responde "sem história" — e NÃO ganha um `kb/.git` por efeito
+    colateral (QA adversarial: GitStore.__init__ faz `git init`)."""
+    kb = settings.path("knowledge")
+    resultado = ComputeStability(settings).execute()
+    assert resultado["head"] is None
+    assert not (kb / ".git").exists()
+
+
 # ================================================== a projeção (usecase)
 def test_projecao_persiste_ranking_e_registra_checkpoint(settings, kb):
     _escreve(kb, _doc("concepts/a.md", "A"))
