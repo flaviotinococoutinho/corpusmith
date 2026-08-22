@@ -112,7 +112,18 @@ jobs:
           test -n "$J" || { echo "::error::o sidecar empacotado nao abriu a porta"; exit 1; }
           P=$(python -c "import json;print(json.load(open('$J'))['port'])")
           T=$(python -c "import json;print(json.load(open('$J'))['token'])")
-          curl -sf -m 10 "http://127.0.0.1:$P/health" -H "x-corpusmith-auth: $T"
+          # daemon.json aparece ANTES de o uvicorn aceitar conexao (medido:
+          # o run 32601684771 falhou com exit 7 e o processo VIVO no
+          # cleanup, enquanto o run irmao do MESMO commit passou). O
+          # primeiro curl ganha retry ate o socket abrir; os seguintes nao
+          # precisam — se o health respondeu, o servidor esta de pe.
+          H=""
+          for i in $(seq 1 30); do
+            H=$(curl -sf -m 5 "http://127.0.0.1:$P/health" -H "x-corpusmith-auth: $T") && break
+            H=""; sleep 1
+          done
+          test -n "$H" || { echo "::error::o sidecar escreveu daemon.json mas nunca aceitou conexao"; exit 1; }
+          echo "$H"
           curl -sf -m 20 "http://127.0.0.1:$P/system/doctor" -H "x-corpusmith-auth: $T" \
             | python -c "import json,sys; d=json.load(sys.stdin); \
                          sys.exit(0 if d['counts']['error']==0 else 1)"
