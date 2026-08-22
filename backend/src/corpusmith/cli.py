@@ -193,6 +193,19 @@ def cmd_checkpoints(s: Settings, args) -> int:
     return 1 if any(x["state"].startswith("stale") for x in linhas) else 0
 
 
+def cmd_stability(s: Settings, args) -> int:
+    """O que menos muda (RFC-006 V3): estabilidade EDITORIAL por página.
+
+    "Estável" aqui = quieto no eixo de edição — nunca "correto" nem
+    "aprovado" (o contrato `editorial_stability` declara a diferença). A
+    execução recomputa a projeção e registra o checkpoint `stability`."""
+    import json as _json
+    from .facades.memory import MemoryFacade
+    result = MemoryFacade(s).stability(limit=args.limit)
+    print(_json.dumps(result, indent=1, default=str))
+    return 0
+
+
 def cmd_themes(s: Settings, args) -> int:
     """Temas com identidade e a última época de cada (RFC-001 §9).
 
@@ -441,6 +454,11 @@ def main(argv: list[str] | None = None) -> int:
                    ).set_defaults(fn=cmd_checkpoints)
     sub.add_parser("themes", help="temas com identidade e última época"
                    ).set_defaults(fn=cmd_themes)
+    stability = sub.add_parser(
+        "stability", help="o que menos muda: estabilidade editorial por "
+                          "página (RFC-006 V3)")
+    stability.add_argument("--limit", type=int, default=None)
+    stability.set_defaults(fn=cmd_stability)
     backup = sub.add_parser("backup", help="backup lógico verificável")
     backup.add_argument("op", choices=["create", "verify", "list", "restore"])
     backup.add_argument("path", nargs="?", default=None)

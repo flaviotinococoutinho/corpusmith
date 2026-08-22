@@ -237,3 +237,20 @@ def test_factual_conflict_parameters_match_code():
     # subir o valor poria um limiar não calibrado a governar o topo da fila
     assert next_actions._FACTUAL_VALUE == next_actions._CONTRADICTION_VALUE
     assert next_actions._FACTUAL_COST < next_actions._CONTRADICTION_COST
+
+
+def test_editorial_stability_parameters_match_code():
+    """RFC-006 V3 — as exclusões do contrato SÃO as do kernel.
+
+    A lista de caminhos regenerados é a decisão de medição inteira: com ela
+    errada, toda página parece volátil (index.md é reescrito a cada write).
+    Declará-la no contrato e cruzá-la aqui impede que kernel e contrato
+    andem separados — a mesma disciplina do limiar do `factual_conflict`.
+
+    Falsificável: acrescente um basename em `BASENAMES_REGENERADOS` sem
+    mexer no TOML (ou o contrário) e este teste reprova."""
+    from corpusmith.kernel.stability import (BASENAMES_REGENERADOS,
+                                             PREFIXOS_DE_RITUAL)
+    p = _params("editorial_stability")
+    assert tuple(p["excluded_basenames"].split(",")) == BASENAMES_REGENERADOS
+    assert tuple(p["ritual_prefixes"].split(",")) == PREFIXOS_DE_RITUAL

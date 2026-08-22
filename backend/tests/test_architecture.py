@@ -78,7 +78,9 @@ def test_kernel_and_normalize_are_pure():
         "standards", "geo", "information", "topology",
         "policy", "gates", "scoring", "projection", "practice", "session",
         "parse", "validate",
-        "ontology"}   # RFC-004: curation.py delega a regra de eixos
+        "ontology",   # RFC-004: curation.py delega a regra de eixos
+        "vitality"}   # RFC-006 V3: stability.py LÊ `aposentada` de lá —
+                      # o sentido de ciclo tem UM dono, não dois
     for package in PURE_PACKAGES:
         for module in (SRC / package).rglob("*.py"):
             leaked = _absolute_imports(module) & FORBIDDEN_IN_PURE

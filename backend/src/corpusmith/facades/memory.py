@@ -25,3 +25,10 @@ class MemoryFacade:
 
     def evaluate(self, notify=None) -> dict:
         return EvaluateMemory(self._settings, notify).execute()
+
+    def stability(self, *, limit: int | None = None) -> dict:
+        """O que menos muda (RFC-006 V3): recomputa a projeção de
+        estabilidade editorial e devolve o ranking. Determinística para o
+        mesmo HEAD; "estável" = quieto no eixo de EDIÇÃO, nunca "correto"."""
+        from ..usecases.compute_stability import ComputeStability
+        return ComputeStability(self._settings, limit=limit).execute()

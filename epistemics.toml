@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.10.0"  # F4-PR3b (RFC-005): `factual_conflict` entra — PROMISED → EXPECTED
+version = "1.11.0"  # RFC-006 V3: `editorial_stability` entra (projeção "o que menos muda")
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -934,3 +934,54 @@ high_impact = true
 abstention_supported = true
 human_review_available = false
 
+# ============================ estabilidade editorial (RFC-006, V3)
+[mechanisms.editorial_stability]
+title = "Estabilidade editorial por página — o que menos muda"
+decision = "ordenar as páginas do bundle da mais quieta para a mais volátil no eixo de EDIÇÃO (commits que tocam a página), para quem estuda distinguir o núcleo durável da camada em movimento — nunca decidir o que é verdadeiro"
+implementation_refs = [
+  "backend/src/corpusmith/kernel/stability.py",
+  "backend/src/corpusmith/okf/git_store.py",
+  "backend/src/corpusmith/usecases/compute_stability.py",
+]
+inductive_biases = [
+  "frequência de gesto editorial é sinal de assentamento: página que ninguém precisa reescrever tende a estar assentada — TENDE, e o contrato existe para a distância entre 'tende' e 'está'",
+  "contagem por COMMIT, não por bytes: um commit que troca uma vírgula e um que reescreve tudo contam 1 cada — pesar por tamanho seria um segundo sentido escondido no mesmo número",
+  "a palavra 'estabilidade' tem QUATRO sentidos no produto (edição, ciclo de vida, uso, tema) e este mecanismo mede UM e lê OUTRO — os campos são separados de propósito (a lição do drift.time: quatro tempos exigiram quatro nomes)",
+]
+assumptions = [
+  "a história do Git é a história editorial: import em massa, rebase ou clone raso distorcem a contagem sem avisar",
+  "os caminhos regenerados pelo caminho de escrita são exatamente os declarados em parameters (index.md por diretório, log.md, reviews/) — página de máquina NOVA fora dessa lista conta como conteúdo",
+  "renomear é gesto editorial: --no-renames faz a página renomeada nascer de novo, com história zerada",
+]
+validity_scope = [
+  "só o eixo de EDIÇÃO: quantas vezes cada página foi escrita, quando começou, quando foi a última — mais o motivo de aposentadoria LIDO de vitality (nunca recalculado)",
+  "bundle + Git como únicas fontes: a projeção é 100% re-derivável do canônico (a razão declarada de reconcile_log/curation_acts ficarem FORA — misturá-los quebraria backup_restore)",
+  "ordenação determinística SEM limiar: onde cortar 'núcleo' de 'volátil' é decisão de leitura — qualquer corte fixo seria calibração que ninguém fez",
+]
+known_failure_modes = [
+  "estável NÃO é correto: página errada que ninguém revisita é perfeitamente quieta — o ranking mede quietude, e ler correção nele é a leitura que este contrato existe para impedir (capta ≠ data, docs/26)",
+  "primeira escrita de um import em massa dá edicoes=1 para centenas de páginas de uma vez: o corpus recém-migrado parece inteiro 'estável' até a vida editorial começar",
+  "rename quebra a continuidade (--no-renames declarado): reorganizar diretórios rejuvenesce a história de tudo que moveu",
+  "história reescrita (rebase, squash) muda a contagem retroativamente — o Git é a autoridade e a projeção segue a autoridade, mesmo quando a autoridade foi editada",
+  "página de máquina regenerada FORA da lista declarada de exclusões contaria como conteúdo volátil — a lista é fechada por caminho, não por natureza",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "contagem exata de commits que tocam cada página viva do bundle, excluídos os caminhos regenerados declarados; NÃO que página quieta esteja correta, aprovada ou importante — quietude editorial é o que se mede, assentamento é o que se espera e correção é o que NÃO se pode ler daqui"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+composite = false
+evidence = ["deterministic_check", "property_test"]
+misinterpretations = [
+  "'estável' NÃO significa 'verdadeiro' nem 'revisado' — significa que ninguém escreveu nela; as perguntas de correção têm outros donos (Harness, curadoria)",
+  "edicoes=0 NÃO é defeito: repo recém-inicializado ou página importada fora do Git — o dado diz 'nunca vi esta página ser escrita', e inventar 1 seria fabricar história",
+  "o ranking NÃO combina uso (page_heat) nem tema (theme_epochs): um score único somando os quatro sentidos seria o novo confidence-com-seis-perguntas",
+  "aposentada no ranking NÃO é erro: aposentar não é apagar (F3-PR2), e quem estuda quer saber que o núcleo dele inclui página já sucedida — o campo ciclo carrega o motivo",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.editorial_stability.parameters]
+excluded_basenames = "index.md,log.md"
+ritual_prefixes = "reviews/"

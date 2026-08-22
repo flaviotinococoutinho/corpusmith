@@ -220,7 +220,11 @@ frozen_at, frozen_commit, activation, recall_p, recycles)` · `cold_fts`
 `graph_bridges(src,dst,weight,small_side,large_side)` ·
 `page_index_state(page,sha)` + `index_meta` (índice INCREMENTAL v0.13:
 só páginas com sha alterado reindexam; fingerprint do gazetteer força
-full automático; `rebuild_index(s, full=True)` disponível)
+full automático; `rebuild_index(s, full=True)` disponível) ·
+`page_stability(rel_path,edits,first_commit_at,last_edit_at,lifecycle,
+computed_from)` — RFC-006 V3: estabilidade EDITORIAL, projeção de
+bundle+Git (`corpusmith stability`; checkpoint `stability` em runtime.db;
+"estável" = quieto no eixo de edição, nunca "correto")
 
 Migrações em `runtime/db.py:_migrate`: `graph_edges.confidence`,
 `chunks.valid_at/invalid_at`, `page_heat.first_seen` (backfill =
