@@ -86,7 +86,8 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 | [19-rfc-escada-reconciliacao.md](19-rfc-escada-reconciliacao.md) | **RFC-002** — a escada de reconciliação volta a ter três degraus (B1: o degrau de similaridade era código morto; árbitro LLM segue atrás de flag desligada) |
 | [20-rfc-colisao-de-caminho.md](20-rfc-colisao-de-caminho.md) | **RFC-003** — colisão de caminho entre promoção humana e compilação de máquina (P-7) |
 | [21-adr-categoria-corpusmith.md](21-adr-categoria-corpusmith.md) | **ADR-53** — Corpusmith: o nome, a categoria (*governed knowledge compiler*) e a **fronteira de honestidade** — o que o produto pode e não pode alegar hoje |
-| [27-rfc-conflito-factual.md](27-rfc-conflito-factual.md) | **RFC-005** — conflito factual como REFINAMENTO da contradição candidata (o `canonical` de uma quantidade é o próprio valor, então o sujeito tem de vir do grupo de identificador); a primeira tolerância numérica do Harness, declarada NÃO calibrada; e o primeiro produtor de `contested` |
+| [27-rfc-conflito-factual.md](27-rfc-conflito-factual.md) | **RFC-005** — conflito factual como REFINAMENTO da contradição candidata (o `canonical` de uma quantidade é o próprio valor, então o sujeito tem de vir do grupo de identificador); a primeira tolerância numérica do Harness, declarada NÃO calibrada; e o primeiro **leitor** de `contested` (a correção "escritor→leitor" foi medida — §5.3) |
+| [29-rfc-006-re-mira.md](29-rfc-006-re-mira.md) | **RFC-006** — **a re-mira: do compilador de corpus ao instrumento de estudo** — o pitch (conceitos comparáveis, rastreáveis, explicáveis e acionáveis: sob qual lente, o que permanece, onde diverge, como se aplica, quanto custa adotar), as seis capacidades V1–V6 verificadas contra o código, a ficha do conceito como norte da UI, a LLM-wiki/memória de IA como nome de uso, e a fila reordenada (`docs/18` §10) |
 | [22-rfc-ontologia-da-assercao.md](22-rfc-ontologia-da-assercao.md) | **RFC-004** — a ontologia da asserção: os eixos que `confidence` fundia (com a assimetria medida na fusão), o registro de deriva, e `Assertion`/`EvidenceLink`/`AuthorityGrant` como proposta com condições de reentrada |
 
 ## Guia rápido de roteamento (para não misturar especialidades)
@@ -117,6 +118,8 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 - É **o que falta para ser viável para um terceiro** (e em que ordem)? → `14`.
 - É **como executar isso** (PR a PR, processo, RFC vs ADR)? → `15` + `AGENTS.md` §8.
 - É **o que AINDA falta, com evidência**? → `18` (fonte viva; `14`/`15` são o registro do raciocínio).
+- É **para onde o produto está mirando** (o instrumento de estudo, as seis
+  capacidades, a ordem)? → `29` + `18` §10.
 - É **uma heurística no caminho de escrita**? → as RFCs `16`, `19`, `20` são os precedentes instanciados.
 - É **como instalar/verificar o ambiente**? → `12` + `scripts/install.sh`.
 

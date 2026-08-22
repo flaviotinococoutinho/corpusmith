@@ -1,6 +1,8 @@
 # 18 · Backlog consolidado — o que ainda falta
 
-> Estado em 2026-07-27, HEAD `83c5983`. Consolida `docs/14` (14 problemas de
+> Estado em 2026-07-27, HEAD `83c5983`; §9–§10 atualizados em 2026-08-22
+> (F4-PR3 entregue; fila reordenada pela re-mira do
+> [RFC-006](29-rfc-006-re-mira.md)). Consolida `docs/14` (14 problemas de
 > viabilidade), `docs/15` (plano, D-A…D-K, G-1…G-10), `docs/17` (auditoria
 > adversarial) e as medições desta sessão.
 
@@ -176,9 +178,11 @@ padrões) foram entregues nas Fases 1 e 2. Restam:
 
 O RFC-004 (`docs/22`) e a leitura de literatura (`docs/26`) abriram uma trilha
 própria e **mudaram a forma do F4-PR3**: o detector `policy.factual_conflict`
-deixa de ser só "o conflito real que faltava" e passa a ser **o primeiro
-escritor do eixo `resolution_status`** — hoje `contested` é valor declarado sem
-nenhum produtor.
+deixa de ser só "o conflito real que faltava" e passa a ser o primeiro
+**leitor** do eixo `resolution_status` — a versão inicial deste parágrafo
+dizia "escritor", e a correção foi medida (RFC-005 §5.3): o valor não
+sobrevive ao caminho de volta pelo campo legado, então o que se entrega é o
+SINAL recomputado, e O-2 segue aberta.
 
 | # | O quê | Evidência | Estado |
 |---|---|---|---|
@@ -188,17 +192,9 @@ nenhum produtor.
 | **O-4** | **Os sentidos numéricos de `confidence` seguem no mesmo nome** (autorrelato `confidence_before`, taxas da metacognição, intervalos de avaliação) | 🔴 medido (`docs/22` §2.1) | deriva `open` em `ontology.toml [drift.confidence]`, lint confere os marcadores; rename é decisão própria (não acompanha F4-PR3) |
 | **O-5** | **`Assertion` como entidade** — a unidade epistêmica atômica | 🟡 declarado (RFC-004 §6) | **quatro condições de reentrada**, a primeira é MEDIR uma consulta que a página responde errado; arte prévia citada (nanopubs/micropubs/CRMinf) |
 
-**Fila corrente, em ordem:**
-
-1. **F4-PR3** — `policy.factual_conflict` (**com RFC**, e agora com o papel
-   duplo: detector de conflito + escritor de `contested`) e o ato em lote com
-   preview do `valid_at` legado (P-9 resíduo). Paga a primeira promessa de
-   `PROMISED_MECHANISMS` (`factual_conflict`);
-2. **F5** (P-10 entidade↔página) e **F6** (P-8 rastro de abstenção) — na ordem
-   do `docs/14`; `inferred_cooccurrence_edges` (P-6) paga a segunda promessa;
-3. **F7** (P-11 resíduo de custo) — `temporal_partition` paga a terceira;
-4. **C6** (campo de efeito colateral no `EpistemicContract`) — pequeno, exige
-   mudança de modelo, sem dependências.
+**Fila corrente:** ✅ **F4-PR3 entregue inteiro** (a/b/c — §9.1 abaixo). A
+ordem que valia aqui (F5 → F6 → F7 → C6) foi **reordenada pela re-mira do
+[RFC-006](29-rfc-006-re-mira.md)** — a fila viva mora na **§10**.
 
 ### 9.1 · F4-PR3 partido em dois (RFC-005)
 
@@ -321,4 +317,31 @@ legado: `kernel/ontology.py` (o eixo do ADR-54), `runtime/db.py` (a migração
 9→10 precisa ler o valor antigo) e `cognitive/policy.py` (chave legada em
 snapshots persistidos). É a razão de a separação ter de ser manual: um `grep`
 cego destruiria o vocabulário novo.
+
+---
+
+## 10. A re-mira (RFC-006) e a fila reordenada
+
+O [RFC-006](29-rfc-006-re-mira.md) fixou a direção de produto — **do
+compilador de corpus ao instrumento de estudo** — e decompôs a demanda em
+seis capacidades (V1–V6), cada uma verificada contra o código. A fila
+abaixo substitui a ordem F5 → F6 → F7 → C6 da §9; a razão de cada
+movimento está no RFC-006 §6, e o critério é **dependência real, não
+preferência**.
+
+| # | Pacote | O quê | Movimento |
+|---|---|---|---|
+| 1 | **V3 estabilidade** | projeção determinística "o que menos muda" (Git + sucessão + `theme_epochs`), registrada em `DERIVATIONS` | novo; dependência zero |
+| 2 | **V1 mínimo** | normas (ISO/RFC/ABNT/circulares) como sujeitos fortes: subkinds de `standard` em `CONTRADICTION_IDS` + filtro de kind + contrato | novo; pequeno e localizado |
+| 3 | **F5 ⇒ V2** | **ressignificada**: de "entidade↔página na projeção" (P-10) para identidade-com-sentido — alias multi-candidato, `policy.alias_conflict`, colisão de autoridade como finding, qualificador de domínio no `authority_record` | **promovida** — a fase mais estratégica sob a re-mira |
+| 4 | **F6** | rastro de abstenção (P-8) | **promovida**: deixa de ser "deliberadamente depois" — é componente de V4 |
+| 5 | **V4 dificuldade** | índice "difícil de explicar": composição pura + contrato heurístico (sem detector novo) | novo; depende de F6 |
+| 6 | **V5 como medição** | aresta tipada "aplica-se-a" por ato humano + a consulta medida que RFC-004 §6 exige — o caminho legítimo até o nível 3 | novo; **O-2 ressignificada, não resolvida** |
+| 7 | **C6** | campo de efeito colateral no `EpistemicContract` | levemente **promovida**: pré-requisito barato do fact sheet de V6 |
+| 8 | **V6 fact sheet** | custo/tempo/trade-offs/ganhos como projeção de borda (LLM propõe prosa FORA do bundle, default desligado) | novo; por último — projeta o que 1–7 produzem |
+| 9 | **F7** | P-11 resíduo de custo; `temporal_partition` | **rebaixada**: performance, não visão; não bloqueia nada acima |
+
+Guarda transversal (RFC-006 §8): todo PR desta trilha é revisado primeiro
+contra as duas patologias já catalogadas — um nome carregando várias
+perguntas, e atributo afirmado no nível errado.
 

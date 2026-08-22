@@ -48,6 +48,14 @@ dele. É por isso que a categoria é diferente, e não uma variação.
 O nome traduz o ofício: **corpus** é o material trabalhado, **smith** é quem
 o trabalha. Fontes brutas → curadoria → corpus durável.
 
+**Para quem a categoria aponta** ([RFC-006](29-rfc-006-re-mira.md)): quem
+estuda e acumula conteúdo. A direção declarada é compilar conteúdo disperso
+em conceitos **comparáveis, rastreáveis, explicáveis e acionáveis** — não só
+o que uma ideia significa, mas sob qual lente, o que permanece, onde
+diverge, como se aplica e quanto custa adotá-la. Cada verbo dessa frase
+mapeia numa capacidade com estado declarado no RFC; nenhum vira alegação
+pública antes de existir e ser medido.
+
 ## 3. A tese: conhecimento como alvo de compilação
 
 Um compilador tem código-fonte, um binário auditável e artefatos
@@ -231,6 +239,7 @@ errado, em vez de imaginá-la.
 | a tabela dura (regras, endpoints, tabelas) | [`06-referencia.md`](06-referencia.md) |
 | contribuir / mudar código | [`../AGENTS.md`](../AGENTS.md) |
 | o que ainda falta, com evidência | [`18-backlog-consolidado.md`](18-backlog-consolidado.md) |
+| para onde o produto está mirando (o instrumento de estudo) | [`29-rfc-006-re-mira.md`](29-rfc-006-re-mira.md) |
 | a identidade e a categoria, por escrito | [`21-adr-categoria-corpusmith.md`](21-adr-categoria-corpusmith.md) |
 | o que cada palavra significa, e o que ela proíbe | [`23-ontologia-e-etimologia.md`](23-ontologia-e-etimologia.md) |
 | as suposições de base e os ângulos de leitura | [`24-axiomas-e-oticas.md`](24-axiomas-e-oticas.md) |
