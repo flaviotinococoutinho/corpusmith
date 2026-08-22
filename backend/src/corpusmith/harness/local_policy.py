@@ -149,7 +149,24 @@ def check(docs, reader, git, mode: str = "write",
                                        f"release com link quebrado: {link.target}"))
     return out
 
-CONTRADICTION_IDS = ("doi", "isbn", "issn", "arxiv")
+# Subkinds que formam SUJEITO de contradição/conflito factual — duas
+# páginas que citam o mesmo identificador falam da mesma coisa.
+#
+# RFC-006 V1: as NORMAS entram (iso/nbr/rfc/nist/ieee/eu_reg/circular) —
+# um documento normativo identifica tão fortemente quanto um DOI, e é o
+# material de quem estuda padrões. `regulator` fica FORA de propósito:
+# "LGPD" ou "OWASP" nomeiam um REFERENTE (lei, organização), não um
+# documento — duas páginas que mencionam OWASP não estão falando "do mesmo
+# texto", e incluí-lo compraria o sujeito inventado que a RFC-005 §3
+# recusou. A reconciliação usa STRONG_IDS próprio (reconcile_candidate.py)
+# — ampliar AQUI não faz duas notas sobre a mesma ISO parecerem o mesmo
+# documento lá.
+CONTRADICTION_IDS = ("doi", "isbn", "issn", "arxiv",
+                     "iso", "nbr", "rfc", "nist", "ieee", "eu_reg",
+                     "circular")
+#: Kinds de Match cujos subkinds acima podem formar grupo. `identifier`
+#: cobre doi/isbn/issn/arxiv; `standard` cobre as normas.
+_KINDS_DE_SUJEITO = ("identifier", "standard")
 
 
 def _blocos_de_sucessao(group, pages: set[str]) -> list[set[str]]:
@@ -252,7 +269,8 @@ def check_corpus(docs, reader) -> list[Finding]:
         report = analyze(d.body, gaz=gaz)     # MESMA passada de antes
         medidas[d.rel_path] = _medidas(report, d.body)
         for m in report.matches:
-            if m.kind == "identifier" and m.subkind in CONTRADICTION_IDS \
+            if m.kind in _KINDS_DE_SUJEITO \
+                    and m.subkind in CONTRADICTION_IDS \
                     and m.valid is not False:
                 by_id.setdefault(m.canonical, []).append((d, x))
     out: list[Finding] = []

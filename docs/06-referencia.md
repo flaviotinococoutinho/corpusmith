@@ -36,7 +36,7 @@ Ausência de `# Citations` e de reservados **nunca** gera finding
 | `policy.temporal_order` | error | `invalid_at ≤ valid_at` |
 | `policy.schema_required_field` | error | campo obrigatório declarado por `collection_specification` (`applies_to`) ausente na página do tipo |
 | `policy.quotation_attribution` | warn (só lint, corpus) | citação conhecida do reference.db presente no corpo sem o sobrenome do autor em lugar nenhum do texto — sem atribuição ou mal-atribuída (v1.2; normas pré-computadas, custo medido < 2s na suíte) |
-| `policy.contradiction_candidate` | warn (só lint, corpus) | mesmo identificador forte (doi/isbn/issn/arxiv) em 2+ páginas sem sucessão (`superseded_by`/`supersedes` no grupo ou `invalid_at`); o finding nomeia a página mais entrincheirada (humana > máquina) |
+| `policy.contradiction_candidate` | warn (só lint, corpus) | mesmo identificador forte — acadêmico (doi/isbn/issn/arxiv) ou, desde a RFC-006 V1, **norma** (iso/nbr/rfc/nist/ieee/eu_reg/circular; `regulator` fica FORA: nomeia referente, não documento) — em 2+ páginas sem sucessão (`superseded_by`/`supersedes` no grupo ou `invalid_at`); o finding nomeia a página mais entrincheirada (humana > máquina) |
 | `policy.factual_conflict` | warn (só lint, corpus) | **refinamento** do anterior (RFC-005): dentro de um grupo que já rendeu `contradiction_candidate`, divergência numérica acima da tolerância declarada (1%, **NÃO calibrada**) na mesma dimensão SI. `temp`, `ratio`, `date`, unidade composta e faixa ficam de fora por decisão declarada; o alvo é a mais entrincheirada **entre as divergentes**. Não marca nada no canônico — o eixo `resolution_status` segue sem escritor persistente |
 
 ## 2. Endpoints (API local, auth header `x-corpusmith-auth` OU `?auth=`)

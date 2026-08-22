@@ -12,6 +12,14 @@ RE_NIST = re.compile(r"\bNIST\s+SP\s*(\d{3})[\s\-]?(\d+[A-Za-z]?)"
 RE_IEEE = re.compile(r"\bIEEE\s+(\d{1,4}(?:\.\d+)*[a-z]{0,2})\b")
 RE_EU   = re.compile(r"\bRegula(?:tion|mento)\s*\(?(EU|UE)\)?\s*(?:n[ºo°.]*\s*)?"
                      r"(\d{4})/(\d+)\b", re.I)
+# Circulares normativas (BCB, SUSEP…). "circular" é adjetivo comum em
+# pt-BR ("referência circular", "economia circular") — precisão > recall:
+# C maiúsculo obrigatório (sem re.I) E o número precisa de ponto de milhar
+# OU do marcador nº. "Economia Circular 2030" não casa; "Circular 3.978" e
+# "Circular nº 979" casam. O FP residual (título em caixa-alta seguido de
+# nº) está declarado no contrato do factual_conflict.
+RE_CIRC = re.compile(r"\bCircular\s+(?:(?:n[ºo°.]+\s*)(\d{1,4}(?:\.\d{3})*)"
+                     r"|(\d{1,4}\.\d{3}))(?:/(\d{4}))?\b")
 
 # reguladores/leis nomeados: casamento por alias, forma canônica curada
 NAMED = {
@@ -56,6 +64,12 @@ def detect(text: str) -> list[Match]:
     for m in RE_EU.finditer(text):
         out.append(Match(m.start(), m.end(), "standard", "eu_reg", m.group(0),
                          f"Regulation (EU) {m.group(2)}/{m.group(3)}"))
+    for m in RE_CIRC.finditer(text):
+        numero = m.group(1) or m.group(2)
+        canon = f"Circular {numero}" \
+                + (f"/{m.group(3)}" if m.group(3) else "")
+        out.append(Match(m.start(), m.end(), "standard", "circular",
+                         m.group(0), canon))
     for m in RE_NAMED.finditer(text):
         key, canon = NAMED[m.group(1).lower()]
         out.append(Match(m.start(), m.end(), "standard", "regulator",

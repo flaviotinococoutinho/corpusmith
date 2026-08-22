@@ -456,7 +456,8 @@ assumptions = [
   "o payload SI de `normalize/detectors/quantities.py` está correto para as unidades que ele mapeia",
 ]
 validity_scope = [
-  "SÓ dentro de grupos de identificador forte (doi/isbn/issn/arxiv). Divergência entre páginas que não compartilham identificador forte é invisível POR CONSTRUÇÃO — um corpus de notas sem DOI detecta zero conflitos",
+  "SÓ dentro de grupos de identificador forte — acadêmicos (doi/isbn/issn/arxiv) e, desde a RFC-006 V1, NORMAS (iso/nbr/rfc/nist/ieee/eu_reg/circular). Divergência entre páginas que não compartilham identificador é invisível POR CONSTRUÇÃO — um corpus de notas sem DOI nem norma citada detecta zero conflitos",
+  "`regulator` (LGPD, GDPR, OWASP…) fica FORA do sujeito de propósito: nomeia um REFERENTE, não um documento — duas páginas que mencionam OWASP não afirmam sobre o mesmo texto, e incluí-lo compraria o sujeito inventado que a RFC-005 §3 recusou",
   "páginas VIVAS do grupo, sem relação de sucessão entre os blocos e sem invalid_at — o refinamento herda todas as guardas do candidato genérico",
   "quantidades de dimensão física com payload SI: comprimento, massa, tempo, dados, frequência, potência, energia, tensão, volume",
   "`docs/14` §P-5 pediu quantity E date; `date` está FORA (RFC-005 §4) — a dívida sai de PROMISED paga em parte, e esta linha é o registro de qual parte",
@@ -469,6 +470,9 @@ known_failure_modes = [
   "unidade composta (`km/h`, `mg/L`) é LIDA COMO A UNIDADE-BASE pelo detector de quantidades — `12 km/h` sai como `dim=len, si=12000 m` — e por isso o adaptador do Harness DESCARTA quantidade seguida de `/`: sem esse descarte a velocidade viraria conflito de comprimento (falso positivo com dimensão errada, citando na mensagem texto que não existe na página) e mascararia conflito real pela guarda de faixa. O custo declarado é que conflito REAL em unidade composta não é detectado",
   "tolerância alta demais deixa passar conflito real; baixa demais enche os grupos — o limiar não foi medido contra nenhum conjunto rotulado",
   "herda os falsos positivos do grupo: identificador citado por engano em duas páginas produz um sujeito que não existe, e a divergência dentro dele não significa nada",
+  "versão de norma É sujeito distinto: `ISO 9001` e `ISO 9001:2015` têm canônicos diferentes e NÃO agrupam — no regime normativo a edição muda o texto, então isso é meio-feature; o custo é que citar a mesma norma com e sem ano esconde o conflito entre as duas páginas",
+  "norma citada pervasivamente (RFC 2119 aparece em quase todo documento técnico) forma grupo GIGANTE: o candidato genérico dispara para páginas que só compartilham o jargão, e o conflito factual herda o grupo — o custo é ruído de coexistência, não falso conflito (a divergência numérica ainda precisa existir)",
+  "o detector de circulares exige C maiúsculo e ponto de milhar ou marcador nº (precisão > recall): 'Circular 3.978' casa, 'circular interna 12' não — e um título em caixa-alta seguido de número pontuado ainda pode casar por engano",
   "FUNDIR as páginas em conflito torna a divergência INDETECTÁVEL: os dois valores passam a conviver na mesma página e a guarda de faixa descarta a dimensão — o número errado continua no corpus, sem alarme. O preview do MergePages declara isso antes do efeito, mas nada impede o ato",
   "o desfecho 'as duas estão certas em períodos diferentes' NÃO tem ato: escrever `valid_at` só ganha caminho humano depois do F4-PR3c (o legado do P-9 ainda está sujo)",
 ]
@@ -492,7 +496,7 @@ human_review_available = true
 [mechanisms.factual_conflict.parameters]
 relative_tolerance = 0.01
 excluded_dimensions = "temp,ratio"
-subject_identifiers = "arxiv,doi,isbn,issn"
+subject_identifiers = "arxiv,circular,doi,eu_reg,ieee,isbn,iso,issn,nbr,nist,rfc"
 
 # ============================================================ cognição
 [mechanisms.cognitive_priority]
@@ -929,3 +933,4 @@ misinterpretations = [
 high_impact = true
 abstention_supported = true
 human_review_available = false
+
