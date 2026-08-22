@@ -12,4 +12,4 @@ crate-type = ["cdylib"]
 corpusmith-types = { path = "../corpusmith-types" }
 corpusmith-graph = { path = "../corpusmith-graph" }
 corpusmith-sketch = { path = "../corpusmith-sketch" }
-pyo3 = { version = "0.23", features = ["abi3-py311", "extension-module"] }
+pyo3 = { version = "0.29", features = ["abi3-py311", "extension-module"] }
