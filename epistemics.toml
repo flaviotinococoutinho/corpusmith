@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.11.0"  # RFC-006 V3: `editorial_stability` entra (projeção "o que menos muda")
+version = "1.12.0"  # RFC-006 V2: `alias_conflict` entra (identidade-com-sentido)
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -988,3 +988,54 @@ human_review_available = false
 [mechanisms.editorial_stability.parameters]
 excluded_basenames = "index.md,log.md"
 ritual_prefixes = "reviews/"
+
+# ============================ identidade-com-sentido (RFC-006, V2)
+[mechanisms.alias_conflict]
+title = "Alias disputado por duas identidades curadas"
+decision = "recusar a resolver um alias reivindicado por 2+ identidades da mesma camada — marcar o uso como AMBÍGUO e propor ao curador a edição que desambigua, nunca escolher um sentido"
+implementation_refs = [
+  "backend/src/corpusmith/normalize/gazetteer.py",
+  "backend/src/corpusmith/harness/local_policy.py",
+  "backend/src/corpusmith/okf/authorities.py",
+]
+inductive_biases = [
+  "precedência entre CAMADAS é resolução, colisão DENTRO da camada é ambiguidade: seeds embutidos e reference.db são defaults, authority_record no bundle é curadoria — a curadoria vence e isso não é conflito (regra de sempre, v0.22)",
+  "o sentido é parte da IDENTIDADE e mora no canônico (`Entropia (física)`), não num campo paralelo: campo `sense` separado criaria dois donos do mesmo fato, e o campo `authority` já carrega cinco sentidos (drift ABERTA)",
+  "não decidir é melhor que decidir errado: um alias disputado produz `confidence=ambiguous`, que toda a cadeia já respeita — não reescreve o texto, não indexa entidade, não lista no frontmatter, pesa 0.15 no grafo",
+]
+assumptions = [
+  "dois registros curados que reivindicam o mesmo alias representam sentidos DIFERENTES — se representam o mesmo, o canônico é o mesmo e a dedup os funde antes de virar conflito",
+  "o parse do qualificador (um parêntese FINAL, sem aninhamento) reflete a intenção do curador; ele NÃO decide identidade, que é o canônico inteiro comparado por igualdade",
+]
+validity_scope = [
+  "aliases de ENTIDADE do gazetteer (seeds ∪ reference.db ∪ authority_records) — identificadores fortes, normas, datas e quantidades têm outros donos e não passam por aqui",
+  "conflito DENTRO da camada de maior precedência que reivindica cada alias",
+  "só lint de corpus (`check_corpus`) e painel — jamais o gate de escrita, jamais severidade error",
+]
+known_failure_modes = [
+  "RECALL LIMITADO AO QUE FOI CURADO — o modo de falha central: o detector só vê ambiguidade que alguém já escreveu em DOIS registros. Um bundle sem authority_record tem zero conflitos e vocabulário inteiramente por resolver; ausência de finding NÃO é vocabulário desambiguado",
+  "ambiguidade de sentido que ninguém declarou continua colapsando: se um único registro reivindica `entropia` para um sentido só, o outro sentido é lido como aquele — silenciosamente, como antes desta mudança",
+  "o qualificador é convenção de escrita, não campo validado: um canônico que termine em parêntese sem ser sentido (`Fulano (org)`) é rotulado errado na mensagem do finding — custa um rótulo, nunca uma identidade",
+  "marcar AMBÍGUO tem preço declarado: o termo deixa de ligar páginas no grafo e some do índice de entidades enquanto o conflito durar — recuperar recall exige o ato humano, e é essa a troca",
+  "alias disputado que ninguém usa gera finding sem página de uso: é dívida de vocabulário, não de conteúdo, e a mensagem diz isso em vez de inventar urgência",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "igualdade exata de alias entre identidades da mesma camada de precedência; NÃO que o vocabulário esteja desambiguado, NÃO que os sentidos declarados sejam os corretos, NÃO que a ausência de conflito signifique ausência de ambiguidade"
+universal_guarantee = false
+fallback = ["request_human_review"]
+adaptive = false
+feedback_signal = ""
+composite = false
+evidence = ["deterministic_check", "property_test"]
+misinterpretations = [
+  "'nenhum conflito' NÃO significa 'vocabulário desambiguado' — significa que ninguém curou dois registros disputando o mesmo alias",
+  "AMBÍGUO não é erro do curador: é o estado honesto de um termo que serve a dois sentidos, e o produto prefere não ligar páginas a ligá-las errado",
+  "o finding NÃO escolhe qual sentido é o certo, e nenhum ato automático o faz — a escolha é humana, e a mensagem nomeia qual edição a expressa",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.alias_conflict.parameters]
+tier_seed = 0
+tier_reference = 1
+tier_bundle = 2

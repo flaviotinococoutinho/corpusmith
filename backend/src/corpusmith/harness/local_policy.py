@@ -169,6 +169,61 @@ CONTRADICTION_IDS = ("doi", "isbn", "issn", "arxiv",
 _KINDS_DE_SUJEITO = ("identifier", "standard")
 
 
+def _alias_conflitantes(gaz, usos: dict[str, set[str]]) -> list[Finding]:
+    """`policy.alias_conflict` — duas identidades curadas disputam o mesmo
+    alias (RFC-006 V2).
+
+    **Determinístico E contratado, e a distinção importa.** A detecção é
+    igualdade de alias entre registros da mesma camada — sem limiar, sem
+    calibração, como o `valid_at` legado do F4-PR3c. Mas aquele é um ATO
+    cuja assinatura é COMPLETA sobre o corpus (toda página de máquina com
+    os carimbos iguais é legado), enquanto este é um DETECTOR com lacuna
+    de recall: ele só enxerga a ambiguidade que alguém já CUROU em dois
+    registros. Um bundle sem `authority_record` tem zero conflitos e
+    vocabulário inteiramente por resolver — e ler esse silêncio como
+    "está desambiguado" é a inferência falsa que `[mechanisms.
+    alias_conflict]` existe para impedir.
+
+    A mensagem NOMEIA o ato que resolve, e ele depende do diagnóstico:
+    canônicos já qualificados por sentido pedem que o alias NU saia de um
+    dos registros (o alias curto não pode servir a dois donos); canônicos
+    sem qualificador pedem que o sentido seja declarado. Dizer só "há
+    conflito" deixaria o curador adivinhando qual das duas edições fazer."""
+    out: list[Finding] = []
+    for alias, cands in gaz.conflitos().items():
+        paginas_de_uso = sorted(usos.get(alias, ()))
+        alvo = next((c.page for c in cands if c.page), None) \
+            or (paginas_de_uso[0] if paginas_de_uso else None)
+        if alvo is None:
+            continue          # nem registro editável nem uso: nada a fazer
+        sentidos = [c.sentido for c in cands]
+        nomes = ", ".join(f"`{c.canonical}`" for c in cands)
+        if all(sentidos):
+            comoresolver = (f"os sentidos já estão declarados ({', '.join(sentidos)}), "
+                            f"mas o alias `{alias}` continua servindo aos dois — "
+                            "tire-o de um dos registros ou qualifique o uso")
+        else:
+            comoresolver = ("declare o sentido no canônico de cada registro "
+                            "(ex.: `Entropia (física)` e `Entropia "
+                            "(informação)`) para que sejam identidades "
+                            "distintas")
+        onde = (f"; usado em {len(paginas_de_uso)} página(s): "
+                f"{paginas_de_uso[:3]}" if paginas_de_uso else
+                "; nenhuma página usa o alias hoje")
+        out.append(Finding(
+            "warn", "policy.alias_conflict", alvo,
+            f"o alias `{alias}` é reivindicado por {len(cands)} identidades "
+            f"({nomes}) — {comoresolver}{onde}. Enquanto durar, o termo é "
+            "lido como AMBÍGUO: não é reescrito, não entra no índice de "
+            "entidades e não liga páginas",
+            meta={"alias": alias,
+                  "candidates": [c.canonical for c in cands],
+                  "senses": sentidos,
+                  "records": [c.page for c in cands if c.page],
+                  "pages": paginas_de_uso}))
+    return out
+
+
 def _blocos_de_sucessao(group, pages: set[str]) -> list[set[str]]:
     """Partição das páginas do grupo pelas relações de sucessão declaradas.
 
@@ -263,6 +318,7 @@ def check_corpus(docs, reader) -> list[Finding]:
     códigos."""
     by_id: dict[str, list] = {}
     medidas: dict[str, list[dict]] = {}
+    usos_ambiguos: dict[str, set[str]] = {}
     gaz = load_gazetteer(reader)
     for d in docs:
         x = d.meta.model_dump(exclude_none=True)
@@ -273,7 +329,16 @@ def check_corpus(docs, reader) -> list[Finding]:
                     and m.subkind in CONTRADICTION_IDS \
                     and m.valid is not False:
                 by_id.setdefault(m.canonical, []).append((d, x))
-    out: list[Finding] = []
+            elif m.kind == "entity" and m.confidence == "ambiguous" \
+                    and d.meta.type != "authority_record":
+                # mesma passada: onde o alias disputado é USADO. Sem isto o
+                # finding diria que há conflito e não onde ele dói.
+                # O próprio registro é DEFINIÇÃO, não uso — ele menciona o
+                # termo que define por construção, e contá-lo faria o
+                # finding apontar de volta para si mesmo
+                usos_ambiguos.setdefault(m.surface.lower(),
+                                         set()).add(d.rel_path)
+    out: list[Finding] = _alias_conflitantes(gaz, usos_ambiguos)
     for ident, group in by_id.items():
         # F3-PR2 paga a dívida declarada no ADR-41.5 e confirmada pela
         # auditoria: `resolved = any(...)` silenciava o GRUPO INTEIRO assim

@@ -111,7 +111,7 @@ def test_version_e_o_conjunto_de_mecanismos_andam_juntos():
     digest = hashlib.sha256(
         ",".join(sorted(c.mechanism_id for c in registry.contracts))
         .encode()).hexdigest()[:12]
-    assert (registry.version, digest) == ("1.11.0", "48d926119022"), (
+    assert (registry.version, digest) == ("1.12.0", "4047f71f13fb"), (
         "o conjunto de mecanismos mudou — bumpe [registry].version em "
         "epistemics.toml e atualize este par no mesmo commit")
 
@@ -122,7 +122,7 @@ def test_apagar_contrato_deixa_o_lint_vermelho(tmp_path):
     finding(s)", exit 0. Falsificável — sem `_completude`, isto passa."""
     mutado = lint(_sem_contrato("theme_identity_matching", tmp_path))
     assert mutado["ok"] is False
-    assert mutado["mechanisms"] == 20
+    assert mutado["mechanisms"] == 21
     erros = [f for f in mutado["findings"] if f["severity"] == "error"]
     assert [(f["code"], f["mechanism_id"]) for f in erros] == [
         ("epistemic.mechanism_missing", "theme_identity_matching")]
@@ -370,7 +370,7 @@ def test_cli_lint_exit_codes(settings, capsys):
     # exit 0 = nenhum ERRO. Desde o G-10 a saída lista as dívidas conhecidas
     # (contratos prometidos por docs/14 e ainda não escritos) como `warn` —
     # visíveis sem travar o gate.
-    assert "21 mecanismo(s)" in out
+    assert "22 mecanismo(s)" in out
     assert "error" not in out
     # registro quebrado ⇒ ok=False (exit 1 no comando)
     broken = lint(path=settings.home / "nao_existe.toml")

@@ -288,7 +288,7 @@ def dictionary(settings: Settings) -> dict:
             origins[p["origin"]] += 1
     gaz = load_gazetteer(BundleReader(settings.path("knowledge") / "bundle"))
     authorities: dict[str, int] = defaultdict(int)
-    for _canonical, kind, _qid in set(gaz.map.values()):
+    for _canonical, kind, _qid in gaz.termos():
         authorities[kind] += 1
     return {
         "types": sorted(
@@ -304,7 +304,10 @@ def dictionary(settings: Settings) -> dict:
         "log_kinds": ["Creation", "Update", "Deprecation", "Review",
                       "Freeze", "Recall"],
         "authorities": sorted(authorities.items(), key=lambda kv: -kv[1]),
-        "gazetteer_terms": len(set(gaz.map.values())),
+        "gazetteer_terms": len(gaz.termos()),
+        # V2: aliases que duas identidades curadas disputam — o vocabulário
+        # que ainda não foi desambiguado, visível no mesmo painel
+        "ambiguous_aliases": sorted(gaz.conflitos()),
     }
 
 

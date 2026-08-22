@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from .bundle import BundleReader
 from ..normalize import Gazetteer, NormReport, analyze, rewrite
+from ..normalize.gazetteer import TIER_BUNDLE, TIER_REFERENCIA
 
 
 def normalize_machine_body(body: str, gaz: Gazetteer) -> tuple[str, NormReport]:
@@ -79,7 +80,8 @@ def _reference_terms(bundle_root: Path) -> list[dict]:
     rows = conn.execute("SELECT canonical, kind, aliases FROM ref_terms")
     out = [{"canonical": r["canonical"],
             "aliases": json.loads(r["aliases"]),
-            "authority": r["kind"], "qid": None} for r in rows]
+            "authority": r["kind"], "qid": None,
+            "tier": TIER_REFERENCIA} for r in rows]
     conn.close()
     return out
 
@@ -90,10 +92,15 @@ def _build_derived(reader: BundleReader) -> dict:
     for d in reader.iter_concepts():
         x = d.meta.model_dump(exclude_none=True)
         if d.meta.type == "authority_record" and x.get("canonical"):
+            # `page` e `tier` (RFC-006 V2): a camada decide a precedência, e
+            # a página é o alvo editável quando dois registros curados
+            # disputam o mesmo alias — sem ela o finding não teria onde
+            # apontar e o conflito viraria aviso sem ato
             extra.append({"canonical": x["canonical"],
                           "aliases": x.get("aliases", []),
                           "authority": x.get("authority", "term"),
-                          "qid": x.get("qid")})
+                          "qid": x.get("qid"),
+                          "tier": TIER_BUNDLE, "page": d.rel_path})
         elif d.meta.type == "collection_specification" and x.get("applies_to"):
             schemas[str(x["applies_to"])] = {
                 "required_fields": list(x.get("required_fields", [])),

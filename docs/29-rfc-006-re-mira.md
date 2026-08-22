@@ -114,6 +114,13 @@ será por heurística declarada, nunca por omissão.
 
 ### V2 · Ótica/domínio na identidade do conceito
 
+> **Estado: ENTREGUE** — alias → lista de candidatos com precedência por
+> camada, sentido no canônico, `ambiguous` propagando o "não resolvido",
+> `policy.alias_conflict` e contrato próprio (`docs/18` §10). A rota
+> confirmou o desenho: **nenhum eixo novo, nenhum schema novo** — o
+> `authority_record` já tolera campos extras e o sentido é parte do
+> canônico. A escolha do sentido em contexto segue humana.
+
 **Já existe.** Quase nada — e este é o mapa mais honesto. A identidade de
 entidade é `UNIQUE(kind, canonical)` (`backend/db/schema_index.sql:49`); um
 alias resolve para exatamente **um** canônico (`normalize/gazetteer.py:66-73`);

@@ -43,11 +43,13 @@ calibrado. Guarda: `test_consolidar_ordena_da_mais_quieta_para_a_mais_volatil`.
 
 Quatro palavras que a conversa cotidiana mistura e o produto separa:
 
-- **lente/ótica (domínio)** — em que disciplina o termo tem este sentido
-  ("massa" em física ≠ em culinária). Ainda **não existe** no produto: é a
-  V2 da fila, e entrará como qualificador de IDENTIDADE de entidade —
-  nunca como eixo de asserção (`ontology.toml` declara
-  `applies_to = "assertion"` para eixos; domínio fala da entidade);
+- **lente/ótica (sentido)** — em que disciplina o termo tem este sentido
+  ("entropia" em física ≠ em informação). **Existe desde a V2**, e mora no
+  CANÔNICO da entidade (`Entropia (física)`), não num eixo de asserção
+  (`ontology.toml` declara `applies_to = "assertion"` para eixos; sentido
+  fala da entidade) nem num campo `sense` paralelo (dois donos do mesmo
+  fato). Lido por `normalize.gazetteer.sentido()`; guarda:
+  `test_sentido_e_base_leem_o_qualificador_do_canonico`;
 - **tema** — partição EMERGENTE do grafo (RFC-001): rótulo sem semântica,
   diz "estas páginas andam juntas", não "são sobre o mesmo assunto";
 - **goal** — recorte de SESSÃO do domínio cognitivo (`cognitive/gates.py`):
@@ -77,7 +79,30 @@ Guarda: `test_reconciliacao_nao_ganha_normas_por_efeito_colateral`.
 (lei, organização), não um texto — incluí-lo compraria o sujeito inventado
 que a RFC-005 §3 recusou. Guarda: `test_regulator_nao_forma_sujeito`.
 
-### conflito factual ≠ coexistência ≠ low_yield
+### precedência ≠ ambiguidade (a distinção que a V2 vive de manter)
+
+Duas identidades reivindicando o mesmo alias significam coisas opostas
+conforme a CAMADA:
+
+| Situação | Leitura | Por quê |
+|---|---|---|
+| camadas diferentes (bundle × reference × seed) | **precedência** — a mais alta vence, em silêncio e corretamente | é a regra de sempre (v0.22): a curadoria humana é a última palavra, e avisar seria ruído em todo bundle que corrige uma grafia |
+| mesma camada | **ambiguidade** — ninguém tem autoridade sobre o outro | escolher seria inventar; o produto marca `ambiguous` e devolve a decisão ao humano |
+
+Guarda: `test_registro_curado_vence_o_seed_sem_virar_conflito` e
+`test_camadas_diferentes_resolvem_por_precedencia`.
+
+### ambíguo — o estado honesto, com preço declarado
+
+`confidence = "ambiguous"` já significava "não resolvido" em toda a
+cadeia; a V2 apenas passou a **produzi-lo** em vez de resolver sozinha. O
+que ele desliga, de propósito: reescrita do texto (`_rewritable` exige
+`extracted`), índice de entidades (`fts`), lista do frontmatter
+(`entities_frontmatter`), peso de aresta (0.15). O preço: enquanto o
+conflito durar, o termo **não liga páginas** — recall trocado por não
+mentir, e a troca é declarada no contrato.
+
+### conflito factual ≠ coexistência ≠ low_yield ≠ alias em conflito
 
 - **coexistência** (`policy.contradiction_candidate`) — o mesmo sujeito em
   2+ páginas sem sucessão. Não diz que discordam;
@@ -86,7 +111,10 @@ que a RFC-005 §3 recusou. Guarda: `test_regulator_nao_forma_sujeito`.
 - **low_yield** — desfecho de USO ("não rendeu"), sem relação com
   divergência. A palavra antiga (`contested`) foi devolvida ao eixo
   `resolution_status` (ADR-52/O-6), que segue **sem escritor persistente**
-  (O-2 aberta).
+  (O-2 aberta);
+- **alias em conflito** (`policy.alias_conflict`) — nada disso: é sobre
+  o VOCABULÁRIO, não sobre o conteúdo. Duas identidades disputam uma
+  palavra; nenhuma página precisa estar errada.
 
 ### LLM-wiki e memória de IA — dois nomes de USO do mesmo bundle
 
