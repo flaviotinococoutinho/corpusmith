@@ -345,6 +345,55 @@ Guarda transversal (RFC-006 §8): todo PR desta trilha é revisado primeiro
 contra as duas patologias já catalogadas — um nome carregando várias
 perguntas, e atributo afirmado no nível errado.
 
+**QA adversarial da V2 (3ª rodada) — e uma correção de alegação minha.**
+As 6 mutações declaradas foram re-executadas: nenhuma sobreviveu, mas
+**duas contagens da mensagem do commit estavam infladas** (declarei "4
+REPROVAM" e "7 REPROVAM"; o medido foi 3 e 2). O commit já estava
+publicado e não se reescreve histórico compartilhado — a correção fica
+aqui, que é onde o repositório registra alegação corrigida. A causa da
+primeira: o docstring do teste nomeava uma mutação que NÃO o mata
+(trocar só a marca para `extracted` não reescreve, porque `rewrite`
+também exige `canonical != surface` — são DUAS guardas). Corrigido.
+
+Sete defeitos reais achados e corrigidos no mesmo dia:
+
+1. **`aliases` escalar virava um alias por CARACTERE** — `aliases:
+   entropia` sem hífen no YAML produzia oito aliases de uma letra, e com
+   dois registros assim a V2 amplificava para findings de conflito sobre
+   vogais soltas. O frontmatter tolera extras sem validar tipo;
+2. **alias vazio** casava em toda fronteira de pontuação (spans de
+   comprimento zero), alcançável por um item `- ` solto;
+3. **o dedup deixava `qid`/`authority` serem decididos pela ordem do
+   arquivo** — o mesmo "último a escrever vence" que a V2 existe para
+   eliminar, sobrevivendo nos outros campos da identidade; e o
+   fingerprint era cego a isso, então renomear um registro trocaria o
+   `qid` servido pelo índice **sem** disparar rebuild;
+4. **o filtro `taken` descartava o termo de referência INTEIRO** — um
+   registro reivindicando só `entropia` apagava `entropy` e `entropie`,
+   que ninguém disputou, e de quebra fazia o degrau `TIER_REFERENCIA`
+   nunca engatar em produção (o gazetteer real só via as camadas [0, 2]);
+5. **"pesa 0.15 no grafo" era falso**, e estava no CONTRATO: aresta nasce
+   de LINK, não de entidade — o efeito real é o termo não ligar páginas.
+   Corrigido nos cinco lugares (contrato incluso);
+6. **conflito entre termos da referência prescrevia um ato impossível**
+   ("edite os registros" sem registro no bundle) — agora nomeia o ato que
+   existe: criar a curadoria, que vence por precedência;
+7. **`canonical` de tipo errado derrubava o `rebuild_index`** inteiro.
+
+Mais: `evidence` do contrato declarava `property_test` sem property test
+(removido); `docs/29` dizia ENTREGUE com o parágrafo seguinte descrevendo
+o comportamento antigo no presente (reescrito como diagnóstico + estado);
+`ambiguous_aliases` era exposto pela API e não renderizado em painel
+nenhum, apesar de o contrato dizer "painel" (agora aparece no Curadoria);
+e `INDEX_GENERATION` foi bumpado para `g5`, para o full rebuild da
+mudança de forma do fingerprint passar pelo knob declarado em vez de
+acontecer de carona no hash.
+
+Um dos testes novos **também era teatro** e a mutação provou: o guarda do
+filtro `taken` montava o gazetteer à mão e não exercitava
+`authorities.py`. Refeito pelo caminho real (`reference.db` →
+`_build_derived`), e aí a mutação morre.
+
 **QA adversarial da entrega (2ª rodada, worktree isolada).** As 8 mutações
 declaradas foram re-executadas de forma independente: todas reprovam. E o
 QA achou **cinco defeitos reais**, todos corrigidos no mesmo dia:

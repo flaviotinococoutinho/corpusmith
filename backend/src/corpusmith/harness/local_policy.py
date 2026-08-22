@@ -198,7 +198,17 @@ def _alias_conflitantes(gaz, usos: dict[str, set[str]]) -> list[Finding]:
             continue          # nem registro editável nem uso: nada a fazer
         sentidos = [c.sentido for c in cands]
         nomes = ", ".join(f"`{c.canonical}`" for c in cands)
-        if all(sentidos):
+        if not any(c.page for c in cands):
+            # conflito entre termos do reference.db: não há registro no
+            # bundle para editar, e mandar "edite os registros" seria
+            # prescrever um ato impossível. O ato que existe é criar a
+            # curadoria — que vence por precedência de camada
+            comoresolver = ("as duas identidades vêm da referência "
+                            "importada, não do bundle — crie um "
+                            "`authority_record` reivindicando o alias com "
+                            "o sentido desejado (a curadoria vence o "
+                            "reference.db por precedência)")
+        elif all(sentidos):
             comoresolver = (f"os sentidos já estão declarados ({', '.join(sentidos)}), "
                             f"mas o alias `{alias}` continua servindo aos dois — "
                             "tire-o de um dos registros ou qualifique o uso")

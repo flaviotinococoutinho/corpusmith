@@ -1001,7 +1001,7 @@ implementation_refs = [
 inductive_biases = [
   "precedência entre CAMADAS é resolução, colisão DENTRO da camada é ambiguidade: seeds embutidos e reference.db são defaults, authority_record no bundle é curadoria — a curadoria vence e isso não é conflito (regra de sempre, v0.22)",
   "o sentido é parte da IDENTIDADE e mora no canônico (`Entropia (física)`), não num campo paralelo: campo `sense` separado criaria dois donos do mesmo fato, e o campo `authority` já carrega cinco sentidos (drift ABERTA)",
-  "não decidir é melhor que decidir errado: um alias disputado produz `confidence=ambiguous`, que toda a cadeia já respeita — não reescreve o texto, não indexa entidade, não lista no frontmatter, pesa 0.15 no grafo",
+  "não decidir é melhor que decidir errado: um alias disputado produz `confidence=ambiguous`, que toda a cadeia já respeita — não reescreve o texto, não indexa entidade e não lista no frontmatter; como aresta de grafo nasce de LINK e não de entidade, o termo deixa de LIGAR páginas em vez de ligá-las com peso menor",
 ]
 assumptions = [
   "dois registros curados que reivindicam o mesmo alias representam sentidos DIFERENTES — se representam o mesmo, o canônico é o mesmo e a dedup os funde antes de virar conflito",
@@ -1018,6 +1018,8 @@ known_failure_modes = [
   "o qualificador é convenção de escrita, não campo validado: um canônico que termine em parêntese sem ser sentido (`Fulano (org)`) é rotulado errado na mensagem do finding — custa um rótulo, nunca uma identidade",
   "marcar AMBÍGUO tem preço declarado: o termo deixa de ligar páginas no grafo e some do índice de entidades enquanto o conflito durar — recuperar recall exige o ato humano, e é essa a troca",
   "alias disputado que ninguém usa gera finding sem página de uso: é dívida de vocabulário, não de conteúdo, e a mensagem diz isso em vez de inventar urgência",
+  "detector de PRIORIDADE MAIOR resolve o span antes: `PRIORITY` dá standard=4 e identifier=5 contra entity=1, então um alias curado que colida com uma norma (`iso 9001`) é lido como `standard` e resolve normal — a ambiguidade não aparece naquele span, a página não entra em `pages`, e o finding do vocabulário fica sem uso registrado",
+  "o dedup é por (canônico, autoridade, qid): dois registros com o MESMO canônico e autoridades diferentes são duas identidades, não uma — e aparecem como conflito, que é a leitura honesta de dois curadores discordando sobre o que a palavra classifica",
 ]
 guarantee_kind = "deterministic"
 guarantee_relative_to = "igualdade exata de alias entre identidades da mesma camada de precedência; NÃO que o vocabulário esteja desambiguado, NÃO que os sentidos declarados sejam os corretos, NÃO que a ausência de conflito signifique ausência de ambiguidade"
@@ -1026,7 +1028,7 @@ fallback = ["request_human_review"]
 adaptive = false
 feedback_signal = ""
 composite = false
-evidence = ["deterministic_check", "property_test"]
+evidence = ["deterministic_check"]
 misinterpretations = [
   "'nenhum conflito' NÃO significa 'vocabulário desambiguado' — significa que ninguém curou dois registros disputando o mesmo alias",
   "AMBÍGUO não é erro do curador: é o estado honesto de um termo que serve a dois sentidos, e o produto prefere não ligar páginas a ligá-las errado",

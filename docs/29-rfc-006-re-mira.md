@@ -121,13 +121,20 @@ será por heurística declarada, nunca por omissão.
 > `authority_record` já tolera campos extras e o sentido é parte do
 > canônico. A escolha do sentido em contexto segue humana.
 
-**Já existe.** Quase nada — e este é o mapa mais honesto. A identidade de
-entidade é `UNIQUE(kind, canonical)` (`backend/db/schema_index.sql:49`); um
-alias resolve para exatamente **um** canônico (`normalize/gazetteer.py:66-73`);
-colisão entre fontes de autoridade é resolvida por precedência silenciosa.
-"Entropia" da física e "entropia" da informação são hoje **a mesma
+**O que existia antes deste pacote** (mapa original, preservado porque é o
+diagnóstico): quase nada. A identidade de entidade é
+`UNIQUE(kind, canonical)` (`backend/db/schema_index.sql:49`); um alias
+resolvia para exatamente **um** canônico, e a colisão era decidida por
+ordem de inserção — "entropia" da física e da informação eram **a mesma
 entidade**. Temas não são disciplinas (partição emergente, rótulo sem
-semântica).
+semântica) e seguem não sendo.
+
+**O que existe agora**: alias → LISTA de candidatos com precedência por
+camada; alias disputado vira `ambiguous` (não reescreve, não indexa, não
+liga páginas); `policy.alias_conflict` nomeia a edição que resolve; o
+sentido mora no canônico. A identidade de entidade continua sendo
+`UNIQUE(kind, canonical)` — o qualificador é parte dela, e por isso não
+houve migração.
 
 **A menor construção.** (i) O `authority_record` (canônico, no bundle) ganha
 qualificador de sentido, e o canônico desambiguado o carrega — estilo

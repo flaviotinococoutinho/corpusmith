@@ -11,8 +11,10 @@ A correção não inventa mecanismo: usa o que o produto já tem para *não
 decidir*. Um alias disputado produz `Match(confidence="ambiguous")`, e
 `ambiguous` já significa "não resolvido" em toda a cadeia — `_rewritable`
 não reescreve (o texto não ganha um lado escolhido), `fts.py` não indexa
-como entidade, `entities_frontmatter` não lista, o grafo pesa 0.15. O que
-faltava era PRODUZIR a ambiguidade em vez de resolvê-la sozinho.
+como entidade e `entities_frontmatter` não lista — e, como aresta de
+grafo nasce de LINK e não de entidade, o termo simplesmente deixa de
+ligar páginas. O que faltava era PRODUZIR a ambiguidade em vez de
+resolvê-la sozinho.
 
 **Precedência entre camadas ≠ ambiguidade dentro de uma.** Seeds embutidos
 e `reference.db` são DEFAULTS; `authority_record` no bundle é CURADORIA. A
@@ -146,7 +148,18 @@ class Gazetteer:
         por_alias: dict[str, list[Candidato]] = {}
 
         def reivindicar(cand: Candidato, aliases) -> None:
-            forms = set(a.lower() for a in aliases)
+            # `aliases` vem de frontmatter com `extra="allow"`: NADA valida o
+            # tipo. `aliases: entropia` (escalar) chega como str, e iterar
+            # str produz um alias por CARACTERE — medido: 8 aliases de uma
+            # letra, cada vogal do corpus virando ocorrência da entidade, e
+            # com dois registros assim a V2 amplificava para findings de
+            # conflito sobre letras soltas. Alias vazio é igualmente tóxico:
+            # entra no `alts` como alternativa vazia e casa em toda fronteira
+            # de pontuação (spans de comprimento zero).
+            if isinstance(aliases, str):
+                aliases = [aliases]
+            forms = {a.lower() for a in aliases or ()
+                     if isinstance(a, str) and a.strip()}
             if cand.canonical not in UNSAFE_BARE:
                 forms.add(cand.canonical.lower())   # idempotência: casa a si mesmo
             for f in forms:
@@ -164,15 +177,22 @@ class Gazetteer:
         self.map: dict[str, list[Candidato]] = {}
         for alias, cands in por_alias.items():
             teto = max(c.tier for c in cands)
-            vistos: dict[str, Candidato] = {}
+            vistos: dict[tuple, Candidato] = {}
             for c in cands:
                 # precedência resolve ENTRE camadas; dentro da camada,
-                # canônico repetido é o mesmo fato dito duas vezes (dedup),
-                # e canônico diferente é conflito de verdade
+                # IDENTIDADE repetida é o mesmo fato dito duas vezes
+                # (dedup), e identidade diferente é conflito de verdade.
+                #
+                # A chave é (canônico, autoridade, qid), não só o canônico:
+                # dedupar só por canônico deixava `qid` ser decidido pela
+                # ORDEM DO ARQUIVO — o mesmo "último a escrever vence" que
+                # este pacote existe para eliminar, sobrevivendo nos outros
+                # campos da identidade.
                 if c.tier == teto:
-                    vistos.setdefault(c.canonical, c)
-            self.map[alias] = sorted(vistos.values(),
-                                     key=lambda c: c.canonical)
+                    vistos.setdefault((c.canonical, c.authority, c.qid), c)
+            self.map[alias] = sorted(
+                vistos.values(),
+                key=lambda c: (c.canonical, c.authority, c.qid or ""))
 
         alts = "|".join(sorted((re.escape(k) for k in self.map),
                                key=len, reverse=True))

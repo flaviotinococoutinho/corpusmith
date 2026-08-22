@@ -10,7 +10,8 @@ falam da mesma coisa, e ninguém era avisado.
 A correção não inventa mecanismo — usa o que o produto já tem para NÃO
 decidir. `confidence="ambiguous"` já significa "não resolvido" em toda a
 cadeia (`_rewritable` não reescreve, `fts` não indexa, o frontmatter não
-lista, o grafo pesa 0.15). O que faltava era PRODUZIR a ambiguidade.
+lista; e aresta nasce de LINK, então o termo deixa de ligar páginas). O
+que faltava era PRODUZIR a ambiguidade.
 
 **Precedência ≠ ambiguidade**: seed e `reference.db` são defaults, o
 bundle é curadoria — a curadoria vence e isso NÃO é conflito. Conflito é
@@ -125,8 +126,12 @@ def test_ambiguo_nao_e_reescrito_no_texto(entropia, kb):
     escolheria um sentido no corpo do usuário — em silêncio e por
     construção. `_rewritable` exige `extracted`, e este teste prende isso.
 
-    Falsificável: troque a marca para `extracted` no `detect` ambíguo e o
-    corpo sai reescrito com um dos dois sentidos."""
+    Falsificável: faça o ramo ambíguo RESOLVER (`canonical` do primeiro
+    candidato + marca `extracted`) e o corpo sai reescrito com um dos dois
+    sentidos. Trocar SÓ a marca não basta, e a primeira versão deste
+    docstring dizia que bastava: `rewrite` filtra por `_rewritable(m) and
+    m.canonical != m.surface`, e no ramo ambíguo o canônico É a superfície
+    — são DUAS guardas, e remover qualquer uma mata o teste."""
     from corpusmith.okf.authorities import load_gazetteer
     gaz = load_gazetteer(BundleReader(kb / "bundle"))
     texto = "A entropia cresce."
@@ -268,3 +273,133 @@ def test_termos_conta_identidades_distintas():
         {"canonical": "Entropia (informação)", "aliases": ["entropia"]}])
     assert {c for c, _a, _q in gaz.termos()} == {"Entropia (física)",
                                                  "Entropia (informação)"}
+
+
+# ============================ o que o QA adversarial achou (2ª rodada)
+def test_aliases_escalar_nao_vira_um_alias_por_caractere():
+    """`aliases` não é campo declarado: `extra="allow"` deixa passar
+    QUALQUER tipo. `aliases: entropia` (escalar, sem hífen no YAML) chegava
+    como str, e iterar str produz um alias por CARACTERE — medido: oito
+    aliases de uma letra, cada vogal do corpus virando ocorrência da
+    entidade, e com dois registros assim a V2 amplificava para findings de
+    conflito sobre letras soltas.
+
+    Falsificável: remova a coerção e as chaves de uma letra voltam."""
+    g = Gazetteer([], curados=[
+        {"canonical": "Entropia (física)", "aliases": "entropia"}])
+    assert set(g.map) == {"entropia", "entropia (física)"}
+    assert not [a for a in g.map if len(a) == 1]
+
+
+def test_alias_vazio_nao_casa_em_toda_fronteira():
+    """Alias vazio entrava no `alts` como alternativa vazia e casava em
+    cada fronteira de pontuação — spans de comprimento zero espalhados
+    pelo texto. Alcançável por um item `- ` solto no YAML."""
+    g = Gazetteer([], curados=[{"canonical": "Alfa", "aliases": ["", "  ",
+                                                                "alfa"]}])
+    assert "" not in g.map
+    assert [m.surface for m in g.detect("x - y")] == []
+    assert [m.canonical for m in g.detect("uso alfa aqui")] == ["Alfa"]
+
+
+def test_dedup_nao_deixa_o_qid_ser_decidido_pela_ordem_do_arquivo():
+    """O dedup por canônico SÓ deixava `qid`/`authority` serem escolhidos
+    pela ordem de leitura do bundle — o mesmo "último a escrever vence"
+    que este pacote existe para eliminar, sobrevivendo nos outros campos
+    da identidade. Dois registros que discordam do qid são DUAS
+    identidades, e a leitura honesta é conflito.
+
+    Falsificável: volte a chave do dedup para só o canônico e o conflito
+    desaparece (um dos qids some, decidido pelo caminho do arquivo)."""
+    a = Gazetteer([], curados=[
+        {"canonical": "X", "aliases": ["x"], "qid": "Q1"},
+        {"canonical": "X", "aliases": ["x"], "qid": "Q999"}])
+    assert "x" in a.conflitos()
+    # e o fingerprint enxerga a diferença: sem isso, renomear um registro
+    # trocaria o qid servido pelo índice SEM disparar rebuild
+    b = Gazetteer([], curados=[
+        {"canonical": "X", "aliases": ["x"], "qid": "Q1"}])
+    assert _gazetteer_fingerprint(a) != _gazetteer_fingerprint(b)
+
+
+def test_conflito_sem_registro_no_bundle_prescreve_o_ato_possivel():
+    """Duas identidades vindas da referência importada não têm página no
+    bundle para editar — mandar "edite os registros" seria prescrever um
+    ato impossível. O ato que existe é CRIAR a curadoria, que vence por
+    precedência de camada."""
+    from corpusmith.harness.local_policy import _alias_conflitantes
+    gaz = Gazetteer([], curados=[
+        {"canonical": "Entropia", "aliases": ["entropia"],
+         "tier": TIER_REFERENCIA},
+        {"canonical": "Entropia de Shannon", "aliases": ["entropia"],
+         "tier": TIER_REFERENCIA}])
+    f = _alias_conflitantes(gaz, {"entropia": {"concepts/uso.md"}})
+    assert len(f) == 1
+    assert f[0].meta["records"] == []
+    assert "crie um `authority_record`" in f[0].message
+
+
+def test_registro_curado_nao_apaga_os_outros_aliases_da_referencia():
+    """O filtro `taken` descartava o termo de referência INTEIRO quando
+    QUALQUER alias colidia: um registro reivindicando só `entropia`
+    apagava também `entropy` e `entropie`, que ninguém disputou — e de
+    quebra fazia o degrau TIER_REFERENCIA nunca engatar em produção.
+
+    Com precedência alias a alias, o disputado fica com a curadoria e o
+    resto do termo de referência sobrevive."""
+    gaz = Gazetteer([], curados=[
+        {"canonical": "Entropia (referência)",
+         "aliases": ["entropia", "entropy", "entropie"],
+         "tier": TIER_REFERENCIA},
+        {"canonical": "Entropia (física)", "aliases": ["entropia"],
+         "tier": TIER_BUNDLE, "page": "authorities/term/e.md"}])
+    assert [c.canonical for c in gaz.candidatos("entropia")] == \
+        ["Entropia (física)"]                       # curadoria vence
+    assert [c.canonical for c in gaz.candidatos("entropy")] == \
+        ["Entropia (referência)"]                   # e o resto sobrevive
+    assert gaz.conflitos() == {}
+
+
+def test_canonical_de_tipo_errado_nao_derruba_o_gazetteer(settings, kb):
+    """`canonical` não é validado pelo frontmatter: uma lista derrubava o
+    `rebuild_index` inteiro com AttributeError três chamadas adiante."""
+    _escreve(settings, kb,
+             _doc("authorities/term/quebrado.md", "Quebrado",
+                  type="authority_record", canonical=["a", "b"],
+                  aliases=["x"]),
+             _doc("concepts/ok.md", "OK", "# OK\n\nprosa."))
+    from corpusmith.okf.authorities import load_gazetteer
+    gaz = load_gazetteer(BundleReader(kb / "bundle"))
+    assert "x" not in gaz.map            # registro inválido é ignorado
+
+
+def test_a_referencia_perde_so_o_alias_disputado_no_caminho_real(
+        settings, kb):
+    """A guarda de VERDADE do filtro `taken` — pelo caminho real
+    (`reference.db` → `_build_derived` → gazetteer), não com o Gazetteer
+    montado à mão.
+
+    O primeiro teste que escrevi para isto construía o gazetteer
+    diretamente e por isso NÃO exercitava `authorities.py`: a mutação
+    sobrevivia (medido). Este vai pelo caminho que o produto usa.
+
+    Falsificável: restaure o descarte do termo INTEIRO em
+    `_build_derived` e `entropy` some do gazetteer."""
+    from corpusmith.okf.authorities import invalidate_cache, load_gazetteer
+    from corpusmith.usecases.manage_reference import ImportReferenceData
+    ImportReferenceData(settings, {"terms": [
+        {"canonical": "Entropia", "kind": "term",
+         "aliases": ["entropia", "entropy", "entropie"]}]}).execute()
+    _escreve(settings, kb,
+             _registro("authorities/term/entropia-fisica.md",
+                       "Entropia (física)", ["entropia"]))
+    invalidate_cache()
+    gaz = load_gazetteer(BundleReader(kb / "bundle"))
+
+    # o disputado fica com a CURADORIA (precedência de camada)…
+    assert [c.canonical for c in gaz.candidatos("entropia")] == \
+        ["Entropia (física)"]
+    # …e os aliases que ninguém disputou SOBREVIVEM
+    assert [c.canonical for c in gaz.candidatos("entropy")] == ["Entropia"]
+    assert [c.canonical for c in gaz.candidatos("entropie")] == ["Entropia"]
+    assert gaz.conflitos() == {}

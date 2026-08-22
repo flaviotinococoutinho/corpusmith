@@ -98,9 +98,10 @@ Guarda: `test_registro_curado_vence_o_seed_sem_virar_conflito` e
 cadeia; a V2 apenas passou a **produzi-lo** em vez de resolver sozinha. O
 que ele desliga, de propósito: reescrita do texto (`_rewritable` exige
 `extracted`), índice de entidades (`fts`), lista do frontmatter
-(`entities_frontmatter`), peso de aresta (0.15). O preço: enquanto o
-conflito durar, o termo **não liga páginas** — recall trocado por não
-mentir, e a troca é declarada no contrato.
+(`entities_frontmatter`). Aresta de grafo nasce de LINK, não de entidade
+— o efeito é o termo **não ligar páginas**, não ligá-las com peso menor
+(`EDGE_WEIGHT["ambiguous"]=0.15` é de wiki-link e não passa por aqui). O
+preço: recall trocado por não mentir, declarado no contrato.
 
 ### conflito factual ≠ coexistência ≠ low_yield ≠ alias em conflito
 
