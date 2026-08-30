@@ -206,6 +206,16 @@ def insights(settings: Settings) -> dict:
         "SELECT type, COUNT(*) n FROM events "
         "WHERE created_at > unixepoch() - 14*86400 "
         "GROUP BY type ORDER BY n DESC LIMIT 10")]
+    # F6 (P-8): o rastro de abstenção como lacuna de primeira classe —
+    # o que a base JÁ falhou, agrupado por chave determinística; só os
+    # abertos (fechamento é verificado por re-ask, nunca adivinhado)
+    miss_open = rt.execute(
+        "SELECT COUNT(*) c FROM ask_misses WHERE closed_at IS NULL"
+    ).fetchone()["c"]
+    miss_recurrent = [dict(r) for r in rt.execute(
+        "SELECT miss_key, COUNT(*) n, MAX(created_at) last_at, "
+        "MIN(query) query FROM ask_misses WHERE closed_at IS NULL "
+        "GROUP BY miss_key ORDER BY n DESC, last_at DESC LIMIT 5")]
     cold_count = 0
     try:
         cold = connect(settings.app_support / "cold.db")
@@ -251,6 +261,7 @@ def insights(settings: Settings) -> dict:
             "stale": [p["page"] for p in pages if p["stale"]][:20],
             "cold_count": cold_count,
             "eval": eval_rows,
+            "abstention": {"open": miss_open, "recurrent": miss_recurrent},
         },
         "topology": {
             "nodes": len(graph["nodes"]), "edges": len(graph["edges"]),

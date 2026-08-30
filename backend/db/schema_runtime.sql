@@ -223,3 +223,22 @@ CREATE TABLE IF NOT EXISTS pattern_verdicts(
   decided_at REAL NOT NULL,
   PRIMARY KEY (kind, key));
 CREATE INDEX IF NOT EXISTS idx_verdicts_kind ON pattern_verdicts(kind, until);
+
+-- Rastro de abstenção (F6, P-8): a ignorância que o usuário tentou USAR.
+-- Uma linha por /ask abstido; `miss_key` agrupa recorrência (mesma chave =
+-- mesmo buraco). O fechamento é VERIFICADO POR RE-ASK: só uma consulta com
+-- a mesma chave que respondeu fecha o rastro (`closed_by` = o ask_id que
+-- provou cobertura) — nenhum job adivinha. Fica em runtime.db (uso, não
+-- projeção): rebuild do índice não pode apagar o que o usuário perguntou.
+CREATE TABLE IF NOT EXISTS ask_misses(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ask_id     TEXT NOT NULL,
+  miss_key   TEXT NOT NULL,
+  query      TEXT NOT NULL,
+  entities   TEXT NOT NULL DEFAULT '[]',  -- json: canônicos da pergunta
+  gaps       TEXT NOT NULL DEFAULT '[]',  -- json: lacunas nomeadas na resposta
+  as_of      TEXT,
+  created_at REAL DEFAULT (unixepoch('subsec')),
+  closed_at  REAL,
+  closed_by  TEXT);
+CREATE INDEX IF NOT EXISTS idx_misses_key ON ask_misses(miss_key, closed_at);

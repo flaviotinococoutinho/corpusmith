@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.12.0"  # RFC-006 V2: `alias_conflict` entra (identidade-com-sentido)
+version = "1.13.0"  # F6/P-8: `abstention_trace` entra (rastro de abstenção)
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -1041,3 +1041,55 @@ human_review_available = true
 tier_seed = 0
 tier_reference = 1
 tier_bundle = 2
+
+# --------------------------------------------------------------------------
+# F6 (P-8, RFC-006): a memória lembra o que falhou.
+[mechanisms.abstention_trace]
+title = "Rastro de abstenção com fechamento verificado por re-ask"
+decision = "gravar TODO /ask abstido como miss com chave determinística (conjunto de entidades da pergunta; sem entidade curada, SimHash do texto normalizado) e fechar o rastro APENAS quando uma consulta com a MESMA chave responder — recorrência vira sinal visível em vez de ignorância descartada"
+implementation_refs = [
+  "backend/src/corpusmith/kernel/sketch.py",
+  "backend/src/corpusmith/usecases/ask_memory.py",
+  "backend/src/corpusmith/retrieval/observatory.py",
+]
+inductive_biases = [
+  "a ignorância mais cara é a que o usuário tentou USAR: o rastro nasce do /ask real, nunca de varredura especulativa da base",
+  "perguntas sobre o MESMO conjunto de entidades curadas são o mesmo buraco, independentemente da frase — a identidade da falta é o sujeito, não a sintaxe",
+  "fechamento é prova, não inferência: só o re-ask que respondeu fecha (closed_by auditável); nenhum job adivinha cobertura — a lição das perguntas-que-nunca-fecham (docs/14 §6), paga ANTES de o rastro alimentar fila",
+]
+assumptions = [
+  "o gazetteer extrai as entidades relevantes da pergunta — a chave herda a cobertura (e os limites) do vocabulário curado",
+  "duas perguntas com o mesmo conjunto de entidades pedem conhecimento da mesma região da base — nem sempre verdade, e o custo está declarado nos failure modes",
+]
+validity_scope = [
+  "só o caminho de abstenção do AskMemory (fusão vazia ou abaixo do threshold) — bloqueio de privacidade e falha de modelo não são miss",
+  "recorrência agrupa por IGUALDADE de chave; sem entidade curada, só perguntas quase-idênticas (SimHash exato) recorrem",
+  "superfície de leitura: insights.gaps.abstention (abertos + recorrentes) — nenhum gate de escrita, nada tocado no canônico",
+]
+known_failure_modes = [
+  "RECALL LIMITADO — o modo central: paráfrase sem entidade curada gera chave NOVA, a recorrência subconta; ausência de recorrência não é ausência de buraco",
+  "fechamento por entidade pode fechar DEMAIS: uma pergunta DIFERENTE sobre os mesmos sujeitos que responde fecha o miss da outra — `closed_by` registra qual ask fechou, e o preço fica auditável",
+  "resposta extrativa fraca fecha como qualquer resposta: fechado = 'a base respondeu', não 'respondeu bem' — qualidade é problema de `evidence_sufficiency`, não deste rastro",
+  "o miss grava a pergunta em claro no runtime.db local — dado de uso sensível como `ask_outcomes` já é; o export do bundle não o inclui",
+  "auto_recycle que responde não deixa rastro do quase-miss: a reidratação venceu e o registro não diz que foi por um triz",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "igualdade exata da chave (entidades ordenadas, ou SimHash do texto normalizado); NÃO que a recorrência capture toda repetição semântica, NÃO que fechamento signifique resposta de qualidade"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+composite = false
+evidence = ["deterministic_check"]
+misinterpretations = [
+  "'zero misses' NÃO é 'base completa' — é 'ninguém perguntou o que ela não cobre' (ou perguntou com frase que a chave não junta)",
+  "miss aberto não é bug: é a fila de estudo dizendo onde a base ainda não chegou — o insumo do índice 'difícil de explicar' (V4)",
+  "fechado ≠ resolvido para sempre: nova abstenção com a mesma chave abre um miss NOVO — a linha do tempo preserva as idas e vindas",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.abstention_trace.parameters]
+key_prefix_entities = "e:"
+key_prefix_text = "s:"
+entity_digest_hex_chars = 16

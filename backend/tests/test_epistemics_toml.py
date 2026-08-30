@@ -254,3 +254,18 @@ def test_editorial_stability_parameters_match_code():
     p = _params("editorial_stability")
     assert tuple(p["excluded_basenames"].split(",")) == BASENAMES_REGENERADOS
     assert tuple(p["ritual_prefixes"].split(",")) == PREFIXOS_DE_RITUAL
+
+
+def test_abstention_trace_parameters_match_code():
+    """F6 — a chave declarada no contrato É a que o kernel gera.
+
+    Falsificável: mude um prefixo (ou o truncamento do digest) em
+    `miss_key` sem mexer no TOML e este teste reprova."""
+    from corpusmith.kernel.sketch import miss_key
+    p = _params("abstention_trace")
+    com_entidade = miss_key("qualquer frase", {"ISO 27001"})
+    sem_entidade = miss_key("qualquer frase", set())
+    assert com_entidade.startswith(p["key_prefix_entities"])
+    assert sem_entidade.startswith(p["key_prefix_text"])
+    assert len(com_entidade) == (len(p["key_prefix_entities"])
+                                 + int(p["entity_digest_hex_chars"]))

@@ -47,3 +47,37 @@ describe("badge de frescor dos indicadores (X1+X2)", () => {
     expect(await screen.findByText(/mapa nunca computado/)).toBeTruthy();
   });
 });
+
+// F6 (P-8) — o rastro de abstenção chega à superfície dos indicadores.
+// Sem isto o backend grava misses e nenhuma tela os diz (a lição da R9
+// da V2: instrumentado-mas-invisível é meio caminho).
+describe("rastro de abstenção (F6)", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  function montarComGaps(gaps: Record<string, unknown>) {
+    vi.spyOn(client, "connect").mockResolvedValue(undefined as any);
+    vi.spyOn(client, "insights").mockResolvedValue(
+      { ...BASE, gaps: { ...BASE.gaps, ...gaps }, freshness: null } as any);
+    vi.spyOn(client, "traces").mockResolvedValue({ traces: [] } as any);
+    vi.spyOn(client, "gaps").mockResolvedValue(
+      { gaps: [], articulators: [], communities: 0 } as any);
+    return render(<InsightsPanel />);
+  }
+
+  it("mostra os misses abertos e a recorrência", async () => {
+    montarComGaps({ abstention: { open: 3, recurrent: [
+      { miss_key: "s:1", n: 2, query: "história do egito", last_at: 1 },
+      { miss_key: "e:2", n: 1, query: "iso 27001", last_at: 2 },
+    ] } });
+    expect(await screen.findByText(/absteve/)).toBeTruthy();
+    expect(await screen.findByText(/história do egito ×2/)).toBeTruthy();
+    // recorrência 1 não vira linha — só o agregado
+    expect(screen.queryByText(/iso 27001 ×1/)).toBeNull();
+  });
+
+  it("daemon antigo sem o campo não quebra o painel", async () => {
+    montarComGaps({});
+    expect(await screen.findByText(/Gaps epistêmicos/)).toBeTruthy();
+    expect(screen.queryByText(/absteve/)).toBeNull();
+  });
+});

@@ -218,7 +218,13 @@ rel_paths ordenados, status∈accepted|rejected|deferred, until, pages
 json)` — juízo HUMANO sobre padrão computado (F3-PR2/P-3); mora em
 runtime.db e não em index.db porque o padrão morre no rebuild mas o
 juízo não pode morrer junto (o `leiden` recriaria a ponte que o
-usuário acabou de rejeitar)
+usuário acabou de rejeitar) ·
+`ask_misses(ask_id, miss_key, query, entities json, gaps json, as_of,
+created_at, closed_at, closed_by)` — rastro de abstenção (F6/P-8):
+um miss por `/ask` abstido, chave determinística (entidades da
+pergunta; sem entidade, SimHash do texto), fechamento VERIFICADO por
+re-ask (`closed_by` = o ask que provou cobertura); recorrência aberta
+aparece em `insights.gaps.abstention` (contrato `abstention_trace`)
 
 **cognitive.db** (v0.19 — Cognitive Experience Domain, SEPARADO: só
 referências a páginas, zero conteúdo canônico; projeções

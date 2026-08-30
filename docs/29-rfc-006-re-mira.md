@@ -329,8 +329,11 @@ Por dependência real (a fila reordenada vive em `docs/18` §10):
    vínculo entidade↔página" para portadora da identidade-com-sentido
    (alias multi-candidato, `policy.alias_conflict`, colisão de autoridade
    como finding). Promovida a fase mais estratégica;
-4. **F6 promovida** — o rastro de abstenção (P-8) deixa de ser
-   "deliberadamente depois": é componente direto de V4;
+4. **F6 promovida** ✅ **entregue** — o rastro de abstenção (P-8) deixou
+   de ser "deliberadamente depois": `ask_misses` com chave determinística
+   por entidades, fechamento verificado por re-ask, superfície nos
+   Indicadores e contrato `abstention_trace` (docs/18 §10 item 4). O
+   sinal que V4 consome existe;
 5. **V4** — composição pura + contrato, depois de F6;
 6. **V5 como medição** — arestas tipadas por ato humano + a consulta medida
    que financia as condições de reentrada de RFC-004 §6. **O-2 fica

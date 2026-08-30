@@ -60,7 +60,8 @@ def load_registry(path: Path | str | None = None
 #   desfechos ruins — contrato escrito às pressas para calar o gate, ou o gate
 #   desligado. Warn mantém a dívida VISÍVEL no mesmo lugar onde ela será paga.
 EXPECTED_MECHANISMS = (
-    "abstention", "adaptive_strategy_selection", "alias_conflict",
+    "abstention", "abstention_trace",
+    "adaptive_strategy_selection", "alias_conflict",
     "attention_queue", "cognitive_priority", "consolidate_inbox",
     "editorial_stability",
     "evidence_sufficiency", "factual_conflict", "memory_freeze",

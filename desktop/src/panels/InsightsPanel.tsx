@@ -111,6 +111,17 @@ export function InsightsPanel() {
           <div><b>{g.orphans.length}</b> órfã(s) · <b>{g.low_yield.length}</b>{" "}
             de baixo rendimento · <b>{g.stale.length}</b> stale ·{" "}
             <b>{g.cold_count}</b> na base fria</div>
+          {/* F6 (P-8): o que a base JÁ falhou — misses abertos; fecham
+              sozinhos quando um re-ask com a mesma chave responde */}
+          {g.abstention && (
+            <div className="pt-1 border-t">
+              <b>{g.abstention.open}</b> pergunta(s) em que a base se
+              absteve (fecham quando um re-ask responder)
+              {g.abstention.recurrent.filter((m: any) => m.n > 1)
+                .slice(0, 3).map((m: any) => (
+                  <div key={m.miss_key} className="font-mono truncate">
+                    🕳 {m.query} ×{m.n}</div>))}
+            </div>)}
           {g.low_yield.slice(0, 3).map((p: string) => (
             <div key={p} className="flex items-center gap-1">
               <span className="font-mono flex-1 truncate">⚔️ {p}</span>
