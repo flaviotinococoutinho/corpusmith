@@ -519,7 +519,18 @@ def main(argv: list[str] | None = None) -> int:
 
     args = ap.parse_args(argv)
     s = Settings.load(args.config)
-    return args.fn(s, args)
+    try:
+        return args.fn(s, args)
+    except (httpx.ConnectError, httpx.ConnectTimeout):
+        # Handshake órfão é o caso comum aqui: o daemon caiu sem o finally
+        # (SIGKILL, crash) e state/daemon.json ficou para trás apontando uma
+        # porta morta. Medido antes: ~70 linhas de traceback do httpx e
+        # diagnóstico nenhum. Os comandos offline nunca chegam neste except.
+        h = _handshake(s)
+        sys.exit(f"daemon não responde em {h.get('host', '127.0.0.1')}:"
+                 f"{h.get('port')} — o handshake (state/daemon.json) é "
+                 "provavelmente órfão de um daemon que caiu; "
+                 "suba com `just daemon` e tente de novo")
 
 
 if __name__ == "__main__":

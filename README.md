@@ -379,9 +379,9 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   para conteúdo `api:*`).
 - **Runtime**: fila de jobs SQLite + worker + scheduler + governor de
   orçamento de API + eventos SSE; índice FTS5 (+denso opcional) derivado.
-- **Cockpit** (12 abas): Estado · Consulta · Inbox · Wiki · Grafo ·
+- **Cockpit** (13 abas): Estado · Consulta · Inbox · Corpus · Grafo ·
   Indicadores · Memória · Cognição · Foco · Curadoria · Qualidade ·
-  Processos — com o botão **⭐ Promover para memória**
+  Processos · Integridade — com o botão **⭐ Promover para memória**
   (`generated_via: human:promote`, sem exigência de `source_sha256`).
 
 ## Instalação
@@ -398,7 +398,7 @@ backend/scripts/corpusmith okf bootstrap
 backend/scripts/corpusmith seed        # dados pré-definidos (idempotente):
                                     # referência do mundo + pipelines builtin
 just daemon &                       # API em 127.0.0.1:8377 (token efêmero)
-cd desktop && npm i && npm run dev  # cockpit Electron
+cd desktop && npm ci && npm run dev # cockpit Electron
 ```
 
 **Docker (daemon empacotado; desktop conecta de fora):**
@@ -422,7 +422,7 @@ just test             # suíte de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/corpusmithctl status
 backend/scripts/corpusmith okf lint        # 0 erros num bundle recém-bootstrapado
-cd desktop && npm i && npm run dev      # cockpit (Electron + Vite)
+cd desktop && npm ci && npm run dev     # cockpit (Electron + Vite)
 ```
 
 O bundle é bootstrapado automaticamente pelo daemon (ou `corpusmith okf

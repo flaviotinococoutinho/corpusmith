@@ -1,9 +1,11 @@
 # 12 — Instalação e verificação do ambiente
 
-> Guia **validado em máquina real** (macOS arm64, 2026-07): cada comando
-> daqui foi executado e o resultado esperado registrado. O instalador
-> automatizado é [`scripts/install.sh`](../scripts/install.sh); este
-> documento é a versão explicada + solução de problemas.
+> Guia **validado em máquina real** (macOS arm64, 2026-07; revalidado em
+> Linux x86_64, 2026-08 — bootstrap, seed, lint, doctor, epistemics, daemon
+> e `/ask`): cada comando daqui foi executado e o resultado esperado
+> registrado. O instalador automatizado é
+> [`scripts/install.sh`](../scripts/install.sh); este documento é a versão
+> explicada + solução de problemas.
 
 ## 0. O que é instalado
 
@@ -49,7 +51,8 @@ chmod +x scripts/corpusmith scripts/corpusmithctl scripts/pull_models.sh scripts
 
 # primeira execução (cria ~/corpusmith; use CORPUSMITH_HOME para outro lugar)
 scripts/corpusmith okf bootstrap           # → "bundle criado"
-scripts/corpusmith seed                    # → seed ok: {'terms': 7, 'quotations': 3, 'facts': 11} (+pipelines)
+scripts/corpusmith seed                    # → seed ok: {'terms': 7, 'quotations': 3, 'facts': 11}
+                                        #   (+pipelines; golden eval: {'pages': 7, 'cases': 12})
 
 # daemon
 .venv/bin/python -m corpusmith.daemon &    # → "corpusmith daemon em http://127.0.0.1:8377"
@@ -76,14 +79,21 @@ Se `docker compose` (plugin) não existir mas `docker-compose` sim, ver §7.2.
 
 ## 5. Verificação — prove que a instalação funcionou
 
-Gate completo (o mesmo do CI e do `AGENTS.md` §2 — `just verify` roda os três):
+Gate completo (o mesmo do CI e do `AGENTS.md` §2; a lista é presa por
+`architecture.toml [gate]` + `test_pr0_gate.py` — atalho: `just verify`):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # → 545 passed
+cd backend && .venv/bin/python -m pytest tests -q   # → todos passam (847 na v2.0)
 cd desktop && npx tsc --noEmit                      # → sem erros
+cd desktop && npm test                              # → smoke da UI verde
 docker compose config -q                            # → sem saída = ok
-cargo test --workspace --manifest-path native/Cargo.toml   # → 8 passed
+cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # → 22 mecanismo(s)
+cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # → sem erros
 ```
+
+A CI roda ainda `cargo test --workspace --manifest-path native/Cargo.toml`
+(kernels nativos — 8 passed) e constrói+executa o binário PyInstaller.
+A contagem da suíte cresce a cada versão; o que importa é **zero falhas**.
 
 A suíte é **hermética**: não conversa com o Ollama da máquina
 (`tests/conftest.py` aponta o roteador para uma porta morta). Isso é
@@ -99,7 +109,9 @@ backend/scripts/corpusmith okf bootstrap    # bundle criado
 backend/scripts/corpusmith seed             # seed ok (idempotente)
 backend/scripts/corpusmith okf lint         # 0 finding(s), 0 erro(s)
 backend/scripts/corpusmith doctor           # {"ok": true, ...}
-backend/scripts/corpusmith epistemics lint  # 7 mecanismo(s), 0 finding(s)
+backend/scripts/corpusmith epistemics lint  # 22 mecanismo(s) na v2.0; os avisos
+    # `mechanism_promised` são dívida DECLARADA (contrato prometido em doc
+    # e ainda não escrito) — não são erro de instalação
 ```
 
 Smoke da API (daemon rodando):
@@ -110,16 +122,34 @@ curl -s -H "x-corpusmith-auth: $TOKEN" http://127.0.0.1:8377/health/full | head
 # → {"ok": true, "instance": {...}, "stacks": {"runtime.db": {"integrity": "ok", ...}}}
 
 curl -s -X POST -H "x-corpusmith-auth: $TOKEN" -H "Content-Type: application/json" \
-     -d '{"query":"pergunta sem cobertura"}' http://127.0.0.1:8377/ask
-# → {"answer": null, "abstained": true, "gaps": [...]}  ← abstenção honesta é o esperado
+     -d '{"query":"qual o preço do xilofone de titânio em Vega"}' http://127.0.0.1:8377/ask
+# → {"answer": null, "abstained": true, "gaps": [...], "via": "none"}
+#   ← abstenção honesta: NADA na base cobre a pergunta
 ```
 
-## 6. Daemon como serviço (macOS) e modelos locais
+Atenção ao escolher a pergunta de teste: desde a v1.6.3 o `seed` traz 7
+páginas avaliáveis (golden eval), então perguntas que TOCAM esse conteúdo
+respondem extrativo (`"via": "local:extractive"`) — inclusive "pergunta sem
+cobertura", que casa com a página *Abstenção epistêmica* que descreve o
+próprio mecanismo. Os dois desfechos são instalação sadia; fabricação é que
+nunca acontece.
 
 ```bash
-backend/scripts/install_daemon.sh    # launchd agent (com.corpusmith.daemon)
+```
+
+## 6. Daemon como serviço (macOS e Linux) e modelos locais
+
+```bash
+backend/scripts/install_daemon.sh    # macOS: launchd agent (com.corpusmith.daemon)
+                                     # Linux: unidade systemd DE USUÁRIO
+                                     #   (systemctl --user status corpusmith-daemon;
+                                     #    logs: journalctl --user -u corpusmith-daemon)
 backend/scripts/pull_models.sh       # baixa o modelo adequado A ESTA máquina
 ```
+
+Em Linux sem sessão systemd de usuário (container, SSH sem *lingering*) o
+script escreve a unidade e **falha alto** dizendo o que resta — o caminho
+manual (`python -m corpusmith.daemon`) e o Docker (§4) continuam valendo.
 
 ### 6.1 O modelo de chat é uma ESCADA, não um nome fixo (ADR-42)
 
@@ -230,8 +260,9 @@ ou mate o processo) ou mude `server.port` via override de config.
 ### 7.7 `/ask` se abstém em base recém-instalada
 
 Não é erro: `abstained: true` com `gaps` é o contrato de abstenção
-(LongMemEval) — a base seedada ainda não tem cobertura para perguntas
-livres. Compile conteúdo (inbox → `compile`) e pergunte de novo.
+(LongMemEval) — nunca resposta fabricada. A base seedada cobre só as 7
+páginas do golden eval (v1.6.3); qualquer pergunta fora delas se abstém.
+Compile conteúdo (inbox → `compile`) e pergunte de novo.
 
 ### 7.8 Ollama de pé, mas o modelo da config não existe
 
@@ -265,5 +296,16 @@ backend/scripts/corpusmith doctor --repair  # → ok: true
 
 Depois de atualizar, **reinicie o daemon** — o processo antigo continua
 com o código velho em memória e pode responder 500 ao ler dados já
-migrados: `launchctl kickstart -k gui/$(id -u)/com.corpusmith.daemon`.
+migrados: `launchctl kickstart -k gui/$(id -u)/com.corpusmith.daemon`
+(macOS) ou `systemctl --user restart corpusmith-daemon` (Linux).
 Confirme com `curl -s .../health` que `version` é a esperada.
+
+### 7.10 `corpusmithctl`: "daemon não responde … handshake órfão"
+
+Sintoma (encontrado exercitando este guia): o daemon caiu sem passar pelo
+shutdown limpo (SIGKILL, crash, queda da máquina) e `state/daemon.json`
+ficou para trás apontando uma porta morta. O CLI diagnostica em vez de
+estourar traceback — e a mensagem já diz o reparo: suba o daemon de novo
+(`just daemon`, ou o serviço do §6). O shutdown limpo remove o próprio
+handshake (e SÓ o próprio: um daemon novo que tenha reescrito o arquivo
+nunca perde o dele para o antigo que está saindo).

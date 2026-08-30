@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import uvicorn
 from . import __version__
-from .api.system import build_app, issue_token
+from .api.system import build_app, issue_token, retire_handshake
 from .okf.bootstrap import ensure_bundle
 from .runtime.db import connect
 from .runtime.events import EventBus
@@ -63,6 +63,7 @@ def main() -> None:
     finally:
         worker.stop()
         scheduler.stop()
+        retire_handshake(s, token)   # órfão só em SIGKILL/crash a partir daqui
 
 
 if __name__ == "__main__":

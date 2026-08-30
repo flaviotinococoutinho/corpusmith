@@ -33,11 +33,18 @@ Toda mudança MUST passar por (rode na raiz do repo; atalho: `just verify`):
 ```bash
 cd backend && .venv/bin/python -m pytest tests -q   # suíte completa
 cd desktop && npx tsc --noEmit                        # typecheck do cockpit
+cd desktop && npm test                                # smoke de comportamento da UI
 docker compose config -q                              # compose válido
-cargo test --workspace --manifest-path native/Cargo.toml  # kernels nativos (se Rust instalado)
+cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # contratos epistêmicos
+cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # eixos, termos e deriva
 ```
 
-Integridade em runtime (não são testes, são ferramentas de operação):
+A CI impõe, além destes: `cargo test --workspace --manifest-path
+native/Cargo.toml` (kernels nativos), `doctor`, `backup create/verify` e
+`pyinstaller build.spec` (o caminho empacotado é construído E executado).
+
+Integridade em runtime (ferramentas de operação — as duas de lint acima
+também são gate; `doctor` e `backup` são impostos na CI):
 
 ```bash
 cd backend && .venv/bin/python -m corpusmith.cli doctor          # invariantes INV-*

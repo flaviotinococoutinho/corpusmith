@@ -18,9 +18,10 @@ Toda mudança precisa passar pelo gate. Atalho na raiz:
 just verify
 ```
 
-Ele executa a suíte do backend (pytest), o typecheck do cockpit
-(`npx tsc --noEmit`), a validação do compose e os testes Rust dos kernels
-nativos. O conjunto exato **não é decidido aqui**: `architecture.toml [gate]`
+Ele executa a suíte do backend (pytest), o typecheck e o smoke do cockpit
+(`npx tsc --noEmit` + `npm test`), a validação do compose e os linters dos
+registros epistêmico e ontológico. Os testes Rust, o `doctor`, o `backup` e
+o build empacotado (PyInstaller) são impostos na CI. O conjunto exato **não é decidido aqui**: `architecture.toml [gate]`
 é a fonte única, e `backend/tests/test_pr0_gate.py` cruza gate, CI e justfile
 — se a CI deixar de rodar algo do gate, a suíte quebra. Não contorne isso
 editando só um dos três lados.

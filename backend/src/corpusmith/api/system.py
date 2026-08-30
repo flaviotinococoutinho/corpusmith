@@ -64,6 +64,22 @@ def issue_token(s: Settings) -> str:
     return token
 
 
+def retire_handshake(s: Settings, token: str) -> None:
+    """Remove o handshake no shutdown limpo — mas só se ainda for o NOSSO.
+
+    Entre a liberação da porta e este unlink outro daemon pode ter subido e
+    reescrito o arquivo; apagar o dele deixaria um daemon VIVO sem handshake
+    (CLI e Electron cegos). Token diferente ou arquivo ilegível ⇒ não toca.
+    SIGKILL/crash continuam deixando órfão — por isso o CLI diagnostica
+    conexão recusada em vez de estourar traceback (auditoria 2026-08)."""
+    hs = s.app_support / "daemon.json"
+    try:
+        if json.loads(hs.read_text()).get("token") == token:
+            hs.unlink()
+    except (OSError, ValueError):
+        pass
+
+
 def build_app(s: Settings, queue: JobQueue, gov: Governor,
               bus: EventBus, token: str | None = None,
               known_jobs: set[str] | None = None) -> FastAPI:
