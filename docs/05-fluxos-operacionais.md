@@ -366,4 +366,13 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | POST /cockpit/cognition/observe · job metacog | Cognition.observe | ObserveMetacognition |
 | POST /cockpit/cognition/observations/review | Cognition.review_observation | ReviewObservation (+TuneConfig no aceite) |
 | GET /cockpit/attention | Cognition.attention_plan | PlanAttention |
+| POST /cockpit/config/preset | Curation.apply_preset | TuneConfig (`source=preset:<nome>`) |
+| /cognitive/* (jornada v0.19–0.21) | Cognition.* | CreateFocusGoal · BuildProjection · Start/Suspend/Resume/CompleteCognitiveSession · SubmitRetrievalAttempt · RecordCognitiveFeedback · CompleteReview · ReportMetacognitiveExperience · RegisterAnalogy/PromoteAnalogy |
+| GET /system/doctor · CLI `doctor` | System.doctor | DiagnoseSystem (GET puro) |
+| POST /system/doctor/repair | System.doctor | DiagnoseSystem (repara só PROJEÇÃO) |
+| /curation/acts·history · POST /curation/act | CurationActs.kinds/history/preview/act | `usecases/curate.ACTS` (tabela fechada, F1) |
+| GET /cockpit/next-actions | Curation.next_actions | NextActions (R3) |
+| POST /cockpit/next-actions/verdict | — (`runtime/verdicts.record`) | grava `pattern_verdicts` (F3-PR2) |
+| CLI `stability` | Memory.stability | ComputeStability (RFC-006 V3) |
+| CLI `backup create\|verify\|restore` · job backup | — (sem facade; ADR-35) | CreateBackup / RestoreBackup |
 | GET / · /health · /health/full | — (sistema, api/system.py) | — |

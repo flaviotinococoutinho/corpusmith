@@ -26,6 +26,8 @@ Ausência de `# Citations` e de reservados **nunca** gera finding
 | `policy.citation_required` | error | `api:*` sem seção `# Citations` com entradas |
 | `policy.citation_invalid` | error | refs `[n]` no corpo sem entrada na seção |
 | `policy.bad_commit_ref` | error | sha citado (contexto commit/stale_as_of) inexistente no kb |
+| `policy.path_collision` | error | intenção `Creation` sobre página que JÁ existe — sobrescrever seria destruição registrada como criação; declare `Update` (fundindo frontmatter) ou outro slug (docs/20) |
+| `policy.dangling_successor` | error | `superseded_by`/`answered_by` aponta para página inexistente — a página sairia da fila sem sucessora real; vale para o LOTE (fusão que escreve sucessora+aposentada no mesmo `write` é legítima) |
 | `policy.schema_shrink` | error | campo de `## Schema` removido sem `supersedes` |
 | `policy.metadata_shrink` | warn | chave de frontmatter perdida (exceto timestamp) |
 | `policy.unknown_type` | info | type fora da taxonomia recomendada |
@@ -49,6 +51,12 @@ GET  /health/full                (v0.16: instância{snowflake,pid,uptime} · pro
                                   · queue{by_state,oldest_age} · stacks{bytes,wal,integrity,tables}/banco
                                   · bus{subscribers} · config{gerações} · resources{disk} · budget)
 GET  /status                     · GET/POST /jobs · GET /events (SSE)
+GET  /events/types               (F-UI: vocabulário FECHADO de eventos — o cliente
+                                  pergunta quais existem; `EventBus.emit` recusa
+                                  tipo fora da lista, a resposta não desatualiza)
+GET  /system/doctor              (F0: mesmos INV-* do CLI; GET é puro — CQS)
+POST /system/doctor/repair       (F0: só o que `DiagnoseSystem` declara reparável —
+                                  rebuild de PROJEÇÃO, nunca o canônico)
 POST /jobs/{id}/cancel           (v1.3: queued→cancelled; leased→cancel_requested)
 POST /jobs/{id}/retry            (failed/dead_lettered/cancelled → queued)
 POST /ask                        {query, deep?, local_only?, as_of?}
@@ -71,7 +79,20 @@ GET  /cockpit/insights           (gaps · topology{+structure∈disperso|focado|
                                   diverso, communities, evenness} · activity · classifiers)
 GET  /cockpit/gaps               (v1.1: lacunas estruturais{déficit, pergunta-ponte,
                                   representantes} + articuladores por intermediação)
-GET  /cockpit/dictionary         (enums vivos: tipos, origens, confiança, autoridades)
+GET  /cockpit/next-actions       ?limit= (R3/v1.8: fila única "Próxima ação" —
+                                  revisões, lacunas, inbox, com origem/valor/custo;
+                                  PROPÕE, o humano decide)
+POST /cockpit/next-actions/verdict ({kind, pages, status∈accepted|rejected|deferred,
+                                  until?, note?} — veredito humano sobre PADRÃO
+                                  COMPUTADO → `pattern_verdicts`; supressão por
+                                  `until`, jamais DELETE; 400 campo/valor)
+GET  /curation/acts              (F1: tabela FECHADA de atos — a UI não adivinha)
+GET  /curation/history           ?limit= (fila de atos executados; alvo do undo)
+POST /curation/act               ({act, params, dry_run} — dry_run=preview antes
+                                  do efeito; 409 UndoNotExpressible nomeado ·
+                                  404 ato · 400 params)
+GET  /cockpit/dictionary         (enums vivos: tipos, origens, confiança, autoridades,
+                                  `ambiguous_aliases` — RFC-006 V2)
 GET  /cockpit/traces · /cockpit/trace?ask_id=   (proveniência página→stream)
 GET/POST /cockpit/tags           (contagens; POST {from, to?} renomeia/funde/remove)
 GET/POST /cockpit/config         (seções TUNABLE: flags·ask·memory·policy·consolidate;
@@ -184,7 +205,20 @@ status∈proposed|accepted|rejected|suspended)` ·
 query_categories json, metrics json, out_of_scope json, eval_run_ids
 json, evaluation_status∈unevaluated|partially_evaluated|evaluated|
 drifted|invalidated)` — Generalization Envelope por mecanismo do
-`epistemics.toml` (v1.6/ADR-38; schema runtime 6→7)
+`epistemics.toml` (v1.6/ADR-38; schema runtime 6→7) ·
+`curation_acts(act, params json, commit_sha, pages json)` — fila de
+atos da curadoria (F1): todo ato vira commit + entrada aqui; é o alvo
+do undo por escrita-para-frente ·
+`checkpoints(derivation PK, input_state, computed_at, detail json)` —
+a cadeia `DERIVATIONS` (`kernel/checkpoints.py`, ADR-46): estado da
+FONTE quando cada derivação foi computada; o `doctor` deriva staleness
+transitiva daqui e `record()` recusa derivação não declarada ·
+`pattern_verdicts(kind∈bridge|contradiction|…, key=sha256 dos
+rel_paths ordenados, status∈accepted|rejected|deferred, until, pages
+json)` — juízo HUMANO sobre padrão computado (F3-PR2/P-3); mora em
+runtime.db e não em index.db porque o padrão morre no rebuild mas o
+juízo não pode morrer junto (o `leiden` recriaria a ponte que o
+usuário acabou de rejeitar)
 
 **cognitive.db** (v0.19 — Cognitive Experience Domain, SEPARADO: só
 referências a páginas, zero conteúdo canônico; projeções
@@ -225,7 +259,17 @@ full automático; `rebuild_index(s, full=True)` disponível) ·
 `page_stability(rel_path,edits,first_commit_at,last_edit_at,lifecycle,
 computed_from)` — RFC-006 V3: estabilidade EDITORIAL, projeção de
 bundle+Git (`corpusmith stability`; checkpoint `stability` em runtime.db;
-"estável" = quieto no eixo de edição, nunca "correto")
+"estável" = quieto no eixo de edição, nunca "correto") ·
+`graph_centrality(page, betweenness)` — intermediação de Brandes
+(F2-PR3/4): o articulador é quem LIGA blocos ·
+`graph_snapshot(id=1, bundle_head, computed_at, backend∈leiden|
+components, seed)` — carimbo do mapa comunitário vigente: de qual HEAD
+e algoritmo ele veio ·
+`themes(theme_id, community, rel_path, born_at, died_at, members json)`
++ `theme_epochs(theme_id, event∈born|grew|shrank|merged|split|died, at,
+bundle_head)` — identidade de TEMA através de recomputações (RFC-001,
+docs/16): o rótulo numérico da comunidade muda a cada época; o
+`theme_id` sobrevive e a linha do tempo fica em épocas
 
 Migrações em `runtime/db.py:_migrate`: `graph_edges.confidence`,
 `chunks.valid_at/invalid_at`, `page_heat.first_seen` (backfill =
@@ -244,7 +288,7 @@ emitem `config.tuned`/`config.rolled_back` com trace.
 
 `compile_source · consolidate_inbox · ask · embed · rerank · leiden ·
 ocr · lora_train · review_weekly · reflect · eval_memory ·
-index_rebuild · pipeline · metacog` — contrato
+index_rebuild · pipeline · metacog · backup` — contrato
 `run(settings, payload, emit) -> dict`. O `emit` é um `JobContext`:
 chamável (emite evento), `.cancelled()` (cancelamento cooperativo) e
 `.gov` (v1.6.1/REL-1: jobs que chamam modelo herdam orçamento e ledger
@@ -258,12 +302,17 @@ embed + consolidate_inbox. O job `pipeline` injeta o REGISTRY no
 
 ```yaml
 home: ~/corpusmith                 # CORPUSMITH_HOME sobrepõe
+server:  {host: 127.0.0.1, port: 8377}
 privacy: {default: local_only, rules: [{pattern, privacy}...]}
 budget:  {daily_usd: 2.0}
 policy:  {citation_required: true}
 flags:   {retrieval.descend: true, reconcile.llm_arbiter: false}
 ask:     {abstain_threshold: 0.0}
-models:  {local: {ollama...}, api: {anthropic...}}
+memory:  {freeze_tau: 0.0, activation_noise: 0.4,        # base fria (v0.12)
+          max_recall_probability: 0.05, min_idle_days: 90,
+          auto_recycle: false}
+models:  {local: {ollama, escada chat ADR-42, memory_fraction: 0.6},
+          api: {anthropic...}}
 worker:  {heavy_slots: 1, light_slots: 2, poll_seconds: 1.0}
 ```
 
@@ -327,8 +376,8 @@ alert→architectural_alert/alerts.
 | Detector | subkinds | Reescreve? |
 |---|---|---|
 | identifiers | cpf, cnpj, doi, arxiv, isbn, issn, orcid, cve, uuid, semver(inferred), iban, git_sha | sim (extracted, DV não-inválido) |
-| standards | iso, nbr, rfc, nist, ieee, eu_reg, regulator | sim |
-| entity (gazetteer) | stack, publisher, publication, org (+authority_records) | sim |
+| standards | iso, nbr, rfc, nist, ieee, eu_reg, circular (lookbehind exclui Carta/Portaria), regulator | sim |
+| entity (gazetteer) | stack, publisher, publication, org (+authority_records, +reference.db) | sim quando `resolved`; `ambiguous` (V2) NUNCA reescreve |
 | dates | date (pt/en/numérico/ISO/ano-mês) | NUNCA — anexo `{"iso"}` |
 | quantities | qty (tabela UNITS, conversão SI) | NUNCA — anexo `{"si"}` |
 | geo | country, uf(ancorada), cep, address(inferred) | NUNCA |
@@ -377,15 +426,32 @@ em `benchmarks/METRICS.md`. Painel novo: 🧠 Memória (4 camadas + base
 fria). Processos: jobs falhos têm ↻ reexecutar (payload na listagem).
 Removido: retrieval/fusion.py (substituído por streams desde a v0.9).
 
-**Memory**: AskMemory · RecordOutcome · EvaluateMemory.
+**Memory**: AskMemory · RecordOutcome · EvaluateMemory ·
+ComputeStability (RFC-006 V3).
 **Compiler**: IngestSource (entrada pelo app → raw/) · CompileSource ·
-ConsolidateInbox (+`_ConsolidatedPage`) · ReconcileCandidate ·
-RebuildIndex · DetectCommunities.
+ConsolidateInbox (+`_ConsolidatedPage`) · ReconcileCandidate (invocado
+pelo Template Method) · RebuildIndex · DetectCommunities · SavePipeline ·
+DeletePipeline · RunPipeline (v0.17).
 **Curation**: PromoteToMemory · MarkPageStale (+`dependents_of` puro) ·
 FreezeMemory · RecycleMemory (+`cold_search`/`cold_by_strong_id`/
 `cold_stats` puros) · RenameTag · ExportMemory · LintBundle ·
 ComputeWeeklyReview · PublishWeeklyReview · ReflectOnUsage
-(+ `usage_candidates` puro).
+(+ `usage_candidates` puro) · NextActions (R3) · TuneConfig ·
+RollbackConfig (ADR-14) · ImportReferenceData (v0.22) — e as consultas
+de epistemics/ontology/reference que alimentam o painel Qualidade.
+**CurationActs** (F1, facade própria): kinds · preview · act · history
+sobre a tabela FECHADA `usecases/curate.py:ACTS` — todo ato tem preview
+e vira commit + `curation_acts`.
+**System**: DiagnoseSystem (GET `/system/doctor` puro; repair só no que
+o próprio use case declara reparável).
+**Cognition** (v0.19): a jornada vertical inteira (CreateFocusGoal →
+BuildProjection → StartCognitiveSession → SubmitRetrievalAttempt →
+RecordCognitiveFeedback → Suspend/Resume/CompleteCognitiveSession →
+CompleteReview), mais DeclareCognitiveState · PlanAttention ·
+ObserveMetacognition · ReviewObservation · ReportMetacognitiveExperience ·
+RegisterAnalogy/PromoteAnalogy (v0.20).
+CreateBackup · RestoreBackup ficam FORA de facade: são invocados pelo
+CLI e pelo job `backup` (ADR-35) — não têm rota HTTP.
 
 Observatório (Fase 5, consultas puras em `retrieval/observatory.py`):
 `graph_data` · `insights` · `dictionary` · `traces`/`trace`. Config viva:
@@ -420,7 +486,7 @@ HEAD é chave de invalidação perfeita (236× no hit a 150 páginas,
 | PPR (HippoRAG) | damping 0.5 · 20 iterações · top-12 · seeds com add-one | kernel/graphwalk.py + ask |
 | SimHash near-dup | 64 bits · shingle 3 palavras · hamming ≤ 8 converge | kernel/sketch.py + consolidate |
 | Relacionadas (A-mem) | top-5 por Σ n·surprisal, excluindo já-linkadas | retrieval/related.py (`GET /cockpit/page`.related) |
-| Pesos de aresta | extracted 1.0 · inferred 0.5 · ambiguous 0.15 | usecases/detect_communities.py |
+| Pesos de aresta | extracted 1.0 · inferred 0.5 · ambiguous 0.15 — confiança da ARESTA nascida de LINK; não confundir com o `ambiguous` de alias (V2), que não vira aresta nenhuma ([docs/30](30-dicionario-da-re-mira.md)) | usecases/detect_communities.py |
 | Co-menção | 2..30 páginas, peso 0.25 | idem |
 | Hub p99, mínimo | max(p99, 8) | idem |
 | Chunk | 1200 chars | retrieval/fts.py |

@@ -96,10 +96,10 @@ de API grava tokens/USD no `ledger`.
   pipeline do Inbox/Processos via os eventos `page.stage`.
 - **Vite**: config em `vite.config.mts` (ESM-only por causa do plugin
   Tailwind v4) com `vite-plugin-electron` buildando main+preload CJS.
-- **Painéis** (12 abas em `App.tsx:TABS`): Estado (Dashboard), Consulta
-  (ChatEvidence +PromoteDialog), Inbox, Wiki (Explorer), Grafo, Indicadores
-  (Insights), Memória, Cognição, Foco, Curadoria, Qualidade, Processos —
-  todos consomem apenas o daemonClient. *(A consolidação em 3 níveis —
+- **Painéis** (13 abas em `App.tsx:TABS`): Estado (Dashboard), Consulta
+  (ChatEvidence +PromoteDialog), Inbox, Corpus (Explorer), Grafo, Indicadores
+  (Insights), Memória, Cognição, Foco, Curadoria, Qualidade, Processos,
+  Integridade (Doctor, F-UI) — todos consomem apenas o daemonClient. *(A consolidação em 3 níveis —
   essencial/análise/avançado — é a frente UX-2 do backlog.)*
 
 ## 5. Implantação

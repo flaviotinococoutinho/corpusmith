@@ -78,6 +78,34 @@ executável que o paga, e as oito óticas sobre o mesmo corpus) e
 [`25`](docs/25-fronteira-e-diferencial.md) (as três fronteiras que o produto
 recusa cruzar).
 
+## A re-mira (RFC-006): de compilador de corpus a instrumento de estudo
+
+Para quem estuda de verdade — acumula PDFs, normas, artigos e notas — o
+produto compila conteúdo disperso em **conceitos comparáveis, rastreáveis,
+explicáveis e acionáveis**: não só o que uma ideia significa, mas **sob
+qual lente**, o que permanece, onde diverge e quanto custa adotá-la. Três
+das seis capacidades já estão entregues e presas por teste:
+
+- **Normas como sujeitos fortes (V1)** — `ISO 27001`, `NBR 14724`,
+  `RFC 9110`, `Circular BCB 3.978` são identidades de primeira classe:
+  duas páginas afirmando coisas diferentes sobre a MESMA norma sem
+  sucessão viram `policy.contradiction_candidate`, como já valia para
+  DOI/ISBN.
+- **Identidade-com-sentido (V2)** — "entropia (física)" ≠ "entropia
+  (informação)": o sentido é grafado NO canônico; alias reivindicado por
+  duas identidades da mesma camada vira uso `ambiguous` — nunca é
+  reescrito, não entra no índice de entidades, e `policy.alias_conflict`
+  nomeia a edição que resolve. Silêncio não é vocabulário desambiguado:
+  o detector só vê o que alguém curou.
+- **Estabilidade editorial (V3)** — o que menos muda no SEU corpus,
+  medido do histórico Git (`corpusmith stability`): "estável" = quieto
+  no eixo de edição, nunca "correto".
+
+A direção completa (V4–V6: índice "difícil de explicar", arestas tipadas
+"aplica-se a", ficha de conceito) está no
+[`docs/29`](docs/29-rfc-006-re-mira.md); os termos da re-mira fixados
+contra ambiguidade, no [`docs/30`](docs/30-dicionario-da-re-mira.md).
+
 ---
 
 Arquitetura: knowledge base **OKF local-first** com daemon de
@@ -103,7 +131,8 @@ cognitive/   ← puro (v0.19): Cognitive Experience Domain — gates, score,
                working set, sessão, prática espaçada (testável sem infra)
 okf/ harness/← domínio canônico: modelo OKF, writer, regras (muda devagar)
 usecases/    ← aplicação: 1 classe = 1 operação = 1 método público execute()
-facades/     ← orquestração: Memory · Compiler · Curation · Cognition
+facades/     ← orquestração: Memory · Compiler · Curation · CurationActs ·
+               Cognition · System
 jobs/ api/ cli · desktop/   ← adapters: a camada MAIS mutável (fila, HTTP, UI)
 ```
 

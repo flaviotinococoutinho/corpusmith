@@ -105,9 +105,13 @@ substituível no registry de jobs).
   chamado. Regra verificada por introspecção em
   `test_every_usecase_has_single_public_method`.
 - **Facade**: uma por área — `MemoryFacade` (memória em uso: ask,
-  outcome, evaluate), `CompilerFacade` (em construção: compile, index,
-  communities), `CurationFacade` (sob governo humano: promote, stale,
-  lint, review, reflect). É o único lugar que COMPÕE use cases.
+  outcome, evaluate, stability), `CompilerFacade` (em construção:
+  compile, index, communities, pipelines), `CurationFacade` (sob governo
+  humano: promote, stale, lint, review, reflect, config, reference,
+  epistemics), `CurationActsFacade` (F1: a tabela fechada de atos com
+  preview/undo), `CognitionFacade` (v0.19: a jornada foco→sessão→revisão)
+  e `SystemFacade` (doctor). É o único lugar que COMPÕE use cases; o
+  mapa endpoint→facade→use case vive em `docs/05` §11.
 - **Adapters** (jobs/, api/, cli, desktop): tradução de transporte
   (fila/HTTP/argv) para chamadas de facade. A camada mais mutável; zero
   lógica de negócio. `test_api_speaks_only_to_facades` proíbe a api de

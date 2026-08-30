@@ -138,11 +138,23 @@ aliases: [postgres, pgsql, postgre]
 qid: Q192490              # Wikidata — resolução externa de entidade
 ```
 
-O normalizador compila (seeds embutidos ∪ authority_records) num único
-autômato regex no load. Efeitos: curadoria versionada no Git, lintável
-pelo Harness, editável no Explorer — **corrigir uma grafia é um commit,
+O normalizador compila **três camadas** num único autômato regex no load
+— seeds embutidos < `reference.db` (v0.22) < `authority_records` —, e
+desde a RFC-006 V2 a precedência é resolvida **alias a alias** (um
+registro curado que reivindica só `entropia` não apaga `entropy` do termo
+de referência). Efeitos: curadoria versionada no Git, lintável pelo
+Harness, editável no Explorer — **corrigir uma grafia é um commit,
 não um deploy**. Termos com alto risco de falso positivo (`Go`, `R`,
 `C`, `Rust`, `Swift`, `Nature`) estão em `UNSAFE_BARE`: nunca casam sozinhos.
+
+**Sentido vive no canônico** (V2): a ótica de um conceito é grafada no
+próprio nome — `Entropia (física)` ≠ `Entropia (informação)` — nunca num
+campo paralelo. Alias reivindicado por duas identidades da MESMA camada é
+**ambiguidade**: o uso vira `confidence=ambiguous`, não é reescrito, não
+entra no índice de entidades, e `policy.alias_conflict` nomeia a edição
+que resolve. Colisão ENTRE camadas é precedência (resolvida); colisão
+DENTRO da camada é ambiguidade (custa) — os dois nomes não se misturam
+([docs/30](30-dicionario-da-re-mira.md)).
 
 ## 7. Proveniência e a divisão máquina/humano
 
