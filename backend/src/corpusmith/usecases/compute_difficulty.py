@@ -41,10 +41,15 @@ from ..runtime.db import connect
 from ..settings import Settings
 
 #: Confiança declarada ANTES de conferir a partir da qual a falha conta
-#: como sobreconfiança. É o mesmo limiar do `spaced-v1`
-#: (`review.overconfidence_threshold`), lido da config para não haver
-#: duas definições de "confiante" no produto.
-_CONFIANCA_PADRAO = 0.7
+#: como sobreconfiança — o MESMO valor do `spaced-v1`
+#: (`cognitive/policy.py:DEFAULT_POLICY["review"]["overconfidence_
+#: threshold"]`), repetido aqui em vez de importado porque a memória não
+#: importa `cognitive/` (asserção de arquitetura). Repetir constante
+#: costuma ser dívida; aqui ela é PRESA por teste
+#: (`test_limiar_de_sobreconfianca_e_o_mesmo_do_spaced_v1`) e declarada no
+#: contrato, então divergir quebra a suíte em vez de virar duas definições
+#: de "confiante" convivendo em silêncio.
+_CONFIANCA = 0.7
 
 #: Regras do lint de corpus que contam como sinal de dificuldade, e o
 #: componente de cada uma. `policy.quotation_attribution` fica FORA de
@@ -125,8 +130,6 @@ class ComputeDifficulty(UseCase):
 
         Banco cognitivo AUSENTE não é zero disfarçado: sem prática, o
         componente fica em 0 e o `medida` do kernel conta a história."""
-        limiar = float(self._settings.get(
-            "review.overconfidence_threshold", _CONFIANCA_PADRAO))
         caminho = self._settings.app_support / "cognitive.db"
         if not caminho.is_file():
             return
@@ -135,7 +138,7 @@ class ComputeDifficulty(UseCase):
             for row in cog.execute(
                     "SELECT item, COUNT(*) n FROM retrieval_attempts "
                     "WHERE result = 'failure' AND confidence_before >= ? "
-                    "GROUP BY item", (limiar,)):
+                    "GROUP BY item", (_CONFIANCA,)):
                 if row["item"] in sinais:
                     sinais[row["item"]]["falha_confiante"] += row["n"]
         finally:

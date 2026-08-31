@@ -83,7 +83,7 @@ Gate completo (o mesmo do CI e do `AGENTS.md` §2; a lista é presa por
 `architecture.toml [gate]` + `test_pr0_gate.py` — atalho: `just verify`):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # → todos passam (882 na v2.0)
+cd backend && .venv/bin/python -m pytest tests -q   # → todos passam (884 na v2.0)
 cd desktop && npx tsc --noEmit                      # → sem erros
 cd desktop && npm test                              # → smoke da UI verde
 docker compose config -q                            # → sem saída = ok

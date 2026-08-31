@@ -1158,3 +1158,6 @@ saturacao_conflito = 2
 saturacao_pergunta_aberta = 2
 saturacao_vocabulario_ambiguo = 2
 saturacao_lacuna_recorrente = 3
+# mesmo limiar do spaced-v1 (cognitive/policy.py); repetido no código
+# porque a memória não importa `cognitive/`, e preso por teste
+limiar_sobreconfianca = 0.7

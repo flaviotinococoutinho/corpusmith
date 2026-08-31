@@ -255,3 +255,32 @@ def test_dificuldade_nao_declara_derivacao_na_cadeia():
     entrega — o doctor diria "fresca" com a prática de ontem."""
     from corpusmith.kernel.checkpoints import DERIVATIONS
     assert "difficulty" not in DERIVATIONS
+
+
+def test_limiar_de_sobreconfianca_e_o_mesmo_do_spaced_v1():
+    """Uma definição de "confiante" no produto, não duas.
+
+    A memória não importa `cognitive/` (asserção de arquitetura), então a
+    constante é repetida — e repetir constante só é honesto se algo
+    quebrar quando as duas divergirem. É este teste. Falsificável: mude
+    `_CONFIANCA` (ou o default do spaced-v1) e ele reprova."""
+    from corpusmith.cognitive.policy import validate_policy
+    from corpusmith.usecases.compute_difficulty import _CONFIANCA
+    assert _CONFIANCA == validate_policy({})["review"][
+        "overconfidence_threshold"]
+
+
+def test_a_memoria_nao_importa_o_dominio_cognitivo():
+    """V4 é cross-domain por natureza — e é exatamente por isso que a
+    fronteira precisa de guarda. `cognitive.db` é lido como DADO (uma
+    projeção de prática); o MÓDULO `cognitive/` continua fora do alcance
+    da memória, que é o que a asserção de arquitetura promete."""
+    import ast
+    from pathlib import Path
+    from corpusmith.usecases import compute_difficulty
+    src = Path(compute_difficulty.__file__).read_text()
+    for node in ast.walk(ast.parse(src)):
+        if isinstance(node, ast.ImportFrom):
+            assert "cognitive" not in (node.module or "")
+        elif isinstance(node, ast.Import):
+            assert all("cognitive" not in a.name for a in node.names)

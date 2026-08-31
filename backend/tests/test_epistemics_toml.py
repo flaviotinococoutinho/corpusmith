@@ -286,3 +286,5 @@ def test_explanation_difficulty_parameters_match_code():
     # e o contrato não pode declarar peso para componente que não existe
     declarados = {k[len("peso_"):] for k in p if k.startswith("peso_")}
     assert declarados == set(COMPONENTES)
+    from corpusmith.usecases.compute_difficulty import _CONFIANCA
+    assert float(p["limiar_sobreconfianca"]) == _CONFIANCA
