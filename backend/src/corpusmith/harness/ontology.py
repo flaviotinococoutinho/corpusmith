@@ -54,7 +54,7 @@ def load(path: Path | str | None = None) -> dict:
 
 def _refs(data: dict) -> set[str]:
     alvos: set[str] = set()
-    for secao in ("axes", "terms"):
+    for secao in ("axes", "terms", "vocabularies"):
         for corpo in data.get(secao, {}).values():
             alvos.update(corpo.get("lives_in", ()))
     return alvos
@@ -68,6 +68,9 @@ def lint(path: Path | str | None = None) -> tuple[dict, tuple[Finding, ...]]:
     - `ontology.axis_mismatch` — vocabulário declarado ≠ constante real;
     - `ontology.axis_undeclared` — eixo no código sem verbete aqui;
     - `ontology.term_off_axis` — valor que aparece em dois eixos;
+    - `ontology.vocabulary_undeclared` — vocabulário fechado do código
+      sem verbete (ou verbete sem constante);
+    - `ontology.vocabulary_mismatch` — valores/objeto declarados ≠ código;
     - `ontology.ref_missing` — `lives_in` que não existe no disco;
     - `ontology.drift_sense_gone` — deriva aberta cujo marcador sumiu;
     - `ontology.drift_regressed` — separação resolvida que perdeu um nome;
@@ -106,6 +109,41 @@ def lint(path: Path | str | None = None) -> tuple[dict, tuple[Finding, ...]]:
                     "ontology.term_off_axis", "error", eixo,
                     f"`{valor}` também está em {outros} — um termo, duas "
                     "perguntas: é a conflação que RFC-004 combate"))
+
+    # --- 2b. vocabulário fechado NOVO precisa de verbete ---------------
+    # O buraco que esta regra fecha foi MEDIDO nesta trilha: a V5 criou
+    # `RELACOES` e a C6 criou `SideEffect` — dois vocabulários fechados
+    # que entram no canônico e no registro epistêmico — e o léxico não
+    # cresceu um verbete, sem que nada acendesse. É o mesmo defeito que
+    # `EXPECTED_MECHANISMS` fechou do lado epistêmico (G-10): o registro
+    # verificava o que ESTÁ declarado e nada cobrava o que FALTA.
+    declarados_vocab = data.get("vocabularies", {})
+    for nome, (valores, objeto, mora_em) in onto.VOCABULARIES.items():
+        corpo = declarados_vocab.get(nome)
+        if corpo is None:
+            out.append(Finding(
+                "ontology.vocabulary_undeclared", "error", nome,
+                f"o vocabulário fechado `{nome}` existe em {mora_em} e não "
+                "tem verbete em ontology.toml — vocabulário sem fronteira "
+                "declarada é a deriva que este registro existe para impedir"))
+            continue
+        if tuple(corpo.get("values", ())) != valores:
+            out.append(Finding(
+                "ontology.vocabulary_mismatch", "error", nome,
+                f"vocabulário declarado {list(corpo.get('values', ()))} ≠ "
+                f"{list(valores)} em {mora_em}"))
+        if corpo.get("applies_to") != objeto:
+            out.append(Finding(
+                "ontology.vocabulary_mismatch", "error", nome,
+                f"`applies_to` declarado {corpo.get('applies_to')!r} ≠ "
+                f"{objeto!r} — o OBJETO de um vocabulário fechado é parte "
+                "da sua identidade (relação ≠ afirmação ≠ mecanismo)"))
+    for nome in sorted(set(declarados_vocab) - set(onto.VOCABULARIES)):
+        out.append(Finding(
+            "ontology.vocabulary_undeclared", "error", nome,
+            "verbete de vocabulário sem constante correspondente no "
+            "código — registro não pode apodrecer em nenhuma das duas "
+            "direções"))
 
     # --- 3. refs e marcadores (única parte que precisa de filesystem) ---
     if frozen():

@@ -286,3 +286,23 @@ cd backend && .venv/bin/python -m corpusmith.cli ontology terms
 cd backend && .venv/bin/python -m corpusmith.cli ontology drift
 cd backend && .venv/bin/python -m corpusmith.cli ontology lint
 ```
+
+## Vocabulários fechados de outros objetos (v1.1 do registro)
+
+Um **eixo** é uma pergunta sobre uma AFIRMAÇÃO. O registro passou a
+declarar também os vocabulários fechados sobre **outros objetos** — a
+relação entre duas páginas (`applies_to`/`exemplifies`/`refines`, RFC-006
+V5) e o efeito colateral de um mecanismo (`none`/`canonical_write`/
+`projection_write`/`state_write`, C6). Guardá-los em `axes` teria feito
+`eixos_de()` responder sobre dois objetos com a mesma cara: o erro de
+nível que a RFC-004 combate no conteúdo, cometido na estrutura.
+
+**Por que a seção existe, e o buraco que ela fecha.** O lint cruzava os
+eixos com o código e não cobrava NADA de vocabulário novo. Foi medido
+nesta trilha: a V5 e a C6 criaram dois vocabulários fechados que entram
+no canônico e no registro epistêmico, e o léxico não cresceu um verbete
+— em silêncio. Agora `kernel/ontology.py:VOCABULARIES` espelha os
+valores reais e `ontology lint` emite `vocabulary_undeclared` (constante
+sem verbete, ou verbete sem constante) e `vocabulary_mismatch` (valores
+ou objeto divergentes). É o simétrico exato do `EXPECTED_MECHANISMS` que
+o achado G-10 criou do lado epistêmico.

@@ -97,27 +97,35 @@ def test_projecao_e_estado_nao_exigem_alto_impacto():
 
 
 # ------------------------------- o cruzamento (a declaração vira prova)
-def test_quem_escreve_no_bundle_DECLARA_escrita_canonica():
-    """A guarda que impede a declaração de virar decoração.
+def test_nenhum_MODULO_que_escreve_fica_sem_declaracao():
+    """A guarda que impede a declaração de virar decoração — e a
+    granularidade dela, corrigida por um caso real.
 
-    Se um `implementation_ref` do mecanismo usa o `BundleWriter` (a porta
-    ÚNICA de escrita no canônico), o contrato tem de dizer
-    `canonical_write`. É o mesmo espírito do cruzamento de parâmetros:
-    contrato que mente sobre o código quebra a suíte.
+    A primeira versão exigia que TODO mecanismo cujo `implementation_ref`
+    importa o `BundleWriter` declarasse `canonical_write`. Parecia certo
+    e é um ERRO DE NÍVEL (docs/28 §2): um módulo hospeda vários
+    mecanismos com efeitos diferentes. Medido quando
+    `inferred_cooccurrence_edges` entrou: ele vive em
+    `detect_communities.py` — que escreve páginas de comunidade — mas o
+    MECANISMO dele só monta adjacência em memória. A regra antiga
+    forçaria uma declaração FALSA para calar o teste, que é o oposto do
+    que ela existe para fazer.
 
-    Falsificável: tire `canonical_write` de `[mechanisms.abstention]` —
-    cujo caminho de auto_recycle escreve — e este teste reprova."""
+    O invariante honesto é por MÓDULO: se um módulo alcança a porta de
+    escrita, ALGUÉM entre os mecanismos que o citam tem de declarar
+    `canonical_write`. Mais fraco que o anterior — e verdadeiro.
+
+    Falsificável: tire `canonical_write` de `[mechanisms.memory_freeze]`
+    (único dono de `cold_memory.py`) e este teste reprova."""
     import ast
+    from collections import defaultdict
     from pathlib import Path
     repo = Path(__file__).resolve().parents[2]
 
     def importa_writer(caminho: Path) -> bool:
         """IMPORTAR o writer, não citá-lo: a checagem por substring
-        acusava sete mecanismos, e cinco eram menção em comentário. A
-        pergunta é "este módulo alcança a porta de escrita?", e quem
-        responde é o import — não a prosa."""
-        arvore = ast.parse(caminho.read_text())
-        for node in ast.walk(arvore):
+        acusava sete mecanismos, e cinco eram menção em comentário."""
+        for node in ast.walk(ast.parse(caminho.read_text())):
             nomes = ([a.name for a in node.names]
                      if isinstance(node, (ast.Import, ast.ImportFrom))
                      else [])
@@ -126,18 +134,17 @@ def test_quem_escreve_no_bundle_DECLARA_escrita_canonica():
         return False
 
     registry, _ = load_registry()
-    faltando = []
+    declaram: dict[str, bool] = defaultdict(bool)
     for contrato in registry.contracts:
-        escreve = any(
-            importa_writer(repo / ref)
-            for ref in contrato.implementation_refs
-            if ref.endswith(".py") and (repo / ref).is_file())
-        declara = SideEffect.CANONICAL_WRITE in contrato.side_effects
-        if escreve and not declara:
-            faltando.append(contrato.mechanism_id)
-    assert faltando == [], (
-        "mecanismos que IMPORTAM o BundleWriter e não declaram "
-        f"`canonical_write`: {faltando}")
+        escreve = SideEffect.CANONICAL_WRITE in contrato.side_effects
+        for ref in contrato.implementation_refs:
+            if ref.endswith(".py") and (repo / ref).is_file() \
+                    and importa_writer(repo / ref):
+                declaram[ref] |= escreve
+    mudos = sorted(ref for ref, ok in declaram.items() if not ok)
+    assert mudos == [], (
+        "módulos que alcançam o BundleWriter e cujos mecanismos NENHUM "
+        f"declara `canonical_write`: {mudos}")
 
 
 def test_o_caso_C6_esta_declarado_no_registro():

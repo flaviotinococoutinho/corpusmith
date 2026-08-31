@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.17.0"  # RFC-006 V6: `concept_sheet` entra (a ficha do conceito)
+version = "1.18.0"  # dívidas PROMISED pagas: temporal_partition e inferred_cooccurrence_edges
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -1295,3 +1295,103 @@ palavras_por_minuto = 150.0
 piso_de_custo_min = 2.0
 contratos_citados = "editorial_stability,explanation_difficulty,typed_application_edges"
 prosa_default = "desligada"
+
+# --------------------------------------------------------------------------
+# Dívida PROMISED paga (docs/14 §5): o mecanismo existia desde a v0.8 e o
+# contrato não. Um aviso que nunca some ensina a ignorar o lint.
+[mechanisms.temporal_partition]
+title = "Partição bi-temporal da evidência por `as_of`"
+decision = "quando a pergunta carrega uma data, REORDENAR a evidência pondo primeiro o que era válido naquele instante — e, sem data, FILTRAR duro o que foi substituído"
+implementation_refs = [
+  "backend/src/corpusmith/retrieval/streams.py",
+  "backend/src/corpusmith/usecases/ask_memory.py",
+]
+inductive_biases = [
+  "tempo de MUNDO e tempo de REGISTRO são eixos distintos: `valid_at`/`invalid_at` dizem quando o conhecimento valeu, `timestamp` diz quando alguém escreveu — perguntar 'o que valia em 2023' não é perguntar 'o que escrevemos em 2023'",
+  "com `as_of` a partição REORDENA em vez de filtrar: uma página fora da validade pedida ainda pode ser o contexto que explica a resposta, e sumir com ela seria decidir pelo leitor. Sem `as_of`, supersedida é filtro DURO (INV-003) — aí a substituição já foi um ato humano",
+  "página SEM `valid_at` é válida em QUALQUER `as_of`: a ausência significa 'nenhuma alegação temporal foi feita', não 'sem informação' — semântica pinada pelo P-9, quando o default de escrita morreu",
+]
+assumptions = [
+  "as datas do frontmatter são ISO e comparáveis por prefixo de string — `as_of` de granularidade menor (ano) compara contra o prefixo correspondente",
+  "a data extraída da pergunta reflete a intenção temporal de quem perguntou — extração determinística do detector de datas, nunca inferida por modelo",
+]
+validity_scope = [
+  "evidência já fundida (RRF): a partição é o último passo de ordenação, não um filtro de recuperação — o que não foi recuperado não é reordenado",
+  "páginas que declararam validade; as demais atravessam por construção",
+  "consulta HISTÓRICA (`as_of` presente) reordena; consulta corrente aplica o filtro duro de supersedida (INV-003)",
+]
+known_failure_modes = [
+  "GRANULARIDADE MUDA O RESULTADO: `as_of='2024'` compara prefixo de 4 caracteres e aceita qualquer mês de 2024; `as_of='2024-06-01'` compara o dia — a mesma pergunta com data mais precisa pode devolver ordem diferente",
+  "data ausente na pergunta é indistinguível de 'quero o estado atual': quem quer histórico e não datou recebe o filtro duro de supersedida, que é o oposto do que pediu",
+  "corpus sem `valid_at` nenhum torna a partição inerte — toda evidência atravessa, e o leitor pode ler ordem temporal onde não há nenhuma",
+  "a data extraída pode ser uma data CITADA no texto da pergunta e não a âncora desejada ('o que a norma de 2015 dizia em 2020?' tem duas datas e o detector escolhe uma)",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "as datas declaradas no frontmatter e a data extraída da pergunta; NÃO que a evidência ordenada primeiro seja a correta, NÃO que ausência de `valid_at` signifique validade verificada"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+composite = false
+evidence = ["deterministic_check", "golden_set"]
+side_effects = ["none"]
+evaluated_by = ["eval_memory"]
+misinterpretations = [
+  "reordenar NÃO é filtrar: com `as_of`, o que estava fora da validade continua na resposta, mais abaixo",
+  "página sem `valid_at` no topo de uma consulta histórica não é erro — é uma página que não fez alegação temporal nenhuma",
+]
+high_impact = false
+abstention_supported = true
+human_review_available = false
+[mechanisms.temporal_partition.parameters]
+comparacao = "prefixo de string ISO do tamanho do as_of"
+sem_valid_at = "válida em qualquer as_of"
+sem_as_of = "filtro duro de superseded (INV-003)"
+
+# --------------------------------------------------------------------------
+# Dívida PROMISED paga (docs/14 §4): co-menção materializada.
+[mechanisms.inferred_cooccurrence_edges]
+title = "Aresta INFERIDA por co-menção de entidade"
+decision = "materializar no grafo uma aresta fraca entre páginas que compartilham uma entidade, com teto anti-hub na origem — para que o particionamento veja proximidade temática que ninguém linkou"
+implementation_refs = [
+  "backend/src/corpusmith/usecases/detect_communities.py",
+]
+inductive_biases = [
+  "compartilhar entidade é indício FRACO de proximidade: a aresta nasce com metade do peso de uma inferida comum (0.25 contra 0.5) e um quarto de um link explícito — ela influencia o particionamento sem competir com o gesto humano de linkar",
+  "entidade onipresente não liga nada: o teto de 30 páginas corta o super-hub ANTES de gerar pares, porque uma entidade em 200 páginas produziria ~20 mil arestas e fundiria o grafo inteiro numa comunidade só",
+  "o piso de 2 páginas é definicional — co-menção exige dois",
+]
+assumptions = [
+  "as entidades do índice aproximam os assuntos da página (herda o recall e os limites do gazetteer, incluindo a ambiguidade não curada da V2)",
+  "proximidade temática justifica proximidade no particionamento — plausível e NÃO validado contra julgamento humano de tema",
+]
+validity_scope = [
+  "grafo de comunidades (job `leiden`) — a aresta vive na adjacência do particionamento",
+  "entidades presentes em 2..30 páginas distintas do índice",
+]
+known_failure_modes = [
+  "TETO ARBITRÁRIO NÃO CALIBRADO: 30 é limiar de projeto; num corpus grande, entidades legitimamente centrais passam do teto e a proximidade real some do grafo — falso negativo silencioso",
+  "co-menção não é relação: duas páginas que citam a mesma norma por motivos opostos ficam próximas no particionamento, e o mapa não distingue concordância de conflito",
+  "custo quadrático NA ENTIDADE: 30 páginas geram 435 pares; o teto é o que mantém isso viável, e não há guarda além dele",
+  "a aresta é invisível no canônico: ela existe só na projeção, então o usuário vê um tema formado por um vínculo que não consegue apontar numa página",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "as entidades indexadas e o teto declarado; NÃO que as páginas tratem do mesmo assunto, NÃO que a ausência de aresta signifique ausência de relação"
+universal_guarantee = false
+fallback = ["degrade"]
+adaptive = false
+feedback_signal = ""
+composite = false
+evidence = ["deterministic_check"]
+side_effects = ["projection_write"]
+misinterpretations = [
+  "aresta de co-menção NÃO é link: ninguém a escreveu, e ela não aparece em página nenhuma",
+  "peso menor não é 'menos verdadeiro' — é menos EVIDÊNCIA de que as páginas se relacionam",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.inferred_cooccurrence_edges.parameters]
+min_paginas = 2
+max_paginas = 30
+peso_da_aresta = 0.25

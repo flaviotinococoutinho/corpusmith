@@ -108,6 +108,7 @@ Regras do lint (códigos estáveis): `contract_missing_bias`,
 referencial), `failure_modes_missing` (heurísticos),
 `evaluation_missing` (empíricos), `fallback_missing` (alto impacto),
 `canonical_write_without_impact` e `side_effect_contradiction` (C6),
+`mechanism_missing` e `mechanism_promised` (completude do CONJUNTO, G-10),
 `feedback_signal_missing` (adaptativos), `components_missing`
 (compostos), `implementation_ref_missing`, `invalid_vocabulary`,
 `unknown_field`, `self_certification_only`, `forbidden_justification`.
@@ -185,7 +186,7 @@ painel Qualidade → seção "Contratos epistêmicos"┘  (harness/epistemics)
 - ~~o golden set não é distribuído por default~~ — **pago pelo QA-1**:
   `seed_golden_eval` distribui 10+ casos out-of-the-box e o eval deixa de
   ser no-op (idempotente: nunca sobrescreve golden curado pelo usuário);
-- contratos cobrem **26 mecanismos** (registry 1.17.0) — a fonte viva é
+- contratos cobrem **28 mecanismos** (registry 1.18.0) — a fonte viva é
   `epistemics.toml` (`[registry].version` + `EXPECTED_MECHANISMS` no
   lint; este documento não acompanha o conjunto entrada a entrada; a
   consolidação e o freeze/recycle, listados aqui como devidos, ganharam

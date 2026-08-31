@@ -67,24 +67,29 @@ EXPECTED_MECHANISMS = (
     "editorial_stability",
     "evidence_sufficiency", "explanation_difficulty",
     "factual_conflict", "memory_freeze",
-    "graph_cache", "metacog_observation_mining", "native_graph_kernel",
+    "graph_cache", "inferred_cooccurrence_edges",
+    "metacog_observation_mining", "native_graph_kernel",
     "native_index_builder", "native_sketch_kernel", "native_text_extraction",
     "pattern_layer_snapshot", "reconciliation", "retrieval_rrf_hedge",
-    "retrieval_uncertainty", "theme_identity_matching",
+    "retrieval_uncertainty", "temporal_partition", "theme_identity_matching",
     "typed_application_edges", "worker_isolation",
 )
 
-# `docs/14` §5: "quatro contratos novos obrigatórios" seguido de SEIS nomes —
-# `pattern_layer_snapshot` já entrou (F2), os DOIS abaixo não.
-# `attention_queue` saiu daqui no F3-PR2 e entrou em EXPECTED_MECHANISMS: a
-# dívida foi PAGA, e é o gesto de mover o nome que registra isso.
-# `factual_conflict` fez o mesmo caminho no F4-PR3b — com a ressalva que o
-# `validity_scope` do contrato declara: `docs/14` §P-5 pedia quantity E date,
-# e `date` ficou de fora (RFC-005 §4). Dívida paga em PARTE, e dita.
-PROMISED_MECHANISMS = (
-    ("inferred_cooccurrence_edges", "docs/14 §4 (co-menção materializada)"),
-    ("temporal_partition", "docs/14 §5"),
-)
+# `docs/14` §5 e §4 declararam contratos obrigatórios; TODOS foram escritos.
+# A lista fica VAZIA e o mecanismo continua de pé — é ele que impede a
+# próxima promessa de virar folclore. O ritual de quitação é mover o nome
+# daqui para `EXPECTED_MECHANISMS` no mesmo commit em que o contrato é
+# escrito, e foi assim com `pattern_layer_snapshot` (F2), `attention_queue`
+# (F3-PR2), `factual_conflict` (F4-PR3b, dívida paga em PARTE e dita) e
+# agora `temporal_partition` + `inferred_cooccurrence_edges` — cujos
+# MECANISMOS existiam desde a v0.8, medidos em `streams.py:_valid_at` e
+# `detect_communities.py`: a dívida era de contrato, não de funcionalidade.
+#
+# Um aviso que nunca some ensina a ignorar a saída do lint; por isso ele
+# some quando é pago, e por isso a lista vazia é um estado legítimo — não
+# um sinal de que a checagem morreu (`test_promessa_nao_escrita...` prende
+# o comportamento com registro sintético).
+PROMISED_MECHANISMS: tuple[tuple[str, str], ...] = ()
 
 
 def _completude(registry: Registry) -> list[Finding]:

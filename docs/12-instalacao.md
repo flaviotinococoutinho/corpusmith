@@ -83,12 +83,12 @@ Gate completo (o mesmo do CI e do `AGENTS.md` §2; a lista é presa por
 `architecture.toml [gate]` + `test_pr0_gate.py` — atalho: `just verify`):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # → todos passam (927 na v2.0)
+cd backend && .venv/bin/python -m pytest tests -q   # → todos passam (941 na v2.0)
 cd desktop && npx tsc --noEmit                      # → sem erros
 cd desktop && npm test                              # → smoke da UI verde
 docker compose config -q                            # → sem saída = ok
-cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # → 26 mecanismo(s)
-cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # → sem erros
+cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # → 28 mecanismo(s)
+cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # → 4 eixos, 22 termos, 0 findings
 ```
 
 A CI roda ainda `cargo test --workspace --manifest-path native/Cargo.toml`
@@ -109,9 +109,9 @@ backend/scripts/corpusmith okf bootstrap    # bundle criado
 backend/scripts/corpusmith seed             # seed ok (idempotente)
 backend/scripts/corpusmith okf lint         # 0 finding(s), 0 erro(s)
 backend/scripts/corpusmith doctor           # {"ok": true, ...}
-backend/scripts/corpusmith epistemics lint  # 26 mecanismo(s) na v2.0; os avisos
-    # `mechanism_promised` são dívida DECLARADA (contrato prometido em doc
-    # e ainda não escrito) — não são erro de instalação
+backend/scripts/corpusmith epistemics lint  # 28 mecanismo(s), 0 finding(s) na v2.0 — os avisos
+    # `mechanism_promised` (dívida de contrato prometido em doc e não
+    # escrito) foram todos PAGOS: hoje o lint sai limpo
 ```
 
 Smoke da API (daemon rodando):

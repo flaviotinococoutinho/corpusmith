@@ -64,6 +64,31 @@ QUESTIONS: dict[str, str] = {
     "governance_status": "quem autorizou isto a contar como conhecimento?",
 }
 
+#: VOCABULÁRIOS FECHADOS DE OUTROS OBJETOS — e a separação é o ponto.
+#:
+#: Um EIXO (acima) é uma pergunta sobre uma AFIRMAÇÃO. O que segue são
+#: vocabulários fechados sobre objetos DIFERENTES: a relação entre duas
+#: páginas (V5) e o efeito colateral de um mecanismo (C6). Guardá-los no
+#: mesmo dicionário `AXES` seria cometer, na estrutura, o erro de nível
+#: que a RFC-004 combate no conteúdo — "relação entre páginas" não é uma
+#: propriedade de uma afirmação, e `eixos_de()` passaria a responder
+#: sobre dois objetos distintos com a mesma cara.
+#:
+#: Estar AQUI é o que faz o `ontology lint` cobrar verbete: antes desta
+#: constante, criar vocabulário fechado novo (foi o que V5 e C6 fizeram)
+#: não acendia luz nenhuma, e o léxico não crescia. É o buraco simétrico
+#: ao que `EXPECTED_MECHANISMS` fechou no registro epistêmico (G-10).
+#:
+#: Formato: nome → (valores, objeto, onde a constante REAL mora).
+VOCABULARIES: dict[str, tuple[tuple[str, ...], str, str]] = {
+    "semantic_relation": (
+        ("applies_to", "exemplifies", "refines"), "relation",
+        "backend/src/corpusmith/kernel/semantics.py"),
+    "side_effect": (
+        ("none", "canonical_write", "projection_write", "state_write"),
+        "mechanism", "backend/src/corpusmith/epistemic/model.py"),
+}
+
 #: Vocabulário LEGADO do campo `confidence` — os quatro valores que o
 #: produto de fato escreve hoje. Fechado a partir de agora: valor fora
 #: daqui é `ontology.value_off_axis` no lint, não "extensão privada".

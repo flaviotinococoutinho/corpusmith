@@ -25,7 +25,7 @@
 schema_version = 1
 
 [ontology]
-version = "1.0.0"
+version = "1.1.0"  # vocabulários fechados de outros objetos + 4 termos (V3–V6, C6)
 
 # =====================================================================
 # 1. EIXOS — as perguntas independentes sobre uma afirmação
@@ -203,6 +203,64 @@ not_means = "uma ontologia formal com semântica lógica"
 constrains = "declarar que algo existe não é alegar que é verdadeiro; ADR-53 §3 proíbe 'ontologia formal' e este arquivo não a introduz"
 lives_in = ["ontology.toml", "backend/src/corpusmith/kernel/ontology.py"]
 
+[terms.stability]
+roots = "lat. stabilis, 'que se pode manter de pé' (de stare, 'estar em pé') — firmeza de POSTURA, não de mérito"
+means = "quietude no eixo de EDIÇÃO: quantas vezes a página mudou e quando parou de mudar (RFC-006 V3, kernel/stability.py)"
+not_means = "correta, revisada, aprovada nem importante"
+constrains = "a palavra carrega QUATRO sentidos no produto (edição, ciclo de vida, uso, tema) e cada um tem dono próprio — usar 'estável' sem dizer em qual eixo é a conflação que docs/30 fixou"
+lives_in = ["backend/src/corpusmith/kernel/stability.py", "docs/30-dicionario-da-re-mira.md"]
+
+[terms.difficulty]
+roots = "lat. difficultas (dis- + facilis, 'não fácil') — a NEGAÇÃO de fácil, não a afirmação de valor"
+means = "índice composto de onde o estudo trava: falha de recuperação com sobreconfiança, conflito, pergunta aberta, vocabulário ambíguo e lacuna reincidente (RFC-006 V4)"
+not_means = "importância, prioridade, qualidade — nem 'ninguém achou útil', que é `low_yield` e tem outro dono"
+constrains = "score 0 com `medida=false` é NADA OBSERVADO, jamais 'fácil de explicar'; a etimologia pela negação é o próprio limite — o índice sabe negar facilidade, não afirmar dificuldade absoluta"
+lives_in = ["backend/src/corpusmith/kernel/difficulty.py"]
+
+[terms.application]
+roots = "lat. applicare, 'dobrar em direção a' (ad + plicare) — algo se DOBRA na direção do caso; o caso não é gerado pelo conceito"
+means = "relação declarada por ato humano entre um conceito e o caso onde ele vale (RFC-006 V5, `applies_to`/`exemplifies`)"
+not_means = "menção, semelhança ou co-ocorrência; tampouco prova de que o conceito funciona ali"
+constrains = "a aresta liga PÁGINAS, então afirma a página inteira do destino — enquanto o nível da afirmação (docs/28) não existir, essa grossura é declarada e MEDIDA (`ambiguous_fraction`), nunca dissimulada"
+lives_in = ["backend/src/corpusmith/kernel/semantics.py", "backend/src/corpusmith/usecases/practical_cases.py"]
+
+[terms.side_effect]
+roots = "efeito COLATERAL: lat. cum + latus, 'do mesmo lado' — o que acontece ao lado do que se pediu, sem ter sido pedido"
+means = "o que um mecanismo ESCREVE além de responder: canônico (bundle+Git), projeção recomputável ou dado de uso (C6)"
+not_means = "erro nem bug: um efeito colateral declarado é legítimo — o que é ilegítimo é ele existir sem estar dito"
+constrains = "escrita no CANÔNICO obriga `high_impact`; um `/ask` que move o HEAD do Git é exatamente o caso que criou este verbete, e ele agora não pode existir sem estar declarado"
+lives_in = ["backend/src/corpusmith/epistemic/model.py"]
+
+# =====================================================================
+# 2b. VOCABULÁRIOS FECHADOS DE OUTROS OBJETOS
+# =====================================================================
+# Eixo (§1) é pergunta sobre uma AFIRMAÇÃO. Aqui ficam os vocabulários
+# fechados sobre objetos DIFERENTES — a relação entre duas páginas e o
+# efeito de um mecanismo. A separação não é organizacional: pôr tudo em
+# `axes` faria `eixos_de()` responder sobre dois objetos com a mesma
+# cara, que é o erro de nível que a RFC-004 combate no conteúdo.
+#
+# `kernel/ontology.py:VOCABULARIES` espelha estes valores e o
+# `ontology lint` cobra o verbete: vocabulário fechado novo sem entrada
+# aqui é ERRO. Foi assim que o buraco apareceu — a V5 e a C6 criaram
+# vocabulário e o léxico não cresceu, em silêncio.
+
+[vocabularies.semantic_relation]
+question = "que tipo de relação um humano DECLAROU entre duas páginas?"
+values = ["applies_to", "exemplifies", "refines"]
+applies_to = "relation"
+etymology = "lat. relatio, 'ação de levar de volta' (referre) — a relação LEVA de uma coisa à outra e guarda a direção do trajeto"
+constrains = "estrito na ESCRITA (o ato recusa valor fora daqui, porque o canônico é para sempre) e tolerante na LEITURA (desconhecido vira não-tipado, nunca derruba um rebuild); a direção é parte do sentido — `applies_to` invertido afirma o contrário"
+lives_in = ["backend/src/corpusmith/kernel/semantics.py"]
+
+[vocabularies.side_effect]
+question = "o que este mecanismo ESCREVE, além de responder?"
+values = ["none", "canonical_write", "projection_write", "state_write"]
+applies_to = "mechanism"
+etymology = "lat. effectus, 'o que foi levado a cabo' (ex + facere) + colateral, 'do mesmo lado' — o que se realiza ao lado do que se pediu"
+constrains = "os três destinos não são graus do mesmo eixo: canônico é AUTORIDADE (e obriga `high_impact`), projeção é recomputável, estado é uso — e `none` ao lado de outro valor é contradição, não ênfase"
+lives_in = ["backend/src/corpusmith/epistemic/model.py"]
+
 # =====================================================================
 # 3. DERIVA SEMÂNTICA — onde uma palavra ainda responde a duas perguntas
 # =====================================================================
@@ -253,7 +311,7 @@ markers = [
   ["backend/src/corpusmith/bench.py", "a autoridade DECLARADA de performance"],
   ["backend/src/corpusmith/usecases/cold_memory.py", "PROTECTED_TYPES = {\"authority_record\""],
 ]
-paid = "nenhum ainda — os cinco sentidos convivem; docs/23 §3 nomeia cada um e RFC-004 §6 propõe os qualificadores"
+paid = "nenhum ainda — os cinco sentidos convivem. A RFC-006 V2 CONTORNOU a deriva em vez de pagá-la, e a distinção importa: o sentido do conceito passou a morar no CANÔNICO (`Entropia (física)`) justamente para não ser enfiado no campo `authority`, que já responde a cinco perguntas. Medido na V2: nenhum schema mudou e nenhum sentido foi separado — a deriva segue aberta, agora com a evidência de que ampliá-la seria o caminho errado. docs/23 §3 nomeia cada sentido; RFC-004 §6 propõe os qualificadores"
 
 [drift.evidence]
 field = "evidence"
