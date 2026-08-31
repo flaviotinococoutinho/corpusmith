@@ -160,7 +160,7 @@ painel Qualidade → seção "Contratos epistêmicos"┘  (harness/epistemics)
 - ~~o golden set não é distribuído por default~~ — **pago pelo QA-1**:
   `seed_golden_eval` distribui 10+ casos out-of-the-box e o eval deixa de
   ser no-op (idempotente: nunca sobrescreve golden curado pelo usuário);
-- contratos cobrem **23 mecanismos** (registry 1.13.0) — a fonte viva é
+- contratos cobrem **24 mecanismos** (registry 1.14.0) — a fonte viva é
   `epistemics.toml` (`[registry].version` + `EXPECTED_MECHANISMS` no
   lint; este documento não acompanha o conjunto entrada a entrada; a
   consolidação e o freeze/recycle, listados aqui como devidos, ganharam

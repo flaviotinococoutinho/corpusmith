@@ -32,3 +32,10 @@ class MemoryFacade:
         mesmo HEAD; "estável" = quieto no eixo de EDIÇÃO, nunca "correto"."""
         from ..usecases.compute_stability import ComputeStability
         return ComputeStability(self._settings, limit=limit).execute()
+
+    def difficulty(self, *, limit: int | None = None) -> dict:
+        """Onde o estudo trava (RFC-006 V4): recomputa o índice composto
+        de dificuldade de EXPLICAR e devolve o ranking. Página sem sinal
+        sai com `medida=False` — silêncio não é facilidade."""
+        from ..usecases.compute_difficulty import ComputeDifficulty
+        return ComputeDifficulty(self._settings, limit=limit).execute()

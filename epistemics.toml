@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.13.0"  # F6/P-8: `abstention_trace` entra (rastro de abstenção)
+version = "1.14.0"  # RFC-006 V4: `explanation_difficulty` entra (onde o estudo trava)
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -1093,3 +1093,68 @@ human_review_available = false
 key_prefix_entities = "e:"
 key_prefix_text = "s:"
 entity_digest_hex_chars = 16
+
+# --------------------------------------------------------------------------
+# V4 (RFC-006): onde o estudo trava. Composição — nenhum detector novo.
+[mechanisms.explanation_difficulty]
+title = "Índice de dificuldade de EXPLICAR por página"
+decision = "compor cinco sinais de donos distintos (falha de recuperação com sobreconfiança, conflito/contradição, pergunta aberta, vocabulário ambíguo, lacuna de abstenção reincidente) num índice por página com pesos FIXOS declarados, distinguindo 'nada observado' de 'fácil'"
+implementation_refs = [
+  "backend/src/corpusmith/kernel/difficulty.py",
+  "backend/src/corpusmith/usecases/compute_difficulty.py",
+]
+inductive_biases = [
+  "o sinal HUMANO pesa mais: alguém tentou explicar e falhou achando que sabia (0.35) vale mais que qualquer sinal derivado — sobreconfiança é o sinal de calibração mais caro (spaced-v1, Roediger & Karpicke)",
+  "cada componente SATURA no seu teto (3/2/2/2/3): uma sessão de prática ruim não pode afogar os outros quatro sinais, e a terceira falha sobre a mesma página já diz o que a quarta diria",
+  "`low_yield` fica FORA por decisão: 'ninguém achou útil' e 'é difícil de explicar' são perguntas diferentes — somá-las re-fundiria o que o F4-PR2 separou (ADR-52)",
+  "silêncio não é facilidade: sem sinal nenhum o resultado é `medida=false`, não score baixo — a mesma disciplina do `measurable=false` da profundidade (v0.20)",
+]
+assumptions = [
+  "uma página com conflito, pergunta aberta ou vocabulário ambíguo é mais difícil de explicar que uma sem — plausível e NÃO validado contra desfecho de aprendizagem",
+  "o `item` de uma tentativa de recuperação identifica a página que o estudante tentou explicar",
+  "uma página que carrega a entidade sobre a qual a base se absteve é sobre aquele assunto (`page_entities`) — aproximação de nível, declarada abaixo",
+]
+validity_scope = [
+  "granularidade de PÁGINA, falando de compreensão de AFIRMAÇÕES: enquanto o nível 3 da escada (docs/28) não existir, o índice aproxima o objeto que descreve",
+  "bundle local com lint de corpus disponível; os componentes de USO (prática e abstenção) existem apenas onde houve uso — um clone novo calcula o índice com os componentes determinísticos apenas",
+  "leitura e ordenação; nunca gate de escrita, nunca marca no canônico",
+]
+known_failure_modes = [
+  "PESOS NÃO CALIBRADOS — o modo central: 0.35/0.25/0.15/0.15/0.10 são projeto, não medição; não há ground truth de 'dificuldade' contra o qual ajustá-los, e a porta de reentrada é medir contra desfechos de prática reais",
+  "página nunca praticada, sem conflito e sem pergunta sai com score 0 e `medida=false` — pode ser a mais difícil da base e apenas nunca ter sido olhada",
+  "o salto de nível da lacuna: um miss é da PERGUNTA, e atribuí-lo à página que carrega a entidade pode marcar uma página que só menciona o assunto de passagem",
+  "conflito conta para todas as páginas do grupo: uma página correta ao lado de uma errada recebe o mesmo sinal — o índice diz 'aqui há desacordo', não 'esta página está errada'",
+  "vocabulário ambíguo herda o recall do `alias_conflict`: só vê ambiguidade curada em dois registros",
+  "índice recomputado sob demanda e SEM derivação declarada: dois dos cinco sinais não movem o HEAD do bundle, então um carimbo prometeria frescor que a cadeia não entrega — o número pode estar velho e o produto não tem como saber",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "os cinco sinais declarados, com os pesos e tetos deste bloco; NÃO que a página seja objetivamente difícil, NÃO que score baixo signifique fácil, NÃO que a ordem reflita esforço de aprendizagem medido"
+universal_guarantee = false
+fallback = ["request_human_review"]
+adaptive = false
+feedback_signal = ""
+composite = true
+composite_components = [
+  "falha_confiante", "conflito", "pergunta_aberta",
+  "vocabulario_ambiguo", "lacuna_recorrente",
+]
+evidence = ["human_feedback", "deterministic_check"]
+misinterpretations = [
+  "score 0 NÃO é 'fácil de explicar' — leia `medida` antes do número",
+  "o índice não diz QUAL página está errada num conflito, só que há desacordo por resolver",
+  "'difícil de explicar' não é 'de baixo rendimento': a segunda é desfecho de uso e vive em `page_overlay`, com outro dono",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.explanation_difficulty.parameters]
+peso_falha_confiante = 0.35
+peso_conflito = 0.25
+peso_pergunta_aberta = 0.15
+peso_vocabulario_ambiguo = 0.15
+peso_lacuna_recorrente = 0.10
+saturacao_falha_confiante = 3
+saturacao_conflito = 2
+saturacao_pergunta_aberta = 2
+saturacao_vocabulario_ambiguo = 2
+saturacao_lacuna_recorrente = 3

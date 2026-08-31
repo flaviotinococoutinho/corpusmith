@@ -374,5 +374,6 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | GET /cockpit/next-actions | Curation.next_actions | NextActions (R3) |
 | POST /cockpit/next-actions/verdict | — (`runtime/verdicts.record`) | grava `pattern_verdicts` (F3-PR2) |
 | CLI `stability` | Memory.stability | ComputeStability (RFC-006 V3) |
+| CLI `difficulty` | Memory.difficulty | ComputeDifficulty (RFC-006 V4) |
 | CLI `backup create\|verify\|restore` · job backup | — (sem facade; ADR-35) | CreateBackup / RestoreBackup |
 | GET / · /health · /health/full | — (sistema, api/system.py) | — |

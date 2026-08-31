@@ -269,3 +269,20 @@ def test_abstention_trace_parameters_match_code():
     assert sem_entidade.startswith(p["key_prefix_text"])
     assert len(com_entidade) == (len(p["key_prefix_entities"])
                                  + int(p["entity_digest_hex_chars"]))
+
+
+def test_explanation_difficulty_parameters_match_code():
+    """V4 — os pesos e tetos do contrato SÃO os do kernel.
+
+    Este cruzamento é o que impede a deriva mais provável num mecanismo
+    composto: alguém ajusta um peso no código "só para testar" e o
+    contrato segue prometendo a composição antiga. Falsificável: mude
+    0.35 em `PESOS` (ou um teto em `SATURACAO`) sem mexer no TOML."""
+    from corpusmith.kernel.difficulty import COMPONENTES, PESOS, SATURACAO
+    p = _params("explanation_difficulty")
+    for c in COMPONENTES:
+        assert float(p[f"peso_{c}"]) == PESOS[c]
+        assert int(p[f"saturacao_{c}"]) == SATURACAO[c]
+    # e o contrato não pode declarar peso para componente que não existe
+    declarados = {k[len("peso_"):] for k in p if k.startswith("peso_")}
+    assert declarados == set(COMPONENTES)

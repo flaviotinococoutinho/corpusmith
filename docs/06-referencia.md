@@ -262,6 +262,12 @@ frozen_at, frozen_commit, activation, recall_p, recycles)` · `cold_fts`
 `page_index_state(page,sha)` + `index_meta` (índice INCREMENTAL v0.13:
 só páginas com sha alterado reindexam; fingerprint do gazetteer força
 full automático; `rebuild_index(s, full=True)` disponível) ·
+`page_difficulty(rel_path, score, measured, reason, components json)` —
+RFC-006 V4: índice composto "difícil de EXPLICAR" (`corpusmith
+difficulty`; pesos e tetos no `kernel/difficulty.py`, cruzados com
+`[mechanisms.explanation_difficulty]`). `measured=0` é **nada
+observado**, nunca "fácil"; SEM derivação declarada de propósito (dois
+dos cinco sinais são de uso e não movem o HEAD) ·
 `page_stability(rel_path,edits,first_commit_at,last_edit_at,lifecycle,
 computed_from)` — RFC-006 V3: estabilidade EDITORIAL, projeção de
 bundle+Git (`corpusmith stability`; checkpoint `stability` em runtime.db;
@@ -433,7 +439,7 @@ fria). Processos: jobs falhos têm ↻ reexecutar (payload na listagem).
 Removido: retrieval/fusion.py (substituído por streams desde a v0.9).
 
 **Memory**: AskMemory · RecordOutcome · EvaluateMemory ·
-ComputeStability (RFC-006 V3).
+ComputeStability (RFC-006 V3) · ComputeDifficulty (RFC-006 V4).
 **Compiler**: IngestSource (entrada pelo app → raw/) · CompileSource ·
 ConsolidateInbox (+`_ConsolidatedPage`) · ReconcileCandidate (invocado
 pelo Template Method) · RebuildIndex · DetectCommunities · SavePipeline ·

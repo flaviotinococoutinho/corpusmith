@@ -199,6 +199,17 @@ somando os quatro seria o novo `confidence`-com-seis-perguntas.
 
 ### V4 · "O que é mais difícil de explicar" — índice declarado
 
+> **Estado: ENTREGUE** (`docs/18` §10 item 5). Cinco componentes de cinco
+> donos com pesos e tetos declarados no contrato
+> `explanation_difficulty`; `corpusmith difficulty` + bloco no painel
+> Indicadores. As três recusas do desenho estão presas por teste:
+> `low_yield` fica FORA (a armadilha nomeada abaixo), silêncio sai como
+> `medida=false` em vez de "fácil", e cada componente satura no seu teto.
+> O que NÃO entrou: calibração dos pesos (não há ground truth de
+> dificuldade — porta de reentrada é medir contra desfechos de prática) e
+> derivação declarada na cadeia (dois sinais são de uso e não movem o
+> HEAD; um carimbo prometeria frescor que a cadeia não entrega).
+
 **Já existe.** Cada componente com dono: contradição/conflito factual
 (harness), perguntas sem `answered_by`, `low_yield` por desfecho agregado,
 falha de recuperação com sobreconfiança (o "sinal de calibração mais caro",

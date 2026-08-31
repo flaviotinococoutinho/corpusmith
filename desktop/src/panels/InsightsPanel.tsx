@@ -111,6 +111,23 @@ export function InsightsPanel() {
           <div><b>{g.orphans.length}</b> órfã(s) · <b>{g.low_yield.length}</b>{" "}
             de baixo rendimento · <b>{g.stale.length}</b> stale ·{" "}
             <b>{g.cold_count}</b> na base fria</div>
+          {/* V4: onde o estudo trava — índice composto por página. Só as
+              MEDIDAS aparecem: sem sinal não é "fácil", é "nada observado",
+              e o rodapé diz isso em vez de deixar o vazio insinuar. */}
+          {g.difficulty && (
+            <div className="pt-1 border-t">
+              <b>Onde o estudo trava</b>
+              {g.difficulty.length ? g.difficulty.map((d: any) => (
+                <div key={d.rel_path} className="flex items-baseline gap-1">
+                  <span className="font-mono truncate flex-1">
+                    🧗 {d.rel_path}</span>
+                  <span className="text-neutral-500">{d.reason}</span>
+                  <span className="tabular-nums">
+                    {d.score.toFixed(2)}</span>
+                </div>)) : <div className="text-neutral-400">
+                nada observado ainda — rode `corpusmith difficulty` depois de
+                praticar; silêncio aqui não significa fácil</div>}
+            </div>)}
           {/* F6 (P-8): o que a base JÁ falhou — misses abertos; fecham
               sozinhos quando um re-ask com a mesma chave responde */}
           {g.abstention && (

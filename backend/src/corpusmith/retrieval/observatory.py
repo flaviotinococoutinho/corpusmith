@@ -191,6 +191,14 @@ def insights(settings: Settings) -> dict:
     idx = connect(settings.app_support / "index.db")
     low_yield = [r["page"] for r in idx.execute(
         "SELECT page FROM page_overlay WHERE status='low_yield'")]
+    # V4: onde o estudo trava. LEITURA da projeção persistida — nunca
+    # recomputa aqui (o custo do lint por abertura de painel é o P-11, e
+    # a projeção tem comando próprio: `corpusmith difficulty`). Só as
+    # MEDIDAS entram: `measured=0` é "nada observado", não "fácil", e
+    # listá-las empataria o topo com páginas sobre as quais nada se sabe.
+    difficulty = [dict(r) for r in idx.execute(
+        "SELECT rel_path, score, reason FROM page_difficulty "
+        "WHERE measured = 1 ORDER BY score DESC, rel_path LIMIT 5")]
     bridge_rows = [dict(r) for r in idx.execute(
         "SELECT src, dst, weight FROM graph_bridges ORDER BY weight LIMIT 5")]
     idx.close()
@@ -262,6 +270,7 @@ def insights(settings: Settings) -> dict:
             "cold_count": cold_count,
             "eval": eval_rows,
             "abstention": {"open": miss_open, "recurrent": miss_recurrent},
+            "difficulty": difficulty,
         },
         "topology": {
             "nodes": len(graph["nodes"]), "edges": len(graph["edges"]),

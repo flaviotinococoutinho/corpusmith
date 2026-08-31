@@ -175,3 +175,20 @@ CREATE TABLE IF NOT EXISTS page_stability(
   last_edit_at    REAL,
   lifecycle       TEXT NOT NULL DEFAULT 'viva',
   computed_from   TEXT NOT NULL);    -- HEAD do bundle na hora do cálculo
+
+-- V4 (RFC-006): índice "difícil de explicar" por página. Projeção COMPOSTA
+-- (kernel/difficulty.py): cinco sinais de cinco donos, pesos fixos no kernel
+-- e declarados no contrato `explanation_difficulty`.
+--
+-- `measured` é o campo que impede a leitura errada: score 0 com measured=0
+-- significa "nada observado", NUNCA "fácil de explicar". Ao contrário de
+-- `page_stability`, esta projeção NÃO é 100% re-derivável do canônico — dois
+-- dos cinco sinais são de USO (prática e abstenção) e vivem fora do bundle
+-- por decisão de produto; por isso não há derivação declarada em DERIVATIONS
+-- (um carimbo sobre o HEAD prometeria um frescor que o uso não move).
+CREATE TABLE IF NOT EXISTS page_difficulty(
+  rel_path   TEXT PRIMARY KEY,
+  score      REAL NOT NULL,
+  measured   INTEGER NOT NULL DEFAULT 0,
+  reason     TEXT NOT NULL DEFAULT '',
+  components TEXT NOT NULL DEFAULT '{}');   -- JSON: parcela por componente

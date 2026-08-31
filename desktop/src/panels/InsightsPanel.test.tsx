@@ -81,3 +81,34 @@ describe("rastro de abstenção (F6)", () => {
     expect(screen.queryByText(/absteve/)).toBeNull();
   });
 });
+
+// V4 — "onde o estudo trava" chega à superfície, e o vazio não mente.
+describe("índice de dificuldade (V4)", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  function montarComGaps(gaps: Record<string, unknown>) {
+    vi.spyOn(client, "connect").mockResolvedValue(undefined as any);
+    vi.spyOn(client, "insights").mockResolvedValue(
+      { ...BASE, gaps: { ...BASE.gaps, ...gaps }, freshness: null } as any);
+    vi.spyOn(client, "traces").mockResolvedValue({ traces: [] } as any);
+    vi.spyOn(client, "gaps").mockResolvedValue(
+      { gaps: [], articulators: [], communities: 0 } as any);
+    return render(<InsightsPanel />);
+  }
+
+  it("lista as páginas mais difíceis com motivo e score", async () => {
+    montarComGaps({ difficulty: [
+      { rel_path: "concepts/entropia.md", score: 0.6,
+        reason: "falha de recuperação com confiança alta" },
+    ] });
+    expect(await screen.findByText(/concepts\/entropia.md/)).toBeTruthy();
+    expect(await screen.findByText(/confiança alta/)).toBeTruthy();
+    expect(await screen.findByText("0.60")).toBeTruthy();
+  });
+
+  it("lista vazia diz 'nada observado', nunca 'fácil'", async () => {
+    montarComGaps({ difficulty: [] });
+    expect(await screen.findByText(/nada observado/)).toBeTruthy();
+    expect(await screen.findByText(/não significa fácil/)).toBeTruthy();
+  });
+});

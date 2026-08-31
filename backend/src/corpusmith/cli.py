@@ -283,6 +283,19 @@ def cmd_curate(s: Settings, args) -> int:
     return 0
 
 
+def cmd_difficulty(s: Settings, args) -> int:
+    """Onde o estudo trava (RFC-006 V4): índice composto por página.
+
+    Cinco sinais de cinco donos com pesos fixos declarados no contrato
+    `explanation_difficulty`. `measured: false` significa "nada
+    observado" — jamais "fácil de explicar"."""
+    import json as _json
+    from .facades.memory import MemoryFacade
+    print(_json.dumps(MemoryFacade(s).difficulty(limit=args.limit),
+                      indent=1, default=str))
+    return 0
+
+
 def cmd_backup(s: Settings, args) -> int:
     """backup create|verify|list|restore [--dry-run] [--force] [path]"""
     from .usecases.backup_restore import (CreateBackup, RestoreBackup,
@@ -459,6 +472,11 @@ def main(argv: list[str] | None = None) -> int:
                           "página (RFC-006 V3)")
     stability.add_argument("--limit", type=int, default=None)
     stability.set_defaults(fn=cmd_stability)
+    difficulty = sub.add_parser(
+        "difficulty", help="onde o estudo trava: índice de dificuldade de "
+                           "explicar por página (RFC-006 V4)")
+    difficulty.add_argument("--limit", type=int, default=None)
+    difficulty.set_defaults(fn=cmd_difficulty)
     backup = sub.add_parser("backup", help="backup lógico verificável")
     backup.add_argument("op", choices=["create", "verify", "list", "restore"])
     backup.add_argument("path", nargs="?", default=None)
