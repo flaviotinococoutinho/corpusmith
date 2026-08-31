@@ -153,6 +153,10 @@ class CurationFacade:
                                           if latest else "unevaluated"),
                     "last_evaluated_at": (latest[0]["created_at"]
                                           if latest else None),
+                    # C6: o que o mecanismo ESCREVE viaja para a
+                    # superfície — um campo que ninguém vê é um campo
+                    # que não protege ninguém
+                    "side_effects": [e.value for e in c.side_effects],
                     "high_impact": c.high_impact})
         return {"lint": result, "mechanisms": mechanisms}
 

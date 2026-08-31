@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.15.0"  # RFC-006 V5: `typed_application_edges` entra (ponte abstrato→prático)
+version = "1.16.0"  # C6: `side_effects` entra no modelo (o que cada mecanismo ESCREVE)
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -67,6 +67,7 @@ universal_guarantee = false
 fallback = ["degrade"]
 adaptive = true
 feedback_signal = "ask_outcomes (useful=-1, dead_end/corrected=+1) roteado por ask_provenance página→stream (RecordOutcome._update_stream_credit)"
+side_effects = ["state_write"]
 evidence = ["golden_set", "human_feedback"]
 evaluated_by = ["eval_memory"]
 misinterpretations = [
@@ -119,6 +120,7 @@ adaptive = false
 feedback_signal = ""
 composite = true
 composite_components = ["distinct_pages", "corroborating_streams", "grounded_fraction", "freshness"]
+side_effects = ["none"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "support NÃO é probabilidade de verdade — é contagem de sustentação; o eixo factual segue sendo desfecho observado + Brier",
@@ -161,6 +163,7 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["deterministic_check", "human_feedback"]
 misinterpretations = [
   "a incerteza mede dispersão do retrieval, NÃO é probabilidade de a afirmação ser verdadeira",
@@ -202,6 +205,7 @@ universal_guarantee = false
 fallback = ["abstain", "deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write"]
 evidence = ["golden_set", "human_feedback"]
 evaluated_by = ["eval_memory"]
 misinterpretations = [
@@ -248,6 +252,7 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write"]
 evidence = ["deterministic_check", "human_feedback"]
 misinterpretations = [
   "congelar não é apagar: o conteúdo integral segue no Git e o digest na base fria — FreezeVeto é a saída normal, não erro",
@@ -292,11 +297,12 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "cluster não é juízo de MÉRITO: é sobreposição lexical — a página compilada passa pelo mesmo Harness de qualquer escrita",
 ]
-high_impact = false
+high_impact = true
 abstention_supported = false
 human_review_available = true
 [mechanisms.consolidate_inbox.parameters]
@@ -341,6 +347,7 @@ universal_guarantee = false
 fallback = ["duplicate_in_doubt", "request_human_review"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write"]
 evidence = ["deterministic_check", "property_test"]
 misinterpretations = [
   "score ≥ HI significa 'similar o suficiente para UPDATE', não identidade provada — só o degrau de identificador forte prova identidade",
@@ -409,6 +416,7 @@ composite_components = [
   "review", "question", "low_yield", "stale", "inbox", "bridge",
   "contradiction", "factual_conflict",
 ]
+side_effects = ["none"]
 evidence = ["deterministic_check", "property_test"]
 misinterpretations = [
   "posição na fila NÃO é importância absoluta — é densidade valor/custo sob pesos declarados e fontes conhecidas",
@@ -485,6 +493,7 @@ fallback = ["request_human_review"]
 adaptive = false
 feedback_signal = ""
 composite = false
+side_effects = ["none"]
 evidence = ["deterministic_check", "property_test"]
 misinterpretations = [
   "o finding NÃO marca a página como `contested` no canônico — o eixo `resolution_status` continua SEM escritor persistente (O-2 aberto). O que existe é o SINAL, recomputado a cada leitura; a marca exigiria o nível 3 da escada, que não existe",
@@ -536,6 +545,7 @@ composite_components = [
   "review_urgency", "accessibility_heat", "cost_penalty",
   "expected_information_gain",
 ]
+side_effects = ["none"]
 evidence = ["property_test", "human_feedback"]
 misinterpretations = [
   "expected_information_gain é PROXY heurístico (gap × conectividade), não informação esperada em sentido formal — o nome externo é preservado por compatibilidade; dívida registrada no ADR-38",
@@ -577,6 +587,7 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = true
 feedback_signal = "ask_outcomes via ask_context.strategy (RecordOutcome._update_strategy_credit; mesmo hedge com clamp)"
+side_effects = ["state_write"]
 evidence = ["human_feedback"]
 misinterpretations = [
   "não é diagnóstico de estilo de aprendizagem (VARK foi rejeitado, ADR-19): é preferência revelada por desfecho, revogável",
@@ -617,6 +628,7 @@ universal_guarantee = false
 fallback = ["request_human_review", "no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["state_write"]
 evidence = ["deterministic_check", "human_feedback"]
 misinterpretations = [
   "hipóteses NÃO são diagnóstico psicológico nem inferência de emoção (rejeitado por ADR-19/31)",
@@ -662,6 +674,7 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["property_test", "deterministic_check"]
 misinterpretations = [
   "Rust não melhora a qualidade epistemológica do retrieval — melhora LATÊNCIA; correção e performance são eixos separados",
@@ -698,6 +711,7 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["property_test", "deterministic_check"]
 misinterpretations = [
   "hamming baixo entre sketches indica near-duplicata textual, não equivalência semântica",
@@ -734,6 +748,7 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["property_test", "deterministic_check"]
 misinterpretations = [
   "hit de cache não significa índice atualizado — significa MESMA geração do último build",
@@ -771,6 +786,7 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["property_test", "deterministic_check"]
 misinterpretations = [
   "isolamento não torna o handler mais correto — torna a FALHA dele contível e o cancelamento real",
@@ -804,6 +820,7 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "a existência do crate não significa extração nativa — o status é PLANEJADO (ver ADR-39 Fase 3)",
@@ -835,6 +852,7 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["projection_write"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "o worker selfcheck/graph_metrics existente NÃO constrói índice — Fase 4 é alvo com porta declarada",
@@ -881,13 +899,14 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write", "projection_write"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "carimbo NÃO é histórico: uma linha só, sobrescrita a cada execução — a série temporal do tema é entrega da F2-PR2",
   "o rótulo inteiro da comunidade não é identidade de tema; comparar rótulos entre bundles diferentes não significa nada",
   "INV-004 warn não é corrupção: mapa velho é servível com aviso, e é isso que torna o mapa usável numa máquina pequena",
 ]
-high_impact = false
+high_impact = true
 abstention_supported = false
 human_review_available = false
 
@@ -926,6 +945,7 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write", "projection_write"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "theme_id NAO e um nome: e identificador opaco. O nome legivel esta no frontmatter e pode mudar sem criar pagina",
@@ -975,6 +995,7 @@ fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
 composite = false
+side_effects = ["projection_write"]
 evidence = ["deterministic_check", "property_test"]
 misinterpretations = [
   "'estável' NÃO significa 'verdadeiro' nem 'revisado' — significa que ninguém escreveu nela; as perguntas de correção têm outros donos (Harness, curadoria)",
@@ -1028,6 +1049,7 @@ fallback = ["request_human_review"]
 adaptive = false
 feedback_signal = ""
 composite = false
+side_effects = ["none"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "'nenhum conflito' NÃO significa 'vocabulário desambiguado' — significa que ninguém curou dois registros disputando o mesmo alias",
@@ -1080,6 +1102,7 @@ fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
 composite = false
+side_effects = ["state_write"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "'zero misses' NÃO é 'base completa' — é 'ninguém perguntou o que ela não cobre' (ou perguntou com frase que a chave não junta)",
@@ -1138,6 +1161,7 @@ composite_components = [
   "falha_confiante", "conflito", "pergunta_aberta",
   "vocabulario_ambiguo", "lacuna_recorrente",
 ]
+side_effects = ["projection_write"]
 evidence = ["human_feedback", "deterministic_check"]
 misinterpretations = [
   "score 0 NÃO é 'fácil de explicar' — leia `medida` antes do número",
@@ -1202,13 +1226,14 @@ fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
 composite = false
+side_effects = ["canonical_write", "projection_write"]
 evidence = ["deterministic_check", "human_feedback"]
 misinterpretations = [
   "a aresta tipada NÃO é a ponte topológica (`graph_bridges`): aquela é estrutura do grafo, esta é significado declarado — mesmo nome em português, perguntas diferentes",
   "`ambiguous_fraction` NÃO diz que as arestas estão erradas: diz quantas apontam para páginas onde 'a qual afirmação isto se aplica?' fica sem resposta",
   "medir o custo do nível de página NÃO é a decisão de criar o nível da afirmação — é a primeira das três condições de reentrada da RFC-004 §6",
 ]
-high_impact = false
+high_impact = true
 abstention_supported = false
 human_review_available = true
 [mechanisms.typed_application_edges.parameters]

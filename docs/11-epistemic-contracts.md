@@ -98,7 +98,7 @@ inductive_biases / assumptions / validity_scope / known_failure_modes
 guarantee_kind / guarantee_relative_to / universal_guarantee (= false!)
 fallback / adaptive / feedback_signal
 composite / composite_components
-evidence / evaluated_by / misinterpretations
+evidence / side_effects / evaluated_by / misinterpretations
 high_impact / abstention_supported / human_review_available
 [mechanisms.<id>.parameters]      # constantes CRUZADAS com o código
 ```
@@ -107,6 +107,7 @@ Regras do lint (códigos estáveis): `contract_missing_bias`,
 `contract_missing_scope`, `guarantee_unbounded` (universal OU sem
 referencial), `failure_modes_missing` (heurísticos),
 `evaluation_missing` (empíricos), `fallback_missing` (alto impacto),
+`canonical_write_without_impact` e `side_effect_contradiction` (C6),
 `feedback_signal_missing` (adaptativos), `components_missing`
 (compostos), `implementation_ref_missing`, `invalid_vocabulary`,
 `unknown_field`, `self_certification_only`, `forbidden_justification`.
@@ -127,6 +128,30 @@ Dívida registrada: `expected_information_gain` no score cognitivo é
 **proxy heurístico** (lacuna × conectividade), não ganho de informação
 esperado formal. O nome externo é preservado por compatibilidade; o
 contrato e este doc marcam a natureza de proxy (ADR-38).
+
+## 7b. Efeito colateral declarado (C6)
+
+`side_effects` responde **o que o mecanismo ESCREVE**, com vocabulário
+fechado e três donos distintos:
+
+| valor | toca | exige |
+|---|---|---|
+| `canonical_write` | a AUTORIDADE — bundle + Git, para sempre | `high_impact = true` (regra de lint) |
+| `projection_write` | o que se reconstrói do canônico (index, projeções) | — |
+| `state_write` | dado de USO (calor, desfechos, misses) — não é conhecimento | — |
+| `none` | nada; sozinho, ou é contradição (regra de lint) | — |
+
+O campo nasceu de um defeito MEDIDO (`docs/17` §C6): com
+`memory.auto_recycle`, um `POST /ask` — leitura no modelo mental do
+usuário e no próprio contrato — reidratava uma página, escrevia no
+bundle e movia o HEAD do Git. O agravante estrutural era a ausência do
+campo: nenhuma regra de lint poderia pegar aquilo, porque não havia onde
+declará-lo. A declaração é CRUZADA com o código
+(`test_c6_efeito_colateral.py`): mecanismo cujo `implementation_ref`
+importa o `BundleWriter` e não declara `canonical_write` quebra a suíte.
+O limite dessa checagem está dito no próprio teste — ela vê o import
+DIRETO; o caminho indireto (abstention → RecycleMemory → writer) depende
+da declaração humana, e é justamente o caso que originou o item.
 
 ## 8. Generalization Envelope
 
@@ -160,7 +185,7 @@ painel Qualidade → seção "Contratos epistêmicos"┘  (harness/epistemics)
 - ~~o golden set não é distribuído por default~~ — **pago pelo QA-1**:
   `seed_golden_eval` distribui 10+ casos out-of-the-box e o eval deixa de
   ser no-op (idempotente: nunca sobrescreve golden curado pelo usuário);
-- contratos cobrem **25 mecanismos** (registry 1.15.0) — a fonte viva é
+- contratos cobrem **25 mecanismos** (registry 1.16.0) — a fonte viva é
   `epistemics.toml` (`[registry].version` + `EXPECTED_MECHANISMS` no
   lint; este documento não acompanha o conjunto entrada a entrada; a
   consolidação e o freeze/recycle, listados aqui como devidos, ganharam
