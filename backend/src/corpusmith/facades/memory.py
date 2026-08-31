@@ -39,3 +39,10 @@ class MemoryFacade:
         sai com `medida=False` — silêncio não é facilidade."""
         from ..usecases.compute_difficulty import ComputeDifficulty
         return ComputeDifficulty(self._settings, limit=limit).execute()
+
+    def practical_cases(self, page: str) -> dict:
+        """Onde este conceito se aplica (RFC-006 V5): casos declarados por
+        ato humano, nas duas direções, MAIS a medição do custo da
+        granularidade de página que a RFC-004 §6 exige."""
+        from ..usecases.practical_cases import PracticalCases
+        return PracticalCases(self._settings, page).execute()

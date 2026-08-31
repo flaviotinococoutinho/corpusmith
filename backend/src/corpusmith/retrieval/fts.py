@@ -11,6 +11,7 @@ import time
 from pathlib import Path
 from ..okf.authorities import load_gazetteer
 from ..okf.bundle import BundleReader
+from ..kernel.semantics import relacao_ou_none
 from ..okf.links import parse_links, is_internal, resolve
 from ..normalize import analyze
 from ..runtime.db import connect
@@ -87,9 +88,16 @@ def _index_page(idx, d, gaz) -> None:
         if is_internal(link.target):
             dst = resolve(link.target, d.rel_path)
             conf = "extracted" if link.kind == "markdown" else "ambiguous"
+            # V5: a relação SEMÂNTICA (`rel:applies_to`) sobrevive à
+            # projeção. Antes ela existia no canônico e morria aqui —
+            # `kind` guarda a SINTAXE, e a pergunta "que tipo de relação
+            # é esta?" ficava sem coluna. Leitura TOLERANTE: fora do
+            # vocabulário vira NULL (não tipada), nunca derruba o rebuild.
             idx.execute(
-                "INSERT OR IGNORE INTO graph_edges(src,dst,kind,confidence)"
-                " VALUES (?,?,?,?)", (d.rel_path, dst, link.kind, conf))
+                "INSERT OR IGNORE INTO graph_edges(src,dst,kind,confidence,"
+                "rel) VALUES (?,?,?,?,?)",
+                (d.rel_path, dst, link.kind, conf,
+                 relacao_ou_none(link.rel)))
     index_entities(idx, d.rel_path, analyze(d.body, gaz=gaz))
     index_levels(idx, d.rel_path, d.body, d.meta)
 
@@ -124,10 +132,12 @@ def _gazetteer_fingerprint(gaz) -> str:
 
 
 # bump ⇒ full rebuild. `g5`: a V2 mudou a FORMA do payload do fingerprint
-# (alias → lista de identidades, com authority e qid), então toda base
-# existente reindexa uma vez. A migração passa pelo knob DECLARADO em vez
-# de acontecer de carona no hash do gazetteer.
-INDEX_GENERATION = f"g5:chunk={CHUNK_CHARS}:espan:mdtitle:senses"
+# (alias → lista de identidades, com authority e qid). `g6`: a V5 passou a
+# gravar a relação semântica (`graph_edges.rel`) — a coluna nasce vazia num
+# índice já construído, e só um rebuild a preenche. Em ambos os casos a
+# migração passa pelo knob DECLARADO em vez de acontecer de carona no hash
+# do gazetteer.
+INDEX_GENERATION = f"g6:chunk={CHUNK_CHARS}:espan:mdtitle:senses:rel"
 
 
 def _git_changed_since(kb: Path, previous_head: str) -> set[str] | None:

@@ -236,6 +236,15 @@ fingir a precisão que o nível não tem (`docs/28` §2).
 
 ### V5 · Ponte abstrato→prático
 
+> **Estado: ENTREGUE em versão página-tipada** (`docs/18` §10 item 6) —
+> exatamente o que o gate desta capacidade autorizava: "V5 em versão
+> página-tipada é compatível hoje; V5 em versão afirmação, só depois de
+> medir". O vocabulário fechado, o ato humano, a projeção e a consulta
+> estão de pé; a **medição** que a RFC-004 §6 exige passa a existir
+> (`ambiguous_fraction`). O nível da AFIRMAÇÃO segue vazio, e a
+> reentrada continua condicionada — agora com um número em vez de uma
+> intuição.
+
 **Já existe.** O mapa e o buraco: o nível 3 da escada — a afirmação — "não
 existe ainda" (`docs/28`, tabela do §1). Regiões de evidência existem
 (nível 2, `okf/regions.py`); `/ask` cita página+span como aproximação. O que

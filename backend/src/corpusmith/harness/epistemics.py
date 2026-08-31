@@ -69,7 +69,8 @@ EXPECTED_MECHANISMS = (
     "graph_cache", "metacog_observation_mining", "native_graph_kernel",
     "native_index_builder", "native_sketch_kernel", "native_text_extraction",
     "pattern_layer_snapshot", "reconciliation", "retrieval_rrf_hedge",
-    "retrieval_uncertainty", "theme_identity_matching", "worker_isolation",
+    "retrieval_uncertainty", "theme_identity_matching",
+    "typed_application_edges", "worker_isolation",
 )
 
 # `docs/14` §5: "quatro contratos novos obrigatórios" seguido de SEIS nomes —

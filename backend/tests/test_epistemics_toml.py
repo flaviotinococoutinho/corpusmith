@@ -288,3 +288,18 @@ def test_explanation_difficulty_parameters_match_code():
     assert declarados == set(COMPONENTES)
     from corpusmith.usecases.compute_difficulty import _CONFIANCA
     assert float(p["limiar_sobreconfianca"]) == _CONFIANCA
+
+
+def test_typed_application_edges_parameters_match_code():
+    """V5 — o vocabulário do contrato É o do kernel, e o proxy de
+    ambiguidade declarado É o que a consulta usa.
+
+    Falsificável: acrescente uma relação em `RELACOES` (ou troque o kind
+    de sujeito da medição) sem mexer no TOML e este teste reprova — que é
+    o único jeito de um vocabulário fechado continuar fechado."""
+    from corpusmith.kernel.semantics import RELACOES
+    from corpusmith.usecases.practical_cases import _KINDS_DE_SUJEITO
+    p = _params("typed_application_edges")
+    assert tuple(p["relacoes"].split(",")) == tuple(sorted(RELACOES))
+    assert tuple(p["kinds_de_sujeito"].split(",")) == _KINDS_DE_SUJEITO
+    assert int(p["sujeitos_para_ambiguidade"]) == 2

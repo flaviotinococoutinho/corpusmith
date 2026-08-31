@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.14.0"  # RFC-006 V4: `explanation_difficulty` entra (onde o estudo trava)
+version = "1.15.0"  # RFC-006 V5: `typed_application_edges` entra (ponte abstrato→prático)
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -1161,3 +1161,57 @@ saturacao_lacuna_recorrente = 3
 # mesmo limiar do spaced-v1 (cognitive/policy.py); repetido no código
 # porque a memória não importa `cognitive/`, e preso por teste
 limiar_sobreconfianca = 0.7
+
+# --------------------------------------------------------------------------
+# V5 (RFC-006): a ponte abstrato→prático, e a medição que a RFC-004 §6 pede.
+[mechanisms.typed_application_edges]
+title = "Aresta semântica tipada por ato humano (applies_to / exemplifies / refines)"
+decision = "aceitar apenas relações de um vocabulário FECHADO na escrita, projetá-las no grafo, responder 'que caso prático sustenta este conceito?' nas duas direções, e MEDIR o custo da granularidade de página em vez de estimá-lo"
+implementation_refs = [
+  "backend/src/corpusmith/kernel/semantics.py",
+  "backend/src/corpusmith/usecases/curate/link.py",
+  "backend/src/corpusmith/usecases/practical_cases.py",
+  "backend/src/corpusmith/retrieval/fts.py",
+]
+inductive_biases = [
+  "a relação é ATO HUMANO, nunca inferência: o produto não adivinha que um conceito se aplica a um caso — quem declara é quem curou, pelo caminho único de escrita (commit + preview + undo)",
+  "vocabulário fechado na ESCRITA e tolerante na LEITURA: o canônico é para sempre, então `rel:` inventado é recusado no ato; mas relação desconhecida já gravada (bundle antigo, link de prosa) vira `NULL` — nunca derruba um rebuild",
+  "as duas direções valem: quem escreveu `exemplifies` do lado prático respondeu à mesma pergunta pelo outro lado; exigir a direção 'certa' seria burocracia disfarçada de ontologia",
+  "link SEM relação não é caso prático: 'estas páginas se falam' e 'esta se aplica àquela' são perguntas diferentes — misturá-las devolveria o grafo inteiro como resposta",
+]
+assumptions = [
+  "o curador que declara `applies_to` conhece o conteúdo das duas páginas — a relação não é verificada contra o texto",
+  "sujeito forte (identificador acadêmico ou norma) aproxima 'assunto' de uma página: 2+ sujeitos distintos indicam que ela carrega afirmações separáveis. É PROXY declarado, não definição de assunto",
+]
+validity_scope = [
+  "arestas escritas pelo ato de curadoria ou presentes no corpo com `rel:` do vocabulário; granularidade de PÁGINA (o nível 3 da escada, a afirmação, segue vazio — docs/28)",
+  "leitura e medição; a relação não altera fusão do /ask, não pesa o Leiden e não marca nada no frontmatter",
+  "a medição descreve as arestas QUE EXISTEM no bundle local — não é amostra de um universo de consultas",
+]
+known_failure_modes = [
+  "ERRO DE NÍVEL DECLARADO — o modo central: 'aplica-se a esta página' afirma que a página INTEIRA é o caso; quando ela carrega várias afirmações, a declaração é mais grossa que a realidade. O preview do ato diz isso antes do efeito e a consulta MEDE a fração, mas o produto não resolve enquanto o nível da afirmação não existir",
+  "o proxy de ambiguidade conta SUJEITOS FORTES: uma página com duas afirmações sobre o MESMO sujeito conta como não-ambígua, e uma página que só cita duas normas de passagem conta como ambígua — subconta e superconta, em direções conhecidas",
+  "recall zero sem curadoria: base sem nenhuma aresta tipada responde 'nenhum caso prático' para todo conceito, e isso NÃO significa que o conceito não se aplica a nada",
+  "`refines` e `supersedes` são vizinhos perigosos: refinar convive, suceder aposenta — um curador que use `refines` onde queria `supersede` deixa as duas páginas vivas no retrieval, e nenhum lint detecta a troca",
+  "a relação vive no TÍTULO do link markdown: um editor externo que reescreva o link sem preservar o atributo apaga a relação em silêncio (o commit registra a mudança, mas nada avisa)",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "as arestas com `rel` do vocabulário presentes no índice; NÃO que a relação declarada seja verdadeira, NÃO que a ausência de arestas signifique ausência de aplicação, NÃO que a fração medida generalize para outros corpora"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+composite = false
+evidence = ["deterministic_check", "human_feedback"]
+misinterpretations = [
+  "a aresta tipada NÃO é a ponte topológica (`graph_bridges`): aquela é estrutura do grafo, esta é significado declarado — mesmo nome em português, perguntas diferentes",
+  "`ambiguous_fraction` NÃO diz que as arestas estão erradas: diz quantas apontam para páginas onde 'a qual afirmação isto se aplica?' fica sem resposta",
+  "medir o custo do nível de página NÃO é a decisão de criar o nível da afirmação — é a primeira das três condições de reentrada da RFC-004 §6",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.typed_application_edges.parameters]
+relacoes = "applies_to,exemplifies,refines"
+kinds_de_sujeito = "identifier,standard"
+sujeitos_para_ambiguidade = 2

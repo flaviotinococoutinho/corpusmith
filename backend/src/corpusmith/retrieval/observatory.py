@@ -54,11 +54,15 @@ def graph_data(settings: Settings, *, limit: int | None = None) -> dict:
     """
     pages = _pages_meta(settings)
     idx = connect(settings.app_support / "index.db")
+    # V5: `rel` viaja junto — a aresta que um humano TIPOU não pode chegar
+    # ao leitor indistinguível de um link solto. `None` na esmagadora
+    # maioria (link sem tipo), e o consumidor decide se destaca.
     edges = [{"src": r["src"], "dst": r["dst"],
-              "confidence": r["confidence"] or "extracted"}
+              "confidence": r["confidence"] or "extracted",
+              "rel": r["rel"]}
              for r in idx.execute(
                  "SELECT src, dst, COALESCE(confidence,'extracted') "
-                 "confidence FROM graph_edges")]
+                 "confidence, rel FROM graph_edges")]
     community = {r["page"]: r["community"] for r in
                  idx.execute("SELECT page, community FROM communities")}
     bridges = {(r["src"], r["dst"]) for r in

@@ -83,11 +83,11 @@ Gate completo (o mesmo do CI e do `AGENTS.md` §2; a lista é presa por
 `architecture.toml [gate]` + `test_pr0_gate.py` — atalho: `just verify`):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # → todos passam (884 na v2.0)
+cd backend && .venv/bin/python -m pytest tests -q   # → todos passam (901 na v2.0)
 cd desktop && npx tsc --noEmit                      # → sem erros
 cd desktop && npm test                              # → smoke da UI verde
 docker compose config -q                            # → sem saída = ok
-cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # → 24 mecanismo(s)
+cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # → 25 mecanismo(s)
 cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # → sem erros
 ```
 
@@ -109,7 +109,7 @@ backend/scripts/corpusmith okf bootstrap    # bundle criado
 backend/scripts/corpusmith seed             # seed ok (idempotente)
 backend/scripts/corpusmith okf lint         # 0 finding(s), 0 erro(s)
 backend/scripts/corpusmith doctor           # {"ok": true, ...}
-backend/scripts/corpusmith epistemics lint  # 24 mecanismo(s) na v2.0; os avisos
+backend/scripts/corpusmith epistemics lint  # 25 mecanismo(s) na v2.0; os avisos
     # `mechanism_promised` são dívida DECLARADA (contrato prometido em doc
     # e ainda não escrito) — não são erro de instalação
 ```

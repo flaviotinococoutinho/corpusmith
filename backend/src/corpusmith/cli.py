@@ -296,6 +296,20 @@ def cmd_difficulty(s: Settings, args) -> int:
     return 0
 
 
+def cmd_applications(s: Settings, args) -> int:
+    """Onde um conceito se aplica na prática (RFC-006 V5).
+
+    Lê as arestas TIPADAS que um humano declarou (`applies_to`,
+    `exemplifies`, `refines`) nas duas direções. `measurement` traz o custo
+    MEDIDO da granularidade de página — a evidência que a RFC-004 §6 pede
+    antes de reabrir o nível da afirmação."""
+    import json as _json
+    from .facades.memory import MemoryFacade
+    print(_json.dumps(MemoryFacade(s).practical_cases(args.page),
+                      indent=1, ensure_ascii=False))
+    return 0
+
+
 def cmd_backup(s: Settings, args) -> int:
     """backup create|verify|list|restore [--dry-run] [--force] [path]"""
     from .usecases.backup_restore import (CreateBackup, RestoreBackup,
@@ -477,6 +491,11 @@ def main(argv: list[str] | None = None) -> int:
                            "explicar por página (RFC-006 V4)")
     difficulty.add_argument("--limit", type=int, default=None)
     difficulty.set_defaults(fn=cmd_difficulty)
+    applications = sub.add_parser(
+        "applications", help="onde um conceito se aplica na prática: "
+                             "arestas tipadas + a medição do nível (V5)")
+    applications.add_argument("page")
+    applications.set_defaults(fn=cmd_applications)
     backup = sub.add_parser("backup", help="backup lógico verificável")
     backup.add_argument("op", choices=["create", "verify", "list", "restore"])
     backup.add_argument("path", nargs="?", default=None)

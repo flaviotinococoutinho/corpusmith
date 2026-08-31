@@ -26,8 +26,13 @@ END;
 CREATE TABLE IF NOT EXISTS graph_edges (
     src  TEXT NOT NULL,
     dst  TEXT NOT NULL,
-    kind TEXT NOT NULL,          -- 'wikilink' | 'markdown'
+    kind TEXT NOT NULL,          -- 'wikilink' | 'markdown' (SINTAXE)
     confidence TEXT DEFAULT 'extracted',   -- v0.8 §1.4: extracted|inferred|ambiguous
+    -- V5 (RFC-006): a relação SEMÂNTICA declarada por um humano
+    -- (kernel/semantics.py: aplica_se_a|exemplifica|refina). NULL = link
+    -- sem tipo, que é a esmagadora maioria. Fora da PK de propósito: o
+    -- tipo é ATRIBUTO da aresta que já existe, não uma aresta nova.
+    rel TEXT,
     PRIMARY KEY (src, dst, kind)
 );
 

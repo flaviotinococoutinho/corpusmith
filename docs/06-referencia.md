@@ -255,7 +255,9 @@ frozen_at, frozen_commit, activation, recall_p, recycles)` · `cold_fts`
 (FTS sobre digest, para o recall de fallback).
 
 **index.db** (derivado): `chunks(+valid_at,invalid_at)` · `chunks_fts` ·
-`graph_edges(+confidence)` · `communities` · `embeddings` · `entities` ·
+`graph_edges(+confidence,+rel)` — `kind` é SINTAXE
+(markdown/wikilink) e `rel` é a relação SEMÂNTICA declarada por humano
+(V5: `applies_to|exemplifies|refines`, NULL na maioria) · `communities` · `embeddings` · `entities` ·
 `page_entities(confidence,data)` · `page_levels(level∈0,1)` ·
 `fts_levels` · `page_overlay(status∈preferred|tentative|low_yield)` ·
 `graph_bridges(src,dst,weight,small_side,large_side)` ·
@@ -439,7 +441,8 @@ fria). Processos: jobs falhos têm ↻ reexecutar (payload na listagem).
 Removido: retrieval/fusion.py (substituído por streams desde a v0.9).
 
 **Memory**: AskMemory · RecordOutcome · EvaluateMemory ·
-ComputeStability (RFC-006 V3) · ComputeDifficulty (RFC-006 V4).
+ComputeStability (RFC-006 V3) · ComputeDifficulty (RFC-006 V4) ·
+PracticalCases (RFC-006 V5).
 **Compiler**: IngestSource (entrada pelo app → raw/) · CompileSource ·
 ConsolidateInbox (+`_ConsolidatedPage`) · ReconcileCandidate (invocado
 pelo Template Method) · RebuildIndex · DetectCommunities · SavePipeline ·
