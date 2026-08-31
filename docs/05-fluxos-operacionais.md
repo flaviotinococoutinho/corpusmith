@@ -376,5 +376,6 @@ smoke: app abre com daemon morto (read-only) · sobe daemon ·
 | CLI `stability` | Memory.stability | ComputeStability (RFC-006 V3) |
 | CLI `difficulty` | Memory.difficulty | ComputeDifficulty (RFC-006 V4) |
 | CLI `applications` | Memory.practical_cases | PracticalCases (RFC-006 V5) |
+| CLI `sheet [--prose]` | Memory.concept_sheet | ConceptSheet (RFC-006 V6) |
 | CLI `backup create\|verify\|restore` · job backup | — (sem facade; ADR-35) | CreateBackup / RestoreBackup |
 | GET / · /health · /health/full | — (sistema, api/system.py) | — |

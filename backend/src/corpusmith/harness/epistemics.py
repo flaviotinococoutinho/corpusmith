@@ -62,7 +62,8 @@ def load_registry(path: Path | str | None = None
 EXPECTED_MECHANISMS = (
     "abstention", "abstention_trace",
     "adaptive_strategy_selection", "alias_conflict",
-    "attention_queue", "cognitive_priority", "consolidate_inbox",
+    "attention_queue", "cognitive_priority", "concept_sheet",
+    "consolidate_inbox",
     "editorial_stability",
     "evidence_sufficiency", "explanation_difficulty",
     "factual_conflict", "memory_freeze",

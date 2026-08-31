@@ -442,7 +442,8 @@ Removido: retrieval/fusion.py (substituído por streams desde a v0.9).
 
 **Memory**: AskMemory · RecordOutcome · EvaluateMemory ·
 ComputeStability (RFC-006 V3) · ComputeDifficulty (RFC-006 V4) ·
-PracticalCases (RFC-006 V5).
+PracticalCases (RFC-006 V5) ·
+ConceptSheet (RFC-006 V6).
 **Compiler**: IngestSource (entrada pelo app → raw/) · CompileSource ·
 ConsolidateInbox (+`_ConsolidatedPage`) · ReconcileCandidate (invocado
 pelo Template Method) · RebuildIndex · DetectCommunities · SavePipeline ·

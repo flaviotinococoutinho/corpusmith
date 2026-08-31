@@ -46,3 +46,12 @@ class MemoryFacade:
         granularidade de página que a RFC-004 §6 exige."""
         from ..usecases.practical_cases import PracticalCases
         return PracticalCases(self._settings, page).execute()
+
+    def concept_sheet(self, page: str, *, prose: bool = False) -> dict:
+        """A ficha do conceito (RFC-006 V6): custo de LEITURA, o que
+        permanece, onde trava e onde se aplica — com as ressalvas de cada
+        mecanismo ao lado do número que elas qualificam, e o que NÃO foi
+        medido dito na própria ficha. `prose` liga a borda LLM (default
+        desligada); a prosa vive FORA do bundle."""
+        from ..usecases.concept_sheet import ConceptSheet
+        return ConceptSheet(self._settings, page, prose=prose).execute()

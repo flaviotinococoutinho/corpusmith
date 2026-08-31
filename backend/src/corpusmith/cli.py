@@ -310,6 +310,24 @@ def cmd_applications(s: Settings, args) -> int:
     return 0
 
 
+def cmd_sheet(s: Settings, args) -> int:
+    """A ficha do conceito (RFC-006 V6).
+
+    Reúne o que o produto MEDIU sobre uma página — custo de leitura, o
+    que permanece, onde trava, onde se aplica — com as ressalvas de cada
+    mecanismo junto do número. `--prose` liga a borda LLM (default
+    desligada): a prosa sai FORA do bundle e as ressalvas são
+    re-anexadas DEPOIS do modelo."""
+    import json as _json
+    from .facades.memory import MemoryFacade
+    try:
+        ficha = MemoryFacade(s).concept_sheet(args.page, prose=args.prose)
+    except KeyError as e:
+        sys.exit(str(e).strip("'"))
+    print(_json.dumps(ficha, indent=1, ensure_ascii=False, default=str))
+    return 0
+
+
 def cmd_backup(s: Settings, args) -> int:
     """backup create|verify|list|restore [--dry-run] [--force] [path]"""
     from .usecases.backup_restore import (CreateBackup, RestoreBackup,
@@ -496,6 +514,13 @@ def main(argv: list[str] | None = None) -> int:
                              "arestas tipadas + a medição do nível (V5)")
     applications.add_argument("page")
     applications.set_defaults(fn=cmd_applications)
+    sheet = sub.add_parser(
+        "sheet", help="ficha do conceito: custo, o que permanece, onde "
+                      "trava e onde se aplica (RFC-006 V6)")
+    sheet.add_argument("page")
+    sheet.add_argument("--prose", action="store_true",
+                       help="liga a borda LLM (default: desligada)")
+    sheet.set_defaults(fn=cmd_sheet)
     backup = sub.add_parser("backup", help="backup lógico verificável")
     backup.add_argument("op", choices=["create", "verify", "list", "restore"])
     backup.add_argument("path", nargs="?", default=None)

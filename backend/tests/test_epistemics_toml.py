@@ -303,3 +303,17 @@ def test_typed_application_edges_parameters_match_code():
     assert tuple(p["relacoes"].split(",")) == tuple(sorted(RELACOES))
     assert tuple(p["kinds_de_sujeito"].split(",")) == _KINDS_DE_SUJEITO
     assert int(p["sujeitos_para_ambiguidade"]) == 2
+
+
+def test_concept_sheet_parameters_match_code():
+    """V6 — a ficha usa a MESMA constante de custo da fila de atenção, e
+    o contrato declara exatamente os mecanismos cujas ressalvas ela
+    carrega. Falsificável: acrescente um número à ficha sem acrescentar o
+    contrato dele em `_CONTRATOS` (ou mude o wpm num dos dois lados)."""
+    from corpusmith.usecases.concept_sheet import _CONTRATOS
+    from corpusmith.usecases.plan_attention import _MIN_COST, _WPM
+    p = _params("concept_sheet")
+    assert float(p["palavras_por_minuto"]) == _WPM
+    assert float(p["piso_de_custo_min"]) == _MIN_COST
+    assert tuple(p["contratos_citados"].split(",")) == _CONTRATOS
+    assert p["prosa_default"] == "desligada"
