@@ -228,7 +228,7 @@ async function copyCommand(id,button){
   }catch(_){announce("Não foi possível copiar; selecione o comando manualmente");}
 }
 function renderReferences(){
-  $("#reference-grid").innerHTML=E.references.map((r)=>`<article class="reference-card"><div class="card-meta"><span class="badge">${esc(r.epistemic)}</span><span>grau ${esc(r.grade)}</span></div><h2>${esc(r.title)}</h2><p>${esc(r.note)}</p><div class="card-tags"><span>${esc(r.type)}</span><span>${esc(r.organization)}</span><span>${esc(r.visibility)}</span></div>${r.locator.startsWith("./")?`<a class="locator" href="${esc(r.locator)}">Abrir artefato local →</a>`:`<div class="locator">${esc(r.locator)}</div>`}</article>`).join("");
+  $("#reference-grid").innerHTML=E.references.map((r)=>`<article class="reference-card"><div class="card-meta"><span class="badge">${esc(r.epistemic)}</span><span>grau ${esc(r.grade)}</span></div><h2>${esc(r.title)}</h2><p>${esc((r.note||r.scope))}</p><div class="card-tags"><span>${esc(r.type)}</span><span>${esc(r.organization)}</span><span>${esc(r.visibility)}</span></div>${r.locator.startsWith("./")?`<a class="locator" href="${esc(r.locator)}">Abrir artefato local →</a>`:`<div class="locator">${esc(r.locator)}</div>`}</article>`).join("");
 }
 function renderQuestion(){
   const q=E.questions[questionIndex%E.questions.length]; const m=moduleOf(q.moduleId);
@@ -317,7 +317,7 @@ function renderGlobalSearch(){
   E.concepts.forEach((c)=>{if(strip(c.title+" "+c.summary+" "+c.tags.join(" ")).includes(q))results.push({kind:"conceito",title:c.title,subtitle:moduleOf(c.moduleId).title,id:c.id,action:"concept"});});
   E.questions.forEach((x)=>{if(strip(x.prompt).includes(q))results.push({kind:"pergunta",title:x.prompt,subtitle:x.id,id:x.id,action:"question"});});
   E.labs.forEach((x)=>{if(strip(x.title+" "+x.practice).includes(q))results.push({kind:"laboratório",title:x.title,subtitle:"Dia "+x.day,id:String(x.day),action:"lab"});});
-  E.references.forEach((x)=>{if(strip(x.title+" "+x.note).includes(q))results.push({kind:"fonte",title:x.title,subtitle:x.epistemic+" · grau "+x.grade,id:x.id,action:"reference"});});
+  E.references.forEach((x)=>{if(strip(x.title+" "+(x.note||x.scope)).includes(q))results.push({kind:"fonte",title:x.title,subtitle:x.epistemic+" · grau "+x.grade,id:x.id,action:"reference"});});
   $("#global-search-results").innerHTML=results.slice(0,30).map((r)=>`<button type="button" class="search-result" data-action="${r.action}" data-id="${esc(r.id)}"><strong>${esc(r.title)}</strong><span>${esc(r.kind)} · ${esc(r.subtitle)}</span></button>`).join("")||"<p>Nenhum resultado.</p>";
   $$("#global-search-results button").forEach((b)=>b.addEventListener("click",()=>activateSearchResult(b.dataset.action,b.dataset.id,b)));
   announce(`${results.length} resultados encontrados`);
