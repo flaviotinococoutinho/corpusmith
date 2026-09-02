@@ -1,0 +1,1295 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Manual auditável de preparação para seleção Backend Java/Kotlin Senior/Staff no iFood">
+  <title>Box de achados · Seleção Backend iFood · Java/Kotlin</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="site-nav">
+  <div class="brand"><span class="brand-mark">iF?</span><span>Backend selection box</span></div>
+  <nav class="nav-links" aria-label="Sumário">
+    <a href="#mapa">Mapa</a><a href="#evidencias">Evidências</a><a href="#flavio">Seu encaixe</a>
+    <a href="#etapas">Etapas</a><a href="#design">Design</a><a href="#perguntas">Perguntas</a>
+    <a href="#plano">21 dias</a><a href="#fontes">Fontes</a>
+  </nav>
+  <button id="print-manual" class="nav-action no-print">Imprimir / PDF</button>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">Box de achados · seleção de engenharia · 22 ago 2026</p>
+    <h1>Backend iFood<br>Java + Kotlin</h1>
+    <p class="dek">Manual-base auditável e personalizado para Flávio: sinais atuais, testemunhos triangulados, macro-ontologia, 60 perguntas, rubricas, pegadinhas, prints, códigos executáveis e um plano de treino de 21 dias para Senior/Staff.</p>
+    <div class="hero-meta">
+      <span>29 fontes classificadas</span><span>5 prints de evidência</span><span>60 perguntas</span>
+      <span>4 scorecards</span><span>8 histórias pessoais</span><span>Java + Kotlin + Kafka + SRE</span>
+    </div>
+  </section>
+
+  <section class="section" id="resumo">
+    <div class="section-heading"><div><span class="section-number">00 · RESPOSTA DIRETA</span><h2>O que merece sua energia</h2><p>Conclusão primeiro; detalhes e trilha de auditoria depois.</p></div></div>
+    <div class="grid grid-4">
+      <div class="card accent"><div class="metric">1º</div><div class="metric-label">profundidade + decisões reais</div><p>O currículo vira superfície de probes: onde usou, por que, alternativa, trade-off, métrica, falha e mudança.</p></div>
+      <div class="card teal"><div class="metric">2º</div><div class="metric-label">system design operável</div><p>Invariantes, escala, consistência, idempotência, SLO, falha, custo e evolução — antes da coleção de logos.</p></div>
+      <div class="card navy"><div class="metric">3º</div><div class="metric-label">comunicação Senior/Staff</div><p>Tese primeiro, ação própria delimitada, resultado/proxy e alcance. Staff precisa de influência além do próprio serviço.</p></div>
+      <div class="card amber"><div class="metric">4º</div><div class="metric-label">coding de manutenção</div><p>Treine código correto e testado, mas a evidência não sustenta live coding como etapa universal em todo loop.</p></div>
+    </div>
+    <div class="callout dark"><strong>Diagnóstico personalizado</strong>Seu encaixe técnico é forte para Senior: Java/Spring, pagamentos/cartões, Kafka/SQS, sistemas distribuídos, AWS/EKS e produção. Para Staff, a lacuna não é “mais tecnologia”: é tornar visível influência multi-time, mecanismos duráveis, métricas e direção sob ambiguidade. Kotlin deve ser apresentado como fluência crescente, sem imitar especialidade que ainda não foi praticada na mesma profundidade de Java.</div>
+    <div class="grid grid-3">
+      <div class="card"><span class="confidence a">A · fato atual/primário</span><p>Vagas oficiais e engenharia publicada em 2026 sustentam a barra técnica e o contexto de produção.</p></div>
+      <div class="card"><span class="confidence b">B · testemunho/case</span><p>Relatos de candidatos e customer stories sustentam sinais, desde que datados, limitados e corroborados.</p></div>
+      <div class="card"><span class="confidence x">X · ruído rejeitado</span><p>Guias SEO com etapas fixas ou HackerRank sem fonte rastreável não entraram no modelo factual.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="metodo">
+    <div class="section-heading"><div><span class="section-number">01 · MÉTODO</span><h2>Quatro iterações antes de concluir</h2><p>O prompt foi expandido em quatro passagens com checkpoint local: cada ciclo acrescentou referências, abstrações e testes contra ruído.</p></div></div>
+    <div class="grid grid-4">
+      <div class="card accent"><h3>1 · Terreno</h3><p>Vagas atuais, carreiras e engenharia oficial. Separação por cargo, domínio, data e validade temporal.</p><p><strong>Adicionado:</strong> triangulação, recência e diferença entre requisito de trabalho e etapa de entrevista.</p></div>
+      <div class="card teal"><h3>2 · Processo</h3><p>Glassdoor/Reddit/AMA por cargo e resultado, sem converter opinião anônima em política.</p><p><strong>Adicionado:</strong> CIT/STAR-L, cadeia de probes, contradições e módulos recorrentes.</p></div>
+      <div class="card amber"><h3>3 · Treino</h3><p>Cada sinal virou exercício, artefato e critério observável.</p><p><strong>Adicionado:</strong> prática deliberada, retrieval practice, interleaving, Fermi estimates e gravação.</p></div>
+      <div class="card purple"><h3>4 · Auditoria adversarial</h3><p>Senior versus Staff, time/domínio, falsos universais e fontes SEO problemáticas.</p><p><strong>Adicionado:</strong> grau A/B/C/X, 80/20 e “o que mudaria minha conclusão”.</p></div>
+    </div>
+    <div class="callout info"><strong>Checkpoint reproduzível</strong>O plano e as sementes de busca estão em <a href="docs/01-metodo-quatro-passagens.md">docs/01-metodo-quatro-passagens.md</a>; os relatórios completos dos três eixos estão no diretório <code class="inline">docs/</code>.</div>
+  </section>
+
+  <section class="section" id="mapa">
+    <div class="section-heading"><div><span class="section-number">02 · MACRO-ONTOLOGIA</span><h2>Uma visão do todo</h2><p>Cinco pilares e uma dependência fundamental: requisito/invariante vem antes de tecnologia.</p></div></div>
+    <div class="ontology">
+      <div class="pillar"><strong>Processo</strong><span>Triagem possível por IA</span><span>Talent</span><span>Profundidade</span><span>Design</span><span>Liderança/cultura</span></div>
+      <div class="pillar"><strong>Código JVM</strong><span>Java/JMM/runtime</span><span>Kotlin/coroutines</span><span>Spring/JPA</span><span>Testes/review</span><span>Legibilidade</span></div>
+      <div class="pillar"><strong>Distribuído</strong><span>Contratos/dados</span><span>Kafka/SQS/SNS</span><span>Idempotência</span><span>Consistência</span><span>Replay/reconciliação</span></div>
+      <div class="pillar"><strong>Produção</strong><span>SLO/observabilidade</span><span>AWS/Kubernetes</span><span>Overload</span><span>Canary/rollback</span><span>Incidentes/custo</span></div>
+      <div class="pillar"><strong>Staff</strong><span>Direção técnica</span><span>Influência</span><span>Trade-offs</span><span>Mecanismos duráveis</span><span>Impacto organizacional</span></div>
+    </div>
+    <div class="dependency">
+      <div class="step">Invariante de negócio</div><div class="arrow">→</div>
+      <div class="step">Contratos e dados</div><div class="arrow">→</div>
+      <div class="step">Consistência e eventos</div><div class="arrow">→</div>
+      <div class="step">Falhas e recuperação</div><div class="arrow">→</div>
+      <div class="step">SLO e telemetria</div><div class="arrow">→</div>
+      <div class="step">Evolução segura</div>
+    </div>
+    <div class="callout warn"><strong>Pegadinha macro</strong>Começar por “microserviços + Kafka + Redis + Kubernetes” antes de invariantes e SLO produz um diagrama vistoso, mas não uma solução verificável. A pergunta aberta costuma testar se você descobre o problema, não só se conhece componentes.</div>
+  </section>
+
+  <section class="section" id="evidencias">
+    <div class="section-heading"><div><span class="section-number">03 · EVIDÊNCIAS VISUAIS</span><h2>O que os prints realmente provam</h2><p>Cada legenda explicita alcance e limite. Prints de Glassdoor foram bloqueados por proteção anti-bot; o texto indexado foi preservado no ledger, sem contornar a proteção.</p></div></div>
+    <div class="evidence-gallery">
+      <figure class="evidence"><img src="evidence-selected/01-vaga-staff-logistics-requisitos.jpg" alt="Requisitos da vaga oficial Staff Logistics"><figcaption><strong>Vaga oficial Staff Logistics · grau A</strong>Prova requisitos atuais: sistemas distribuídos, influência, mensageria, AWS/K8s e Java/Kotlin/Rust. Não prova perguntas exatas. <a href="https://job-boards.greenhouse.io/ifoodcarreiras/jobs/8590318002">Abrir fonte</a>.</figcaption></figure>
+      <figure class="evidence"><img src="evidence-selected/02-relato-2026-profundidade-tecnica.jpg" alt="Relato público sobre profundidade técnica"><figcaption><strong>Relato recente de profundidade · grau B</strong>Documenta a cadeia “conhece/usou/aplicou/trade-offs” e tópicos como arquitetura, async, testes, observabilidade e custo. É testemunho anônimo, não rubrica oficial. <a href="https://www.reddit.com/r/brdev/comments/1uiwkdn/entrevista_profundidade_t%C3%A9cnica_e_design_e/">Abrir fonte</a>.</figcaption></figure>
+      <figure class="evidence"><img src="evidence-selected/03-triagem-digai-relato.jpg" alt="Relato sobre triagem DigaAI"><figcaption><strong>Triagem conversacional possível · grau B</strong>Reforça que uma etapa automatizada pode anteceder Talent em alguns fluxos recentes. Não é universal. <a href="https://www.reddit.com/r/brdev/comments/1thnlst/fiz_minha_primeira_entrevista_por_ia/">Abrir fonte</a>.</figcaption></figure>
+      <figure class="evidence"><img src="evidence-selected/04-digai-audio-tres-minutos.jpg" alt="Relato de áudio de três minutos"><figcaption><strong>Áudio com até três minutos · grau B</strong>Base prática para o script cronometrado. O limite é de um relato; prepare-se sem tratá-lo como regra permanente. <a href="https://www.reddit.com/r/brdev/comments/1thnlst/fiz_minha_primeira_entrevista_por_ia/">Abrir fonte</a>.</figcaption></figure>
+      <figure class="evidence"><img src="evidence-selected/05-confluent-streaming-desafio.jpg" alt="Caso Confluent e iFood"><figcaption><strong>Streaming como backbone · grau B</strong>Case de fornecedor: útil para TCO, schema, operação e escala histórica. Números antigos não descrevem automaticamente 2026. <a href="https://www.confluent.io/customers/ifood/">Abrir fonte</a>.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="section" id="funil">
+    <div class="section-heading"><div><span class="section-number">04 · FUNIL PROVÁVEL</span><h2>Módulos recorrentes, não sequência fixa</h2><p>A convergência 2024–2026 sustenta profundidade + design. AI, coding, cultura separada e ordem variam.</p></div></div>
+    <div class="timeline">
+      <div class="timeline-row"><div class="timeline-mark"><span class="timeline-dot">0</span></div><div class="timeline-content"><h4>Entrada · candidatura, sourcing ou indicação <span class="confidence a">alta</span></h4><p>O formulário atual pergunta Java, Kotlin, Kafka, Kubernetes e, em Staff, liderança. Indicação ajuda a chegar à conversa; não substitui a barra.</p></div></div>
+      <div class="timeline-row"><div class="timeline-mark"><span class="timeline-dot">?</span></div><div class="timeline-content"><h4>Triagem IA/WhatsApp em alguns processos <span class="confidence b">média</span></h4><p>Relatos recentes descrevem áudio/diálogo, motivação e perguntas técnicas. Prepare respostas cronometradas; não presuma que ocorrerá.</p></div></div>
+      <div class="timeline-row"><div class="timeline-mark"><span class="timeline-dot">1</span></div><div class="timeline-content"><h4>Talent / recruiter <span class="confidence b">média-alta</span></h4><p>Trajetória, momento, por que iFood, projeto relevante, papel próprio, expectativas e aderência.</p></div></div>
+      <div class="timeline-row"><div class="timeline-mark"><span class="timeline-dot">2</span></div><div class="timeline-content"><h4>Profundidade técnica <span class="confidence b">média-alta</span></h4><p>Normalmente guiada por currículo e experiências; mecanismos, decisões, alternativas, falhas, métricas e aprendizado.</p></div></div>
+      <div class="timeline-row"><div class="timeline-mark"><span class="timeline-dot">3</span></div><div class="timeline-content"><h4>Design / arquitetura <span class="confidence b">média-alta</span></h4><p>Ao vivo e aberto; Draw.io aparece em relatos. Requisitos não funcionais podem ficar por sua conta. Caso de ratings é recorrente, não garantido.</p></div></div>
+      <div class="timeline-row"><div class="timeline-mark"><span class="timeline-dot">±</span></div><div class="timeline-content"><h4>Coding adicional <span class="confidence c">possível</span></h4><p>Um relato Staff de 2025 confirma existência; vários relatos recentes não mencionam. Treine, mas não dê prioridade exclusiva.</p></div></div>
+      <div class="timeline-row"><div class="timeline-mark"><span class="timeline-dot">4</span></div><div class="timeline-content"><h4>Liderança / cultura / gestor <span class="confidence b">média</span></h4><p>Influência, conflito, feedback, escopo, aprendizado e alinhamento. Pode ser etapa própria ou avaliação distribuída.</p></div></div>
+      <div class="timeline-row"><div class="timeline-mark"><span class="timeline-dot">5</span></div><div class="timeline-content"><h4>Oferta ou match com equipe <span class="confidence a">alta no pipeline citado</span></h4><p>Uma vaga oficial contínua informa associação a vaga específica ao final. Loops completos apareceram em 2–4 semanas, mas atraso e espera variam.</p></div></div>
+    </div>
+    <div class="grid grid-3">
+      <div class="card"><h3>Bem sustentado</h3><ul><li>Java/Kotlin no alvo.</li><li>Distribuído, mensageria, AWS/K8s, HA.</li><li>Profundidade e design recorrentes.</li><li>Staff = influência além do código.</li></ul></div>
+      <div class="card"><h3>Variável</h3><ul><li>IA/WhatsApp.</li><li>Live coding.</li><li>Número e ordem de etapas.</li><li>Painel, duração e culture fit separado.</li></ul></div>
+      <div class="card"><h3>Não prometa</h3><ul><li>Case de ratings garantido.</li><li>HackerRank obrigatório.</li><li>Retorno em prazo fixo.</li><li>Uma “rubrica vazada”.</li></ul></div>
+    </div>
+  </section>
+
+  <section class="section" id="flavio">
+    <div class="section-heading"><div><span class="section-number">05 · PERSONALIZAÇÃO</span><h2>Como transformar seu histórico em prova</h2><p>Seu diferencial não é catálogo de tecnologias: é backend financeiro crítico operado em produção.</p></div></div>
+    <div class="callout dark"><strong>Posicionamento recomendado</strong>Senior Java Backend Engineer especializado em card payments, billing e sistemas financeiros distribuídos, com Kafka/SQS, AWS/EKS/Kubernetes, observabilidade e capacidade de arquitetura de solução. Para a vaga: “Java profundo; Kotlin em aceleração disciplinada; produção e domínio como diferenciais imediatos”.</div>
+    <div class="grid grid-3">
+      <div class="card green"><h3>Força imediata</h3><p>Java/Spring, pagamentos/cartões, Kafka/SQS, idempotência/retries, batch/worker, AWS/EKS e troubleshooting.</p></div>
+      <div class="card amber"><h3>Prova a recuperar</h3><p>Baseline, volume/range seguro, latência, lag, MTTD/MTTR, redução de passos, times envolvidos e adoção.</p></div>
+      <div class="card purple"><h3>Upgrade Staff</h3><p>Explicitar critérios, discordâncias, stakeholders, RFC/guardrail, adoção por outras equipes e efeito durável.</p></div>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>História</th><th>Sinais</th><th>Métricas/proxies</th><th>Upgrade Staff</th><th>Risco</th></tr></thead><tbody><tr>
+          <td><strong>Extrato anual: batch to worker to multi-org to events/dashboard/on-demand</strong><br><span class="badge">fit: very-high</span></td>
+          <td>incremental architecture, async, reprocessing, operations</td>
+          <td>volume/duration/failures/lead-time/manual steps</td>
+          <td>teams affected, decision mechanism, adoption</td>
+          <td>tell chronology instead of decision</td>
+        </tr><tr>
+          <td><strong>ON-US credit/debit authorization and processor integration</strong><br><span class="badge">fit: very-high</span></td>
+          <td>payments invariants, external dependency, HA, idempotency</td>
+          <td>TPS range, timeout/reversal, p95/p99, technical approval rate</td>
+          <td>alignment across card/account/processor teams</td>
+          <td>disclose confidential topology or overclaim switch ownership</td>
+        </tr><tr>
+          <td><strong>Kafka binders, multiple clusters, DLQ, retries</strong><br><span class="badge">fit: very-high</span></td>
+          <td>messaging depth, migration, failure semantics</td>
+          <td>lag/throughput/replay/incidents</td>
+          <td>standard, runbook or guardrail adopted by others</td>
+          <td>say exactly-once without boundary</td>
+        </tr><tr>
+          <td><strong>Async confirmation/undo and duplicate effects</strong><br><span class="badge">fit: very-high</span></td>
+          <td>state machine, dedupe, reconciliation</td>
+          <td>duplicate/error reduction, manual reconciliation</td>
+          <td>cross-team invariant and durable prevention</td>
+          <td>skip external-effect boundary</td>
+        </tr><tr>
+          <td><strong>FIS files on S3 and financial reconciliation</strong><br><span class="badge">fit: high</span></td>
+          <td>integration, files, audit, operations</td>
+          <td>files/day, delay, failures, completeness</td>
+          <td>partner/stakeholder coordination</td>
+          <td>merge FIS/Fidelity/Vision names imprecisely</td>
+        </tr><tr>
+          <td><strong>Observability and production incidents</strong><br><span class="badge">fit: high</span></td>
+          <td>Dynatrace/Grafana/Prometheus/OTLP, diagnosis</td>
+          <td>MTTD/MTTR, alert noise, affected services</td>
+          <td>postmortem mechanism and rollout guardrail</td>
+          <td>list dashboards without decision</td>
+        </tr><tr>
+          <td><strong>Personal Java 21/Spring Boot 3/DDD/outbox portfolio</strong><br><span class="badge">fit: high</span></td>
+          <td>current Java, architecture, testing</td>
+          <td>tests, scenarios, ADRs, load result</td>
+          <td>show reusable guidance, not title</td>
+          <td>use portfolio as substitute for corporate scale</td>
+        </tr><tr>
+          <td><strong>Feedback on focus, synthesis and scope</strong><br><span class="badge">fit: high-behavioral</span></td>
+          <td>self-awareness, learning, simplicity</td>
+          <td>answer duration/WIP reduction/decision time</td>
+          <td>mechanism: headline-first, decision log, WIP limit</td>
+          <td>call perfectionism or remain defensive</td>
+        </tr></tbody></table></div>
+
+    <h3>Probes obrigatórios para cada história</h3>
+    <div class="grid grid-4">
+      <div class="card"><strong>1 · Problema</strong><p>Qual invariante, risco e limite de negócio?</p></div>
+      <div class="card"><strong>2 · Decisão</strong><p>Qual era a alternativa e por que foi descartada?</p></div>
+      <div class="card"><strong>3 · Operação</strong><p>Como falhava, era observado, mitigado e recuperado?</p></div>
+      <div class="card"><strong>4 · Impacto</strong><p>Qual baseline, métrica/proxy, alcance e aprendizado?</p></div>
+    </div>
+    <div class="callout warn"><strong>Controle de entropia</strong>Seu risco histórico é abrir hipóteses e detalhes antes da síntese. Use “tese → duas decisões → resultado → convite ao follow-up”. A profundidade fica disponível, mas não invade o orçamento da resposta.</div>
+  </section>
+
+  <section class="section" id="etapas">
+    <div class="section-heading"><div><span class="section-number">06 · PLAYBOOKS</span><h2>Como atuar em cada módulo</h2><p>Estruturas autorais de treino; não são critérios oficiais do iFood.</p></div></div>
+    <div class="grid grid-2">
+      <div class="card accent"><h3>DigaAI possível · 180 s</h3><ol><li><strong>0–15 s:</strong> tese.</li><li><strong>15–40 s:</strong> contexto e risco.</li><li><strong>40–110 s:</strong> duas decisões pessoais.</li><li><strong>110–145 s:</strong> alternativa/trade-off.</li><li><strong>145–170 s:</strong> resultado/proxy.</li><li><strong>170–180 s:</strong> aprendizado/conexão.</li></ol><p>Use <code class="inline">python3 code/mock_interview.py --seconds 180</code>.</p></div>
+      <div class="card navy"><h3>Talent · 60 s</h3><p><strong>Tese:</strong> Java + pagamentos distribuídos + produção. <strong>Provas:</strong> evolução do extrato e um caso de autorização/idempotência. <strong>Conexão:</strong> escala pública, engenharia de produção e domínio da vaga. Pare; deixe o recrutador aprofundar.</p><p><strong>Evite:</strong> contar toda carreira, recitar stack, reclamar do desligamento ou declarar Staff por tempo.</p></div>
+      <div class="card teal"><h3>Profundidade · mapa de prova</h3><p><strong>Invariante → papel → arquitetura → falha → decisão → alternativa → telemetria → resultado → hoje.</strong></p><p>Macete: para toda tecnologia no currículo, tenha um caso real, um limite, uma comparação e uma falha.</p></div>
+      <div class="card amber"><h3>System design · ESCOPO</h3><p><strong>E</strong>scopo; <strong>S</strong>cale/SLO; <strong>C</strong>ontratos/consistência; <strong>O</strong>verview; <strong>P</strong>roblemas/falhas; <strong>O</strong>peração/evolução.</p><p>Cadência 45 min: 5 + 5 + 8 + 10 + 10 + 7.</p></div>
+      <div class="card purple"><h3>Coding · CLEAR</h3><p><strong>C</strong>larify; <strong>L</strong>ist examples; <strong>E</strong>xplain; <strong>A</strong>ct; <strong>R</strong>un/refine.</p><p>Primeiro exemplo em 3–5 min; fatia correta; testes; só então abstração. Diga complexidade e alternativa.</p></div>
+      <div class="card green"><h3>Behavioral/Staff · H-STAR-L</h3><p><strong>H</strong>eadline; Situation; Task; Action; Result; Learning. Staff adiciona: alcance, objeções, mecanismo durável, adoção e efeito organizacional.</p><p>“Eu” para ação pessoal; “nós” para resultado coletivo.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="tecnica">
+    <div class="section-heading"><div><span class="section-number">07 · PADRÕES TÉCNICOS</span><h2>O núcleo provável de cobrança</h2><p>Derivado de vagas atuais, artigos públicos e relatos convergentes.</p></div></div>
+    <div class="grid grid-3">
+      <div class="card accent"><h3>Java/JVM</h3><ul><li>JMM, happens-before, locks, atomics.</li><li>Collections concorrentes e invariantes compostas.</li><li>Virtual threads, pools e limite do downstream.</li><li>GC/JFR, thread dump, p99 e allocation.</li><li>Complexidade, testes e legibilidade.</li></ul></div>
+      <div class="card navy"><h3>Kotlin/Spring</h3><ul><li>Null safety e platform types.</li><li>Coroutines, cancelamento, scope, Flow.</li><li>Interop Java e observabilidade de contexto.</li><li>Proxies, transações, self-invocation.</li><li>JPA, dirty checking, N+1, flush.</li></ul></div>
+      <div class="card teal"><h3>Kafka/distribuído</h3><ul><li>Chave, partição, ordering, skew.</li><li>Offset, rebalance, replay e schema.</li><li>At-least-once, efeito e dedupe.</li><li>Outbox/inbox, DLQ e reconciliação.</li><li>Backpressure, retry budget e overload.</li></ul></div>
+      <div class="card amber"><h3>Dados/cache</h3><ul><li>Access patterns e invariantes.</li><li>SQL/NoSQL, índices e particionamento.</li><li>Isolamento e concorrência.</li><li>TTL, invalidação, LRU/LFU.</li><li>Stampede, hot key e freshness.</li></ul></div>
+      <div class="card green"><h3>AWS/K8s/SRE</h3><ul><li>Probes, requests/limits, HPA, PDB.</li><li>IAM/IRSA, rede e dependências.</li><li>SLI/SLO, RED/USE, error budget.</li><li>Canary, abort, rollback e schema.</li><li>Incidente, runbook, custo e DR.</li></ul></div>
+      <div class="card purple"><h3>Staff</h3><ul><li>Ambiguidade e direção técnica.</li><li>Critérios e trade-offs explícitos.</li><li>Influência cross-team/stakeholders.</li><li>Paved roads, guardrails e escape hatch.</li><li>Impacto, adoção e líderes multiplicados.</li></ul></div>
+    </div>
+    <h3>Sinais de engenharia pública para transformar em exercício</h3>
+    <div class="table-wrap"><table><thead><tr><th>Caso</th><th>O que estudar</th><th>Armadilha</th><th>Exercício</th></tr></thead><tbody>
+      <tr><td>Kafka compression 2026</td><td>CPU × rede × custo × p99; benchmark</td><td>ZSTD como lei universal</td><td>Variar payload/batch/codec e criar rollout com controle</td></tr>
+      <tr><td>Canary 2.0</td><td>Argo, HPA, stable capacity, abort</td><td>Pod count = traffic weight</td><td>Máquina de estados, health signals e rollback de schema</td></tr>
+      <tr><td>FoodScale</td><td>Task queues locais, multicluster, rate limit</td><td>Control plane central síncrono</td><td>Aquecer 5 mil deployments sem thundering herd</td></tr>
+      <tr><td>Middleware financeiro</td><td>DDD, EventBridge, replay e ponte async</td><td>Saga = ACID distribuído</td><td>Solicitação financeira com polling, DLQ e reconciliação</td></tr>
+      <tr><td>Busca 2026</td><td>Elasticsearch/ML, latência e qualidade</td><td>Fan-out sem orçamento</td><td>Autocomplete p99 &lt;100 ms com fallback</td></tr>
+      <tr><td>Faster/Tompero</td><td>Plataforma como produto e escape hatch</td><td>Centralizar sem adoção/SLO</td><td>Paved road Java/Kotlin versionável</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="section" id="design">
+    <div class="section-heading"><div><span class="section-number">08 · LAB DE SYSTEM DESIGN</span><h2>Avaliações de restaurantes</h2><p>Caso recomposto de relatos independentes de 2024 e 2026: registrar avaliação por pedido, listar por estabelecimento e exibir nota agregada.</p></div></div>
+    <div class="callout warn"><strong>Não decore este desenho</strong>O valor do case é praticar descoberta e defesa. O entrevistador pode mudar escala, permitir edição, pedir multi-região, pressionar custo ou trocar o domínio.</div>
+    <div class="grid grid-2">
+      <div class="card"><h3>Perguntas antes do desenho</h3><ol><li>Só pedido entregue? Quem autoriza?</li><li>Uma avaliação por pedido? Pode editar/remover?</li><li>Qual volume, pico e leitura/escrita?</li><li>Frescor da média e SLO de latência/disponibilidade?</li><li>Moderação, PII, abuso e retenção?</li><li>Ordenação/paginação/filtros?</li><li>Multi-região/DR? Limite de custo?</li></ol></div>
+      <div class="card"><h3>Invariantes</h3><ul><li><code class="inline">order_id</code> válido e pertencente ao cliente.</li><li>No máximo uma intenção ativa por pedido.</li><li>Retry não cria segundo efeito.</li><li>Média = sum/count sobre versões válidas.</li><li>Evento pode duplicar; projeção não.</li><li>Correção/replay converge.</li><li>Fonte primária é auditável.</li></ul></div>
+    </div>
+    <h3>Caminho mínimo evolutivo</h3>
+    <div class="architecture">
+      <div class="node hot"><strong>Write API</strong><small>auth + validate + idempotency</small></div><div class="node-arrow">→</div><div class="node store"><strong>Ratings DB</strong><small>UNIQUE(order_id) + outbox</small></div><div class="node-arrow">→</div>
+      <div class="node event"><strong>Outbox relay</strong><small>at-least-once</small></div><div class="node-arrow">→</div><div class="node event"><strong>Kafka/topic</strong><small>key=restaurant or rating</small></div><div class="node-arrow">→</div>
+      <div class="node"><strong>Projector</strong><small>dedupe + sum/count</small></div><div class="node-arrow">→</div><div class="node store"><strong>Summary store</strong><small>version + reconciliation</small></div><div class="node-arrow">→</div>
+      <div class="node hot"><strong>Read API</strong><small>cursor + cache optional</small></div><div class="node-arrow">←</div><div class="node store"><strong>Rating index</strong><small>restaurant, time, id</small></div><div class="node-arrow">←</div>
+    </div>
+    <div class="grid grid-4">
+      <div class="card"><strong>Fase 1</strong><p>SQL único, constraint e média em query/materialized view. Simplicidade e correção.</p></div>
+      <div class="card"><strong>Gatilho</strong><p>P95/leitura/custo ou isolamento justificam projeção async.</p></div>
+      <div class="card"><strong>Fase 2</strong><p>Outbox + projector idempotente + reconciliação.</p></div>
+      <div class="card"><strong>Fase 3</strong><p>Partição, cache, multi-região apenas quando SLO/escala exigem.</p></div>
+    </div>
+    <h3>Estimativa de ordem de grandeza</h3>
+    <p>A vaga oficial atual declara média de 100 milhões de pedidos/mês. Todo o resto abaixo é hipótese de treino: 20% avaliam, pico 8×, leitura/escrita 25×, evento 1,2 KB, retenção 5 anos.</p>
+    <div class="grid grid-5">
+      <div class="card"><div class="metric">20M</div><div class="metric-label">ratings/mês · hipótese</div></div>
+      <div class="card"><div class="metric">7,7</div><div class="metric-label">writes/s média</div></div>
+      <div class="card"><div class="metric">61,7</div><div class="metric-label">writes/s pico</div></div>
+      <div class="card"><div class="metric">1,5k</div><div class="metric-label">reads/s pico</div></div>
+      <div class="card"><div class="metric">1,3 TiB</div><div class="metric-label">raw em 5 anos</div></div>
+    </div>
+    <div class="callout info"><strong>Como falar</strong>“Vou assumir X apenas para obter ordem de grandeza; se o dado real diferir, ajusto. Antes de sharding, validaria headroom, índices e picos reais. Hot restaurants merecem modelagem separada.” Execute <code class="inline">python3 code/capacity_estimator.py</code> para mudar hipóteses.</div>
+  </section>
+
+  <section class="section" id="codigo">
+    <div class="section-heading"><div><span class="section-number">09 · CÓDIGO RECORTADO</span><h2>Idempotência, outbox e replay</h2><p>Exemplos autorais e executáveis — não são código do iFood.</p></div></div>
+    <div class="code-grid">
+      <div><h3>Java · duas fronteiras de idempotência</h3><pre><code>synchronized Rating submit(SubmitRating command) {
+    Rating retried = resultByCommand.get(command.commandId());
+    if (retried != null) return retried;
+
+    Rating previous = ratingsByOrder.get(command.orderId());
+    if (previous != null) {
+        if (sameIntent(previous, command)) return previous;
+        throw new Conflict(&quot;order already rated&quot;);
+    }
+
+    Rating rating = create(command);
+    // Production: rating + outbox share one DB transaction.
+    ratingsByOrder.put(rating.orderId(), rating);
+    outbox.add(RatingSubmitted.v1(rating));
+    return rating;
+}</code></pre></div>
+      <div class="card"><h3>O que o entrevistador deve atacar</h3><ul><li><code class="inline">command_id</code> versus <code class="inline">order_id</code>.</li><li>Constraint real no banco.</li><li>Publicação depois do commit.</li><li>Falha entre DB e resposta.</li><li>Edição/remoção/versionamento.</li><li>Efeito externo e reconciliação.</li></ul></div>
+    </div>
+    <div class="code-grid">
+      <div><h3>Kotlin · dedupe no banco da projeção</h3><pre><code>@Transactional
+fun apply(event: OrderStatusChanged) {
+    // UNIQUE(event_id) lives in the same DB as the projection.
+    if (!processedEvents.tryInsert(event.eventId)) return
+    orderProjection.apply(
+        event.orderId,
+        event.status,
+        event.occurredAt
+    )
+}</code></pre></div>
+      <div class="card"><h3>Limite da garantia</h3><p>Marker e projeção precisam compartilhar a mesma transação. Se estão em bancos diferentes, a atomicidade desaparece. Offset do broker, efeito HTTP externo e expiração do dedupe pedem outra conversa.</p></div>
+    </div>
+    <div class="grid grid-3">
+      <div class="card"><h3>Executar tudo</h3><pre><code>bash code/run_labs.sh</code></pre><p>Valida o Java e roda o estimador.</p></div>
+      <div class="card"><h3>Treino de áudio</h3><pre><code>python3 code/mock_interview.py --seconds 180</code></pre><p>Pergunta aleatória + autoavaliação.</p></div>
+      <div class="card"><h3>Kotlin</h3><pre><code>kotlinc code/RatingSystemLab.kt   -include-runtime -d /tmp/rating.jar
+java -jar /tmp/rating.jar</code></pre><p>Recupera sintaxe e abre probes de coroutines/interop.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="perguntas">
+    <div class="section-heading"><div><span class="section-number">10 · BANCO DE PERGUNTAS</span><h2>60 prompts + follow-ups + pegadinhas</h2><p>Autorais, derivados dos sinais; nenhuma pergunta é apresentada como banco interno.</p></div></div>
+    <div class="practice-card no-print">
+      <div><span class="eyebrow" id="practice-meta">treino aleatório</span><h3 id="practice-question">Clique para sortear uma pergunta visível</h3><p id="practice-follow">Follow-up aparecerá aqui.</p><p id="practice-trap">Pegadinha aparecerá aqui.</p></div>
+      <button id="random-question">Sortear</button>
+    </div>
+    <div class="controls no-print">
+      <select id="filter-stage"><option value="">Todas as etapas</option><option>Behavioral</option><option>Closing</option><option>Depth</option><option>Design</option><option>Talent</option></select>
+      <select id="filter-domain"><option value="">Todos os domínios</option><option>AI</option><option>API</option><option>AWS</option><option>Architecture</option><option>Cache</option><option>Conflict</option><option>Cost</option><option>Data</option><option>Evolution</option><option>Failure</option><option>Feedback</option><option>Impact</option><option>Incident</option><option>Influence</option><option>Interview</option><option>Java-JVM</option><option>Kafka</option><option>Kotlin</option><option>Kubernetes</option><option>Leadership</option><option>Logistics</option><option>Messaging</option><option>Metrics</option><option>Motivation</option><option>Multicluster</option><option>Narrative</option><option>Observability</option><option>Payments</option><option>Platform</option><option>Ratings</option><option>Reporting</option><option>Search</option><option>Security</option><option>Simplicity</option><option>Spring</option><option>Testing</option></select>
+      <select id="filter-level"><option value="">Todos os níveis</option><option>Senior</option><option>Staff</option></select>
+      <input id="filter-search" type="search" placeholder="Buscar idempotência, Kotlin, Staff...">
+      <span class="filter-count" id="question-count"></span>
+    </div>
+    <div class="table-wrap"><table class="question-table"><thead><tr><th>ID</th><th>Etapa</th><th>Domínio/nível</th><th>Pergunta</th><th>Follow-up</th><th>Pegadinha</th><th>Prova esperada</th></tr></thead><tbody><tr class="question-row" data-stage="Talent" data-domain="Narrative" data-level="Senior">
+          <td>Q01</td>
+          <td>Talent</td>
+          <td>Narrative<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Apresente sua trajetória em 60 segundos</strong></td>
+          <td class="q-follow">Por que iFood e por que agora?</td>
+          <td class="q-trap">Cronologia antes da tese</td>
+          <td>Especialidade + contexto + 2 provas + conexão com vaga</td>
+        </tr><tr class="question-row" data-stage="Talent" data-domain="Motivation" data-level="Senior">
+          <td>Q02</td>
+          <td>Talent</td>
+          <td>Motivation<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Por que esta vaga no iFood?</strong></td>
+          <td class="q-follow">Que problema público da área lhe interessa?</td>
+          <td class="q-trap">Marca/benefícios como única razão</td>
+          <td>Duas evidências públicas + contribuição concreta</td>
+        </tr><tr class="question-row" data-stage="Talent" data-domain="Impact" data-level="Senior">
+          <td>Q03</td>
+          <td>Talent</td>
+          <td>Impact<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Qual projeto teve maior papel seu?</strong></td>
+          <td class="q-follow">O que foi especificamente seu?</td>
+          <td class="q-trap">Confundir resultado do time com autoria</td>
+          <td>STAR-L com métrica ou proxy</td>
+        </tr><tr class="question-row" data-stage="Behavioral" data-domain="Feedback" data-level="Senior">
+          <td>Q04</td>
+          <td>Behavioral</td>
+          <td>Feedback<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Qual feedback difícil você recebeu?</strong></td>
+          <td class="q-follow">Que mecanismo mudou depois?</td>
+          <td class="q-trap">Fraqueza falsa ou culpar terceiros</td>
+          <td>Mudança observável e evidência de progresso</td>
+        </tr><tr class="question-row" data-stage="Behavioral" data-domain="Conflict" data-level="Staff">
+          <td>Q05</td>
+          <td>Behavioral</td>
+          <td>Conflict<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Conte um desacordo arquitetural</strong></td>
+          <td class="q-follow">Quem discordava e como decidiu?</td>
+          <td class="q-trap">Eu estava certo e convenci todos</td>
+          <td>Critérios, coalizão, decisão e relação preservada</td>
+        </tr><tr class="question-row" data-stage="Behavioral" data-domain="Influence" data-level="Staff">
+          <td>Q06</td>
+          <td>Behavioral</td>
+          <td>Influence<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Como influenciou sem autoridade?</strong></td>
+          <td class="q-follow">O que persistiu depois de você?</td>
+          <td class="q-trap">Mentoria informal sem alcance</td>
+          <td>Múltiplos times, guardrail/RFC e adoção</td>
+        </tr><tr class="question-row" data-stage="Behavioral" data-domain="Simplicity" data-level="Staff">
+          <td>Q07</td>
+          <td>Behavioral</td>
+          <td>Simplicity<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Quando removeu complexidade de uma proposta?</strong></td>
+          <td class="q-follow">Qual risco aceitou?</td>
+          <td class="q-trap">Vender overengineering como rigor</td>
+          <td>Fase mínima, gatilho de evolução e resultado</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Java-JVM" data-level="Senior">
+          <td>Q08</td>
+          <td>Depth</td>
+          <td>Java-JVM<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Explique happens-before</strong></td>
+          <td class="q-follow">Dê um bug que volatile não resolve</td>
+          <td class="q-trap">Volatile torna operação composta atômica</td>
+          <td>Mecanismo + exemplo + ferramenta de diagnóstico</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Java-JVM" data-level="Senior">
+          <td>Q09</td>
+          <td>Depth</td>
+          <td>Java-JVM<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Virtual threads ou pool clássico?</strong></td>
+          <td class="q-follow">E se o downstream aceita 50 conexões?</td>
+          <td class="q-trap">Mais threads aumentam capacidade externa</td>
+          <td>Workload, pinning, semáforo/bulkhead e telemetria</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Java-JVM" data-level="Senior">
+          <td>Q10</td>
+          <td>Depth</td>
+          <td>Java-JVM<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como investigaria p99 alto sem CPU alta?</strong></td>
+          <td class="q-follow">Que evidência separa lock de I/O?</td>
+          <td class="q-trap">Aumentar heap/threads sem hipótese</td>
+          <td>Traces, pools, thread dump, GC, DNS/TLS e downstream</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Java-JVM" data-level="Senior">
+          <td>Q11</td>
+          <td>Depth</td>
+          <td>Java-JVM<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como funciona HashMap e quando ConcurrentHashMap?</strong></td>
+          <td class="q-follow">O que acontece sob colisão?</td>
+          <td class="q-trap">Thread-safe igual a invariante composta segura</td>
+          <td>Estrutura, complexidade e atomic APIs</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Java-JVM" data-level="Senior">
+          <td>Q12</td>
+          <td>Depth</td>
+          <td>Java-JVM<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Escolha G1, ZGC ou padrão</strong></td>
+          <td class="q-follow">Que métrica validaria?</td>
+          <td class="q-trap">Nomear coletor sem workload</td>
+          <td>Heap, pause target, throughput, allocation e JFR</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Spring" data-level="Senior">
+          <td>Q13</td>
+          <td>Depth</td>
+          <td>Spring<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como @Transactional funciona?</strong></td>
+          <td class="q-follow">E self-invocation ou chamada async?</td>
+          <td class="q-trap">Anotação garante transação em qualquer chamada</td>
+          <td>Proxy, propagação, isolamento e fronteira</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Spring" data-level="Senior">
+          <td>Q14</td>
+          <td>Depth</td>
+          <td>Spring<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>JPA por baixo dos panos</strong></td>
+          <td class="q-follow">Quando N+1 aparece?</td>
+          <td class="q-trap">Entity sempre é row e lazy sempre é melhor</td>
+          <td>Persistence context, dirty checking, flush, proxy e query plan</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Spring" data-level="Senior">
+          <td>Q15</td>
+          <td>Depth</td>
+          <td>Spring<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>MVC, WebFlux ou coroutines?</strong></td>
+          <td class="q-follow">E JDBC bloqueante?</td>
+          <td class="q-trap">API reativa torna dependência bloqueante não bloqueante</td>
+          <td>Caminho ponta a ponta e custo operacional</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kotlin" data-level="Senior">
+          <td>Q16</td>
+          <td>Depth</td>
+          <td>Kotlin<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Quais NPEs ainda existem em Kotlin?</strong></td>
+          <td class="q-follow">Como tratar platform types?</td>
+          <td class="q-trap">Null safety elimina todo NPE</td>
+          <td>Interop, !!, init, generics e contratos</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kotlin" data-level="Senior">
+          <td>Q17</td>
+          <td>Depth</td>
+          <td>Kotlin<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>coroutineScope versus supervisorScope</strong></td>
+          <td class="q-follow">Como cancelamento propaga?</td>
+          <td class="q-trap">GlobalScope ou capturar CancellationException</td>
+          <td>Structured concurrency, failure semantics e testes</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kotlin" data-level="Senior">
+          <td>Q18</td>
+          <td>Depth</td>
+          <td>Kotlin<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Flow frio versus SharedFlow/StateFlow</strong></td>
+          <td class="q-follow">Qual backpressure?</td>
+          <td class="q-trap">Flow é sempre hot e paralelo</td>
+          <td>Lifecycle, buffering, cancellation e operador</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kotlin" data-level="Senior">
+          <td>Q19</td>
+          <td>Depth</td>
+          <td>Kotlin<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Java virtual threads versus Kotlin coroutines</strong></td>
+          <td class="q-follow">Qual escolheria para serviço Spring?</td>
+          <td class="q-trap">Declarar vencedor universal</td>
+          <td>Stack existente, I/O, debugging, interop e equipe</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Architecture" data-level="Senior">
+          <td>Q20</td>
+          <td>Depth</td>
+          <td>Architecture<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Clean ou Hexagonal?</strong></td>
+          <td class="q-follow">Qual acoplamento concreto reduz?</td>
+          <td class="q-trap">Discutir nomes sem dependências reais</td>
+          <td>Regra de dependência, ports/adapters, testes e custo</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Architecture" data-level="Senior">
+          <td>Q21</td>
+          <td>Depth</td>
+          <td>Architecture<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Monólito modular ou microserviços?</strong></td>
+          <td class="q-follow">Qual gatilho justificaria separar?</td>
+          <td class="q-trap">Microserviço como sinônimo de escala</td>
+          <td>Ownership, deploy, dados, SLO, equipe e evolução</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Messaging" data-level="Senior">
+          <td>Q22</td>
+          <td>Depth</td>
+          <td>Messaging<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Fila ou tópico?</strong></td>
+          <td class="q-follow">Quem possui retry e DLQ?</td>
+          <td class="q-trap">Ambos são apenas assíncronos</td>
+          <td>Fan-out, competição, retenção, replay e ordering</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kafka" data-level="Senior">
+          <td>Q23</td>
+          <td>Depth</td>
+          <td>Kafka<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Qual semântica de entrega você promete?</strong></td>
+          <td class="q-follow">Onde termina exactly-once?</td>
+          <td class="q-trap">Flag de EOS resolve efeito externo</td>
+          <td>Fronteira, offset, efeito, dedupe e reconciliação</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kafka" data-level="Senior">
+          <td>Q24</td>
+          <td>Depth</td>
+          <td>Kafka<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como escolher partition key?</strong></td>
+          <td class="q-follow">E hot restaurant/courier?</td>
+          <td class="q-trap">Ordering global gratuito</td>
+          <td>Invariante de ordem, skew, cardinalidade e crescimento</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kafka" data-level="Senior">
+          <td>Q25</td>
+          <td>Depth</td>
+          <td>Kafka<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Quando commitar offset?</strong></td>
+          <td class="q-follow">Caiu depois do DB e antes do commit</td>
+          <td class="q-trap">Auto-commit sem discutir efeito</td>
+          <td>Janela de duplicação/perda e idempotência</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kafka" data-level="Senior">
+          <td>Q26</td>
+          <td>Depth</td>
+          <td>Kafka<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como tratar poison message?</strong></td>
+          <td class="q-follow">DLQ virou cemitério; e agora?</td>
+          <td class="q-trap">Retry infinito</td>
+          <td>Classificação, budget, parking lot, replay e ownership</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kafka" data-level="Senior">
+          <td>Q27</td>
+          <td>Depth</td>
+          <td>Kafka<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>ZSTD sempre vence LZ4?</strong></td>
+          <td class="q-follow">Como faria rollout?</td>
+          <td class="q-trap">Generalizar benchmark do iFood</td>
+          <td>Payload, CPU, rede, batch, p99 e controle</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="AWS" data-level="Senior">
+          <td>Q28</td>
+          <td>Depth</td>
+          <td>AWS<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Kafka, SQS/SNS ou EventBridge?</strong></td>
+          <td class="q-follow">E replay e ordering?</td>
+          <td class="q-trap">Escolher por preferência</td>
+          <td>Log, queue, fan-out/route, operação e custo</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Data" data-level="Senior">
+          <td>Q29</td>
+          <td>Depth</td>
+          <td>Data<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>SQL ou NoSQL para avaliações?</strong></td>
+          <td class="q-follow">Quais queries e invariantes?</td>
+          <td class="q-trap">Escolher por escala abstrata</td>
+          <td>Access patterns, consistency, indexes, partitions e migration</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Data" data-level="Senior">
+          <td>Q30</td>
+          <td>Depth</td>
+          <td>Data<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como impedir avaliação duplicada?</strong></td>
+          <td class="q-follow">DB confirma e resposta perde</td>
+          <td class="q-trap">Dedup só no broker</td>
+          <td>Unique order, idempotency key, transaction e response replay</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Cache" data-level="Senior">
+          <td>Q31</td>
+          <td>Depth</td>
+          <td>Cache<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Onde colocaria cache?</strong></td>
+          <td class="q-follow">Como invalida e mede?</td>
+          <td class="q-trap">Redis como resposta automática</td>
+          <td>Freshness, TTL, stampede, eviction e hit ratio</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Cache" data-level="Staff">
+          <td>Q32</td>
+          <td>Depth</td>
+          <td>Cache<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>LRU ou LFU?</strong></td>
+          <td class="q-follow">Hot keys mudam por almoço/jantar</td>
+          <td class="q-trap">Política sem workload</td>
+          <td>Distribuição, temporalidade, memória e benchmark</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Testing" data-level="Senior">
+          <td>Q33</td>
+          <td>Depth</td>
+          <td>Testing<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Explique sua pirâmide de testes</strong></td>
+          <td class="q-follow">Qual falha só Testcontainers encontra?</td>
+          <td class="q-trap">Cobertura percentual como qualidade</td>
+          <td>Risco, contrato, integração, velocidade e determinismo</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Testing" data-level="Staff">
+          <td>Q34</td>
+          <td>Depth</td>
+          <td>Testing<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Quando chaos/load test?</strong></td>
+          <td class="q-follow">Como limita blast radius?</td>
+          <td class="q-trap">Caos em produção sem hipótese</td>
+          <td>Steady state, abort, escopo, aprendizado e ação</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Observability" data-level="Senior">
+          <td>Q35</td>
+          <td>Depth</td>
+          <td>Observability<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Observabilidade além de logs</strong></td>
+          <td class="q-follow">Qual alerta acorda alguém?</td>
+          <td class="q-trap">Dashboard sem decisão</td>
+          <td>SLI/SLO, RED/USE, trace, runbook e actionability</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Incident" data-level="Senior">
+          <td>Q36</td>
+          <td>Depth</td>
+          <td>Incident<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>p99 subiu após deploy</strong></td>
+          <td class="q-follow">Primeira mitigação?</td>
+          <td class="q-trap">Debugar antes de conter impacto</td>
+          <td>Impacto, rollback/freeze, hipótese e comparação canary</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kubernetes" data-level="Senior">
+          <td>Q37</td>
+          <td>Depth</td>
+          <td>Kubernetes<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Readiness, liveness e startup</strong></td>
+          <td class="q-follow">Dependência externa na liveness?</td>
+          <td class="q-trap">Probe reinicia pod por falha do downstream</td>
+          <td>Propósito, failure effect, warmup e thresholds</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kubernetes" data-level="Senior">
+          <td>Q38</td>
+          <td>Depth</td>
+          <td>Kubernetes<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como HPA escolhe sinal?</strong></td>
+          <td class="q-follow">CPU baixa com fila crescendo</td>
+          <td class="q-trap">CPU como proxy universal</td>
+          <td>Workload signal, requests, lag, warmup e scaling limits</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Kubernetes" data-level="Staff">
+          <td>Q39</td>
+          <td>Depth</td>
+          <td>Kubernetes<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Como canary interage com HPA?</strong></td>
+          <td class="q-follow">Rollback sob pico?</td>
+          <td class="q-trap">Reduzir stable conforme peso</td>
+          <td>Capacidade stable, traffic split, abort e schema</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Ratings" data-level="Senior">
+          <td>Q40</td>
+          <td>Design</td>
+          <td>Ratings<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Desenhe avaliações de restaurante</strong></td>
+          <td class="q-follow">Comece perguntando NFRs</td>
+          <td class="q-trap">Desenhar Kafka/Redis antes do escopo</td>
+          <td>ESCOPO completo, invariants e evolução</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Ratings" data-level="Senior">
+          <td>Q41</td>
+          <td>Design</td>
+          <td>Ratings<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como calcular média?</strong></td>
+          <td class="q-follow">E edição/remoção/replay?</td>
+          <td class="q-trap">Average of averages</td>
+          <td>Sum+count, event version, correction e reconciliation</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Ratings" data-level="Senior">
+          <td>Q42</td>
+          <td>Design</td>
+          <td>Ratings<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como paginar avaliações?</strong></td>
+          <td class="q-follow">Ordenação estável sob novas escritas</td>
+          <td class="q-trap">Offset em dataset mutável</td>
+          <td>Cursor por createdAt+id e índice</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Ratings" data-level="Staff">
+          <td>Q43</td>
+          <td>Design</td>
+          <td>Ratings<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>E 100x mais tráfego?</strong></td>
+          <td class="q-follow">O que quebra primeiro?</td>
+          <td class="q-trap">Redesenhar tudo</td>
+          <td>Gargalo dominante, skew, headroom e gatilho</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Logistics" data-level="Staff">
+          <td>Q44</td>
+          <td>Design</td>
+          <td>Logistics<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Desenhe dispatch de entregadores</strong></td>
+          <td class="q-follow">Picos regionais e localização</td>
+          <td class="q-trap">Consistência forte global</td>
+          <td>Partitioning, freshness, matching, degradation e privacy</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Payments" data-level="Staff">
+          <td>Q45</td>
+          <td>Design</td>
+          <td>Payments<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Desenhe autorização de pagamento</strong></td>
+          <td class="q-follow">Timeout do processador e reversal</td>
+          <td class="q-trap">Retry financeiro cego</td>
+          <td>Ledger, idempotency, state machine, reconciliation e audit</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Reporting" data-level="Senior">
+          <td>Q46</td>
+          <td>Design</td>
+          <td>Reporting<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Batch para relatório sob demanda</strong></td>
+          <td class="q-follow">Como migrar incrementalmente?</td>
+          <td class="q-trap">Big bang de microsserviços</td>
+          <td>Worker, status, events, replay, storage e phased plan</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Search" data-level="Staff">
+          <td>Q47</td>
+          <td>Design</td>
+          <td>Search<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Autocomplete p99 &lt;100ms</strong></td>
+          <td class="q-follow">ML indisponível</td>
+          <td class="q-trap">Fan-out ilimitado</td>
+          <td>Index/cache, latency budget, fallback e quality metrics</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Platform" data-level="Staff">
+          <td>Q48</td>
+          <td>Design</td>
+          <td>Platform<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Crie paved road Java/Kotlin</strong></td>
+          <td class="q-follow">Como evita lock-in?</td>
+          <td class="q-trap">Centralizar tudo</td>
+          <td>Self-service, SLO, adoption, escape hatch e versioning</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Multicluster" data-level="Staff">
+          <td>Q49</td>
+          <td>Design</td>
+          <td>Multicluster<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Aqueça milhares de deployments</strong></td>
+          <td class="q-follow">Temporal/control plane cai</td>
+          <td class="q-trap">Control plane síncrono central</td>
+          <td>Local authority, task queues, idempotency e rate limits</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Security" data-level="Staff">
+          <td>Q50</td>
+          <td>Design</td>
+          <td>Security<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Autorização centralizada ABAC</strong></td>
+          <td class="q-follow">Policy service indisponível</td>
+          <td class="q-trap">Fail-open implícito</td>
+          <td>PDP/PEP, cache/revocation, audit e default deny</td>
+        </tr><tr class="question-row" data-stage="Behavioral" data-domain="Incident" data-level="Senior">
+          <td>Q51</td>
+          <td>Behavioral</td>
+          <td>Incident<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Conte um incidente real</strong></td>
+          <td class="q-follow">O que mudou permanentemente?</td>
+          <td class="q-trap">Heroísmo e ausência de prevenção</td>
+          <td>Timeline, impact, mitigation, root/contributors e guardrail</td>
+        </tr><tr class="question-row" data-stage="Behavioral" data-domain="Metrics" data-level="Senior">
+          <td>Q52</td>
+          <td>Behavioral</td>
+          <td>Metrics<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Qual impacto sem divulgar dado interno?</strong></td>
+          <td class="q-follow">Que proxy pode ser auditado?</td>
+          <td class="q-trap">Inventar percentual</td>
+          <td>Range/proxy, before-after e honest limitation</td>
+        </tr><tr class="question-row" data-stage="Behavioral" data-domain="Leadership" data-level="Staff">
+          <td>Q53</td>
+          <td>Behavioral</td>
+          <td>Leadership<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Como elevou a barra técnica?</strong></td>
+          <td class="q-follow">Quem adotou o mecanismo?</td>
+          <td class="q-trap">Número de PRs pessoais</td>
+          <td>Standard/tool/RFC, adoption and outcome</td>
+        </tr><tr class="question-row" data-stage="Behavioral" data-domain="Failure" data-level="Staff">
+          <td>Q54</td>
+          <td>Behavioral</td>
+          <td>Failure<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Decisão sua que falhou</strong></td>
+          <td class="q-follow">Como detectou e reverteu?</td>
+          <td class="q-trap">Disfarçar sucesso</td>
+          <td>Ownership, signal, correction and institutional learning</td>
+        </tr><tr class="question-row" data-stage="Behavioral" data-domain="AI" data-level="Senior">
+          <td>Q55</td>
+          <td>Behavioral</td>
+          <td>AI<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como usa IA no dia a dia?</strong></td>
+          <td class="q-follow">Como valida e governa?</td>
+          <td class="q-trap">Produtividade sem evidência ou dados sensíveis</td>
+          <td>Case, verification, privacy, failure and metric</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Cost" data-level="Staff">
+          <td>Q56</td>
+          <td>Design</td>
+          <td>Cost<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Managed ou self-hosted?</strong></td>
+          <td class="q-follow">Qual custo domina?</td>
+          <td class="q-trap">Comparar só licença</td>
+          <td>TCO, toil, skill, egress, SLA, portability and exit</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="API" data-level="Senior">
+          <td>Q57</td>
+          <td>Depth</td>
+          <td>API<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>REST, gRPC ou evento?</strong></td>
+          <td class="q-follow">Como versiona?</td>
+          <td class="q-trap">Um protocolo para tudo</td>
+          <td>Interaction, latency, coupling, schema and failure</td>
+        </tr><tr class="question-row" data-stage="Depth" data-domain="Security" data-level="Senior">
+          <td>Q58</td>
+          <td>Depth</td>
+          <td>Security<br><span class="badge">Senior</span></td>
+          <td class="q-prompt"><strong>Como protege PII e dados financeiros?</strong></td>
+          <td class="q-follow">O que logar?</td>
+          <td class="q-trap">Observabilidade vazando dado</td>
+          <td>Minimization, encryption, tokenization, audit and redaction</td>
+        </tr><tr class="question-row" data-stage="Design" data-domain="Evolution" data-level="Staff">
+          <td>Q59</td>
+          <td>Design</td>
+          <td>Evolution<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Migre sem dual-write inconsistente</strong></td>
+          <td class="q-follow">Como prova paridade?</td>
+          <td class="q-trap">Escrever em dois bancos e torcer</td>
+          <td>CDC/outbox, shadow read, reconciliation, cutover and rollback</td>
+        </tr><tr class="question-row" data-stage="Closing" data-domain="Interview" data-level="Staff">
+          <td>Q60</td>
+          <td>Closing</td>
+          <td>Interview<br><span class="badge">Staff</span></td>
+          <td class="q-prompt"><strong>Que pergunta faria ao time?</strong></td>
+          <td class="q-follow">Como distinguir Senior de Staff?</td>
+          <td class="q-trap">Pergunta genérica respondida na vaga</td>
+          <td>SLO/risk/ownership/decision mechanism tied to role</td>
+        </tr></tbody></table></div>
+  </section>
+
+  <section class="section" id="pegadinhas">
+    <div class="section-heading"><div><span class="section-number">11 · PEGADINHAS</span><h2>Pequenas anuências que mudam a resposta</h2><p>Não são truques secretos; são pontos em que slogans deixam a solução frágil.</p></div></div>
+    <ol class="trap-list">
+      <li><strong>Enunciado incompleto é dado.</strong>Pergunte escala, SLO, consistência, frescor, atores e não objetivos antes de desenhar.</li>
+      <li><strong>Nome de tecnologia não é decisão.</strong>Associe carga, invariante, alternativa, operação, custo e gatilho de evolução.</li>
+      <li><strong>Async não é exactly-once.</strong>Defina a fronteira: broker, banco, efeito externo e reconciliação.</li>
+      <li><strong>Unique constraint não fecha dual-write.</strong>Rating e outbox precisam de transação; consumidor precisa tolerar replay.</li>
+      <li><strong>Cache é um sistema.</strong>Freshness, TTL, eviction, stampede, hot key, degradação e hit ratio.</li>
+      <li><strong>Observabilidade não é dashboard.</strong>SLO → sinal → alerta → ação → aprendizado.</li>
+      <li><strong>Retry multiplica cauda e carga.</strong>Deadline, budget, backoff+jitter e idempotência.</li>
+      <li><strong>Coroutine pode bloquear thread.</strong>JDBC e SDK bloqueante continuam bloqueantes; escolha dispatcher/modelo conscientemente.</li>
+      <li><strong>Virtual thread não aumenta downstream.</strong>Proteja pool/conexão com limite e backpressure.</li>
+      <li><strong>Liveness não testa toda dependência.</strong>Reiniciar por falha externa pode gerar cascata.</li>
+      <li><strong>CPU não é sempre sinal de HPA.</strong>Fila/lag, saturação e warmup podem dominar.</li>
+      <li><strong>Canary pequeno não é tráfego representativo.</strong>Weights, sessões, janela e stable capacity importam.</li>
+      <li><strong>“100×” não exige recomeçar.</strong>Aponte o gargalo dominante, preserve invariantes e evolua por gatilho.</li>
+      <li><strong>Case público não é senha.</strong>Memorizar ratings não substitui defesa sob follow-ups.</li>
+      <li><strong>Currículo é um contrato.</strong>JPA, Kafka, AWS ou Staff escritos ali autorizam perguntas profundas.</li>
+      <li><strong>Senior ≠ Staff por tempo.</strong>Staff demonstra influência cross-team e mecanismos replicáveis.</li>
+      <li><strong>“Não sei” pode ser forte.</strong>Declare limite, raciocine e descreva validação; não blefe.</li>
+      <li><strong>Benchmark publicado não é lei.</strong>Repita método e hipótese, não percentual, codec ou banco como dogma.</li>
+    </ol>
+  </section>
+
+  <section class="section" id="rubricas">
+    <div class="section-heading"><div><span class="section-number">12 · RUBRICAS</span><h2>Treino calibrado, não sensação</h2><p>Âncoras autorais 0–4: 0 inseguro/inventa; 1 reconhece termos; 2 happy path; 3 produção; 4 produção + direção/influência Staff.</p></div></div>
+    <div class="callout info"><strong>Barra de treino recomendada</strong>Média ≥3,0, nenhum crítico &lt;2; meta de segurança ≥3,3 em três mocks. Isso não é nota de corte oficial.</div>
+    <div class="rubric-board"><div class="rubric"><h3>Coding · 100 pontos</h3><div class="rubric-row">
+              <span><strong>Clarification and examples</strong><br><small>Reframes, asks constraints and creates cases</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Clarification and examples">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Correctness and invariants</strong><br><small>Correct happy path and boundaries</small></span>
+              <span>25%</span>
+              <select class="rubric-score" data-weight="25" aria-label="Nota Correctness and invariants">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Data structures and complexity</strong><br><small>Choice justified; time/space explicit</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Data structures and complexity">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Tests</strong><br><small>Normal, empty, edge, error and invariant</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Tests">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Legibility</strong><br><small>Small coherent units and good names</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Legibility">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Production failures</strong><br><small>Concurrency, timeout and idempotency when relevant</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Production failures">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Communication</strong><br><small>Short checkpoints and collaborative thinking</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Communication">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-total">Média ponderada: 0,00 / 4,00</div></div><div class="rubric"><h3>System design · 100 pontos</h3><div class="rubric-row">
+              <span><strong>Scope and invariants</strong><br><small>Defines truth conditions and non-goals</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Scope and invariants">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Capacity and SLO</strong><br><small>Order of magnitude, peak and freshness</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Capacity and SLO">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Contracts and data</strong><br><small>Versionable API/events and access-driven model</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Contracts and data">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Architecture boundaries</strong><br><small>Minimal path and clear ownership</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Architecture boundaries">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Consistency and concurrency</strong><br><small>Atomicity, ordering, dedupe and reconciliation</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Consistency and concurrency">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Failures and recovery</strong><br><small>Timeout, retry budget, overload and DR</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Failures and recovery">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Observability and operation</strong><br><small>SLIs, alerts, rollout and runbook</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Observability and operation">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Security cost and evolution</strong><br><small>Auth, privacy, migration and TCO</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Security cost and evolution">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-total">Média ponderada: 0,00 / 4,00</div></div><div class="rubric"><h3>Technical depth · 100 pontos</h3><div class="rubric-row">
+              <span><strong>First principles</strong><br><small>Explains mechanism instead of recipe</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota First principles">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Java JVM</strong><br><small>Concurrency, runtime and diagnosis</small></span>
+              <span>20%</span>
+              <select class="rubric-score" data-weight="20" aria-label="Nota Java JVM">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Kotlin Spring</strong><br><small>Nullability, cancellation, proxies and interop</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Kotlin Spring">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Kafka distributed</strong><br><small>Offsets, ordering, delivery and effects</small></span>
+              <span>20%</span>
+              <select class="rubric-score" data-weight="20" aria-label="Nota Kafka distributed">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Data</strong><br><small>Isolation, indexes, cache and schema</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Data">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Production SRE</strong><br><small>SLO, telemetry, rollout and incident</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Production SRE">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Personal evidence</strong><br><small>Real decision without inflated authorship</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Personal evidence">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-total">Média ponderada: 0,00 / 4,00</div></div><div class="rubric"><h3>Behavioral Staff · 100 pontos</h3><div class="rubric-row">
+              <span><strong>Delimited ownership</strong><br><small>I for action; we for collective result</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Delimited ownership">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Judgment</strong><br><small>Ambiguity, alternatives and choice</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Judgment">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Influence</strong><br><small>Stakeholders, objections and adoption</small></span>
+              <span>20%</span>
+              <select class="rubric-score" data-weight="20" aria-label="Nota Influence">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Result</strong><br><small>Metric or honest proxy with baseline</small></span>
+              <span>15%</span>
+              <select class="rubric-score" data-weight="15" aria-label="Nota Result">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Conflict and feedback</strong><br><small>Uses evidence and preserves relationship</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Conflict and feedback">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Learning</strong><br><small>Concrete mechanism changed</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Learning">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Values evidence</strong><br><small>Demonstrates rather than recites</small></span>
+              <span>5%</span>
+              <select class="rubric-score" data-weight="5" aria-label="Nota Values evidence">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-row">
+              <span><strong>Concision</strong><br><small>Headline first; 90-120 seconds</small></span>
+              <span>10%</span>
+              <select class="rubric-score" data-weight="10" aria-label="Nota Concision">
+                <option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </div><div class="rubric-total">Média ponderada: 0,00 / 4,00</div></div></div>
+    <h3>Senior versus Staff</h3>
+    <div class="table-wrap"><table><thead><tr><th>Sinal</th><th>Senior forte</th><th>Staff convincente</th></tr></thead><tbody>
+      <tr><td>Escopo</td><td>Serviço/time</td><td>Múltiplos times, domínio ou plataforma</td></tr>
+      <tr><td>Decisão</td><td>Escolhe boa solução</td><td>Define critérios e direção sob ambiguidade</td></tr>
+      <tr><td>Influência</td><td>Convence pares</td><td>Alinha liderança, produto e dependências</td></tr>
+      <tr><td>Entrega</td><td>Resolve caso complexo</td><td>Cria mecanismo replicável/guardrail</td></tr>
+      <tr><td>Operação</td><td>Sustenta serviço</td><td>Reduz risco sistêmico e melhora padrões</td></tr>
+      <tr><td>Mentoria</td><td>Ajuda colegas</td><td>Multiplica líderes e eleva a barra</td></tr>
+      <tr><td>Resultado</td><td>Métrica técnica/produto</td><td>Efeito organizacional ou de portfólio</td></tr>
+    </tbody></table></div>
+  </section>
+
+  <section class="section" id="plano">
+    <div class="section-heading"><div><span class="section-number">13 · PLANO DE 21 DIAS</span><h2>Artefato diário + critério de aprovação</h2><p>Intercala linguagem, distribuído, operação, narrativa e mocks para aumentar recuperação, não só reconhecimento.</p></div></div>
+    <div class="day-plan"><div class="day"><b>Dia 1</b><strong>Baseline</strong>Mock curto: apresentação, Java, design e behavioral.<br><em>Guardar gravação + score inicial.</em></div><div class="day"><b>Dia 2</b><strong>Java/JVM</strong>JMM, collections, locks, virtual threads.<br><em>Explicar 8 conceitos com exemplo e limite.</em></div><div class="day"><b>Dia 3</b><strong>Java prática</strong>Deduplicação + testes e caso concorrente.<br><em>Executa; 5 testes; complexidade declarada.</em></div><div class="day"><b>Dia 4</b><strong>Kotlin base</strong>Null safety, data/sealed, interop Java.<br><em>Portar um exercício sem !!.</em></div><div class="day"><b>Dia 5</b><strong>Coroutines</strong>Scope, cancelamento, timeout e Flow.<br><em>3 testes de falha/cancelamento.</em></div><div class="day"><b>Dia 6</b><strong>Spring/JPA</strong>Proxies, transações, N+1, isolamento.<br><em>Diagnosticar 6 armadilhas.</em></div><div class="day"><b>Dia 7</b><strong>Narrativas</strong>6 H-STAR-L e apresentação de 60 s.<br><em>Cada história ≤120 s; papel e proxy.</em></div><div class="day"><b>Dia 8</b><strong>Kafka</strong>Partição, offset, rebalance e schema.<br><em>Desenho + 12 respostas sem slogan.</em></div><div class="day"><b>Dia 9</b><strong>Mensageria</strong>Outbox/inbox, retry, DLQ e replay.<br><em>Tabela de fronteiras de garantia.</em></div><div class="day"><b>Dia 10</b><strong>Kafka lab</strong>Duplicata, poison message e falha após DB.<br><em>Reproduzir 3 falhas + runbook.</em></div><div class="day"><b>Dia 11</b><strong>Dados</strong>Rating + pagamento: SQL/NoSQL e índices.<br><em>Invariantes + 3 corridas + reconciliação.</em></div><div class="day"><b>Dia 12</b><strong>Cache</strong>TTL, invalidação, stampede e hot keys.<br><em>Política, sinais, fallback e custo.</em></div><div class="day"><b>Dia 13</b><strong>K8s/AWS</strong>Probes, limits, HPA, PDB, IRSA.<br><em>Encontrar ≥7 riscos num manifesto.</em></div><div class="day"><b>Dia 14</b><strong>SRE</strong>p99/lag após canary.<br><em>Impacto em 2 min; rollback; 5 sinais.</em></div><div class="day"><b>Dia 15</b><strong>Design ratings</strong>Case recorrente em 45 min.<br><em>ESCOPO completo; score ≥75.</em></div><div class="day"><b>Dia 16</b><strong>Design logística</strong>Dispatch e localização em pico regional.<br><em>Hot partition, privacy e degradação.</em></div><div class="day"><b>Dia 17</b><strong>Design próprio</strong>Extrato multi-org batch/on-demand.<br><em>3 fases; gatilhos, custo e replay.</em></div><div class="day"><b>Dia 18</b><strong>Staff/behavioral</strong>Conflito, falha, mentoria e simplicidade.<br><em>6 respostas ≤120 s; ≥4 proxies.</em></div><div class="day"><b>Dia 19</b><strong>Loop A</strong>Talent + depth + coding + design.<br><em>Média ≥3; anotar toda lacuna.</em></div><div class="day"><b>Dia 20</b><strong>Remediação</strong>Repetir duas dimensões abaixo de 3.<br><em>+0,5; sem defensividade/prolixidade.</em></div><div class="day"><b>Dia 21</b><strong>Loop B</strong>Avaliador diferente + checklist de véspera.<br><em>Média ≥3,3; nenhum crítico &lt;2,5.</em></div></div>
+    <h3>Ficha diária</h3>
+    <pre><code>Data / exercício / tempo planejado e real
+Hipótese principal
+Resultado e score por dimensão
+Evidência: teste, diagrama, gravação ou métrica
+Uma coisa a remover
+Uma coisa a repetir
+Próximo follow-up</code></pre>
+    <div class="callout dark"><strong>Prontidão</strong>Dois loops com avaliadores diferentes: coding, design, profundidade e behavioral ≥80/100; Kotlin ≥2,5/4; Java/JVM ≥3,5/4; solução mínima antes da sofisticada; papel e resultado/proxy em toda história; “não sei” sem invenção.</div>
+  </section>
+
+  <section class="section" id="vespera">
+    <div class="section-heading"><div><span class="section-number">14 · VÉSPERA</span><h2>Checklist interativo</h2><p>Fica salvo localmente no navegador; não envia dados.</p></div><button id="reset-checklist" class="secondary no-print">Limpar</button></div>
+    <div class="checklist">
+      <label><input class="persist-check" id="c01" type="checkbox">Apresentação de 60 s.</label>
+      <label><input class="persist-check" id="c02" type="checkbox">Por que iFood/vaga com 2 sinais públicos.</label>
+      <label><input class="persist-check" id="c03" type="checkbox">6 H-STAR-L em até 120 s.</label>
+      <label><input class="persist-check" id="c04" type="checkbox">3 métricas e 3 proxies honestos.</label>
+      <label><input class="persist-check" id="c05" type="checkbox">2 exercícios coding executados/testados.</label>
+      <label><input class="persist-check" id="c06" type="checkbox">Ratings e logística em 45 min.</label>
+      <label><input class="persist-check" id="c07" type="checkbox">Kafka: offset, replay, ordering, idempotência.</label>
+      <label><input class="persist-check" id="c08" type="checkbox">Java: JMM, virtual threads, GC/JFR.</label>
+      <label><input class="persist-check" id="c09" type="checkbox">Kotlin: nullability, scope, cancellation, interop.</label>
+      <label><input class="persist-check" id="c10" type="checkbox">SRE: SLO, overload, canary e rollback.</label>
+      <label><input class="persist-check" id="c11" type="checkbox">Uma falha e mecanismo criado depois.</label>
+      <label><input class="persist-check" id="c12" type="checkbox">Uma decisão simplificada.</label>
+      <label><input class="persist-check" id="c13" type="checkbox">Perguntas ao time sobre SLO/ownership/barra.</label>
+      <label><input class="persist-check" id="c14" type="checkbox">Nenhuma métrica inventada ou dado confidencial.</label>
+    </div>
+    <h3>Perguntas fortes no final</h3>
+    <ol><li>Quais decisões distinguem Senior de Staff neste time?</li><li>Quais SLOs ou riscos operacionais mais ocupam a equipe?</li><li>Onde ficam as fronteiras entre produto, plataforma e operação?</li><li>Como decisões cross-team são registradas e revisitadas?</li><li>Como o time mede impacto além de entrega?</li></ol>
+  </section>
+
+  <section class="section" id="fontes">
+    <div class="section-heading"><div><span class="section-number">15 · LEDGER DE FONTES</span><h2>Claim → evidência → confiança</h2><p>A/B/C/X e validade temporal impedem que uma testemunha vire regra ou que um número histórico vire estado atual.</p></div></div>
+    <div class="controls no-print"><select id="source-confidence"><option value="">Todas as classes</option><option>A</option><option>B</option><option>C</option><option>X</option></select><span class="filter-count">A: primária · B: testemunho/case · C: pista · X: rejeitada</span></div>
+    <div class="table-wrap"><table class="source-table"><thead><tr><th>ID</th><th>Categoria</th><th>Data</th><th>Cargo/domínio</th><th>Achado limitado</th><th>Classe/validade</th><th>Fonte/print</th></tr></thead><tbody><tr class="source-row" data-confidence="A">
+          <td><strong>E01</strong></td>
+          <td>job</td>
+          <td>2026-08-22</td>
+          <td>Staff Backend Logistics</td>
+          <td>100M monthly orders; distributed systems, HA, SQS/SNS/Kafka, AWS, K8s/Docker/IaC/Linux and Java/Kotlin/Rust; influence is explicit</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://job-boards.greenhouse.io/ifoodcarreiras/jobs/8590318002" target="_blank" rel="noreferrer">official-current</a><br><a href="evidence-selected/01-vaga-staff-logistics-requisitos.jpg">print</a></td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E02</strong></td>
+          <td>job</td>
+          <td>2026-08-22</td>
+          <td>Senior Backend</td>
+          <td>Design, code, test and operate resilient backend; OO/functional, data, async messaging, AWS and production</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://job-boards.greenhouse.io/ifoodcarreiras/jobs/5961397002" target="_blank" rel="noreferrer">official-current</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E03</strong></td>
+          <td>job</td>
+          <td>2026-08-22</td>
+          <td>Staff Backend general</td>
+          <td>Deep architecture, stakeholder influence and Java/Kotlin experience fields</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://job-boards.greenhouse.io/ifoodcarreiras/jobs/7765367002" target="_blank" rel="noreferrer">official-current</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E04</strong></td>
+          <td>job</td>
+          <td>2026-08-22</td>
+          <td>Staff Backend affirmative</td>
+          <td>Microservices, load and chaos tests, 24x7 operation, concurrency, SQL/NoSQL and Kafka</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://job-boards.greenhouse.io/ifoodcarreiras/jobs/7766263002" target="_blank" rel="noreferrer">official-current</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E05</strong></td>
+          <td>engineering</td>
+          <td>2026-02-23</td>
+          <td>Kafka FinOps</td>
+          <td>Benchmarks compare compression, CPU, network, latency and cost; results are workload-specific</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://tech.ifood.com.br/artigo/back-end/otimizacao-de-custos-em-escala-o-impacto-da-compressao-de-topicos-kafka-no-ifood/" target="_blank" rel="noreferrer">official-tech</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E06</strong></td>
+          <td>engineering</td>
+          <td>2026-05-20</td>
+          <td>Canary deployment</td>
+          <td>Argo Rollouts, HPA-aware stable capacity, progressive traffic and metric-driven abort</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://tech.ifood.com.br/back-end/canary-2-0-como-o-ifood-transformou-deploy-em-producao-em-um-processo-seguro-e-automatizado/" target="_blank" rel="noreferrer">official-tech</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E07</strong></td>
+          <td>engineering</td>
+          <td>2026</td>
+          <td>Multicluster scaling</td>
+          <td>FoodScale coordinates warm-up and scaling across 30+ clusters with local workers and Temporal task queues</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://tech.ifood.com.br/back-end/30-clusters-zero-planilhas-nossa-jornada-para-scaling-inteligente-com-o-foodscale/" target="_blank" rel="noreferrer">official-tech</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E08</strong></td>
+          <td>engineering</td>
+          <td>2026-08-05</td>
+          <td>Internal platform</td>
+          <td>Faster exposes independent capabilities by SDK/API and separates deployment from feature activation</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://tech.ifood.com.br/engenharia/faster-a-plataforma-de-engenharia-que-acelera-a-evolucao-dos-produtos-do-ifood/" target="_blank" rel="noreferrer">official-tech</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E09</strong></td>
+          <td>engineering</td>
+          <td>2026-07-22</td>
+          <td>Marketplace search</td>
+          <td>Elasticsearch, geographic/time context and ML intent classification create a latency and relevance budget problem</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://tech.ifood.com.br/engenharia/como-funciona-a-busca-do-ifood/" target="_blank" rel="noreferrer">official-tech</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E10</strong></td>
+          <td>engineering</td>
+          <td>2025-01-31</td>
+          <td>Logistics</td>
+          <td>Backend uses Kotlin, Java and Rust according to project constraints</td>
+          <td><span class="confidence a">A</span><br>medium-high</td>
+          <td><a href="https://institucional.ifood.com.br/inovacao/desenvolvimento-de-software-logistica-ifood/" target="_blank" rel="noreferrer">official-institutional</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="B">
+          <td><strong>E11</strong></td>
+          <td>architecture</td>
+          <td>2023-10-17</td>
+          <td>Financial middleware</td>
+          <td>Event Storming, DDD, three services, EventBridge choreography, DB per service, archive/replay and a synchronous-to-async bridge</td>
+          <td><span class="confidence b">B</span><br>medium</td>
+          <td><a href="https://aws.amazon.com/pt/blogs/aws-brasil/como-ifood-se-beneficiou-da-arquitetura-orientada-a-eventos-para-modernizar-seu-midware-financeiro/" target="_blank" rel="noreferrer">AWS-customer-story</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="B">
+          <td><strong>E12</strong></td>
+          <td>architecture</td>
+          <td>historical</td>
+          <td>Streaming platform</td>
+          <td>Kafka operations moved toward managed Confluent; schema governance, real-time orders and courier geolocation are emphasized</td>
+          <td><span class="confidence b">B</span><br>medium-low</td>
+          <td><a href="https://www.confluent.io/customers/ifood/" target="_blank" rel="noreferrer">vendor-customer-story</a><br><a href="evidence-selected/05-confluent-streaming-desafio.jpg">print</a></td>
+        </tr><tr class="source-row" data-confidence="B">
+          <td><strong>E13</strong></td>
+          <td>process</td>
+          <td>2024-07-01</td>
+          <td>Senior Backend</td>
+          <td>About 1h technical depth plus 1h Draw.io design; restaurant ratings case; SQL/NoSQL, latency, scale, monitoring, logs and cache</td>
+          <td><span class="confidence b">B</span><br>medium</td>
+          <td><a href="https://www.glassdoor.com.br/Entrevista/iFood-Senior-Backend-Software-Engineer-Perguntas-entrevista-EI_IE1396166.0%2C5_KO6%2C38.htm" target="_blank" rel="noreferrer">candidate-testimony</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="B">
+          <td><strong>E14</strong></td>
+          <td>process</td>
+          <td>2024-04-03</td>
+          <td>Backend</td>
+          <td>Recruiter, technical depth with two interviewers, high-level system design, manager and offer; SOLID, microservices, cache and AWS</td>
+          <td><span class="confidence b">B</span><br>medium</td>
+          <td><a href="https://www.glassdoor.com/Interview/iFood-Backend-Software-Engineer-Interview-Questions-EI_IE1396166.0%2C5_KO6%2C31.htm" target="_blank" rel="noreferrer">candidate-testimony</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="B">
+          <td><strong>E15</strong></td>
+          <td>process</td>
+          <td>2026-06-06</td>
+          <td>Staff</td>
+          <td>Technical depth, system design and culture conversations in the same day; HA and scalability</td>
+          <td><span class="confidence b">B</span><br>medium</td>
+          <td><a href="https://www.glassdoor.com.br/Entrevista/iFood-Staff-Software-Engineer-Perguntas-entrevista-EI_IE1396166.0%2C5_KO6%2C29.htm" target="_blank" rel="noreferrer">candidate-testimony</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="B">
+          <td><strong>E16</strong></td>
+          <td>process</td>
+          <td>2026-07</td>
+          <td>Senior Backend</td>
+          <td>Technical deep dive follows know/used/applied/trade-off probes; Clean/Hexagonal, sync/async, messaging, test pyramid, observability, cache, cost and AI</td>
+          <td><span class="confidence b">B</span><br>medium-high</td>
+          <td><a href="https://www.reddit.com/r/brdev/comments/1uiwkdn/entrevista_profundidade_t%C3%A9cnica_e_design_e/" target="_blank" rel="noreferrer">candidate-testimony</a><br><a href="evidence-selected/02-relato-2026-profundidade-tecnica.jpg">print</a></td>
+        </tr><tr class="source-row" data-confidence="B">
+          <td><strong>E17</strong></td>
+          <td>process</td>
+          <td>2026</td>
+          <td>Senior</td>
+          <td>DigaAI conversation was described as audio with a maximum of three minutes per answer; feedback asked for more depth</td>
+          <td><span class="confidence b">B</span><br>medium-low</td>
+          <td><a href="https://www.reddit.com/r/brdev/comments/1thnlst/fiz_minha_primeira_entrevista_por_ia/" target="_blank" rel="noreferrer">candidate-testimony</a><br><a href="evidence-selected/04-digai-audio-tres-minutos.jpg">print</a></td>
+        </tr><tr class="source-row" data-confidence="B">
+          <td><strong>E18</strong></td>
+          <td>process</td>
+          <td>2026</td>
+          <td>Staff</td>
+          <td>Some recent flows report an initial automated WhatsApp conversation before recruiter</td>
+          <td><span class="confidence b">B</span><br>medium-low</td>
+          <td><a href="https://www.reddit.com/r/brdev/comments/1tl1co4/elas_s%C3%A3o_tech_ifood_2026_entrevista_com_talent/" target="_blank" rel="noreferrer">candidate-testimony</a><br><a href="evidence-selected/03-triagem-digai-relato.jpg">print</a></td>
+        </tr><tr class="source-row" data-confidence="C">
+          <td><strong>E19</strong></td>
+          <td>process</td>
+          <td>2025</td>
+          <td>Staff</td>
+          <td>One process included a separate coding round and solution design</td>
+          <td><span class="confidence c">C</span><br>medium-low</td>
+          <td><a href="https://www.glassdoor.com.br/Entrevista/iFood-Staff-Software-Engineer-Perguntas-entrevista-EI_IE1396166.0%2C5_KO6%2C29.htm" target="_blank" rel="noreferrer">candidate-testimony</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="C">
+          <td><strong>E20</strong></td>
+          <td>process</td>
+          <td>2026</td>
+          <td>Senior</td>
+          <td>Recruiter call around 30 minutes and a prompt about a project where the candidate played an important role</td>
+          <td><span class="confidence c">C</span><br>medium-low</td>
+          <td><a href="https://www.glassdoor.com.br/Entrevista/iFood-Senior-Software-Engineer-Perguntas-entrevista-EI_IE1396166.0%2C5_KO6%2C30.htm" target="_blank" rel="noreferrer">candidate-testimony</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E21</strong></td>
+          <td>method</td>
+          <td>2026-03</td>
+          <td>Structured interviewing</td>
+          <td>Consistent questions and anchored rubrics reduce noise and improve calibration</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://rework.withgoogle.com/intl/en/guides/a-guide-to-structured-interviewing-for-better-hiring-practices" target="_blank" rel="noreferrer">primary-method</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E22</strong></td>
+          <td>method</td>
+          <td>current</td>
+          <td>System design</td>
+          <td>Distributed-system interviews should probe scale, reliability, robustness, capacity and change</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://research.google/pubs/interviewing-for-systems-design-skills/" target="_blank" rel="noreferrer">primary-research</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E23</strong></td>
+          <td>reference</td>
+          <td>current</td>
+          <td>Reliability</td>
+          <td>SLOs connect user journeys to measurable targets and error budgets</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://sre.google/sre-book/service-level-objectives/" target="_blank" rel="noreferrer">primary-doc</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E24</strong></td>
+          <td>reference</td>
+          <td>current</td>
+          <td>Retries</td>
+          <td>Retries require timeouts, backoff, jitter and an idempotent boundary</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/" target="_blank" rel="noreferrer">primary-doc</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E25</strong></td>
+          <td>reference</td>
+          <td>2026-04-17</td>
+          <td>Kubernetes</td>
+          <td>Startup, readiness and liveness probes have distinct purposes and failure effects</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/" target="_blank" rel="noreferrer">primary-doc</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E26</strong></td>
+          <td>reference</td>
+          <td>2023</td>
+          <td>Java 21</td>
+          <td>Virtual threads improve thread-per-request scalability for blocking I/O; they do not make CPU work faster</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://openjdk.org/jeps/444" target="_blank" rel="noreferrer">primary-spec</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="A">
+          <td><strong>E27</strong></td>
+          <td>reference</td>
+          <td>2026-07-27</td>
+          <td>Kotlin</td>
+          <td>Coroutines require structured cancellation and dispatcher awareness; suspension is not identical to non-blocking I/O</td>
+          <td><span class="confidence a">A</span><br>high</td>
+          <td><a href="https://kotlinlang.org/docs/coroutines-basics.html" target="_blank" rel="noreferrer">primary-doc</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="X">
+          <td><strong>X01</strong></td>
+          <td>rejected</td>
+          <td>current</td>
+          <td>Generic interview SEO</td>
+          <td>Claims fixed stage counts and HackerRank without a traceable iFood source; excluded from factual model</td>
+          <td><span class="confidence x">X</span><br>none</td>
+          <td><a href="https://ophyai.com/blog/company-guides/ifood-interview-guide" target="_blank" rel="noreferrer">secondary-noisy</a><br>—</td>
+        </tr><tr class="source-row" data-confidence="X">
+          <td><strong>X02</strong></td>
+          <td>rejected</td>
+          <td>current</td>
+          <td>Generic interview SEO</td>
+          <td>Generic software-interview patterns cannot be separated from iFood-specific evidence</td>
+          <td><span class="confidence x">X</span><br>none</td>
+          <td><a href="https://www.revarta.com/interview/companies/ifood/roles/software-engineer" target="_blank" rel="noreferrer">secondary-noisy</a><br>—</td>
+        </tr></tbody></table></div>
+  </section>
+
+  <section class="section" id="sessao">
+    <div class="section-heading"><div><span class="section-number">16 · PRÓXIMOS PROMPTS</span><h2>Como aumentar precisão com informação de sessão</h2><p>Se chegar convite autenticado, atualizamos o modelo sem pedir credenciais nem reproduzir material protegido.</p></div></div>
+    <div class="grid grid-2">
+      <div class="card green"><h3>Pode enviar</h3><ul><li>URL/ID e título exato da vaga.</li><li>Texto do e-mail/agenda e data.</li><li>Nome oficial, duração e ferramenta da etapa.</li><li>Print da instrução, com dados pessoais ocultos.</li><li>Competências mencionadas e se pede computador.</li><li>Feedback recebido e estágio do processo.</li></ul></div>
+      <div class="card accent"><h3>Não envie</h3><ul><li>Senha, token, cookie, OTP ou credencial.</li><li>Dados pessoais de entrevistadores.</li><li>Segredos de cliente/empresa.</li><li>Material protegido por NDA.</li><li>Perguntas internas para redistribuição indevida.</li><li>Métrica confidencial não autorizada.</li></ul></div>
+    </div>
+    <div class="callout info"><strong>Template de atualização</strong>Vaga/time: … · Etapa: … · Data/duração/ferramenta: … · Texto oficial: … · Competências: … · Resultado/feedback: … · O que pode ser compartilhado: …</div>
+  </section>
+
+  <section class="section" id="arquivos">
+    <div class="section-heading"><div><span class="section-number">17 · ARQUIVOS</span><h2>Mapa do box</h2><p>Materiais reutilizáveis, auditáveis e offline.</p></div></div>
+    <div class="grid grid-3">
+      <div class="card"><h3>Dados</h3><ul><li><a href="data/source-ledger.csv">source-ledger.csv</a></li><li><a href="data/question-bank.csv">question-bank.csv</a></li><li><a href="data/scorecards.csv">scorecards.csv</a></li><li><a href="data/personal-story-matrix.csv">personal-story-matrix.csv</a></li></ul></div>
+      <div class="card"><h3>Código</h3><ul><li><a href="code/RatingSystemLab.java">RatingSystemLab.java</a></li><li><a href="code/RatingSystemLab.kt">RatingSystemLab.kt</a></li><li><a href="code/capacity_estimator.py">capacity_estimator.py</a></li><li><a href="code/mock_interview.py">mock_interview.py</a></li></ul></div>
+      <div class="card"><h3>Auditoria completa</h3><ul><li><a href="docs/01-metodo-quatro-passagens.md">4 passagens</a></li><li><a href="docs/02-auditoria-processo-relatos.md">Processo/relatos</a></li><li><a href="docs/03-auditoria-engenharia-publica.md">Engenharia pública</a></li><li><a href="docs/04-rubricas-e-plano-completo.md">Treino/rubricas</a></li></ul></div>
+    </div>
+    <p class="footer-note">Escopo: preparação ética com material público e exercícios autorais. Este manual não representa o iFood, não contém banco interno de perguntas e não garante resultado. Vagas e processos mudam; revalide a vaga antes de aplicar.</p>
+  </section>
+</main>
+<script src="assets/app.js"></script>
+</body>
+</html>
