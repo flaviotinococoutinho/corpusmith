@@ -71,6 +71,7 @@ button, a, input, select, textarea, summary { outline-offset: 3px; }
 a { color: var(--brand-2); }
 button { color: inherit; }
 [hidden] { display: none !important; }
+.clipboard-fallback { position: fixed; opacity: 0; pointer-events: none; width: 1px; height: 1px; }
 .sr-only {
   position: absolute!important; width: 1px!important; height: 1px!important;
   padding: 0!important; margin: -1px!important; overflow: hidden!important;
