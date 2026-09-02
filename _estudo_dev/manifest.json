@@ -1,0 +1,40 @@
+{
+  "format": "estudo-dev",
+  "schemaVersion": "1.0.0",
+  "contentRevision": 1,
+  "language": "pt-BR",
+  "profile": "compartilhavel",
+  "entrypoint": "./index.html",
+  "counts": {
+    "modules": 15,
+    "concepts": 203,
+    "relations": 26,
+    "claims": 15,
+    "evidence": 15,
+    "questions": 105,
+    "days": 21,
+    "labs": 21,
+    "commands": 99,
+    "references": 38
+  },
+  "runtimeFiles": [
+    "./index.html",
+    "./assets/styles.css",
+    "./assets/app.js",
+    "./data/catalog.js",
+    "./data/plan.js",
+    "./data/questions.js",
+    "./data/commands.js",
+    "./data/references.js",
+    "./data/evidence.js"
+  ],
+  "guarantees": {
+    "offline": true,
+    "externalRequests": false,
+    "absoluteLinks": false,
+    "analytics": false,
+    "remoteFonts": false,
+    "privateContentBundled": false
+  },
+  "validation": "npm run validate"
+}
