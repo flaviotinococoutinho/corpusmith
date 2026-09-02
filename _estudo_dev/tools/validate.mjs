@@ -7,7 +7,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const runtimeFiles=[
   "index.html","assets/styles.css","assets/app.js",
   "data/catalog.js","data/plan.js","data/questions.js",
-  "data/commands.js","data/references.js"
+  "data/commands.js","data/references.js","data/evidence.js"
 ];
 const text=Object.fromEntries(runtimeFiles.map((p)=>[p,fs.readFileSync(path.join(root,p),"utf8")]));
 const context={window:{}};
@@ -27,11 +27,14 @@ assert(E.concepts.length===203,"esperado 203 conceitos");
 assert(E.questions.length===105,"esperado 105 questões");
 assert(E.plan.length===21,"esperado 21 dias");
 assert(E.labs.length===21,"esperado 21 laboratórios");
+assert(E.claims.length===15&&E.evidence.length===15,"esperado ledger de 15 claims/evidências");
 unique(E.modules,(x)=>x.id,"módulos");
 unique(E.concepts,(x)=>x.id,"conceitos");
 unique(E.questions,(x)=>x.id,"questões");
 unique(E.commands,(x)=>x.id,"comandos");
 unique(E.references,(x)=>x.id,"fontes");
+unique(E.claims,(x)=>x.id,"claims");
+unique(E.evidence,(x)=>x.id,"evidências");
 
 const moduleIds=new Set(E.modules.map((x)=>x.id));
 const sourceIds=new Set(E.references.map((x)=>x.id));
@@ -39,6 +42,11 @@ for(const c of E.concepts){
   assert(moduleIds.has(c.moduleId),"módulo órfão em "+c.id);
   for(const sid of c.sourceIds)assert(sourceIds.has(sid),"fonte órfã "+sid+" em "+c.id);
 }
+for(const claim of E.claims){
+  assert(moduleIds.has(claim.subjectId.replace(":module","")),"claim sem sujeito "+claim.id);
+  for(const eid of claim.evidenceIds)assert(E.evidence.some((x)=>x.id===eid),"claim sem evidência "+claim.id);
+}
+for(const e of E.evidence)assert(sourceIds.has(e.sourceId),"evidência sem fonte "+e.id);
 for(const r of E.relations){
   assert(moduleIds.has(r.from)&&moduleIds.has(r.to),"relação órfã "+r.id);
 }
