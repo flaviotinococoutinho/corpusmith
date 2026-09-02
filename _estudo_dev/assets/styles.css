@@ -300,6 +300,13 @@ textarea { resize: vertical; line-height: 1.55; }
 .copy-command { min-width:44px; min-height:44px; border:1px solid var(--line); border-radius:9px; background:var(--surface); cursor:pointer; }
 .epistemic-strip { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
 .epistemic-strip span { padding:6px 10px; border-radius:999px; background:var(--surface-2); font-size:.72rem; font-weight:800; }
+.claim-panel { margin-bottom: 24px; }
+.catalog-title { margin: 30px 0 14px; }
+.table-wrap { width: 100%; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 780px; }
+th, td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
+td { font-size: .84rem; }
 .reference-card { min-height:250px; }
 .reference-card .locator { margin-top:auto; padding-top:15px; font: .75rem var(--mono); overflow-wrap:anywhere; color:var(--brand-2); }
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:980px; }
