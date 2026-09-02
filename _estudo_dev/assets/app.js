@@ -228,6 +228,11 @@ async function copyCommand(id,button){
   }catch(_){announce("Não foi possível copiar; selecione o comando manualmente");}
 }
 function renderReferences(){
+  $("#claim-ledger").innerHTML=E.claims.map((claim)=>{
+    const evidence=E.evidence.find((x)=>claim.evidenceIds.includes(x.id));
+    const source=evidence&&E.references.find((x)=>x.id===evidence.sourceId);
+    return `<tr><td>${esc(claim.statement)}</td><td>${esc(claim.knowledgeKind)}</td><td><span class="badge">${esc(claim.status)}</span></td><td>${esc(claim.confidence.level)}</td><td>${esc(source?.title||"evidência pendente")} · ${esc(evidence?.grade||"D")}</td></tr>`;
+  }).join("");
   $("#reference-grid").innerHTML=E.references.map((r)=>`<article class="reference-card"><div class="card-meta"><span class="badge">${esc(r.epistemic)}</span><span>grau ${esc(r.grade)}</span></div><h2>${esc(r.title)}</h2><p>${esc((r.note||r.scope))}</p><div class="card-tags"><span>${esc(r.type)}</span><span>${esc(r.organization)}</span><span>${esc(r.visibility)}</span></div>${r.locator.startsWith("./")?`<a class="locator" href="${esc(r.locator)}">Abrir artefato local →</a>`:`<div class="locator">${esc(r.locator)}</div>`}</article>`).join("");
 }
 function renderQuestion(){
