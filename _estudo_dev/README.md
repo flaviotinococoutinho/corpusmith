@@ -34,7 +34,8 @@ _estudo_dev/
     ├── ontology.md
     ├── epistemology.md
     ├── portability.md
-    └── content-contract.md
+    ├── content-contract.md
+    └── qa.md
 ```
 
 ## Princípios
@@ -56,7 +57,9 @@ _estudo_dev/
 - simulador de entrevista com cronômetro de 120 segundos;
 - respostas progressivas e régua 0–4;
 - cartões de comandos com risco operacional;
-- ledger de referências e estado epistemológico;
+- ledger explícito de 15 claims, evidências e fontes;
+- catálogo de 38 referências públicas por identificador relativo;
+- 99 cartões de comandos com risco e versão;
 - checkpoint, exportação e importação de progresso;
 - tema claro, escuro e alto contraste;
 - funcionamento offline, sem CDN, analytics, fontes ou requisições remotas.
@@ -73,6 +76,8 @@ _estudo_dev/
 ## Evolução do conteúdo
 
 Adicione conceitos em `data/catalog.js` preservando IDs. Use relações tipadas e evite duplicar um conceito em dois módulos proprietários. Para uma mudança incompatível, crie um novo ID e marque `supersedes`.
+
+Execute `npm run validate` antes de publicar. O validador não possui dependências externas e confere contagens, IDs, relações, fontes, caminhos e sintaxe.
 
 Antes de publicar, confira:
 
