@@ -45,7 +45,7 @@ function announce(message){
 function moduleOf(id){return E.modules.find((m)=>m.id===id);}
 function routeName(){
   const part=(location.hash||"#/inicio").replace(/^#\//,"").split("/")[0];
-  return ["inicio","mapa","conceitos","trilhas","entrevistas","labor","laboratorios","comandos","fontfontes","fontes","checkpoint"].includes(part)?part:"inicio";
+  return ["inicio","mapa","conceitos","trilhas","entrevistas","laboratorios","comandos","fontes","checkpoint"].includes(part)?part:"inicio";
 }
 function showRoute(){
   const route=routeName();
@@ -97,7 +97,7 @@ const positions={
 function renderGraph(){
   const svg=$("#knowledge-graph");
   while(svg.firstChild) svg.removeChild(svg.firstChild);
-  const ns="http://www.w3.org/2000/svg";
+  const ns=svg.namespaceURI;
   const defs=document.createElementNS(ns,"defs");
   const marker=document.createElementNS(ns,"marker");
   marker.setAttribute("id","arrow");marker.setAttribute("viewBox","0 0 10 10");marker.setAttribute("refX","9");marker.setAttribute("refY","5");marker.setAttribute("markerWidth","6");marker.setAttribute("markerHeight","6");marker.setAttribute("orient","auto-start-reverse");
@@ -187,9 +187,19 @@ function renderPlan(){
   }).join("");
   $$("#plan-list .plan-check").forEach((b)=>b.addEventListener("click",()=>{
     const day=Number(b.dataset.day);
-    if(state.completedDays.includes(day))state.completedDays=state.completedDays.filter((x)=>x!==day);
-    else state.completedDays.push(day);
-    saveState();announce(`Dia ${day} ${state.completedDays.includes(day)?"concluído":"reaberto"}`);
+    if(state.completedDays.includes(day)){
+      state.completedDays=state.completedDays.filter((x)=>x!==day);
+      saveState();announce(`Dia ${day} reaberto`);
+    }else{
+      const proof=state.checkpoints.some((r)=>r.day===day&&r.score>=3&&r.output&&r.evidence);
+      if(!proof){
+        location.hash="#/checkpoint";
+        setTimeout(()=>{$("#checkpoint-day").value=String(day);$("#checkpoint-focus").focus();},0);
+        announce("Conclusão bloqueada: registre nota mínima 3, artefato e evidência relativa");
+        return;
+      }
+      state.completedDays.push(day);saveState();announce(`Dia ${day} concluído com evidência`);
+    }
   }));
   const pct=Math.round(state.completedDays.length/21*100);
   $("#plan-progress").innerHTML=`<span>${state.completedDays.length}/21</span>`;
@@ -212,7 +222,7 @@ async function copyCommand(id,button){
   try{
     if(navigator.clipboard&&isSecureContext)await navigator.clipboard.writeText(value);
     else{
-      const ta=document.createElement("textarea");ta.value=value;ta.setAttribute("readonly","");ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();
+      const ta=document.createElement("textarea");ta.value=value;ta.setAttribute("readonly","");ta.className="clipboard-fallback";document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();
     }
     button.textContent="✓";setTimeout(()=>button.textContent="⧉",1000);announce("Comando copiado");
   }catch(_){announce("Não foi possível copiar; selecione o comando manualmente");}
@@ -268,7 +278,7 @@ function submitCheckpoint(ev){
     output:$("#checkpoint-output").value.trim(),score:selectedCheckpointScore,errors:$("#checkpoint-errors").value.trim(),
     next:$("#checkpoint-next").value.trim(),evidence:$("#checkpoint-evidence").value.trim(),createdAt:new Date().toISOString()
   };
-  if(!record.focus||!record.practice||!record.output||!record.errors||!record.next){announce("Preencha os campos obrigatórios");return;}
+  if(!record.focus||!record.practice||!record.output||!record.errors||!record.next||!record.evidence){announce("Preencha os campos obrigatórios");return;}
   if(/^(?:https?:|file:|\/|\\\\)|\.\./i.test(record.evidence)){announce("A evidência deve usar caminho relativo, sem URL ou caminho absoluto");return;}
   state.checkpoints.push(record);state.dayScores[record.day]=record.score;scheduleReview(`Dia ${record.day} · ${E.plan[record.day-1].title}`,record.score);
   if(record.score>=3&&!state.completedDays.includes(record.day))state.completedDays.push(record.day);
