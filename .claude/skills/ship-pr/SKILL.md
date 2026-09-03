@@ -20,22 +20,31 @@ NUNCA commite direto na `main`.
 ## 2. Gate (obrigatório, na raiz)
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q
-cd desktop && npx tsc --noEmit
-docker compose config -q
+just verify
 ```
 
-Se a contagem de testes mudou, atualize o número em `AGENTS.md` §2 e no
-`README.md` (montagem) — eles citam a contagem exata de propósito.
+A lista do que o gate executa tem UMA fonte — `architecture.toml [gate]`,
+cruzada com o `ci.yml` e com o `justfile` por `test_pr0_gate.py`. Esta
+skill não a copia (as cópias divergiam). **Nunca crave contagem de testes
+em doc viva**: `test_pr0_gate` e `test_docs_contract` reprovam; cite
+`corpusmith context`.
 
 ## 3. Sincronizar o que a mudança tocou
 
-- Funcionalidade core mudou → invoque `/docs-sync` (mapa código→doc).
-- Item do backlog fechado → risque em `docs/09-backlog.md` com a versão
-  (`~~ID~~ (vX.Y)`), como A-06 e DATA-1.
-- Camada/regra de arquitetura mudou → `architecture.toml` (preso a teste).
+- Funcionalidade core mudou → invoque `/docs-sync` (mapa código→doc; o
+  primeiro passo é `just context` e ler o diff do mapa).
+- Item da fila fechado → mova a linha de `docs/18-backlog-consolidado.md`
+  §11 para a seção histórica do mesmo documento, NO MESMO COMMIT, com o
+  teste que prova. `docs/09` é histórico (congelado): não escreva lá.
+- Camada/regra/invariante de arquitetura mudou → `architecture.toml`
+  (`[gate]`, `[[invariant]]` — presos a teste).
+- Requisito não funcional mudou de estado → `nfr.toml` (`declared` →
+  `pinned` só com o teste em `verified_by`).
 - Mecanismo heurístico novo/alterado → contrato em `epistemics.toml`
-  (o lint proíbe garantia universal e autocertificação).
+  (o lint proíbe garantia universal e autocertificação); termo ou valor
+  novo em eixo → `ontology.toml` (RFC, não ADR).
+- Doc novo em `docs/` → linha em `docs/README.md` e a linha
+  `> **Altitude:** … · **Status:** vivo|histórico` na cabeça.
 
 ## 4. Entrega
 
@@ -54,8 +63,8 @@ do teste-que-falhava) · desvios conscientes, se houver.
 ## 5. CI, merge e limpeza
 
 ```bash
-gh pr checks <n> --watch      # backend + desktop + compose verdes
-gh pr merge <n> --merge --delete-branch
+gh pr checks <n> --watch      # todas as pernas do ci.yml verdes
+gh pr merge <n> --squash --delete-branch   # CONTRIBUTING.md: squash merge
 git checkout main && git pull --ff-only && git fetch --prune
 git branch -d claude/<tema-curto>
 ```

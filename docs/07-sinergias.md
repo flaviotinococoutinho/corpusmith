@@ -1,5 +1,7 @@
 # 07 · Sinergias — combinar e extrair o melhor dos conceitos
 
+> **Altitude:** fluxo · **Status:** vivo
+
 > Os conceitos não são features isoladas: formam um sistema com laços.
 > Este documento mapeia as interações (quem alimenta quem), as receitas
 > de composição prontas e os pontos de extensão seguros.

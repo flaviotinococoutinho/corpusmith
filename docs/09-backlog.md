@@ -1,5 +1,7 @@
 # 09 · Backlog — estado de fechamento (v1.5)
 
+> **Altitude:** governança · **Status:** histórico — congelado em v1.5; NÃO atualizar — o estado vivo do que falta está em [`18`](18-backlog-consolidado.md) §11
+
 > Última auditoria: validação da spec **BC-ENG-001** sobre o baseline
 > 1.4.0 (ver [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md)
 > §21); a rodada de consolidação de doc é a v1.5 (ADR-37). Tudo que foi

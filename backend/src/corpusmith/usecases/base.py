@@ -105,7 +105,10 @@ class MachinePageUseCase(UseCase):
             document = self._merged_with_resident(document)
         if decision["op"] == "SUPERSEDE":
             self._supersede(decision["target"], document.rel_path)
-        self._stage("write", page=document.rel_path, op=decision["op"])
+        perda = getattr(self, "_ratificacao_perdida", None)
+        extra_perda = {"ratification_lost": perda} if perda else {}
+        self._stage("write", page=document.rel_path, op=decision["op"],
+                    **extra_perda)
         result = self._writer.write(
             [document],
             log_kind=self.LOG_KIND if decision["op"] == "ADD" else "Update",
@@ -115,7 +118,7 @@ class MachinePageUseCase(UseCase):
         self._stage("done", page=document.rel_path, op=decision["op"])
         return {"op": decision["op"], "page": document.rel_path,
                 "commit": result["commit"], "trace_id": self._trace_id,
-                **self._extra_result()}
+                **extra_perda, **self._extra_result()}
 
     # -------------------------------------------------------------- hooks
     @abstractmethod
@@ -158,10 +161,21 @@ class MachinePageUseCase(UseCase):
         `kernel/curation.py:merge_meta`, compartilhada com o MergePages —
         uma regra de fusão, não duas."""
         from ..kernel.curation import merge_meta, mergeable_source_meta
+        from ..kernel.ontology import ratificacao_perdida
         reader = self._writer.reader
         if not reader.exists(document.rel_path):
             return document
         residente = reader.load(document.rel_path)
+        # RFC-004 / docs/26 §3: quando a residente foi ratificada e o
+        # rascunho de máquina não, a fusão derruba a ratificação — CORRETO
+        # (ela cobria outro conteúdo), mas derrubá-la sem registro é
+        # *audit erasure* no eixo de governança. A perda viaja no evento
+        # `write` e no resultado do use case.
+        self._ratificacao_perdida = ratificacao_perdida(
+            str(document.meta.model_dump().get("confidence")
+                or "extracted"),
+            str(residente.meta.model_dump().get("confidence")
+                or "extracted"))
         fundido = merge_meta(
             document.meta.model_dump(exclude_none=True),
             mergeable_source_meta(

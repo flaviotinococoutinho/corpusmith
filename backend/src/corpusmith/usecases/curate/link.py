@@ -18,6 +18,7 @@ um "não funcionou" silencioso.
 from __future__ import annotations
 from .base import CurationAct, CurationPreview
 from ..mark_stale import dependents_of
+from ...kernel.semantics import RELACOES, e_relacao
 from ...okf.document import OKFDocument, OKFFrontMatter
 from ...okf.relations import prose_links_to, with_link, without_link
 from ...settings import Settings
@@ -29,6 +30,19 @@ class _AtoDeRelacao(CurationAct):
     def __init__(self, settings: Settings, src: str, dst: str, *,
                  rel: str | None = None, notify=None):
         super().__init__(settings, notify)
+        # V5: vocabulário FECHADO na escrita, recusado no CONSTRUTOR — antes
+        # de qualquer leitura de disco e antes do preview, para que nem o
+        # dry-run chegue a montar um plano com relação que não existe. O
+        # canônico é para sempre: um `rel:` inventado hoje é dívida de
+        # vocabulário que ninguém sabe reinterpretar amanhã (a razão de o
+        # `ontology.toml` existir). A LEITURA segue tolerante
+        # (`relacao_ou_none` na projeção): bundle antigo e link de prosa
+        # jamais podem derrubar um rebuild.
+        if rel is not None and not e_relacao(rel):
+            raise ValueError(
+                f"relação desconhecida: {rel!r} — o vocabulário é fechado "
+                f"({', '.join(sorted(RELACOES))}); para só ligar as páginas, "
+                "use o link sem relação")
         self._src = src
         self._dst = dst
         self._rel = rel
@@ -59,12 +73,22 @@ class LinkPages(_AtoDeRelacao):
         return with_link(origem.body, self._src, self._dst, titulo, self._rel)
 
     def _plan(self) -> CurationPreview:
+        nota = (f"acrescenta {self._dst} ao bloco de relações de "
+                f"{self._src}; a prosa não é tocada e a aresta passa a "
+                "existir no grafo após a reindexação")
+        if self._rel:
+            # V5, o preço do NÍVEL declarado ANTES do efeito (docs/28 §2):
+            # a aresta liga PÁGINAS, então a relação vale para a página
+            # INTEIRA do destino — se ela carrega várias afirmações, a
+            # declaração é mais grossa que a realidade. Dizer isso aqui é
+            # o que impede o produto de fingir uma precisão que o nível 3
+            # (a afirmação) ainda não tem.
+            nota += (f"; a relação `{self._rel}` ({RELACOES[self._rel]['pergunta']}) "
+                     f"vale para a página inteira de {self._dst} — não para "
+                     "uma afirmação dela")
         return self._preview_write(
             [self._documento(self._corpo())], self.ACT,
-            dependents=dependents_of(self._settings, self._src),
-            note=(f"acrescenta {self._dst} ao bloco de relações de "
-                  f"{self._src}; a prosa não é tocada e a aresta passa a "
-                  "existir no grafo após a reindexação"))
+            dependents=dependents_of(self._settings, self._src), note=nota)
 
     def _apply(self, preview: CurationPreview) -> dict:
         return self._writer.write(

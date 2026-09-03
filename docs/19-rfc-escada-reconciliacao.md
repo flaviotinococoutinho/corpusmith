@@ -1,5 +1,7 @@
 # 19 · RFC-002 — Ressuscitar o degrau de similaridade da reconciliação
 
+> **Altitude:** governança · **Status:** vivo
+
 > `AGENTS.md` §8 exige RFC — não só ADR — para **heurística no caminho de
 > escrita**. Corrigir a SQL não é um conserto neutro: ela é o degrau que, ao
 > voltar a funcionar, liga os cortes HI/LO, o NCD **e o árbitro LLM local**

@@ -13,7 +13,7 @@ from .model import (Assumption, DecisionFallback, EpistemicContract,
                     EvaluationEnvelope, EvaluationStatus, EvidenceKind,
                     Finding, GuaranteeDescriptor, GuaranteeKind,
                     InductiveBias, KnownFailureMode, Registry,
-                    ValidityScope, envelope_status)
+                    SideEffect, ValidityScope, envelope_status)
 from .parse import RegistryError, parse_registry
 from .validate import validate_registry
 
@@ -21,6 +21,7 @@ __all__ = [
     "Assumption", "DecisionFallback", "EpistemicContract",
     "EvaluationEnvelope", "EvaluationStatus", "EvidenceKind", "Finding",
     "GuaranteeDescriptor", "GuaranteeKind", "InductiveBias",
-    "KnownFailureMode", "Registry", "RegistryError", "ValidityScope",
+    "KnownFailureMode", "Registry", "RegistryError", "SideEffect",
+    "ValidityScope",
     "envelope_status", "parse_registry", "validate_registry",
 ]

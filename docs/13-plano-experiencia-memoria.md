@@ -1,5 +1,7 @@
 # 13 · Plano avançado — Experiência de Memória, Curadoria e Classificação
 
+> **Altitude:** governança · **Status:** histórico — congelado em v1.7; NÃO atualizar — o estado vivo do que falta está em [`18`](18-backlog-consolidado.md) §11
+
 > **Especialidade deste documento:** produto + epistemologia aplicada +
 > experiência de usuário. Não é um ADR (nenhuma decisão foi *tomada*
 > ainda) nem código — é um **plano priorizado** de para onde levar a

@@ -5,7 +5,7 @@
 # Uso:
 #   scripts/install.sh                 # backend + desktop
 #   scripts/install.sh --backend-only  # só o backend (venv + CLI)
-#   scripts/install.sh --with-tests    # roda a suíte (289 testes) ao final
+#   scripts/install.sh --with-tests    # roda a suíte completa do backend ao final
 #   scripts/install.sh --with-smoke    # bootstrap+seed+lint+doctor em HOME temporário
 #   scripts/install.sh --docker        # valida compose e constrói a imagem
 #

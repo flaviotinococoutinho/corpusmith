@@ -5,7 +5,8 @@ aqui (puro): o shell passa `existing_refs` como dado. Determinístico:
 mesma entrada (em qualquer ordem) ⇒ mesmos findings, ordenados.
 """
 from __future__ import annotations
-from .model import (EMPIRICAL_GUARANTEES, HEURISTIC_GUARANTEES,
+from .model import (SideEffect,
+                    EMPIRICAL_GUARANTEES, HEURISTIC_GUARANTEES,
                     SELF_CONTAINED_GUARANTEES, EpistemicContract,
                     EvidenceKind, Finding, Registry)
 
@@ -55,6 +56,19 @@ def _validate_contract(c: EpistemicContract,
             not c.known_failure_modes:
         finding("epistemic.failure_modes_missing",
                 "mecanismo heurístico sem failure modes declarados")
+    # C6: efeito colateral declarado (`docs/17`). Escrever no CANÔNICO é
+    # alto impacto por construção neste produto — o bundle é a autoridade
+    # e o commit é para sempre. Declarar a escrita e negar o impacto seria
+    # o contrato dizendo duas coisas opostas sobre o mesmo mecanismo.
+    if SideEffect.CANONICAL_WRITE in c.side_effects and not c.high_impact:
+        finding("epistemic.canonical_write_without_impact",
+                "declara escrita no CANÔNICO e high_impact=false — o "
+                "bundle é a autoridade e o commit é definitivo; escrita "
+                "no canônico é alto impacto por construção")
+    if SideEffect.NONE in c.side_effects and len(c.side_effects) > 1:
+        finding("epistemic.side_effect_contradiction",
+                "declara `none` ao lado de outro efeito — quem ler `none` "
+                "primeiro lê o contrário do que o mecanismo faz")
     if c.guarantee.kind in EMPIRICAL_GUARANTEES and not c.evaluated_by:
         finding("epistemic.evaluation_missing",
                 "garantia empírica sem vínculo com envelope de avaliação "

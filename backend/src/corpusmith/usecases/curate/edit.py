@@ -6,10 +6,12 @@ use case, endpoint nem CLI de edição, e a correção acontecia FORA do
 produto — onde o doctor nem detecta a divergência, porque INV-002 compara
 `bundle_head` com o HEAD do Git e edição não commitada não move o HEAD.
 
-É também o ato que resolve `contested`: uma página que "deu beco" não
+É também o ato que resolve `low_yield`: uma página que "deu beco" não
 expirou no mundo (não é `invalidate`) nem tem sucessora (não é
 `supersede`) — o que ela precisa é ter o corpo corrigido. Por isso
-`acts_for` deixou `contested` sem ato até agora, e é este PR que muda isso.
+`acts_for` deixou `low_yield` sem ato até agora, e é este PR que muda isso.
+(O-6: o nome antigo era `contested`; a partir do ADR-54 essa palavra é do
+eixo `resolution_status` e significa divergência factual, não beco.)
 
 **A prosa NÃO passa pelo sanduíche.** `normalize_machine_body` reescreve
 grafia canônica e é o eixo de MÁQUINA (v0.8 §1.2 — o Harness aplica só a

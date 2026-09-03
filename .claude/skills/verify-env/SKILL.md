@@ -11,10 +11,13 @@ passo tem uma SAÍDA ESPERADA — se divergir, é achado, não ruído.
 ## 1. Gate único (o mesmo do CI e do AGENTS §2)
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # → N passed (AGENTS §2 diz o N vigente)
-cd desktop && npx tsc --noEmit                      # → sem saída
-docker compose config -q                            # → sem saída
+just verify        # a lista é architecture.toml [gate]; test_pr0_gate cruza CI e justfile
 ```
+
+Saída esperada: pytest com zero falhas (a contagem cresce a cada versão —
+`corpusmith context` a imprime; nenhuma doc viva a crava), `tsc` sem
+saída, `npm test` verde, `docker compose config` sem saída,
+`epistemics lint` e `ontology lint` com 0 finding(s).
 
 Sem venv ainda? `scripts/install.sh --with-tests` (sonda interpretadores
 criando venv real — Python 3.14 do Homebrew tem ensurepip quebrado; a
@@ -32,6 +35,8 @@ backend/scripts/corpusmith seed             # → seed ok: terms/quotations/fact
 backend/scripts/corpusmith okf lint         # → 0 finding(s), 0 erro(s)
 backend/scripts/corpusmith doctor           # → {"ok": true, "counts": {"error": 0, ...}}
 backend/scripts/corpusmith epistemics lint  # → N mecanismo(s), 0 finding(s)
+backend/scripts/corpusmith ontology lint    # → N eixo(s), N termo(s), 0 finding(s)
+backend/scripts/corpusmith context          # → o mapa do repositório (versão, HEAD, registros, rotas, fila)
 ```
 
 ## 3. Smoke da API (daemon vivo, auth real)

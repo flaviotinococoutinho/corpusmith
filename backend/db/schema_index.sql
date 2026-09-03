@@ -26,8 +26,13 @@ END;
 CREATE TABLE IF NOT EXISTS graph_edges (
     src  TEXT NOT NULL,
     dst  TEXT NOT NULL,
-    kind TEXT NOT NULL,          -- 'wikilink' | 'markdown'
+    kind TEXT NOT NULL,          -- 'wikilink' | 'markdown' (SINTAXE)
     confidence TEXT DEFAULT 'extracted',   -- v0.8 §1.4: extracted|inferred|ambiguous
+    -- V5 (RFC-006): a relação SEMÂNTICA declarada por um humano
+    -- (kernel/semantics.py: aplica_se_a|exemplifica|refina). NULL = link
+    -- sem tipo, que é a esmagadora maioria. Fora da PK de propósito: o
+    -- tipo é ATRIBUTO da aresta que já existe, não uma aresta nova.
+    rel TEXT,
     PRIMARY KEY (src, dst, kind)
 );
 
@@ -161,3 +166,34 @@ CREATE TABLE IF NOT EXISTS theme_epochs(
   members     TEXT,                  -- JSON dos membros nesta época
   related     TEXT);                 -- JSON: theme_id(s) envolvidos
 CREATE INDEX IF NOT EXISTS idx_epochs_theme ON theme_epochs(theme_id);
+
+-- RFC-006 V3: estabilidade EDITORIAL por página — projeção pura de
+-- bundle+Git (kernel/stability.py consolida; ComputeStability escreve).
+-- 'lifecycle' é o sentido de CICLO lido de vitality (viva | superseded_by
+-- | invalid_at); 'edits' é o sentido de EDIÇÃO. Uso e tema têm donos
+-- próprios (page_heat, theme_epochs) e NÃO entram aqui de propósito.
+-- Frescor: checkpoint 'stability' em runtime.db (sobrevive ao rebuild).
+CREATE TABLE IF NOT EXISTS page_stability(
+  rel_path        TEXT PRIMARY KEY,
+  edits           INTEGER NOT NULL,
+  first_commit_at REAL,
+  last_edit_at    REAL,
+  lifecycle       TEXT NOT NULL DEFAULT 'viva',
+  computed_from   TEXT NOT NULL);    -- HEAD do bundle na hora do cálculo
+
+-- V4 (RFC-006): índice "difícil de explicar" por página. Projeção COMPOSTA
+-- (kernel/difficulty.py): cinco sinais de cinco donos, pesos fixos no kernel
+-- e declarados no contrato `explanation_difficulty`.
+--
+-- `measured` é o campo que impede a leitura errada: score 0 com measured=0
+-- significa "nada observado", NUNCA "fácil de explicar". Ao contrário de
+-- `page_stability`, esta projeção NÃO é 100% re-derivável do canônico — dois
+-- dos cinco sinais são de USO (prática e abstenção) e vivem fora do bundle
+-- por decisão de produto; por isso não há derivação declarada em DERIVATIONS
+-- (um carimbo sobre o HEAD prometeria um frescor que o uso não move).
+CREATE TABLE IF NOT EXISTS page_difficulty(
+  rel_path   TEXT PRIMARY KEY,
+  score      REAL NOT NULL,
+  measured   INTEGER NOT NULL DEFAULT 0,
+  reason     TEXT NOT NULL DEFAULT '',
+  components TEXT NOT NULL DEFAULT '{}');   -- JSON: parcela por componente

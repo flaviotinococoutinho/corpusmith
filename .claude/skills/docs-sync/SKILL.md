@@ -28,8 +28,20 @@ pergunte ao usuário antes).
 | Teste de arquitetura alterado | `docs/02-metodologias.md` §8 + `docs/06-referencia.md` §9 |
 | Painel/cliente desktop | `docs/04-tecnologias.md` §4 (só se mudar contrato, não estética) |
 | Conceito avaliado e adotado/rejeitado | `docs/08-decisoes.md` (ADR novo com contexto→decisão→consequência e porta de reentrada) |
+| Contrato em `epistemics.toml` (mecanismo novo, parâmetro, `side_effects`, `misinterpretations`) | `docs/11-epistemic-contracts.md` (só o porquê — a contagem e a versão vêm de `corpusmith context`) + `EXPECTED_MECHANISMS` em `harness/epistemics.py` |
+| Eixo, termo, vocabulário fechado ou deriva em `ontology.toml` / `kernel/ontology.py` | `docs/23-ontologia-e-etimologia.md` (verbete com raiz e o que proíbe) — termo NOVO em eixo exige RFC (AGENTS §8) |
+| `architecture.toml` (`[gate]`, `[[invariant]]`, camadas) | `AGENTS.md` §2/§4 e `docs/10` §1 citam o TOML; não copie a lista |
+| `nfr.toml` (status de requisito não funcional) | `docs/10` §5–§17 é a doutrina; o selo NÃO se escreve em prosa — `declared` → `pinned` só com teste em `verified_by` |
+| Item da fila corrente (`docs/18` §11) fechado | mova a linha para a seção histórica de `docs/18` no MESMO commit, com o teste que prova; `docs/29`/`docs/30` só se a direção ou um termo da re-mira mudar |
+| Documento novo em `docs/` | linha em `docs/README.md` + cabeçalho `> **Altitude:** … · **Status:** …` (test_docs_contract) |
 
 ## Procedimento de auditoria
+
+Primeiro passo, sempre: `just context` (ou `corpusmith context --json`) —
+o mapa gerado do código lista rotas, jobs, use cases, bancos, eventos,
+ADRs, registros e a fila; compare-o com a doc ANTES de rodar os greps
+abaixo (eles cobrem o que o mapa ainda não enumera: regras, detectores,
+constantes, flags).
 
 Execute a partir de `backend/` e compare cada saída com a seção citada:
 

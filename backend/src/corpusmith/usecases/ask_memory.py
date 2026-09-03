@@ -12,6 +12,7 @@ Melhorias de coordenação sobre o fluxo anterior:
 """
 from __future__ import annotations
 import heapq
+import json
 import random
 import re
 import time
@@ -22,6 +23,7 @@ from ..compute import get_kernel
 from ..kernel.grounding import ground_spans
 from ..kernel.identity import factory as id_factory, parse as parse_id
 from ..kernel.information import surprisal
+from ..kernel.sketch import miss_key
 from ..models.router import ModelRouter, ModelUnavailable
 from ..normalize import analyze
 from ..okf.authorities import load_gazetteer
@@ -82,7 +84,8 @@ class AskMemory(UseCase):
         self._already_recycled = _recycled
         self._router = ModelRouter(settings, gov)
 
-    def _cold_fallback(self, ask_id, fused, as_of, trajectory) -> dict:
+    def _cold_fallback(self, rt, ask_id, fused, as_of, trajectory,
+                       entidades) -> dict:
         """Abstenção consulta a BASE FRIA (v0.12): memórias congeladas que
         casam com a pergunta viram cold_matches — e, com memory.auto_recycle,
         a melhor é reidratada e a consulta roda de novo (uma única vez)."""
@@ -98,12 +101,39 @@ class AskMemory(UseCase):
         if matches:
             gaps.append("há memória FRIA compatível — recicle para responder: "
                         + ", ".join(m["page"] for m in matches[:3]))
-        return {"answer": None, "abstained": True, "blocked": False,
-                "support": empty_support(),
-                "via": "none", "ask_id": ask_id,
-                "uncertainty": fused.uncertainty, "gaps": gaps,
-                "cold_matches": matches,
-                "evidence": [], "as_of": as_of, "trajectory": trajectory}
+        out = {"answer": None, "abstained": True, "blocked": False,
+               "support": empty_support(),
+               "via": "none", "ask_id": ask_id,
+               "uncertainty": fused.uncertainty, "gaps": gaps,
+               "cold_matches": matches,
+               "evidence": [], "as_of": as_of, "trajectory": trajectory}
+        # F6 (P-8): a abstenção deixa RASTRO. Gravar aqui — no retorno
+        # terminal — e não no chamador garante um miss por pergunta mesmo
+        # quando o auto_recycle re-executa (a recursão retorna acima, e o
+        # miss da re-execução é dela).
+        self._record_miss(rt, out, entidades)
+        return out
+
+    def _record_miss(self, rt, out: dict, entidades) -> None:
+        rt.execute(
+            "INSERT INTO ask_misses(ask_id, miss_key, query, entities, "
+            "gaps, as_of) VALUES(?,?,?,?,?,?)",
+            (out["ask_id"], miss_key(self._query, entidades), self._query,
+             json.dumps(sorted(entidades), ensure_ascii=False),
+             json.dumps(out.get("gaps", []), ensure_ascii=False),
+             out.get("as_of")))
+        rt.commit()
+
+    def _close_misses(self, rt, ask_id: str, entidades) -> None:
+        """Fechamento VERIFICADO por re-ask (F6): só a própria consulta
+        respondida prova que o buraco fechou — nenhum job adivinha
+        cobertura. O primeiro fechador fica (auditoria); reabrir não
+        existe: uma nova abstenção grava um miss NOVO."""
+        rt.execute(
+            "UPDATE ask_misses SET closed_at = unixepoch('subsec'), "
+            "closed_by = ? WHERE miss_key = ? AND closed_at IS NULL",
+            (ask_id, miss_key(self._query, entidades)))
+        rt.commit()
 
     def execute(self) -> dict:
         # ask_id É o trace id (v0.16): snowflake com módulo=ask e
@@ -177,12 +207,14 @@ class AskMemory(UseCase):
             threshold = float(self._settings.get("ask.abstain_threshold",
                                                  0.0))
             if fused.is_empty() or fused.top_score < threshold:
-                out = self._cold_fallback(ask_id, fused, as_of, trajectory)
+                out = self._cold_fallback(rt, ask_id, fused, as_of,
+                                          trajectory, question_entities)
                 out["profile"] = profile.close()
                 return out
 
             with profile.stage("record_usage"):
                 self._record_usage(rt, ask_id, fused)
+                self._close_misses(rt, ask_id, question_entities)
             # R1 (grounding v1.8): localiza no trecho as superfícies das
             # entidades da pergunta — o "por que este trecho" à vista, sem
             # LLM (determinístico; à la langextract). Vazio ⇒ sem highlight.

@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from .bundle import BundleReader
 from ..normalize import Gazetteer, NormReport, analyze, rewrite
+from ..normalize.gazetteer import TIER_BUNDLE, TIER_REFERENCIA
 
 
 def normalize_machine_body(body: str, gaz: Gazetteer) -> tuple[str, NormReport]:
@@ -79,7 +80,8 @@ def _reference_terms(bundle_root: Path) -> list[dict]:
     rows = conn.execute("SELECT canonical, kind, aliases FROM ref_terms")
     out = [{"canonical": r["canonical"],
             "aliases": json.loads(r["aliases"]),
-            "authority": r["kind"], "qid": None} for r in rows]
+            "authority": r["kind"], "qid": None,
+            "tier": TIER_REFERENCIA} for r in rows]
     conn.close()
     return out
 
@@ -89,25 +91,39 @@ def _build_derived(reader: BundleReader) -> dict:
     schemas: dict[str, dict] = {}
     for d in reader.iter_concepts():
         x = d.meta.model_dump(exclude_none=True)
-        if d.meta.type == "authority_record" and x.get("canonical"):
+        # `canonical` precisa ser str: o frontmatter tolera extras sem
+        # validar tipo, e uma lista aqui derrubava o `rebuild_index` inteiro
+        # com AttributeError num `.lower()` três chamadas adiante
+        if d.meta.type == "authority_record" \
+                and isinstance(x.get("canonical"), str) \
+                and x["canonical"].strip():
+            # `page` e `tier` (RFC-006 V2): a camada decide a precedência, e
+            # a página é o alvo editável quando dois registros curados
+            # disputam o mesmo alias — sem ela o finding não teria onde
+            # apontar e o conflito viraria aviso sem ato
             extra.append({"canonical": x["canonical"],
                           "aliases": x.get("aliases", []),
                           "authority": x.get("authority", "term"),
-                          "qid": x.get("qid")})
+                          "qid": x.get("qid"),
+                          "tier": TIER_BUNDLE, "page": d.rel_path})
         elif d.meta.type == "collection_specification" and x.get("applies_to"):
             schemas[str(x["applies_to"])] = {
                 "required_fields": list(x.get("required_fields", [])),
                 "page": d.rel_path}
     # precedência (v0.22): authority_record VENCE reference.db, que vence
-    # os SEEDS — a curadoria humana no bundle é sempre a última palavra
-    taken = {e["canonical"].lower() for e in extra} | {
-        str(a).lower() for e in extra for a in e["aliases"]}
+    # os SEEDS — a curadoria humana no bundle é sempre a última palavra.
+    #
+    # RFC-006 V2: a precedência agora é resolvida ALIAS A ALIAS pelo
+    # gazetteer (camadas), então este filtro deixa de descartar o termo
+    # INTEIRO. Medido antes: um `authority_record` reivindicando só
+    # `entropia` apagava também `entropy` e `entropie` do termo de
+    # referência — aliases que ninguém disputou —, e de quebra fazia o
+    # degrau `TIER_REFERENCIA` nunca engatar em produção (o gazetteer real
+    # só via as camadas [0, 2]). O que fica: o canônico repetido segue
+    # descartado, porque aí é a MESMA identidade dita duas vezes.
+    canonicos_curados = {e["canonical"].lower() for e in extra}
     for term in _reference_terms(reader.root):
-        # colisão por canonical OU por QUALQUER alias: a autoridade
-        # curada no bundle fica com o termo inteiro
-        claimed = {term["canonical"].lower()} | {
-            str(a).lower() for a in term["aliases"]}
-        if claimed & taken:
+        if term["canonical"].lower() in canonicos_curados:
             continue
         extra.append(term)
     return {"gazetteer": Gazetteer.load(extra), "schemas": schemas,

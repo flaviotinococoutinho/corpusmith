@@ -125,9 +125,12 @@ def _migrate(conn: sqlite3.Connection, name: str) -> None:
     """ALTERs para bancos criados por versões anteriores (CREATE IF NOT
     EXISTS não acrescenta colunas). Idempotente."""
     if name == "index.db":
-        if "confidence" not in _columns(conn, "graph_edges"):
+        edge_cols = _columns(conn, "graph_edges")
+        if "confidence" not in edge_cols:
             conn.execute("ALTER TABLE graph_edges ADD COLUMN "
                          "confidence TEXT DEFAULT 'extracted'")
+        if "rel" not in edge_cols:          # V5: relação semântica tipada
+            conn.execute("ALTER TABLE graph_edges ADD COLUMN rel TEXT")
         chunk_cols = _columns(conn, "chunks")
         for col in ("valid_at", "invalid_at"):
             if col not in chunk_cols:
