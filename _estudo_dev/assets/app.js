@@ -24,7 +24,7 @@ function clone(obj){return JSON.parse(JSON.stringify(obj));}
 function loadState(){
   try{
     const parsed=JSON.parse(localStorage.getItem(storageKey)||"null");
-    return parsed&&parsed.format===blankState.format?Object.assign(clone(blankState),parsed):clone(blankState);
+    return parsed?E.normalizeProgressState(parsed):clone(blankState);
   }catch(_){return clone(blankState);}
 }
 function loadPrefs(){
@@ -33,8 +33,9 @@ function loadPrefs(){
 }
 function saveState(){
   localStorage.setItem(storageKey,JSON.stringify(state));
-  renderDashboard(); renderPlan(); renderCheckpointHistory();
+  renderStateViews();
 }
+function renderStateViews(){renderDashboard();renderPlan();renderCheckpointHistory();}
 function savePrefs(){
   localStorage.setItem(prefKey,JSON.stringify(prefs));
 }
@@ -302,11 +303,18 @@ function importProgress(file){
   const reader=new FileReader();
   reader.onload=()=>{
     try{
-      const text=String(reader.result);
-      if(/"(__proto__|constructor|prototype)"\s*:/.test(text))throw new Error("chave proibida");
-      const parsed=JSON.parse(text);
-      if(parsed.format!==blankState.format||parsed.schemaVersion!=="1.0.0"||!Array.isArray(parsed.checkpoints)||!Array.isArray(parsed.completedDays))throw new Error("schema incompatível");
-      state=Object.assign(clone(blankState),parsed);saveState();announce("Progresso importado com sucesso");
+      const candidate=E.normalizeProgressState(JSON.parse(String(reader.result)));
+      const previous=state;
+      state=candidate;
+      try{
+        renderStateViews();
+        localStorage.setItem(storageKey,JSON.stringify(candidate));
+      }catch(err){
+        state=previous;
+        renderStateViews();
+        throw err;
+      }
+      announce("Progresso importado com sucesso");
     }catch(err){announce("Importação recusada: "+err.message);}
   };
   reader.readAsText(file);
