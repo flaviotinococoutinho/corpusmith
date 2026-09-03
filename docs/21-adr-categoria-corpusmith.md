@@ -1,5 +1,7 @@
 # 21 · ADR-53 — Corpusmith: o nome, a categoria e o que o produto pode alegar
 
+> **Altitude:** governança · **Status:** vivo
+
 | | |
 |---|---|
 | **Status** | Adotado (v2.0.0) |

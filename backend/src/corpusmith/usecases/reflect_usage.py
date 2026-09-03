@@ -37,12 +37,12 @@ def usage_candidates(settings: Settings) -> dict:
     archive = [dict(r) for r in rt.execute(
         "SELECT path, score FROM page_heat WHERE score < 0.15 "
         "AND last_seen < unixepoch() - 90*86400 ORDER BY score LIMIT 10")]
-    contested = [r["page"] for r in idx.execute(
+    low_yield = [r["page"] for r in idx.execute(
         "SELECT page FROM page_overlay WHERE status='low_yield'")]
     rt.close()
     idx.close()
     return {"promote": promote, "archive": archive,
-            "low_yield": contested}
+            "low_yield": low_yield}
 
 
 class ReflectOnUsage(UseCase):

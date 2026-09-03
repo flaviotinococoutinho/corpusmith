@@ -55,3 +55,23 @@ def bands(value: int, *, count: int = 9, bits: int = BITS) -> tuple:
     return tuple(
         (i, (value >> edges[i]) & ((1 << (edges[i + 1] - edges[i])) - 1))
         for i in range(count))
+
+
+def miss_key(text: str, entities) -> str:
+    """Chave determinística de uma pergunta NÃO respondida (F6, P-8).
+
+    Entidades primeiro: perguntas sobre o MESMO conjunto de sujeitos são o
+    mesmo buraco na base, independentemente da frase ("o que é a ISO
+    27001?" ≡ "explique a ISO 27001"). Sem entidade curada, cai para o
+    SimHash do texto normalizado — aí só quase-idênticas recorrem
+    (precisão > recall; o preço está declarado no contrato
+    `abstention_trace`). Os prefixos `e:`/`s:` impedem colisão entre os
+    dois espaços de chave.
+    """
+    canon = sorted({str(e).strip().lower() for e in entities
+                    if e and str(e).strip()})
+    if canon:
+        base = "\x1f".join(canon).encode()
+        return "e:" + hashlib.sha256(base).hexdigest()[:16]
+    norm = " ".join(text.lower().split())
+    return "s:" + format(simhash(norm), "016x")

@@ -202,3 +202,118 @@ def test_sufficiency_components_e_parametros_match_code():
     p = dict(contract.parameters)
     assert int(p["pages_saturation"]) == sufficiency._PAGES_SATURATION
     assert int(p["streams_saturation"]) == sufficiency._STREAMS_SATURATION
+
+
+def test_factual_conflict_parameters_match_code():
+    """F4-PR3b (RFC-005) — o PRIMEIRO limiar numérico do Harness sob
+    cross-check.
+
+    Neste repositório o cruzamento parâmetro↔código é MANUAL e por
+    mecanismo: não existe verificação genérica. Sem esta função o contrato
+    poderia declarar 1% enquanto o código corta em 10%, e a suíte ficaria
+    verde — a evidência do mecanismo seria puramente auto-relatada, que é
+    o que A-5 proíbe (`evidence` só com `self_reported`).
+
+    Falsificável: mude `TOLERANCIA_RELATIVA` sem mexer no TOML (ou o
+    contrário) e este teste reprova."""
+    from corpusmith.harness.local_policy import CONTRADICTION_IDS
+    from corpusmith.kernel.factual import EXCLUIDAS, TOLERANCIA_RELATIVA
+    from corpusmith.usecases import next_actions
+    p = _params("factual_conflict")
+    assert float(p["relative_tolerance"]) == TOLERANCIA_RELATIVA
+    assert tuple(p["excluded_dimensions"].split(",")) == EXCLUIDAS
+    # o RECALL do mecanismo é limitado por esta tupla, e o `validity_scope`
+    # o declara — se o conjunto crescer sem o contrato acompanhar, a
+    # limitação declarada passa a mentir
+    assert tuple(p["subject_identifiers"].split(",")) == \
+        tuple(sorted(CONTRADICTION_IDS))
+    # os pesos de FILA moram no contrato da fila, não neste — dois donos do
+    # mesmo número é o defeito que `kernel/ontology.py` combate
+    q = _params("attention_queue")
+    assert float(q["value_factual_conflict"]) == next_actions._FACTUAL_VALUE
+    assert float(q["cost_factual_conflict"]) == next_actions._FACTUAL_COST
+    # a densidade valor/custo é o critério REAL de ordenação: o conflito
+    # factual sobe por ser mais barato de conferir, NÃO por valer mais —
+    # subir o valor poria um limiar não calibrado a governar o topo da fila
+    assert next_actions._FACTUAL_VALUE == next_actions._CONTRADICTION_VALUE
+    assert next_actions._FACTUAL_COST < next_actions._CONTRADICTION_COST
+
+
+def test_editorial_stability_parameters_match_code():
+    """RFC-006 V3 — as exclusões do contrato SÃO as do kernel.
+
+    A lista de caminhos regenerados é a decisão de medição inteira: com ela
+    errada, toda página parece volátil (index.md é reescrito a cada write).
+    Declará-la no contrato e cruzá-la aqui impede que kernel e contrato
+    andem separados — a mesma disciplina do limiar do `factual_conflict`.
+
+    Falsificável: acrescente um basename em `BASENAMES_REGENERADOS` sem
+    mexer no TOML (ou o contrário) e este teste reprova."""
+    from corpusmith.kernel.stability import (BASENAMES_REGENERADOS,
+                                             PREFIXOS_DE_RITUAL)
+    p = _params("editorial_stability")
+    assert tuple(p["excluded_basenames"].split(",")) == BASENAMES_REGENERADOS
+    assert tuple(p["ritual_prefixes"].split(",")) == PREFIXOS_DE_RITUAL
+
+
+def test_abstention_trace_parameters_match_code():
+    """F6 — a chave declarada no contrato É a que o kernel gera.
+
+    Falsificável: mude um prefixo (ou o truncamento do digest) em
+    `miss_key` sem mexer no TOML e este teste reprova."""
+    from corpusmith.kernel.sketch import miss_key
+    p = _params("abstention_trace")
+    com_entidade = miss_key("qualquer frase", {"ISO 27001"})
+    sem_entidade = miss_key("qualquer frase", set())
+    assert com_entidade.startswith(p["key_prefix_entities"])
+    assert sem_entidade.startswith(p["key_prefix_text"])
+    assert len(com_entidade) == (len(p["key_prefix_entities"])
+                                 + int(p["entity_digest_hex_chars"]))
+
+
+def test_explanation_difficulty_parameters_match_code():
+    """V4 — os pesos e tetos do contrato SÃO os do kernel.
+
+    Este cruzamento é o que impede a deriva mais provável num mecanismo
+    composto: alguém ajusta um peso no código "só para testar" e o
+    contrato segue prometendo a composição antiga. Falsificável: mude
+    0.35 em `PESOS` (ou um teto em `SATURACAO`) sem mexer no TOML."""
+    from corpusmith.kernel.difficulty import COMPONENTES, PESOS, SATURACAO
+    p = _params("explanation_difficulty")
+    for c in COMPONENTES:
+        assert float(p[f"peso_{c}"]) == PESOS[c]
+        assert int(p[f"saturacao_{c}"]) == SATURACAO[c]
+    # e o contrato não pode declarar peso para componente que não existe
+    declarados = {k[len("peso_"):] for k in p if k.startswith("peso_")}
+    assert declarados == set(COMPONENTES)
+    from corpusmith.usecases.compute_difficulty import _CONFIANCA
+    assert float(p["limiar_sobreconfianca"]) == _CONFIANCA
+
+
+def test_typed_application_edges_parameters_match_code():
+    """V5 — o vocabulário do contrato É o do kernel, e o proxy de
+    ambiguidade declarado É o que a consulta usa.
+
+    Falsificável: acrescente uma relação em `RELACOES` (ou troque o kind
+    de sujeito da medição) sem mexer no TOML e este teste reprova — que é
+    o único jeito de um vocabulário fechado continuar fechado."""
+    from corpusmith.kernel.semantics import RELACOES
+    from corpusmith.usecases.practical_cases import _KINDS_DE_SUJEITO
+    p = _params("typed_application_edges")
+    assert tuple(p["relacoes"].split(",")) == tuple(sorted(RELACOES))
+    assert tuple(p["kinds_de_sujeito"].split(",")) == _KINDS_DE_SUJEITO
+    assert int(p["sujeitos_para_ambiguidade"]) == 2
+
+
+def test_concept_sheet_parameters_match_code():
+    """V6 — a ficha usa a MESMA constante de custo da fila de atenção, e
+    o contrato declara exatamente os mecanismos cujas ressalvas ela
+    carrega. Falsificável: acrescente um número à ficha sem acrescentar o
+    contrato dele em `_CONTRATOS` (ou mude o wpm num dos dois lados)."""
+    from corpusmith.usecases.concept_sheet import _CONTRATOS
+    from corpusmith.usecases.plan_attention import _MIN_COST, _WPM
+    p = _params("concept_sheet")
+    assert float(p["palavras_por_minuto"]) == _WPM
+    assert float(p["piso_de_custo_min"]) == _MIN_COST
+    assert tuple(p["contratos_citados"].split(",")) == _CONTRATOS
+    assert p["prosa_default"] == "desligada"

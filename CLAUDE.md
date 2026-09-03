@@ -18,9 +18,10 @@ Toda mudança precisa passar pelo gate. Atalho na raiz:
 just verify
 ```
 
-Ele executa a suíte do backend (pytest), o typecheck do cockpit
-(`npx tsc --noEmit`), a validação do compose e os testes Rust dos kernels
-nativos. O conjunto exato **não é decidido aqui**: `architecture.toml [gate]`
+Ele executa a suíte do backend (pytest), o typecheck e o smoke do cockpit
+(`npx tsc --noEmit` + `npm test`), a validação do compose e os linters dos
+registros epistêmico e ontológico. Os testes Rust, o `doctor`, o `backup` e
+o build empacotado (PyInstaller) são impostos na CI. O conjunto exato **não é decidido aqui**: `architecture.toml [gate]`
 é a fonte única, e `backend/tests/test_pr0_gate.py` cruza gate, CI e justfile
 — se a CI deixar de rodar algo do gate, a suíte quebra. Não contorne isso
 editando só um dos três lados.
@@ -34,7 +35,14 @@ entre máquinas); é guarda de mesma-máquina/nightly.
 cd backend && .venv/bin/python -m corpusmith.cli doctor            # invariantes INV-*
 cd backend && .venv/bin/python -m corpusmith.cli epistemics lint   # contratos epistêmicos
 cd backend && .venv/bin/python -m corpusmith.cli backup create     # backup verificável
+just context                                                       # o mapa gerado do repositório (leia antes de mudar algo)
 ```
+
+Registros legíveis por máquina, todos presos a teste: `architecture.toml`
+(camadas, gate, invariantes), `epistemics.toml` (mecanismos),
+`ontology.toml` (termos e eixos), `nfr.toml` (requisitos não funcionais com
+`status`). A fila viva é `docs/18` §11; todo `docs/*.md` declara altitude e
+status na cabeça e doc vivo não crava contagem (`test_docs_contract.py`).
 
 ## Forma do projeto
 

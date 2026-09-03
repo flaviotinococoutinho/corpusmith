@@ -111,7 +111,7 @@ def test_version_e_o_conjunto_de_mecanismos_andam_juntos():
     digest = hashlib.sha256(
         ",".join(sorted(c.mechanism_id for c in registry.contracts))
         .encode()).hexdigest()[:12]
-    assert (registry.version, digest) == ("1.9.1", "f7d3447fa5f6"), (
+    assert (registry.version, digest) == ("1.18.0", "a65521f72ddc"), (
         "o conjunto de mecanismos mudou — bumpe [registry].version em "
         "epistemics.toml e atualize este par no mesmo commit")
 
@@ -122,40 +122,57 @@ def test_apagar_contrato_deixa_o_lint_vermelho(tmp_path):
     finding(s)", exit 0. Falsificável — sem `_completude`, isto passa."""
     mutado = lint(_sem_contrato("theme_identity_matching", tmp_path))
     assert mutado["ok"] is False
-    assert mutado["mechanisms"] == 18
+    assert mutado["mechanisms"] == 27
     erros = [f for f in mutado["findings"] if f["severity"] == "error"]
     assert [(f["code"], f["mechanism_id"]) for f in erros] == [
         ("epistemic.mechanism_missing", "theme_identity_matching")]
 
 
-def test_promessa_nao_escrita_e_warn_e_nao_trava_o_gate():
-    """`docs/14` §5 declara seis contratos obrigatórios; quatro ainda não
-    existem (`pattern_layer_snapshot` entrou na F2, `attention_queue` no
-    F3-PR2 — e é o gesto de mover o nome entre as listas que registra isso).
-    Erro travaria o gate hoje e o incentivo seria escrever contrato às
-    pressas ou desligar a checagem — a dívida fica visível, não fatal."""
+def test_promessa_nao_escrita_e_warn_e_nao_trava_o_gate(monkeypatch):
+    """O MECANISMO da dívida, testado com registro SINTÉTICO.
+
+    `PROMISED_MECHANISMS` está vazia hoje — as seis promessas de
+    `docs/14` §4/§5 foram todas escritas, a última dupla
+    (`temporal_partition`, `inferred_cooccurrence_edges`) com os
+    mecanismos que já existiam no código desde a v0.8. Esvaziar a lista
+    não pode desligar a checagem em silêncio: este teste injeta uma
+    promessa fictícia e exige que ela apareça como WARN (dívida visível)
+    sem derrubar o gate — erro travaria a CI e o incentivo seria
+    escrever contrato às pressas ou desligar a regra."""
+    monkeypatch.setattr("corpusmith.harness.epistemics.PROMISED_MECHANISMS",
+                        (("mecanismo_fictício", "docs/14 §9 (teste)"),))
     resultado = lint()
-    prometidos = {f["mechanism_id"] for f in resultado["findings"]
-                  if f["code"] == "epistemic.mechanism_promised"}
-    assert prometidos == {m for m, _ in PROMISED_MECHANISMS}
-    assert all(f["severity"] == "warn" for f in resultado["findings"]
-               if f["code"] == "epistemic.mechanism_promised")
+    promessas = [f for f in resultado["findings"]
+                 if f["code"] == "epistemic.mechanism_promised"]
+    assert [f["mechanism_id"] for f in promessas] == ["mecanismo_fictício"]
+    assert all(f["severity"] == "warn" for f in promessas)
     assert resultado["ok"] is True
 
 
-def test_promessa_cumprida_para_de_avisar(tmp_path):
-    """Escrever o contrato apaga o aviso — o warn é dívida, não decoração.
+def test_registro_real_nao_tem_mais_divida_prometida():
+    """O estado de HOJE, e ele é uma entrega: zero `mechanism_promised`.
 
-    Um aviso que sobrevive à entrega ensina a ignorar a saída do lint."""
-    assert not ({m for m, _ in PROMISED_MECHANISMS}
-                & set(EXPECTED_MECHANISMS)), "prometido e já entregue"
+    Vale como regressão nos dois sentidos — se alguém prometer contrato
+    novo em doc sem escrevê-lo, este teste cai junto com o lint."""
+    assert PROMISED_MECHANISMS == ()
+    assert not [f for f in lint()["findings"]
+                if f["code"] == "epistemic.mechanism_promised"]
+
+
+def test_promessa_cumprida_para_de_avisar(tmp_path, monkeypatch):
+    """Escrever o contrato apaga o aviso — o warn é dívida, não
+    decoração. Um aviso que sobrevive à entrega ensina a ignorar o lint,
+    e foi por isso que as duas últimas promessas foram pagas."""
+    monkeypatch.setattr("corpusmith.harness.epistemics.PROMISED_MECHANISMS",
+                        (("attention_queue", "docs/14 §5 (teste)"),
+                         ("ainda_devendo", "docs/14 §5 (teste)")))
     escrito = tmp_path / "com_promessa.toml"
     escrito.write_text(MINIMAL_OK.replace("[mechanisms.m1]",
                                           "[mechanisms.attention_queue]"))
     codigos = {(f["code"], f["mechanism_id"])
                for f in lint(escrito)["findings"]}
     assert ("epistemic.mechanism_promised", "attention_queue") not in codigos
-    assert ("epistemic.mechanism_promised", "factual_conflict") in codigos
+    assert ("epistemic.mechanism_promised", "ainda_devendo") in codigos
 
 
 def test_incompatible_schema_version_is_clear_error():
@@ -367,7 +384,7 @@ def test_cli_lint_exit_codes(settings, capsys):
     # exit 0 = nenhum ERRO. Desde o G-10 a saída lista as dívidas conhecidas
     # (contratos prometidos por docs/14 e ainda não escritos) como `warn` —
     # visíveis sem travar o gate.
-    assert "19 mecanismo(s)" in out
+    assert "28 mecanismo(s)" in out
     assert "error" not in out
     # registro quebrado ⇒ ok=False (exit 1 no comando)
     broken = lint(path=settings.home / "nao_existe.toml")
@@ -435,7 +452,11 @@ def test_eval_writes_envelopes_with_golden_hash(settings, kb):
     out = EvaluateMemory(settings).execute()
     assert out["stats"]["abstain"] == [1, 1]
     written = {e["mechanism_id"] for e in out["envelopes"]}
-    assert written == {"retrieval_rrf_hedge", "abstention"}
+    # `temporal_partition` entrou (dívida PROMISED paga): ele declara
+    # `evaluated_by = ["eval_memory"]` porque o golden eval TEM categoria
+    # `temporal` — o envelope passa a registrar onde ele foi medido
+    assert written == {"retrieval_rrf_hedge", "abstention",
+                       "temporal_partition"}
     envs = envelopes_for(settings, "abstention")
     assert len(envs) == 1
     env = envs[0]

@@ -193,6 +193,19 @@ def cmd_checkpoints(s: Settings, args) -> int:
     return 1 if any(x["state"].startswith("stale") for x in linhas) else 0
 
 
+def cmd_stability(s: Settings, args) -> int:
+    """O que menos muda (RFC-006 V3): estabilidade EDITORIAL por página.
+
+    "Estável" aqui = quieto no eixo de edição — nunca "correto" nem
+    "aprovado" (o contrato `editorial_stability` declara a diferença). A
+    execução recomputa a projeção e registra o checkpoint `stability`."""
+    import json as _json
+    from .facades.memory import MemoryFacade
+    result = MemoryFacade(s).stability(limit=args.limit)
+    print(_json.dumps(result, indent=1, default=str))
+    return 0
+
+
 def cmd_themes(s: Settings, args) -> int:
     """Temas com identidade e a última época de cada (RFC-001 §9).
 
@@ -267,6 +280,51 @@ def cmd_curate(s: Settings, args) -> int:
         print(f"⛔ {e}")
         return 2
     print(_json.dumps(result, indent=1, ensure_ascii=False, default=str))
+    return 0
+
+
+def cmd_difficulty(s: Settings, args) -> int:
+    """Onde o estudo trava (RFC-006 V4): índice composto por página.
+
+    Cinco sinais de cinco donos com pesos fixos declarados no contrato
+    `explanation_difficulty`. `measured: false` significa "nada
+    observado" — jamais "fácil de explicar"."""
+    import json as _json
+    from .facades.memory import MemoryFacade
+    print(_json.dumps(MemoryFacade(s).difficulty(limit=args.limit),
+                      indent=1, default=str))
+    return 0
+
+
+def cmd_applications(s: Settings, args) -> int:
+    """Onde um conceito se aplica na prática (RFC-006 V5).
+
+    Lê as arestas TIPADAS que um humano declarou (`applies_to`,
+    `exemplifies`, `refines`) nas duas direções. `measurement` traz o custo
+    MEDIDO da granularidade de página — a evidência que a RFC-004 §6 pede
+    antes de reabrir o nível da afirmação."""
+    import json as _json
+    from .facades.memory import MemoryFacade
+    print(_json.dumps(MemoryFacade(s).practical_cases(args.page),
+                      indent=1, ensure_ascii=False))
+    return 0
+
+
+def cmd_sheet(s: Settings, args) -> int:
+    """A ficha do conceito (RFC-006 V6).
+
+    Reúne o que o produto MEDIU sobre uma página — custo de leitura, o
+    que permanece, onde trava, onde se aplica — com as ressalvas de cada
+    mecanismo junto do número. `--prose` liga a borda LLM (default
+    desligada): a prosa sai FORA do bundle e as ressalvas são
+    re-anexadas DEPOIS do modelo."""
+    import json as _json
+    from .facades.memory import MemoryFacade
+    try:
+        ficha = MemoryFacade(s).concept_sheet(args.page, prose=args.prose)
+    except KeyError as e:
+        sys.exit(str(e).strip("'"))
+    print(_json.dumps(ficha, indent=1, ensure_ascii=False, default=str))
     return 0
 
 
@@ -390,6 +448,52 @@ def cmd_epistemics(s: Settings, args) -> int:
     return 2
 
 
+def cmd_ontology(s: Settings, args) -> int:
+    """ontology lint|axes|terms|drift — o registro ontológico (RFC-004),
+    a MESMA implementação do painel e dos testes (harness.ontology)."""
+    data = CurationFacade(s).ontology_overview()
+    if args.op == "axes":
+        for a in data["axes"]:
+            print(f"{a['axis']:20s} [{a['applies_to']:10s}] "
+                  f"{a['question']}\n{'':20s} {', '.join(a['values'])}")
+        return 0
+    if args.op == "terms":
+        for t in data["terms"]:
+            print(f"{t['term']:14s} {t['roots']}\n"
+                  f"{'':14s} é: {t['means']}\n"
+                  f"{'':14s} não é: {t['not_means']}")
+        return 0
+    if args.op == "drift":
+        for d in data["drift"]:
+            print(f"{d['status']:9s} {d['field']} "
+                  f"({len(d['senses'])} sentidos)")
+            for sentido in d["senses"]:
+                print(f"{'':11s}· {sentido}")
+        return 0
+    for f in data["findings"]:
+        where = f["mechanism_id"] or "<registro>"
+        print(f"{f['severity']:5s} {f['code']:28s} {where}: {f['message']}")
+    print(f"\n{len(data['axes'])} eixo(s), {len(data['terms'])} termo(s), "
+          f"{len(data['drift'])} deriva(s), "
+          f"{len(data['findings'])} finding(s)")
+    return 0 if data["ok"] else 1
+
+
+def cmd_context(s: Settings, args) -> int:
+    """context [--json] — o mapa determinístico do repositório (docs/10
+    §18.4): camadas, gate, invariantes, NFRs, registros, bancos, rotas,
+    jobs, use cases, ADRs, docs e a fila corrente. Lê o FONTE; fora de um
+    checkout falha alto."""
+    from .context_pack import NaoEhUmCheckout, build, render, to_json
+    try:
+        pack = build()
+    except NaoEhUmCheckout as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    print(to_json(pack) if args.json else render(pack))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="corpusmith")
     ap.add_argument("--config", help="caminho de config YAML alternativo")
@@ -410,6 +514,28 @@ def main(argv: list[str] | None = None) -> int:
                    ).set_defaults(fn=cmd_checkpoints)
     sub.add_parser("themes", help="temas com identidade e última época"
                    ).set_defaults(fn=cmd_themes)
+    stability = sub.add_parser(
+        "stability", help="o que menos muda: estabilidade editorial por "
+                          "página (RFC-006 V3)")
+    stability.add_argument("--limit", type=int, default=None)
+    stability.set_defaults(fn=cmd_stability)
+    difficulty = sub.add_parser(
+        "difficulty", help="onde o estudo trava: índice de dificuldade de "
+                           "explicar por página (RFC-006 V4)")
+    difficulty.add_argument("--limit", type=int, default=None)
+    difficulty.set_defaults(fn=cmd_difficulty)
+    applications = sub.add_parser(
+        "applications", help="onde um conceito se aplica na prática: "
+                             "arestas tipadas + a medição do nível (V5)")
+    applications.add_argument("page")
+    applications.set_defaults(fn=cmd_applications)
+    sheet = sub.add_parser(
+        "sheet", help="ficha do conceito: custo, o que permanece, onde "
+                      "trava e onde se aplica (RFC-006 V6)")
+    sheet.add_argument("page")
+    sheet.add_argument("--prose", action="store_true",
+                       help="liga a borda LLM (default: desligada)")
+    sheet.set_defaults(fn=cmd_sheet)
     backup = sub.add_parser("backup", help="backup lógico verificável")
     backup.add_argument("op", choices=["create", "verify", "list", "restore"])
     backup.add_argument("path", nargs="?", default=None)
@@ -438,6 +564,15 @@ def main(argv: list[str] | None = None) -> int:
                                            "evaluations"])
     epistemics.add_argument("mechanism", nargs="?", default=None)
     epistemics.set_defaults(fn=cmd_epistemics)
+    ontology = sub.add_parser(
+        "ontology", help="eixos, termos e deriva semântica (ontology.toml)")
+    ontology.add_argument("op", choices=["lint", "axes", "terms", "drift"])
+    ontology.set_defaults(fn=cmd_ontology)
+    context = sub.add_parser(
+        "context", help="mapa determinístico do repositório para agentes "
+                        "(docs/10 §18.4)")
+    context.add_argument("--json", action="store_true")
+    context.set_defaults(fn=cmd_context)
     seed = sub.add_parser("seed", help="dados pré-definidos (idempotente)")
     seed.add_argument("--file", default=None)
     seed.set_defaults(fn=cmd_seed)
@@ -466,7 +601,18 @@ def main(argv: list[str] | None = None) -> int:
 
     args = ap.parse_args(argv)
     s = Settings.load(args.config)
-    return args.fn(s, args)
+    try:
+        return args.fn(s, args)
+    except (httpx.ConnectError, httpx.ConnectTimeout):
+        # Handshake órfão é o caso comum aqui: o daemon caiu sem o finally
+        # (SIGKILL, crash) e state/daemon.json ficou para trás apontando uma
+        # porta morta. Medido antes: ~70 linhas de traceback do httpx e
+        # diagnóstico nenhum. Os comandos offline nunca chegam neste except.
+        h = _handshake(s)
+        sys.exit(f"daemon não responde em {h.get('host', '127.0.0.1')}:"
+                 f"{h.get('port')} — o handshake (state/daemon.json) é "
+                 "provavelmente órfão de um daemon que caiu; "
+                 "suba com `just daemon` e tente de novo")
 
 
 if __name__ == "__main__":

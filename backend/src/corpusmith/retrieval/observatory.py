@@ -54,11 +54,15 @@ def graph_data(settings: Settings, *, limit: int | None = None) -> dict:
     """
     pages = _pages_meta(settings)
     idx = connect(settings.app_support / "index.db")
+    # V5: `rel` viaja junto — a aresta que um humano TIPOU não pode chegar
+    # ao leitor indistinguível de um link solto. `None` na esmagadora
+    # maioria (link sem tipo), e o consumidor decide se destaca.
     edges = [{"src": r["src"], "dst": r["dst"],
-              "confidence": r["confidence"] or "extracted"}
+              "confidence": r["confidence"] or "extracted",
+              "rel": r["rel"]}
              for r in idx.execute(
                  "SELECT src, dst, COALESCE(confidence,'extracted') "
-                 "confidence FROM graph_edges")]
+                 "confidence, rel FROM graph_edges")]
     community = {r["page"]: r["community"] for r in
                  idx.execute("SELECT page, community FROM communities")}
     bridges = {(r["src"], r["dst"]) for r in
@@ -189,8 +193,16 @@ def insights(settings: Settings) -> dict:
     pages = _pages_meta(settings)
     graph = graph_data(settings)
     idx = connect(settings.app_support / "index.db")
-    contested = [r["page"] for r in idx.execute(
+    low_yield = [r["page"] for r in idx.execute(
         "SELECT page FROM page_overlay WHERE status='low_yield'")]
+    # V4: onde o estudo trava. LEITURA da projeção persistida — nunca
+    # recomputa aqui (o custo do lint por abertura de painel é o P-11, e
+    # a projeção tem comando próprio: `corpusmith difficulty`). Só as
+    # MEDIDAS entram: `measured=0` é "nada observado", não "fácil", e
+    # listá-las empataria o topo com páginas sobre as quais nada se sabe.
+    difficulty = [dict(r) for r in idx.execute(
+        "SELECT rel_path, score, reason FROM page_difficulty "
+        "WHERE measured = 1 ORDER BY score DESC, rel_path LIMIT 5")]
     bridge_rows = [dict(r) for r in idx.execute(
         "SELECT src, dst, weight FROM graph_bridges ORDER BY weight LIMIT 5")]
     idx.close()
@@ -206,6 +218,16 @@ def insights(settings: Settings) -> dict:
         "SELECT type, COUNT(*) n FROM events "
         "WHERE created_at > unixepoch() - 14*86400 "
         "GROUP BY type ORDER BY n DESC LIMIT 10")]
+    # F6 (P-8): o rastro de abstenção como lacuna de primeira classe —
+    # o que a base JÁ falhou, agrupado por chave determinística; só os
+    # abertos (fechamento é verificado por re-ask, nunca adivinhado)
+    miss_open = rt.execute(
+        "SELECT COUNT(*) c FROM ask_misses WHERE closed_at IS NULL"
+    ).fetchone()["c"]
+    miss_recurrent = [dict(r) for r in rt.execute(
+        "SELECT miss_key, COUNT(*) n, MAX(created_at) last_at, "
+        "MIN(query) query FROM ask_misses WHERE closed_at IS NULL "
+        "GROUP BY miss_key ORDER BY n DESC, last_at DESC LIMIT 5")]
     cold_count = 0
     try:
         cold = connect(settings.app_support / "cold.db")
@@ -247,10 +269,12 @@ def insights(settings: Settings) -> dict:
         "gaps": {
             "questions": [p["page"] for p in pages if p["type"] == "question"],
             "orphans": [n["page"] for n in graph["nodes"] if n["orphan"]][:20],
-            "low_yield": contested,
+            "low_yield": low_yield,
             "stale": [p["page"] for p in pages if p["stale"]][:20],
             "cold_count": cold_count,
             "eval": eval_rows,
+            "abstention": {"open": miss_open, "recurrent": miss_recurrent},
+            "difficulty": difficulty,
         },
         "topology": {
             "nodes": len(graph["nodes"]), "edges": len(graph["edges"]),
@@ -288,7 +312,7 @@ def dictionary(settings: Settings) -> dict:
             origins[p["origin"]] += 1
     gaz = load_gazetteer(BundleReader(settings.path("knowledge") / "bundle"))
     authorities: dict[str, int] = defaultdict(int)
-    for _canonical, kind, _qid in set(gaz.map.values()):
+    for _canonical, kind, _qid in gaz.termos():
         authorities[kind] += 1
     return {
         "types": sorted(
@@ -304,7 +328,10 @@ def dictionary(settings: Settings) -> dict:
         "log_kinds": ["Creation", "Update", "Deprecation", "Review",
                       "Freeze", "Recall"],
         "authorities": sorted(authorities.items(), key=lambda kv: -kv[1]),
-        "gazetteer_terms": len(set(gaz.map.values())),
+        "gazetteer_terms": len(gaz.termos()),
+        # V2: aliases que duas identidades curadas disputam — o vocabulário
+        # que ainda não foi desambiguado, visível no mesmo painel
+        "ambiguous_aliases": sorted(gaz.conflitos()),
     }
 
 
