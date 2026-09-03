@@ -53,7 +53,13 @@ function EpistemicsSection() {
                 <div className="text-neutral-400">{m.guarantee_relative_to}</div>
               </td>
               <td><span className={`rounded px-1 ${cls}`}>{label}</span></td>
-              <td className="font-mono">{(m.fallback ?? []).join(", ") || "—"}</td>
+              <td className="font-mono">{(m.fallback ?? []).join(", ") || "—"}
+                {/* C6: escrita no CANÔNICO à vista — o caso que gerou o
+                    item era um /ask que movia o HEAD do Git em silêncio */}
+                {(m.side_effects ?? []).includes("canonical_write") &&
+                  <div className="text-amber-700" title="este mecanismo
+                    pode ESCREVER no canônico (bundle + Git)">✍️ escreve no canônico</div>}
+              </td>
             </tr>);
         })}</tbody>
       </table>

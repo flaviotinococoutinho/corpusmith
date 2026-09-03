@@ -1,5 +1,7 @@
 # 10 · Engenharia AI-friendly (spec BC-ENG-001)
 
+> **Altitude:** engenharia · **Status:** vivo
+
 > **Especialidade deste documento:** engenharia de software, técnicas de
 > algoritmos, paradigmas e **requisitos não funcionais** (CAP, durabilidade,
 > escala, segurança). É a doc de arquitetura-alvo. Conceitos de **produto**
@@ -29,8 +31,11 @@ Regra de ouro (herdada de todo o projeto): **o código é a fonte da verdade.**
 Quando este texto e o código divergirem, o código vence e este texto está
 desatualizado — corrija-o. Um selo ✅ sem teste é um bug de documentação.
 
-- **Baseline validado pela spec:** `1.4.0`, commit `deccd6e`. **Estado
-  atual:** `1.5.0`, 248 testes (esta rodada de consolidação — ADR-37).
+- **Baseline validado pela spec:** `1.4.0`, commit `deccd6e` (ADR-37).
+  **Estado atual:** este texto NÃO crava versão nem contagem de testes —
+  `corpusmith context` (ou `just context`) imprime versão, HEAD, registros,
+  rotas, jobs e a fila corrente, gerados do código; a suíte
+  (`test_docs_contract.py`) reprova doc vivo que volte a cravar número.
 - **Linguagem normativa:** MUST / MUST NOT / SHOULD / MAY conforme RFC 2119
   e RFC 8174. "MUST" descreve obrigação; num item 🎯 PROPOSTO o "MUST"
   descreve a obrigação **quando** o mecanismo for construído, não hoje.
@@ -42,30 +47,36 @@ desatualizado — corrija-o. Um selo ✅ sem teste é um bug de documentação.
 | Arquitetura | gradiente de mutabilidade + pureza de núcleo | ✅ | `test_architecture.py` |
 | Arquitetura | Functional Core / Imperative Shell | ✅ | `test_architecture.py` |
 | Arquitetura | contrato legível-por-máquina | ✅ | `architecture.toml` + `test_architecture_toml.py` |
+| Arquitetura | invariantes com DONO ÚNICO (`[[invariant]]`, cada um com teste que existe) | ✅ | `architecture.toml` + `test_architecture_toml.py::test_todo_invariante_e_verificado_por_teste_que_existe` |
+| NFR | registro legível-por-máquina com `status = pinned/declared` cruzado pela suíte | ✅ | [`nfr.toml`](../nfr.toml) + `test_nfr_toml.py` |
+| Documentação | context pack determinístico (`corpusmith context` / `just context`) | ✅ | `context_pack.py` + `test_context_pack.py` |
+| Documentação | contrato de docs: altitude/status por doc, índice completo, links, contagens não cravadas | ✅ | `test_docs_contract.py` |
 | Tipos | máquina de estados de jobs | ✅ | `runtime/queue.py`, `test_jobs_reliability.py` |
 | Tipos | Value Objects (`PagePath`, `TraceId`…) | 🎯 | §4.2 |
 | Tipos | `ReconcileDecision` como ADT (união discriminada) | ⚠️ | lógica em `reconcile_candidate.py`; tipo em §4.3 |
 | Tipos | hierarquia de erro + RFC 9457 Problem Details | 🎯 | §4.5, A-05/A-08 |
 | Dados | 5 stores com autoridade separada | ✅ | `06-referencia.md` §3 |
-| Dados | `StoragePolicy` por criticidade | 🎯 | §5.2, A-03 |
-| Transação | `BundleUnitOfWork` (escrita atômica) | 🎯 | §7.1, A-01/A-02 |
+| Dados | `StoragePolicy` por criticidade | 🎯 | §5.2, A-03 — hoje é PREMISSA presa: WAL+NORMAL uniforme (`nfr.toml` NFR-DUR-003) |
+| Transação | `BundleUnitOfWork` (escrita atômica) | 🎯 | §7.1, A-01/A-02 — `nfr.toml` NFR-INT-002 (`declared`) |
 | Transação | outbox estado+evento | 🎯 | §7.3, A-07 |
 | Transação | `index.db` converge para `bundle_head` | ✅ | `test_v13.py`, `test_doctor.py` |
 | Fila | retry backoff + jitter estável | ✅ | `runtime/queue.py::_stable_jitter`, `test_jobs_reliability.py` |
 | Fila | lease atômico SQL `RETURNING` | 🎯 | §8.2, A-04 |
-| Fila | timeout cooperativo + watchdog | ✅ | `runtime/worker.py`, `test_jobs_reliability.py` |
+| Fila | timeout cooperativo + watchdog | ⚠️ | cancel cooperativo ✅ `test_jobs_reliability.py::test_cancel_leased_is_cooperative`; o watchdog em thread NÃO tem teste próprio e "timeout" só é deadline sob `process_isolation` (`nfr.toml` NFR-QUE-003) |
 | Fila | hard-kill de thread CPU-bound (subprocesso) | ⚠️ | v1.7 (ADR-39): real atrás de `compute.process_isolation`; default thread |
 | API | Idempotency-Key / ETag / If-Match | 🎯 | §9.2, A-08 |
 | API | OpenAPI → tipos TypeScript | 🎯 | §10.1, A-10 |
 | Operação | `doctor` (INV-001/002/003 + repair) | ✅ | `usecases/diagnose.py`, `test_doctor.py` |
-| Operação | backup/restore quiescente (manifesto+sha256) | ✅ | `usecases/backup_restore.py` |
+| Operação | backup/restore verificável (manifesto+sha256) | ✅ | `test_backup_restore.py` (NFR-DUR-004); a quiescência pausa só o worker — NFR-DUR-005 é premissa, não garantia |
 | Operação | ledger de migração + rejeição de schema futuro | ✅ | `runtime/db.py`, `test_v16.py` |
-| Segurança | token efêmero 0600, loopback, `local_only` | ✅ | `harness/local_policy.py` |
+| Segurança | token efêmero 0600, loopback | ✅ | `test_nfr_toml.py::test_handshake_nasce_0600`, `::test_loopback_e_o_default` (NFR-SEC-001/002) |
+| Privacidade | `local_only` fora do export por default | ✅ | `test_fase5.py::test_export_respects_privacy_and_formats` (NFR-PRIV-001) |
+| Privacidade | `local_only` nunca chega ao provedor de API | ⚠️ | comportamento existe em `models/router.py`, SEM teste — `nfr.toml` NFR-PRIV-002 (`declared`) |
 | Segurança | regras anti-prompt-injection para agentes | ✅ | `AGENTS.md` §7, §17.2 |
 | Escala | S0 local single-writer | ✅ | estado atual |
 | Escala | S1–S3 (vertical → multi-processo → multi-host) | 🎯 | §16, só por gatilho |
-| Qualidade | testes de arquitetura executáveis | ✅ | `test_architecture.py` (12 testes) |
-| Qualidade | SLO/SLI medidos + benchmark harness | 🎯 | §15, QA-2 |
+| Qualidade | testes de arquitetura executáveis | ✅ | `test_architecture.py` |
+| Qualidade | SLO/SLI medidos + benchmark harness | 🎯 | §15, QA-2 — `nfr.toml` NFR-SLO-001/002 (`declared`: nunca medidos no perfil de 50k páginas) |
 
 ---
 
@@ -82,7 +93,9 @@ desatualizado — corrija-o. Um selo ✅ sem teste é um bug de documentação.
 
 ### 0.2 Não objetivos
 
-- Não é roadmap de produto (isso é [`09-backlog.md`](09-backlog.md)).
+- Não é roadmap de produto (a fila viva é
+  [`18-backlog-consolidado.md`](18-backlog-consolidado.md) §11; a direção é
+  [`29`](29-rfc-006-re-mira.md)).
 - Não introduz tecnologia distribuída antes de gatilho objetivo (§16.5).
 - Não substitui os testes: `architecture.toml` e este texto **evitam
   regra duplicada**, mas o teste é quem falha o CI.
@@ -96,40 +109,48 @@ Decisões atuais que se tornam **requisitos permanentes**.
 ### 1.1 Gradiente de mutabilidade ✅
 
 ```text
-kernel / normalize / cognitive      ← núcleo PURO (stdlib, zero I/O)
+kernel / normalize / cognitive / epistemic   ← núcleo PURO (stdlib, zero I/O)
         ↓
-okf / harness / retrieval           ← domínio canônico
+okf / harness / retrieval / compute          ← domínio canônico (+ porta de cômputo, ADR-39)
         ↓
-usecases                            ← aplicação (1 método público: execute)
+usecases                                     ← aplicação (1 método público: execute)
         ↓
-facades                             ← orquestração
+facades                                      ← orquestração
         ↓
-jobs / api / cli / daemon / models / desktop   ← adapters (falam com o mundo)
+jobs / api / cli / daemon / models / desktop ← adapters (falam com o mundo)
 ```
 
 Quanto mais interna a camada: menor volatilidade, maior pureza, menos
-consciência de transporte/persistência/UI. Verificado por
-`test_architecture.py` e declarado em `architecture.toml`.
+consciência de transporte/persistência/UI. **Dono único da lista:**
+`architecture.toml` (`[project].layers`, `[pure]`, `[domain]`), verificado
+por `test_architecture.py` e renderizado por `corpusmith context` — este
+desenho é ilustração; se divergir do TOML, o TOML vence.
 
 ### 1.2 Invariantes obrigatórios
 
-| ID | Invariante | Status | Verificado por |
-|---|---|:--:|---|
-| INV-ARCH-001 | `kernel/`,`normalize/`,`cognitive/` livres de I/O/rede/banco/framework/fs | ✅ | `test_architecture.py::test_kernel_and_normalize_are_pure` |
-| INV-ARCH-002 | memória MUST NOT depender de cognitivo (unidirecional) | ✅ | `::test_memory_domain_does_not_depend_on_cognitive_domain` |
-| INV-ARCH-003 | `usecases/` MUST NOT importar `api/`/`jobs/`/`facades/` | ✅ | `::test_usecases_do_not_reach_outward` |
-| INV-ARCH-004 | `api/` só chama facades | ✅ | `::test_api_speaks_only_to_facades` |
-| INV-ARCH-005 | todo `UseCase` expõe no máximo `execute()` | ✅ | `::test_every_usecase_has_single_public_method` |
-| INV-ARCH-006 | subclasses de `MachinePageUseCase` não sobrescrevem `execute()` | ✅ | `::test_machine_page_template_is_closed_for_modification` |
-| INV-DATA-001 | escrita canônica passa por Harness + writer | ✅ | `test_writer.py` |
-| INV-DATA-002 | página supersedida auditável e FORA do retrieval padrão | ✅ | `test_v22.py::test_inv003_*` |
-| INV-DATA-003 | `index.db` reconstruível do bundle | ✅ | `test_v13.py`, `test_doctor.py` |
-| INV-DATA-004 | falha cognitiva não altera confiança/validade canônicas | ✅ | `test_cognitive_journey.py` |
-| INV-DATA-005 | LLM não é gate único de integridade/reconciliação/autorização | ✅ | Harness é o gate (`harness/`) |
-| INV-PRIV-001 | conteúdo `local_only` não sai da máquina | ✅ | `harness/local_policy.py` |
-| INV-OPS-001 | config aplicada tem linhagem, validação e rollback | ✅ | `test_v16.py` |
-| INV-OPS-002 | todo job aceito termina em estado terminal ou fica recuperável | ✅ | `test_jobs_reliability.py` |
-| INV-AI-001 | toda alteração por agente declara invariantes afetados | 🎯 | protocolo de PR (`AGENTS.md` §8) |
+A tabela de invariantes tem **um dono**: `architecture.toml [[invariant]]`
+(id, regra, `verified_by`), espelhada em `AGENTS.md` §4 e cruzada por
+`test_architecture_toml.py` — os ids dos dois lugares são iguais e todo
+`verified_by` resolve para um teste que existe. Este documento não repete a
+tabela (era a segunda cópia, com dezesseis linhas contra quinze, e a coluna
+"verificado por" citava arquivo em vez de teste para `INV-PRIV-001`).
+
+Duas linhas que só existiam aqui, e o que virou cada uma:
+
+- **"LLM não é gate único de integridade/reconciliação/autorização"** — é a
+  regra MUST NOT de `AGENTS.md` §5 ("tratar o LLM como autoridade de
+  escrita, validação ou reconciliação") e vale por construção: só o
+  Harness escreve (`INV-DATA-001`), e o árbitro LLM da reconciliação fica
+  atrás de flag desligada (RFC-002);
+- **"toda alteração por agente declara invariantes afetados"** — é
+  protocolo, não asserção: o campo *Contratos afetados → Invariantes* do
+  template de PR. Continua 🎯 como guarda executável; a fila viva
+  ([`18`](18-backlog-consolidado.md) §11) diz se e quando vira lint de PR.
+
+Os requisitos NÃO funcionais recebem o mesmo tratamento em
+[`nfr.toml`](../nfr.toml) (`test_nfr_toml.py`): a doutrina fica em §5–§17
+deste documento; o **estado** (`pinned` / `measured` / `declared`) vem do
+registro, nunca de selo em prosa.
 
 ---
 
@@ -264,6 +285,12 @@ Hoje a política é **uniforme** (`WAL + synchronous=NORMAL`). Alvo — uma
 
 **MUST NOT** prometer RPO 0 para store em `synchronous=NORMAL` sob perda
 de energia. Porta: ao medir custo do FULL na suíte de benchmark (§15).
+
+**Estado (NFR-DUR-003, presa por `test_nfr_toml.py`):** a política é
+uniforme — WAL + NORMAL em todo banco. A consequência está declarada como
+PREMISSA, não garantia: "RPO 0 após ACK" (§15) vale contra crash de
+processo; sob perda de energia o RPO é o último checkpoint do WAL. Esta
+seção e a §15 diziam coisas opostas sobre o mesmo PRAGMA até 2026-09.
 
 ### 5.3 Filesystem e risco de partição ✅ (por convenção)
 
@@ -554,7 +581,7 @@ no mesmo contrato.
 
 ## 14. Qualidade, testes e arquitetura executável
 
-### 14.1 Pirâmide de verificação (estado atual: 248 testes)
+### 14.1 Pirâmide de verificação
 
 ```text
 property tests do kernel + unit de policy/state machine + contract de
@@ -562,9 +589,13 @@ stores + integration de use cases + API contract + golden + disaster
 recovery + benchmark gates + architecture tests
 ```
 
-Arquitetura é teste, não convenção: `test_architecture.py` (12 testes) +
+Arquitetura é teste, não convenção: `test_architecture.py` +
 `test_architecture_toml.py` provam pureza, dependência unidirecional,
-método público único e template fechado.
+método público único, template fechado e — desde 2026-09 — que cada
+invariante declarado cita um teste que existe. A documentação entrou na
+mesma pirâmide: `test_docs_contract.py` (altitude/status por doc, índice,
+links, contagens), `test_nfr_toml.py` (requisitos não funcionais) e
+`test_context_pack.py` (o mapa gerado é determinístico e fiel às fontes).
 
 ### 14.2 Testes obrigatórios por tipo de alteração
 
@@ -587,20 +618,15 @@ volta; deadline do gateway; evento não publicado; SSE perde sequência;
 backup interrompido; **schema futuro aberto (✅ `SchemaTooNewError`)**;
 job reexecutado após lease expirado (✅); cancel durante estágio (✅).
 
-### 14.4 Gate único de verificação ✅ (comandos) / 🎯 (`just verify`)
+### 14.4 Gate único de verificação ✅ (`just verify`, imposto)
 
-Hoje o gate roda por comandos (§ AGENTS.md §2 e `architecture.toml
-[commands]`):
-
-```bash
-cd backend && .venv/bin/python -m pytest tests -q     # 248 testes
-cd desktop && npx tsc --noEmit                         # typecheck
-docker compose config -q                               # compose
-cd backend && .venv/bin/python -m corpusmith.cli doctor   # invariantes
-```
-
-Alvo: um `just verify` que encadeie architecture/unit/integration/golden/
-migration/doctor/backup-restore/typecheck/**openapi-diff**/docs-sync-check.
+O gate tem UMA fonte — `architecture.toml [gate]` — cruzada com o
+`ci.yml` e com a receita `verify` do `justfile` por `test_pr0_gate.py`:
+se a CI deixar de rodar um token do gate, a suíte quebra. Este documento
+não copia a lista de comandos (era a quarta cópia, e divergia); rode
+`just verify` ou leia o TOML. O que ainda é 🎯: **openapi-diff** e a
+verificação de docs gerados por diff (`just context` existe; o passo
+"docs vivos citam o comando" é presa por `test_docs_contract.py`).
 
 ---
 
@@ -624,8 +650,13 @@ daemon+desktop na mesma máquina, SSD local.
 | rebuild completo (50k) | ≤ 15 min |
 
 **RPO/RTO target:** bundle+Git, `reference.db`, `cold.db`,
-`cognitive.db`, jobs/config → **RPO 0 após ACK**; telemetria → ≤ 5 min;
-`index.db` → não aplicável (reconstruível). RTO 5–15 min conforme store.
+`cognitive.db`, jobs/config → **RPO 0 após ACK contra crash de processo**
+(sob perda de energia: último checkpoint do WAL — NFR-DUR-003, premissa
+presa por teste); telemetria → ≤ 5 min; `index.db` → não aplicável
+(reconstruível). RTO 5–15 min conforme store, **não medido** no perfil.
+"RPO" carrega uma segunda pergunta — perda de MÍDIA — cuja única resposta
+hoje é o backup semanal no mesmo volume (NFR-DUR-005, premissa). Estado
+vivo dos alvos desta seção: [`nfr.toml`](../nfr.toml) NFR-SLO-001/002.
 
 **Métricas obrigatórias (🎯 instrumentar):** `queue_oldest_age_seconds`,
 `queue_depth`, `job_duration_seconds`, `job_retry_total`,
@@ -689,12 +720,16 @@ remoção. Runtime recebe escrutínio maior que dev.
 
 ```text
 AGENTS.md              ✅  ponto de entrada normativo
-architecture.toml      ✅  contrato ESTRUTURAL legível-por-máquina (preso a teste)
-epistemics.toml        ✅  contrato EPISTEMOLÓGICO legível-por-máquina (v1.6,
-                           ADR-38 — preso a test_epistemics_toml.py; docs/11)
-docs/10-…              ✅  esta spec
+architecture.toml      ✅  contrato ESTRUTURAL (camadas, gate, [[invariant]]) — preso a teste
+epistemics.toml        ✅  contrato EPISTEMOLÓGICO (ADR-38) — preso a test_epistemics_toml.py; docs/11
+ontology.toml          ✅  léxico e eixos (RFC-004) — preso a test_ontology.py; docs/23
+nfr.toml               ✅  requisitos NÃO funcionais com status cruzado — test_nfr_toml.py
+docs/10-…              ✅  esta spec (doutrina; o estado vem dos registros)
 docs/08-decisoes.md    ✅  ADRs
-docs/ (rfc/)           🎯  quando o primeiro RFC nascer
+docs/16,19,20,22,27,29 ✅  RFC-001…006 instanciados
+docs/*.md              ✅  toda doc declara `Altitude` e `Status` (vivo|histórico) na cabeça —
+                           test_docs_contract.py; histórico aponta para a fonte viva
+corpusmith context     ✅  o mapa GERADO (§18.4)
 backend/…/README.md    🎯  só módulos complexos
 ```
 
@@ -702,7 +737,11 @@ backend/…/README.md    🎯  só módulos complexos
 
 Módulos críticos SHOULD declarar: Purpose, Inputs, Outputs, Invariants,
 Side effects, Failure modes, Complexity, Authority, Rebuildability,
-Related ADRs.
+Related ADRs. Medido em 2026-09: nenhum módulo declara, e os módulos sem
+docstring incluem o Harness inteiro e a API do cockpit. A âncora já
+existe — `implementation_refs` em `epistemics.toml` e `lives_in` em
+`ontology.toml` — e o pacote que paga isto está na fila viva
+([`18`](18-backlog-consolidado.md) §11).
 
 ### 18.3 Protocolo de alteração por agente ✅ (ver `AGENTS.md` §8)
 
@@ -711,11 +750,29 @@ invariantes afetados (INV-AI-001) → identificar autoridade/projeções →
 teste que falha antes → menor mudança → gate verde → atualizar docs +
 `architecture.toml` → evidência no PR → sem refactor incidental.
 
-### 18.4 Context pack gerado 🎯
+### 18.4 Context pack gerado ✅
 
-`just context` determinístico (versão, HEAD, camadas, endpoints, jobs,
-schemas, flags, invariantes, ADRs ativos, backlog, comandos) para reduzir
-alucinação sem enviar o repo inteiro ao contexto.
+`corpusmith context` (`just context`; `--json` para máquinas) imprime o
+mapa determinístico do repositório: versão e HEAD, camadas, gate,
+invariantes, NFRs por status, registros (versão e contagem), bancos e
+derivações, eventos, jobs, rotas, use cases, ADRs, a altitude/status de
+cada doc e a fila corrente de `docs/18` §11. Cada seção lê a fonte que já
+é autoridade — TOMLs, constantes, o fonte por AST — nunca uma cópia;
+`test_context_pack.py` prova que duas execuções produzem o mesmo mapa e
+que cada seção é igual à fonte. **Regra que ele materializa:** o que é
+enumerável é gerado; à mão fica só o porquê. Doc vivo cita o comando em
+vez de cravar número (`test_docs_contract.py`).
+
+### 18.5 Contrato de documentação ✅
+
+`test_docs_contract.py`: (1) todo `docs/*.md` declara `Altitude` (produto ·
+ciência · engenharia · referência · contrato · fluxo · governança · índice) e
+`Status` (`vivo` | `histórico`) na cabeça; histórico aponta para a fonte
+viva; (2) `docs/README.md` lista todo arquivo; (3) todo link relativo
+resolve (fora de crase e de bloco de código); (4) doc vivo não crava
+contagem de mecanismos/termos/testes/contratos — ledgers (ADRs, RFCs, o
+histórico de fechamento de `docs/18`) podem, porque registram o que era
+verdade no commit. `AGENTS.md` não pode citar doc histórico como destino.
 
 ---
 
@@ -732,10 +789,13 @@ distribuída.
 [`08-decisoes.md`](08-decisoes.md). Template de RFC (Status, Contexto,
 Problema mensurado, Opções, Decisão, Invariantes, CAP, Migrations, Falhas,
 Segurança, Observabilidade, Rollout, Rollback, Custo, Risco de
-overengineering, Condições de reentrada, Evidências) — ✅ instanciado três
+overengineering, Condições de reentrada, Evidências) — ✅ instanciado seis
 vezes: [RFC-001](16-rfc-theme-id.md) (theme_id),
-[RFC-002](19-rfc-escada-reconciliacao.md) (escada de reconciliação) e
-[RFC-003](20-rfc-colisao-de-caminho.md) (colisão de caminho).
+[RFC-002](19-rfc-escada-reconciliacao.md) (escada de reconciliação),
+[RFC-003](20-rfc-colisao-de-caminho.md) (colisão de caminho),
+[RFC-004](22-rfc-ontologia-da-assercao.md) (ontologia da asserção),
+[RFC-005](27-rfc-conflito-factual.md) (conflito factual) e
+[RFC-006](29-rfc-006-re-mira.md) (a re-mira).
 
 ---
 
@@ -777,21 +837,22 @@ Estado de cada risco levantado na validação do baseline `1.4.0`:
 
 | ID | Achado | Prioridade | Status | Onde |
 |---|---|:--:|:--:|---|
-| A-01 | atomicidade do BundleWriter (TOCTOU) | P0 | 🎯 | §7.1 |
-| A-02 | SUPERSEDE em duas operações | P0 | 🎯 | §7.1 |
-| A-03 | política uniforme de SQLite | P0/P1 | 🎯 | §5.2 |
-| A-04 | lease dependente de lock Python | P1 | 🎯 | §8.2 |
+| A-01 | atomicidade do BundleWriter (TOCTOU) | P0 | 🎯 | §7.1 — `nfr.toml` NFR-INT-002 (`declared`); fila viva `docs/18` §11 |
+| A-02 | SUPERSEDE de máquina em duas operações | P0 | 🎯 | §7.1 — idem (atos HUMANOS já fecham em um commit: NFR-INT-001) |
+| A-03 | política uniforme de SQLite | P0/P1 | ⚠️ **decidido como premissa** | §5.2 — NFR-DUR-003 presa por teste; StoragePolicy segue 🎯 |
+| A-04 | lease dependente de lock Python | P1 | 🎯 | §8.2 — NFR-INT-003 (`declared`) |
 | A-05 | tipos frouxos no frontend (`any`) | P1 | 🎯 | §10.1 |
 | A-06 | jitter não determinístico (`hash()`) | P2 | ✅ **corrigido** | §8.3, `_stable_jitter` |
-| A-07 | estado e evento podem divergir | P1 | 🎯 | §7.3 |
-| A-08 | idempotência de comandos HTTP | P1 | 🎯 | §9.2 |
-| A-09 | sem hard timeout para thread CPU-bound | P1 | ⚠️ **v1.7** | §8.4; `procjobs` (flag) |
+| A-07 | estado e evento podem divergir | P1 | 🎯 | §7.3 — em S0 a UI reconcilia por polling; candidato a "aceito como premissa" na fila viva |
+| A-08 | idempotência de comandos HTTP | P1 | 🎯 | §9.2 — NFR-CON-003 (`declared`) |
+| A-09 | sem hard timeout para thread CPU-bound | P1 | ⚠️ **v1.7** | §8.4; `procjobs` (flag) — NFR-QUE-003 |
 | A-10 | divergência de contrato Python/TypeScript | P1 | 🎯 | §10.1 |
 
-**Backlog que permanece prioritário** (ver [`09-backlog.md`](09-backlog.md)):
-governor no compile, golden eval com Recall@K/MRR, validação de citações
-no `/ask`, fila única de próxima ação, progressive disclosure, presets
-versionados, benchmarks reproduzíveis.
+Esta tabela é o registro de ORIGEM dos riscos (baseline 1.4.0); o estado
+vivo de cada um — e a decisão de pagar, aceitar como premissa ou rejeitar —
+mora em [`18-backlog-consolidado.md`](18-backlog-consolidado.md) §11 e em
+[`nfr.toml`](../nfr.toml). O backlog de produto que esta seção listava
+(`docs/09`) está congelado; nada dele é roteado daqui.
 
 ---
 
@@ -808,6 +869,10 @@ versionados, benchmarks reproduzíveis.
 - **Fase 4 — Distribuição (só por gatilho + RFC):** command plane vs
   derived search plane; store CP para canônico; broker durável; réplicas
   AP; security model remoto.
+
+Este roadmap é a ordem DOUTRINÁRIA das fases de engenharia; ele não é
+acompanhado item a item. A fila que é acompanhada — com dependência real,
+prova por item e governança — é [`18`](18-backlog-consolidado.md) §11.
 
 ---
 

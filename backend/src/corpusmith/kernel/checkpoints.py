@@ -40,6 +40,9 @@ DERIVATIONS: dict[str, str | None] = {
     "graph_map": "index",    # comunidades e pontes (job leiden)
     "centrality": "index",   # intermediação (mesmo job, fonte igual)
     "themes": "graph_map",   # identidade e épocas (RFC-001)
+    "stability": "bundle",   # estabilidade editorial (RFC-006 V3) — deriva
+                             # DIRETO da autoridade: lê Git + frontmatter,
+                             # não o índice, para ser 100% re-derivável
 }
 
 

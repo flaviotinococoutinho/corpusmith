@@ -85,6 +85,34 @@ def test_agents_md_nao_finge_contagem_de_testes():
         "no primeiro PR que adiciona um teste")
 
 
+def test_skills_nao_copiam_o_gate_nem_cravam_contagem():
+    """As skills de trabalho mandavam "atualizar a contagem de testes no
+    AGENTS §2" (o que o teste acima proíbe) e listavam TRÊS comandos onde
+    o gate tem seis — um agente que as seguisse ao pé da letra quebrava a
+    suíte ou pulava metade do gate. Skill cita `just verify`; se copiar
+    o pytest, copia o gate inteiro."""
+    tokens = _arch()["gate"]["verify_enforced"]
+    for skill in sorted((_ROOT / ".claude/skills").glob("*/SKILL.md")):
+        texto = skill.read_text()
+        assert not re.search(r"contagem (exata )?de testes.*atualize|"
+                             r"atualize o n[úu]mero", texto), (
+            f"{skill}: instrui a cravar contagem de testes")
+        if "pytest tests -q" in texto:
+            faltando = [t for t in tokens if t not in texto]
+            assert not faltando, (
+                f"{skill}: copia o gate e omite {faltando} — cite "
+                "`just verify` em vez de copiar")
+
+
+def test_estrategia_de_merge_e_uma_so():
+    """CONTRIBUTING pedia squash e a skill ship-pr fazia --merge."""
+    contrib = (_ROOT / "CONTRIBUTING.md").read_text().lower()
+    assert "squash" in contrib
+    for skill in sorted((_ROOT / ".claude/skills").glob("*/SKILL.md")):
+        assert "--merge" not in skill.read_text(), (
+            f"{skill}: estratégia de merge contradiz o CONTRIBUTING")
+
+
 # ============================== G-6 · migração com prova de UPGRADE
 def test_upgrade_de_index_antigo_preserva_dados_e_carimba(tmp_path):
     """`_migrate` decide por presença de COLUNA, nunca por versão — a

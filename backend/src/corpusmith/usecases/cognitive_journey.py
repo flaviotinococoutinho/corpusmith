@@ -57,7 +57,7 @@ def _candidate_views(settings: Settings, goal: dict,
         distance.setdefault(pin, policy["budgets"]["max_distance"])
     words = {r["page"]: (r["c"] or 0) / 6 for r in idx.execute(
         "SELECT page, SUM(LENGTH(text)) c FROM chunks GROUP BY page")}
-    contested = {r["page"] for r in idx.execute(
+    low_yield = {r["page"] for r in idx.execute(
         "SELECT page FROM page_overlay WHERE status='low_yield'")}
     idx.close()
 
@@ -92,7 +92,7 @@ def _candidate_views(settings: Settings, goal: dict,
             superseded=bool(meta.get("superseded_by")),
             invalid=bool(invalid_at and invalid_at.timestamp() <= now),
             stale=bool(meta.get("stale_as_of")),
-            low_yield=page in contested,
+            low_yield=page in low_yield,
             sensitive=bool(meta.get("sensitive_data")),
             distance=distance[page],
             degree=len(adjacency.get(page, ())),
@@ -523,7 +523,12 @@ def curation_projection(settings: Settings, limit: int = 20) -> dict:
         focus_pages |= set(goal.get("pinned", []))
     cog.close()
     idx = connect(settings.app_support / "index.db")
-    contested = {r["page"] for r in idx.execute(
+    # O-6 (ADR-52 concluído): a coluna já era `low_yield`; o SINAL emitido
+    # aqui ainda era `contested`, e a partir do ADR-54 essa palavra tem
+    # outro dono — `resolution_status = contested` significa divergência
+    # factual aberta, não desfecho de uso. Enquanto a API emitisse os dois
+    # sentidos sob o mesmo nome, nenhum consumidor podia distingui-los.
+    low_yield = {r["page"] for r in idx.execute(
         "SELECT page FROM page_overlay WHERE status='low_yield'")}
     idx.close()
     items = []
@@ -533,8 +538,8 @@ def curation_projection(settings: Settings, limit: int = 20) -> dict:
         signals = []
         if meta.get("stale_as_of"):
             signals.append(("stale", 0.6))
-        if doc.rel_path in contested:
-            signals.append(("contested", 0.8))
+        if doc.rel_path in low_yield:
+            signals.append(("low_yield", 0.8))
         if doc.meta.type == "question":
             signals.append(("question", 0.7))
         if not signals:

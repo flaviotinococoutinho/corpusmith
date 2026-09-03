@@ -1,5 +1,7 @@
 # 15 · Plano de execução — como desenvolver as lacunas (produto e processo)
 
+> **Altitude:** governança · **Status:** histórico — congelado em v1.8.1; NÃO atualizar — o estado vivo do que falta está em [`18`](18-backlog-consolidado.md) §11
+
 > **Especialidade deste documento:** engenharia de entrega e processo. Não
 > é diagnóstico (isso é [`14`](14-plano-viabilidade.md)) nem ADR — é o
 > **plano de execução**: pacotes de trabalho PR a PR, ordem revisada com

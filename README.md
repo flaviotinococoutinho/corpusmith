@@ -42,7 +42,12 @@ O espaço que Corpusmith ocupa não é nenhum desses elementos isolado — é a
 - **contratos epistêmicos executáveis** — [`epistemics.toml`](epistemics.toml)
   declara pressupostos, garantias *relativas*, modos de falha e fallback de
   cada mecanismo heurístico, e a suíte **quebra** quando um contrato mente
-  sobre o código.
+  sobre o código;
+- **léxico com fronteira** — [`ontology.toml`](ontology.toml) declara os eixos
+  independentes de uma afirmação (*como derivou · foi assentada? · quem
+  autorizou*) e, para cada termo, a raiz etimológica e o que a palavra **não**
+  pode passar a significar. Um valor que responda a duas perguntas quebra a
+  suíte ([`docs/23`](docs/23-ontologia-e-etimologia.md)).
 
 **A alegação honesta de governança, hoje**: máquinas escrevem sob políticas
 (gate único de escrita, colisão vira decisão humana, heurística cercada por
@@ -58,6 +63,69 @@ alucinação", ontologia formal, nem prontidão para decisões clínicas ou
 reguladas.
 
 *Not another agent-memory database.*
+
+### 📖 Entenda em 15 minutos
+
+**[`docs/00-o-que-e-corpusmith.md`](docs/00-o-que-e-corpusmith.md)** conta a
+história inteira do zero: o problema, a categoria, a tese de compilação, **um
+fato seguido do PDF até a resposta**, quem pode mudar o quê, e o que o
+produto **não** alega. Se você só vai ler um documento, leia esse.
+
+Depois dele, três páginas curtas explicam por que o produto é assim:
+[`23`](docs/23-ontologia-e-etimologia.md) (o léxico e o que cada raiz proíbe),
+[`24`](docs/24-axiomas-e-oticas.md) (os oito axiomas, cada um com a asserção
+executável que o paga, e as oito óticas sobre o mesmo corpus) e
+[`25`](docs/25-fronteira-e-diferencial.md) (as três fronteiras que o produto
+recusa cruzar).
+
+## A re-mira (RFC-006): de compilador de corpus a instrumento de estudo
+
+Para quem estuda de verdade — acumula PDFs, normas, artigos e notas — o
+produto compila conteúdo disperso em **conceitos comparáveis, rastreáveis,
+explicáveis e acionáveis**: não só o que uma ideia significa, mas **sob
+qual lente**, o que permanece, onde diverge, como se aplica e quanto custa
+adotá-la. As seis capacidades estão entregues no núcleo, presas por teste
+e declaradas em contrato — cada uma com o que ela **não** alega:
+
+- **Normas como sujeitos fortes (V1)** — `ISO 27001`, `NBR 14724`,
+  `RFC 9110`, `Circular BCB 3.978` são identidades de primeira classe:
+  duas páginas afirmando coisas diferentes sobre a MESMA norma sem
+  sucessão viram `policy.contradiction_candidate`, como já valia para
+  DOI/ISBN. Não detecta o órgão emissor: `SUSEP 100` e `BCB 100` colidem.
+- **Identidade-com-sentido (V2)** — "entropia (física)" ≠ "entropia
+  (informação)": o sentido é grafado NO canônico; alias reivindicado por
+  duas identidades da mesma camada vira uso `ambiguous` — nunca é
+  reescrito, não entra no índice de entidades, e `policy.alias_conflict`
+  nomeia a edição que resolve. Silêncio não é vocabulário desambiguado:
+  o detector só vê o que alguém curou.
+- **Estabilidade editorial (V3)** — o que menos muda no SEU corpus,
+  medido do histórico Git (`corpusmith stability`): "estável" = quieto
+  no eixo de edição, nunca "correto".
+- **Onde o estudo trava (V4)** — um índice de dificuldade por página que
+  COMPÕE cinco sinais que já existiam (falha de recuperação com
+  sobreconfiança, conflito, pergunta aberta, vocabulário ambíguo, lacuna
+  de abstenção reincidente): `corpusmith difficulty` e o painel
+  Indicadores. Os pesos são **declarados, não calibrados**, e silêncio
+  não é facilidade.
+- **A ponte abstrato→prático (V5)** — o curador declara `applies_to`,
+  `exemplifies` ou `refines` entre páginas (vocabulário fechado; a
+  projeção guarda a relação, não só a sintaxe do link) e `corpusmith
+  applications` responde "que caso prático sustenta X?" nas duas direções.
+  A aresta vale para a **página inteira**, e a fração de alvos ambíguos é
+  medida em vez de escondida.
+- **A ficha do conceito (V6)** — `corpusmith sheet` reúne custo de
+  LEITURA (método junto do número), estabilidade, dificuldade e
+  aplicações, com a ressalva de cada contrato ao lado do valor que ela
+  qualifica. Não existe campo de "ganho" nem de "importância": o produto
+  diz na ficha que não os mediu.
+
+O que falta — e é o primeiro bloco da fila corrente
+([`docs/18`](docs/18-backlog-consolidado.md) §11): levar V3, V5 e V6 ao
+cockpit (hoje só CLI), a ficha na tela, a aresta tipada a partir da página,
+o léxico navegável e a resposta do `/ask` explicando por que confia pouco
+ou por que se absteve. A direção está no
+[`docs/29`](docs/29-rfc-006-re-mira.md); os termos da re-mira fixados
+contra ambiguidade, no [`docs/30`](docs/30-dicionario-da-re-mira.md).
 
 ---
 
@@ -84,7 +152,8 @@ cognitive/   ← puro (v0.19): Cognitive Experience Domain — gates, score,
                working set, sessão, prática espaçada (testável sem infra)
 okf/ harness/← domínio canônico: modelo OKF, writer, regras (muda devagar)
 usecases/    ← aplicação: 1 classe = 1 operação = 1 método público execute()
-facades/     ← orquestração: Memory · Compiler · Curation · Cognition
+facades/     ← orquestração: Memory · Compiler · Curation · CurationActs ·
+               Cognition · System
 jobs/ api/ cli · desktop/   ← adapters: a camada MAIS mutável (fila, HTTP, UI)
 ```
 
@@ -249,7 +318,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   schema 1) — gazetteer frio×quente medido 236×@150/636×@500 (o claim
   ~92× era conservador) e índice incremental 4–13× (**o claim 29× não
   se reproduziu**; ADRs-06/07 corrigidos — a doc nunca descreve o que o
-  teste não confirma); 17 testes de sensibilidade nos limiares críticos
+  teste não confirma); testes de sensibilidade nos limiares críticos
   (clamp Hedge, overlay RRF, abstain, orçamento, hamming, citação).
 - **v1.6.3** — QA-1 fechado: `corpusmith seed` distribui o golden eval
   (7 páginas avaliáveis + 12 casos nas 5 categorias — o eval funciona
@@ -284,7 +353,8 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   `benchmarks/baseline.json`); cache de grafo por geração; incremental
   do índice por DELTA DO GIT (1 página = 130 bytes lidos, antes tudo);
   isolamento de jobs pesados por processo com hard-kill REAL (REL-2b,
-  flag `compute.process_isolation`); 6 contratos epistemológicos novos;
+  flag `compute.process_isolation`); contratos epistemológicos novos para
+  o compute plane;
   `corpusmith bench ask|graph|consolidate|compare`; testes diferenciais
   (bit-idênticos p/ sketch; |Δ|≤1e-8 p/ PPR/Brandes) + Hypothesis (2
   divergências Unicode reais achadas e corrigidas). Rust calcula
@@ -342,7 +412,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   particionamento; páginas `communities/*.md` (`community_summary`) geradas.
 - **Heat/outcomes/reflect**: `✅ útil · 🚫 beco · ✏️ corrigi` no chat →
   `ask_outcomes`; reflect semanal recalcula `page_heat` e o overlay
-  `preferred/tentative/contested` que ajusta a fusão RRF (+15%/−20%);
+  `preferred/tentative/low_yield` que ajusta a fusão RRF (+15%/−20%);
   correção vira memória nova no inbox (`raw/correcoes/`).
 - **Descida hierárquica** L0/L1 (`page_levels` + `fts_levels`) com
   `trajectory` visível no painel de evidências.
@@ -360,9 +430,9 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   para conteúdo `api:*`).
 - **Runtime**: fila de jobs SQLite + worker + scheduler + governor de
   orçamento de API + eventos SSE; índice FTS5 (+denso opcional) derivado.
-- **Cockpit** (12 abas): Estado · Consulta · Inbox · Wiki · Grafo ·
+- **Cockpit** (13 abas): Estado · Consulta · Inbox · Corpus · Grafo ·
   Indicadores · Memória · Cognição · Foco · Curadoria · Qualidade ·
-  Processos — com o botão **⭐ Promover para memória**
+  Processos · Integridade — com o botão **⭐ Promover para memória**
   (`generated_via: human:promote`, sem exigência de `source_sha256`).
 
 ## Instalação
@@ -379,7 +449,7 @@ backend/scripts/corpusmith okf bootstrap
 backend/scripts/corpusmith seed        # dados pré-definidos (idempotente):
                                     # referência do mundo + pipelines builtin
 just daemon &                       # API em 127.0.0.1:8377 (token efêmero)
-cd desktop && npm i && npm run dev  # cockpit Electron
+cd desktop && npm ci && npm run dev # cockpit Electron
 ```
 
 **Docker (daemon empacotado; desktop conecta de fora):**
@@ -403,7 +473,7 @@ just test             # suíte de contrato/arquitetura/golden bundles
 just daemon &         # sobe em 127.0.0.1:8377 com token efêmero
 backend/scripts/corpusmithctl status
 backend/scripts/corpusmith okf lint        # 0 erros num bundle recém-bootstrapado
-cd desktop && npm i && npm run dev      # cockpit (Electron + Vite)
+cd desktop && npm ci && npm run dev     # cockpit (Electron + Vite)
 ```
 
 O bundle é bootstrapado automaticamente pelo daemon (ou `corpusmith okf
@@ -429,19 +499,22 @@ backend/
                 descend, dense, related, streams (fusão RRF+Hedge)
     models/     router (local Ollama × API Anthropic, privacidade + orçamento)
     api/        system (auth header OU ?auth=), cockpit (+outcome/eval/
-                authorities/reflect, v0.8 §11), cognitive (/cognitive/* v0.19)
-    daemon.py · cli.py · settings.py (flags + get)
+                authorities/reflect, v0.8 §11), cognitive (/cognitive/* v0.19),
+                curation (atos com preview, F1)
+    daemon.py · cli.py · settings.py (flags + get) · context_pack.py
+                (o mapa gerado: `corpusmith context`)
   db/           schema_runtime.sql · schema_index.sql · schema_cognitive.sql
                 · schema_cold.sql · schema_reference.sql (5 bancos, v0.8 §2.1)
   config/       default.yaml (privacy.default: local_only · flags v0.8)
   build.spec    PyInstaller onedir (AGPL fora do binário)
 desktop/
   electron/     main, preload, sidecar (handshake via state/daemon.json)
-  src/panels/   Dashboard(+candidatos reflect), ChatEvidence(+desfechos,
-                as_of, trajetória, abstenção), PromoteDialog, Inbox,
-                Explorer(+filtro authority), Quality(+5 barras de eval),
-                Processes
-  src/lib/      daemonClient (extensões do cockpit + v0.8), client (singleton)
+  src/panels/   as abas do cockpit (a lista viva é `TABS` em src/App.tsx):
+                Dashboard, ChatEvidence, Inbox, Explorer, Quality, Processes,
+                Graph, Insights, Curation, Doctor, Focus, Cognition, Memory,
+                ActsHistory + diálogos (PromoteDialog, CurationDialog)
+  src/lib/      daemonClient (extensões do cockpit + v0.8), client (singleton),
+                live (SSE)
 ```
 
 ## Aceite da v0.7 (verificado por teste)
@@ -470,7 +543,7 @@ desktop/
       `abstained: true` com `gaps`
 - [x] `eval_memory` grava as categorias em `eval_runs`; painel Qualidade
       mostra as 5 barras; `abstain` só passa com abstenção real
-- [x] `reflect` popula `page_heat`/`page_overlay`; página `contested` afunda
+- [x] `reflect` popula `page_heat`/`page_overlay`; página `low_yield` afunda
       na fusão do `/ask`; Dashboard exibe candidatos
 - [x] migração idempotente: bancos v0.7 ganham `graph_edges.confidence` e
       `chunks.valid_at/invalid_at` no primeiro `connect()`

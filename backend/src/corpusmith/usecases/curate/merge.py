@@ -84,10 +84,33 @@ class MergePages(CurationAct):
     # ------------------------------------------------- a contradição resolvida
     def _identificadores_compartilhados(self, docs) -> list[dict]:
         """Findings de contradição ENTRE os documentos dados — o detector
-        existente, sem heurística nova (seria RFC, AGENTS.md §8)."""
+        existente, sem heurística nova (seria RFC, AGENTS.md §8).
+
+        FILTRA por regra: desde o F4-PR3b `check_corpus` emite também
+        `policy.factual_conflict`, e sem o filtro o conflito factual seria
+        contado como identificador compartilhado (com `identifier` repetido
+        na nota do preview)."""
         return [{"identifier": f.meta.get("identifier"),
                  "pages": f.meta.get("pages", []), "message": f.message}
-                for f in check_corpus(docs, self._writer.reader)]
+                for f in check_corpus(docs, self._writer.reader)
+                if f.rule == "policy.contradiction_candidate"]
+
+    def _conflitos_factuais(self, docs) -> list[dict]:
+        """O que esta fusão vai tornar INDETECTÁVEL, e por quê.
+
+        Fundir põe os dois valores divergentes na mesma página. A guarda de
+        faixa de `kernel/factual.py` então descarta a dimensão inteira —
+        uma página que afirma dois valores está descrevendo faixa, não
+        afirmando um valor. Resultado: o finding some **sem que o número
+        tenha sido corrigido**, e o preview declararia resolvido o que só
+        foi silenciado.
+
+        Mesma disciplina de `ratificacao_perdida` (RFC-004 §5.4): o ato
+        pode destruir, mas nunca em silêncio."""
+        return [{"dim": f.meta.get("dim"), "spread": f.meta.get("spread"),
+                 "pages": f.meta.get("pages", []), "message": f.message}
+                for f in check_corpus(docs, self._writer.reader)
+                if f.rule == "policy.factual_conflict"]
 
     def _outras_paginas_com(self, identificadores: list[str]) -> list[str]:
         """Páginas fora do par que citam os mesmos identificadores fortes.
@@ -121,6 +144,25 @@ class MergePages(CurationAct):
                   f"declarada de {self._into} (nenhuma prosa é reescrita) e "
                   f"{self._page} passa a apontar para {self._into} — nada é "
                   "apagado, as duas seguem no histórico"]
+        # RFC-004 / docs/26 §3: a ratificação cobre um CONTEÚDO, e a fusão
+        # produz outro — perder a cobertura é correto, perdê-la em silêncio
+        # é *audit erasure*. O preview declara a perda ANTES do efeito, que
+        # é o contrato de todo ato de curadoria.
+        from ...kernel.ontology import ratificacao_perdida
+        perda = ratificacao_perdida(
+            str(self._writer.reader.load(self._into).meta.model_dump()
+                .get("confidence") or "extracted"),
+            str(self._writer.reader.load(self._page).meta.model_dump()
+                .get("confidence") or "extracted"))
+        if perda:
+            quem = self._into if perda["ratified_side"] == "alvo" \
+                else self._page
+            partes.append(
+                f"esta fusão PERDE a ratificação de {quem}: o resultado sai "
+                f"como `{perda['merged_confidence']}` "
+                "(a aprovação humana cobria o conteúdo anterior, não o "
+                "fundido) — se a página fundida merece ratificação, ela "
+                "volta por um ato de edição registrado, nunca por herança")
         if antes:
             depois = self._identificadores_compartilhados(docs)
             ids = ", ".join(str(f["identifier"]) for f in antes)
@@ -140,6 +182,20 @@ class MergePages(CurationAct):
                     + " — essa convivência NÃO é tratada aqui e SEGUE na "
                       "fila depois desta fusão (F3-PR2: a sucessão resolve "
                       "só o bloco que ela liga, não o grupo inteiro)")
+        # F4-PR3b: o caso em que a fusão SILENCIA em vez de resolver. Vem
+        # por último de propósito — é a advertência que o curador precisa
+        # ler antes de confirmar, e a última linha é a que fica na tela.
+        for conflito in self._conflitos_factuais(
+                [self._writer.reader.load(self._page),
+                 self._writer.reader.load(self._into)]):
+            partes.append(
+                f"ATENÇÃO: há CONFLITO FACTUAL entre as duas ({conflito['message']})"
+                " — fundir NÃO resolve essa divergência: os dois valores passam "
+                "a conviver na mesma página, e o detector deixa de acusá-los "
+                "(uma página que afirma dois valores descreve faixa, não "
+                "afirma um valor). O número errado continua no corpus, agora "
+                "sem alarme. Se um dos dois está errado, o ato certo é "
+                "`edit`, não `merge`")
         return "; ".join(partes)
 
     # ------------------------------------------------------------- esqueleto

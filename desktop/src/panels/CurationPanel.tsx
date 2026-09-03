@@ -103,6 +103,13 @@ export function CurationPanel() {
             <div><b>Autoridades</b>: {dict.authorities.map(
               ([a, n]: any) => `${a}×${n}`).join(" · ")}
               {" "}({dict.gazetteer_terms} termos no gazetteer)</div>
+            {/* RFC-006 V2: vocabulário AINDA por desambiguar. Enquanto o
+                alias é disputado, o termo não liga páginas — e a dívida
+                precisa ter superfície, não só ficar no lint. */}
+            {dict.ambiguous_aliases?.length > 0 && (
+              <div title="dois registros curados disputam estes aliases; enquanto durar, o termo é lido como ambíguo e não liga páginas">
+                <b>⚖️ Aliases ambíguos</b>: {dict.ambiguous_aliases.join(" · ")}
+                {" "}— resolva no `authority_record` (ver lint)</div>)}
           </div>)}
       </Card>
 

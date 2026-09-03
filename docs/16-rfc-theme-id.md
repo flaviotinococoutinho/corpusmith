@@ -1,5 +1,7 @@
 # 16 · RFC-001 — Identidade de tema (`theme_id`) por casamento de partições
 
+> **Altitude:** governança · **Status:** vivo
+
 > **Este é o primeiro RFC do projeto.** O `docs/10` §19 define o template e o
 > marcava "🎯 a instanciar"; esta é a instanciação. O `AGENTS.md` §8 exige RFC
 > — não só ADR — para **heurística no caminho de escrita**, e é exatamente o

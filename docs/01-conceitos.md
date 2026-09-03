@@ -1,11 +1,32 @@
 # 01 · Conceitos abstratos
 
+> **Altitude:** produto · **Status:** vivo
+
 > O QUE o sistema acredita. Cada conceito aqui tem um mecanismo concreto
 > (documento 05) e um fundamento teórico (documento 03). Este documento é
 > o vocabulário compartilhado — quando dois módulos discordarem sobre um
 > termo, este texto arbitra.
 
-## 1. A tese central: memória como compilação
+## 0. A pergunta que o produto responde
+
+Antes do vocabulário, a categoria — porque cada termo abaixo existe para
+sustentar UMA pergunta, e ela não é "o que recuperar" nem "o que recordar":
+
+> **O que foi aceito como conhecimento, com base em quê, por quem, em qual
+> período e sob quais limites?**
+
+Governar isso é o produto; recuperar e representar são meios. A explicação
+narrativa completa está em [`00-o-que-e-corpusmith.md`](00-o-que-e-corpusmith.md);
+a decisão de categoria e a fronteira do que se pode alegar, em
+[`21`](21-adr-categoria-corpusmith.md).
+
+Cada conceito deste documento é uma peça dessa resposta:
+**aceito** → §7 proveniência e §6 autoridade · **com base em quê** → §8
+epistemologia operacional · **por quem** → §7 divisão máquina/humano ·
+**em qual período** → §4 bi-temporalidade · **sob quais limites** → §5
+escala de confiança e os contratos epistêmicos ([`11`](11-epistemic-contracts.md)).
+
+## 1. A tese central: conhecimento como alvo de compilação
 
 O Corpusmith trata conhecimento pessoal como um **alvo de compilação**:
 fontes brutas (`raw/`) são *código-fonte*; páginas OKF versionadas em Git
@@ -119,11 +140,23 @@ aliases: [postgres, pgsql, postgre]
 qid: Q192490              # Wikidata — resolução externa de entidade
 ```
 
-O normalizador compila (seeds embutidos ∪ authority_records) num único
-autômato regex no load. Efeitos: curadoria versionada no Git, lintável
-pelo Harness, editável no Explorer — **corrigir uma grafia é um commit,
+O normalizador compila **três camadas** num único autômato regex no load
+— seeds embutidos < `reference.db` (v0.22) < `authority_records` —, e
+desde a RFC-006 V2 a precedência é resolvida **alias a alias** (um
+registro curado que reivindica só `entropia` não apaga `entropy` do termo
+de referência). Efeitos: curadoria versionada no Git, lintável pelo
+Harness, editável no Explorer — **corrigir uma grafia é um commit,
 não um deploy**. Termos com alto risco de falso positivo (`Go`, `R`,
 `C`, `Rust`, `Swift`, `Nature`) estão em `UNSAFE_BARE`: nunca casam sozinhos.
+
+**Sentido vive no canônico** (V2): a ótica de um conceito é grafada no
+próprio nome — `Entropia (física)` ≠ `Entropia (informação)` — nunca num
+campo paralelo. Alias reivindicado por duas identidades da MESMA camada é
+**ambiguidade**: o uso vira `confidence=ambiguous`, não é reescrito, não
+entra no índice de entidades, e `policy.alias_conflict` nomeia a edição
+que resolve. Colisão ENTRE camadas é precedência (resolvida); colisão
+DENTRO da camada é ambiguidade (custa) — os dois nomes não se misturam
+([docs/30](30-dicionario-da-re-mira.md)).
 
 ## 7. Proveniência e a divisão máquina/humano
 

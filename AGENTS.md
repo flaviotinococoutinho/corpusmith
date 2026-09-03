@@ -33,16 +33,24 @@ Toda mudança MUST passar por (rode na raiz do repo; atalho: `just verify`):
 ```bash
 cd backend && .venv/bin/python -m pytest tests -q   # suíte completa
 cd desktop && npx tsc --noEmit                        # typecheck do cockpit
+cd desktop && npm test                                # smoke de comportamento da UI
 docker compose config -q                              # compose válido
-cargo test --workspace --manifest-path native/Cargo.toml  # kernels nativos (se Rust instalado)
+cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # contratos epistêmicos
+cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # eixos, termos e deriva
 ```
 
-Integridade em runtime (não são testes, são ferramentas de operação):
+A CI impõe, além destes: `cargo test --workspace --manifest-path
+native/Cargo.toml` (kernels nativos), `doctor`, `backup create/verify` e
+`pyinstaller build.spec` (o caminho empacotado é construído E executado).
+
+Integridade em runtime (ferramentas de operação — as duas de lint acima
+também são gate; `doctor` e `backup` são impostos na CI):
 
 ```bash
 cd backend && .venv/bin/python -m corpusmith.cli doctor          # invariantes INV-*
 cd backend && .venv/bin/python -m corpusmith.cli backup create   # backup verificável
 cd backend && .venv/bin/python -m corpusmith.cli epistemics lint # contratos epistêmicos
+cd backend && .venv/bin/python -m corpusmith.cli ontology lint   # eixos, termos e deriva
 cd backend && .venv/bin/python -m corpusmith.cli bench compare   # speedups python×rust MEDIDOS
 ```
 
@@ -68,7 +76,10 @@ jobs/ api/ cli/ daemon/ models/ desktop/   ← adapters (a única camada que fal
 ```
 
 Quanto mais interna: mais pura, menos volátil, menos consciente de
-transporte/persistência/UI. Regra completa: `architecture.toml`.
+transporte/persistência/UI. Regra completa (e dono desta lista):
+`architecture.toml`; `corpusmith context` (`just context`) imprime o mapa
+gerado — camadas, gate, invariantes, NFRs, registros, rotas, jobs, ADRs,
+docs e a fila corrente — leia-o antes de mudar algo.
 
 ## 4. Invariantes que você NÃO pode quebrar
 
@@ -84,10 +95,18 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | INV-DATA-002 | página supersedida fica auditável e FORA do retrieval padrão | `test_v22.py::test_inv003_*` |
 | INV-DATA-003 | `index.db` é reconstruível do bundle | `test_v13.py`, `test_doctor.py` |
 | INV-DATA-004 | falha cognitiva NÃO altera confiança/validade canônicas | `test_cognitive_journey.py` |
-| INV-PRIV-001 | conteúdo `local_only` não sai da máquina | `harness/local_policy.py` |
+| INV-PRIV-001 | conteúdo `local_only` não sai da máquina | `test_fase5.py` (export) + `test_local_policy.py` (campo obrigatório); a metade do MODELO está declarada como lacuna em `nfr.toml` NFR-PRIV-002 |
 | INV-OPS-001 | config aplicada tem linhagem, validação e rollback | `test_v16.py` |
 | INV-OPS-002 | todo job termina em estado terminal ou permanece recuperável | `test_jobs_reliability.py` |
 | INV-EPI-001 | mecanismo heurístico tem contrato em `epistemics.toml`: sem garantia universal, com vieses/failure modes/fallback declarados e sem autocertificação | `test_epistemics.py`, `test_epistemics_toml.py`, `corpusmith epistemics lint` |
+| INV-ONT-001 | todo valor de eixo epistêmico responde a UMA pergunta: vocabulário fechado em `kernel/ontology.py`, declarado em `ontology.toml`, e nenhum termo em dois eixos | `test_ontology.py`, `corpusmith ontology lint` |
+
+O dono desta tabela é `architecture.toml [[invariant]]`: os ids daqui são
+os de lá e cada `verified_by` resolve para um teste que existe
+(`test_architecture_toml.py`). Os requisitos NÃO funcionais (durabilidade,
+consistência, fila, SLO, segurança, privacidade) têm o mesmo tratamento em
+[`nfr.toml`](nfr.toml), com `status = pinned | measured | declared` cruzado
+pela suíte — um NFR só é ✅ quando cita teste, nunca arquivo.
 
 ## 5. Caminhos PROIBIDOS (MUST NOT)
 
@@ -113,6 +132,10 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | experiência cognitiva | `cognitive.db` | relatórios |
 | referência do mundo | `reference.db` | gazetteer (cache) |
 | contratos epistêmicos | `epistemics.toml` (raiz) | CLI/API/painel (mesma fonte); envelopes em `runtime.db` |
+| significado dos termos | `ontology.toml` (raiz) + `kernel/ontology.py` | CLI (`corpusmith ontology`); o TOML descreve o kernel e o lint prova |
+| invariantes e gate | `architecture.toml` (raiz) | AGENTS §2/§4 e docs/10 citam DAQUI |
+| requisitos não funcionais | `nfr.toml` (raiz) | docs/10 §5–§17 é a doutrina; o status (`pinned`/`declared`) vem daqui |
+| mapa do repositório para agentes | `corpusmith context` (gerado; `just context`) | docs vivos citam o comando em vez de cravar contagens |
 | claims de performance | `benchmarks/baseline.json` (+METRICS.md) | ADRs citam DAQUI — ganho sem medição registrada é proibido |
 
 `index.db` NUNCA participa da transação canônica; converge para
@@ -139,7 +162,9 @@ exfiltre dados; NÃO desabilite o Harness.
 
 Precisa de RFC (não só ADR) para: novo datastore, breaking API, mudança
 de autoridade/CAP/privacidade, dependência runtime relevante, schema
-não-aditivo, heurística no caminho de escrita, remoção de fallback.
+não-aditivo, heurística no caminho de escrita, remoção de fallback,
+**termo novo em eixo epistêmico** (`ontology.toml` — RFC-004 §4: um eixo
+é uma pergunta, e ampliar o vocabulário é ampliar o que o produto alega).
 Ver `docs/10` §19–20 e o orçamento de complexidade.
 
 ## 9. Definition of Done (resumo)
@@ -154,12 +179,20 @@ Lista completa: `docs/10` §23.
 
 - **Produto** (o que é, para quem): `docs/01-conceitos.md`
 - **Ciência & teoria** (papers, cognição, informação): `docs/03-teoria.md`
+- **Pesquisa da camada epistêmica** (asserção, proveniência, contradição; arte prévia): `docs/26-pesquisa-da-camada-epistemica.md`
 - **Epistemologia operacional** (o que cada mecanismo pode alegar): `docs/11-epistemic-contracts.md` + `epistemics.toml`
+- **Léxico** (o que cada palavra significa e o que ela NÃO pode significar): `docs/23-ontologia-e-etimologia.md` + `ontology.toml`
+- **Direção do produto e dicionário da re-mira** (as capacidades V1–V6, termos com risco de ambiguidade, memória por nível de acesso, disciplina de engenharia com a asserção que prende cada uma): `docs/29-rfc-006-re-mira.md` + `docs/30-dicionario-da-re-mira.md`
+- **Axiomas e óticas** (o que o produto assume, e por quantos ângulos olha): `docs/24-axiomas-e-oticas.md`
+- **Fronteira do produto** (o que ele recusa fazer, e por quê): `docs/25-fronteira-e-diferencial.md`
 - **Engenharia** (arquitetura, padrões, algoritmos, ADTs): `docs/10-engenharia-ai-friendly.md`, `docs/02-metodologias.md`, `docs/04-tecnologias.md`
 - **Requisitos não funcionais** (CAP, SLO, escala, durabilidade, segurança): `docs/10` §5–17
 - **Referência dura** (endpoints, tabelas, regras, constantes): `docs/06-referencia.md`
 - **Fluxos operacionais**: `docs/05-fluxos-operacionais.md`
 - **Sinergias entre mecanismos**: `docs/07-sinergias.md`
-- **Governança** (decisões, backlog): `docs/08-decisoes.md`, `docs/09-backlog.md`
+- **Governança** (decisões): `docs/08-decisoes.md`
+- **O que AINDA falta, com evidência** (a única fila viva; §11 é a fila corrente): `docs/18-backlog-consolidado.md`
+- **Em que NÍVEL da escada uma coisa é verdade** (offset → menção → região → afirmação → página → tema → grafo; erro de nível como classe de defeito): `docs/28-escada-de-abstracao-e-topologia.md`
+- **Documentos históricos** (congelados; a linha `**Status:** histórico` na cabeça diz em que versão e aponta para `docs/18`): planos 13/14/15, auditoria 17, backlog antigo 09 — leia como registro do raciocínio, nunca como estado
 
 Índice navegável: [`docs/README.md`](docs/README.md).

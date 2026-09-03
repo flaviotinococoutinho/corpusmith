@@ -52,6 +52,28 @@ class EvaluationStatus(str, Enum):
     INVALIDATED = "invalidated"
 
 
+class SideEffect(str, Enum):
+    """O que o mecanismo ESCREVE — C6 (`docs/17`).
+
+    A lacuna que este vocabulário fecha foi medida: com
+    `memory.auto_recycle`, um `POST /ask` (leitura no modelo mental do
+    usuário e no próprio contrato) reidratava uma página, escrevia no
+    bundle e MOVIA O HEAD DO GIT. O contrato não tinha onde declarar
+    isso, então nenhuma regra de lint podia pegar — a ausência de campo
+    era a causa geradora, não um detalhe de formato.
+
+    Os três níveis não são graus do mesmo eixo; são donos diferentes:
+    `canonical_write` toca a AUTORIDADE (bundle + Git, para sempre),
+    `projection_write` toca o que se reconstrói do canônico, e
+    `state_write` toca dado de USO (calor, desfechos, misses), que não é
+    conhecimento. Só o primeiro força `high_impact` — exigir o mesmo dos
+    outros diluiria a palavra até ela não dizer nada."""
+    NONE = "none"
+    CANONICAL_WRITE = "canonical_write"
+    PROJECTION_WRITE = "projection_write"
+    STATE_WRITE = "state_write"
+
+
 class EvidenceKind(str, Enum):
     """De onde vem a evidência de QUALIDADE do mecanismo. `self_reported`
     sozinho dispara epistemic.self_certification_only: um mecanismo não
@@ -111,6 +133,7 @@ class EpistemicContract:
     composite: bool = False
     composite_components: tuple[str, ...] = ()
     evidence: tuple[EvidenceKind, ...] = ()
+    side_effects: tuple[SideEffect, ...] = ()   # C6: o que ESCREVE
     evaluated_by: tuple[str, ...] = ()      # jobs/fluxos que geram envelope
     misinterpretations: tuple[str, ...] = ()
     high_impact: bool = False
@@ -138,6 +161,7 @@ class EpistemicContract:
             "composite": self.composite,
             "composite_components": list(self.composite_components),
             "evidence": [e.value for e in self.evidence],
+            "side_effects": [e.value for e in self.side_effects],
             "evaluated_by": list(self.evaluated_by),
             "misinterpretations": list(self.misinterpretations),
             "high_impact": self.high_impact,

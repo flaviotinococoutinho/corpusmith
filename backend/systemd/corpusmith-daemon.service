@@ -1,0 +1,15 @@
+# Unidade systemd DE USUÁRIO do daemon (Linux) — espelho do launchd agent
+# do macOS (launchd/com.corpusmith.daemon.plist). Instalada por
+# scripts/install_daemon.sh, que troca o marcador pelo caminho real do backend.
+# Logs vão para o journal: journalctl --user -u corpusmith-daemon
+[Unit]
+Description=Corpusmith daemon (API local-first em 127.0.0.1:8377)
+
+[Service]
+ExecStart=__BACKEND__/.venv/bin/python -m corpusmith.daemon
+# KeepAlive/SuccessfulExit=false do launchd == reiniciar só em falha
+Restart=on-failure
+Nice=10
+
+[Install]
+WantedBy=default.target

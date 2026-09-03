@@ -11,7 +11,7 @@ import tomllib
 from .model import (Assumption, DecisionFallback, EpistemicContract,
                     EvidenceKind, Finding, GuaranteeDescriptor,
                     GuaranteeKind, InductiveBias, KnownFailureMode,
-                    Registry, ValidityScope)
+                    Registry, SideEffect, ValidityScope)
 
 SUPPORTED_SCHEMA = 1
 _SEMVER = re.compile(r"\d+\.\d+\.\d+")
@@ -21,7 +21,7 @@ _KNOWN_FIELDS = {
     "assumptions", "validity_scope", "known_failure_modes",
     "guarantee_kind", "guarantee_relative_to", "universal_guarantee",
     "fallback", "adaptive", "feedback_signal", "composite",
-    "composite_components", "evidence", "evaluated_by",
+    "composite_components", "evidence", "side_effects", "evaluated_by",
     "misinterpretations", "high_impact", "abstention_supported",
     "human_review_available", "parameters",
 }
@@ -55,7 +55,10 @@ def _contract(mechanism_id: str, raw: dict,
         findings.append(Finding(
             "epistemic.unknown_field", "error", mechanism_id,
             f"campo desconhecido '{key}' — rejeitado para evitar erro "
-            f"silencioso (typo? campo novo exige bump de schema)"))
+            f"silencioso (typo? ou registro escrito por versão mais nova "
+            f"do produto: campo OPCIONAL com default seguro não bumpa "
+            f"`schema_version`, porque bumpar quebraria a direção que "
+            f"importa — código novo lendo registro antigo)"))
     kind = _enum(GuaranteeKind, str(raw.get("guarantee_kind", "none")),
                  mechanism_id, "guarantee_kind", findings)
     fallbacks, evidence = [], []
@@ -64,6 +67,12 @@ def _contract(mechanism_id: str, raw: dict,
                        findings)
         if parsed:
             fallbacks.append(parsed)
+    side_effects = []
+    for value in _strings(raw, "side_effects"):
+        parsed = _enum(SideEffect, value, mechanism_id, "side_effects",
+                       findings)
+        if parsed:
+            side_effects.append(parsed)
     for value in _strings(raw, "evidence"):
         parsed = _enum(EvidenceKind, value, mechanism_id, "evidence",
                        findings)
@@ -97,6 +106,7 @@ def _contract(mechanism_id: str, raw: dict,
         composite=bool(raw.get("composite", False)),
         composite_components=_strings(raw, "composite_components"),
         evidence=tuple(evidence),
+        side_effects=tuple(side_effects),
         evaluated_by=_strings(raw, "evaluated_by"),
         misinterpretations=_strings(raw, "misinterpretations"),
         high_impact=bool(raw.get("high_impact", False)),

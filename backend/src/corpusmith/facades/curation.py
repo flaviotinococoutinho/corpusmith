@@ -153,6 +153,10 @@ class CurationFacade:
                                           if latest else "unevaluated"),
                     "last_evaluated_at": (latest[0]["created_at"]
                                           if latest else None),
+                    # C6: o que o mecanismo ESCREVE viaja para a
+                    # superfície — um campo que ninguém vê é um campo
+                    # que não protege ninguém
+                    "side_effects": [e.value for e in c.side_effects],
                     "high_impact": c.high_impact})
         return {"lint": result, "mechanisms": mechanisms}
 
@@ -176,3 +180,10 @@ class CurationFacade:
     def epistemics_lint(self) -> dict:
         from ..harness.epistemics import lint
         return lint()
+
+    # ------------------------------------ registro ontológico (RFC-004)
+    def ontology_overview(self) -> dict:
+        """Eixos, termos e deriva semântica + lint — a MESMA fonte de
+        CLI, API e testes (nenhuma releitura paralela do TOML)."""
+        from ..harness.ontology import overview
+        return overview()

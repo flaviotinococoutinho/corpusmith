@@ -7,6 +7,9 @@
 - Invariantes:
 - Autoridade e projeções:
 - ADR/RFC/documentação:
+- Requisitos não funcionais (`nfr.toml`: algum `status` muda? só com teste):
+- Termo novo/alterado responde a UMA pergunta (eixo em `ontology.toml`)?
+- Em que NÍVEL da escada (offset · menção · região · afirmação · página · tema · grafo) o atributo novo é afirmado, e por quê?
 
 ## Evidências
 

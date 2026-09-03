@@ -19,13 +19,17 @@ const navigate = (tab: string) =>
 // Padrões COMPUTADOS: relações derivadas que o job recomputa, não páginas.
 // Veredito sobre página é ato de curadoria (vai ao frontmatter); veredito
 // sobre padrão vai para `pattern_verdicts`, com `until` e sem DELETE.
-const PADROES = new Set(["bridge", "contradiction"]);
+// F4-PR3b: `factual_conflict` é padrão computado como os outros dois, e
+// PRECISA estar aqui — sem isto o item de maior densidade da fila nasce sem
+// botão de adiar/rejeitar, e "o produto escuta" regride justo no item novo.
+// `NextActionItem.kind` é `string`, então `tsc --noEmit` NÃO acusa a falta.
+const PADROES = new Set(["bridge", "contradiction", "factual_conflict"]);
 
 function NextActionsQueue({ onApplied }: { onApplied(): void }) {
   const [q, setQ] = useState<NextActionsQueue | null>(null);
   // F1-PR6: o clique abre o ATO quando o item declara ofertas; quando não
   // declara (question/inbox/review/stale/low_yield), continua navegando —
-  // trocar tudo por dialog regrediria 5 dos 7 kinds para "sem destino".
+  // trocar tudo por dialog regrediria 5 dos 8 kinds para "sem destino".
   const [aberto, setAberto] = useState<CurationActOffer | null>(null);
   // F0/P-11: antes, pendente E erro caíam no MESMO `null` ⇒ a única
   // chamada-para-ação do produto desaparecia em silêncio enquanto o

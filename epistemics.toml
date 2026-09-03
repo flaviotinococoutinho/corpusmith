@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.9.1"   # F4-PR2 (ADR-52): overlay contested → low_yield (valor, chave e rótulo)
+version = "1.18.0"  # dívidas PROMISED pagas: temporal_partition e inferred_cooccurrence_edges
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -67,6 +67,7 @@ universal_guarantee = false
 fallback = ["degrade"]
 adaptive = true
 feedback_signal = "ask_outcomes (useful=-1, dead_end/corrected=+1) roteado por ask_provenance página→stream (RecordOutcome._update_stream_credit)"
+side_effects = ["state_write"]
 evidence = ["golden_set", "human_feedback"]
 evaluated_by = ["eval_memory"]
 misinterpretations = [
@@ -119,6 +120,7 @@ adaptive = false
 feedback_signal = ""
 composite = true
 composite_components = ["distinct_pages", "corroborating_streams", "grounded_fraction", "freshness"]
+side_effects = ["none"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "support NÃO é probabilidade de verdade — é contagem de sustentação; o eixo factual segue sendo desfecho observado + Brier",
@@ -161,6 +163,7 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["deterministic_check", "human_feedback"]
 misinterpretations = [
   "a incerteza mede dispersão do retrieval, NÃO é probabilidade de a afirmação ser verdadeira",
@@ -202,6 +205,7 @@ universal_guarantee = false
 fallback = ["abstain", "deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write"]
 evidence = ["golden_set", "human_feedback"]
 evaluated_by = ["eval_memory"]
 misinterpretations = [
@@ -248,6 +252,7 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write"]
 evidence = ["deterministic_check", "human_feedback"]
 misinterpretations = [
   "congelar não é apagar: o conteúdo integral segue no Git e o digest na base fria — FreezeVeto é a saída normal, não erro",
@@ -292,11 +297,12 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "cluster não é juízo de MÉRITO: é sobreposição lexical — a página compilada passa pelo mesmo Harness de qualquer escrita",
 ]
-high_impact = false
+high_impact = true
 abstention_supported = false
 human_review_available = true
 [mechanisms.consolidate_inbox.parameters]
@@ -341,6 +347,7 @@ universal_guarantee = false
 fallback = ["duplicate_in_doubt", "request_human_review"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write"]
 evidence = ["deterministic_check", "property_test"]
 misinterpretations = [
   "score ≥ HI significa 'similar o suficiente para UPDATE', não identidade provada — só o degrau de identificador forte prova identidade",
@@ -379,7 +386,7 @@ inductive_biases = [
   "densidade valor/custo (VoI por minuto) ordena melhor que valor absoluto — item caríssimo de valor alto não deve afogar cinco baratos",
   "custo é leitura estimada a 150 palavras/min com piso de 2 min",
   "revisão vale mais na zona de esforço produtivo: review_gain(p) = 4p(1−p) (Bjork 1994) — o trivial e o perdido rendem pouco",
-  "valor por tipo é fixo e declarado (contradição 0.85 > pergunta 0.9 > contestada 0.8 > stale 0.6 > inbox 0.5), não aprendido",
+  "valor por tipo é fixo e declarado (pergunta 0.9 > contradição 0.85 > baixo rendimento 0.8 > stale 0.6 > inbox 0.5), não aprendido",
 ]
 assumptions = [
   "page_heat (leituras e citações) aproxima o uso real da página",
@@ -396,6 +403,7 @@ known_failure_modes = [
   "custo por palavras/min ignora dificuldade — 300 palavras de matemática não custam o mesmo que 300 de prosa",
   "medido no F3-PR2: sem filtro de vitalidade a fila propunha revisar página aposentada e página inexistente, porque page_heat é chaveado por caminho e ninguém o confrontava com a autoridade",
   "veredito humano sobre padrão computado (ponte, contradição) precisa de pattern_verdicts com until: apagar a linha do padrão seria desfeito na próxima recomputação do job",
+  "F4-PR3b: `contradiction` e `factual_conflict` têm namespaces de supressão SEPARADOS, sem herança — rejeitar a coexistência não julga o número divergente, e herdar o silêncio repetiria a dívida do ADR-41.5 (um veredito sobre UMA relação apagando outra que ninguém julgou). O custo é que o curador pode ver o mesmo PAR duas vezes se rejeitar só um dos dois",
 ]
 guarantee_kind = "heuristic"
 guarantee_relative_to = "ordenação por densidade valor/custo sobre as fontes declaradas, com alvo verificado vivo; NÃO otimalidade da atenção nem completude das fontes"
@@ -406,8 +414,9 @@ feedback_signal = ""
 composite = true
 composite_components = [
   "review", "question", "low_yield", "stale", "inbox", "bridge",
-  "contradiction",
+  "contradiction", "factual_conflict",
 ]
+side_effects = ["none"]
 evidence = ["deterministic_check", "property_test"]
 misinterpretations = [
   "posição na fila NÃO é importância absoluta — é densidade valor/custo sob pesos declarados e fontes conhecidas",
@@ -427,7 +436,78 @@ value_stale = 0.6
 value_inbox = 0.5
 value_bridge_base = 0.7
 value_contradiction = 0.85
+value_factual_conflict = 0.85
+cost_factual_conflict = 3.0
 review_gain_floor = 0.3
+
+# ============================== conflito factual (F4-PR3b, RFC-005)
+# O PRIMEIRO limiar numérico do Harness. Até aqui as regras usavam só
+# cardinalidades (`< 2`) e truncamentos de mensagem — este é o primeiro
+# número que decide, e por isso o contrato existe antes da calibração.
+[mechanisms.factual_conflict]
+title = "Conflito factual entre páginas do mesmo grupo de identificador forte"
+decision = "apontar divergência numérica, na mesma dimensão SI, entre páginas que já convivem sob o mesmo identificador forte — PROPOR conferência humana, nunca escolher um lado"
+implementation_refs = [
+  "backend/src/corpusmith/kernel/factual.py",
+  "backend/src/corpusmith/harness/local_policy.py",
+  "backend/src/corpusmith/usecases/next_actions.py",
+]
+inductive_biases = [
+  "o SUJEITO da divergência é o grupo de identificador forte que `policy.contradiction_candidate` já forma — duas páginas que citam o mesmo DOI falam da mesma fonte; duas páginas sem nada em comum que dizem `250 ms` são coincidência léxica",
+  "comparação em SI, não em unidade idêntica: `12 km` e `12000 m` são o MESMO valor, e exigir unidade igual só compraria falso negativo",
+  "dispersão RELATIVA ao valor de maior magnitude — 1% de 12 km e 1% de 12 GB são erros de grandeza comparável; um limiar absoluto não seria",
+  "precisão > recall: uma página que afirma DOIS valores da mesma dimensão está descrevendo faixa ou comparação, e a dimensão inteira sai do exame",
+]
+assumptions = [
+  "`TOLERANCIA_RELATIVA = 0.01` NÃO é calibrada: não existe golden set de conflitos factuais neste repositório, e é ponto de partida DECLARADO — a calibração é condição de reentrada, não promessa cumprida",
+  "quantidade detectada no corpo da página é afirmação DA PÁGINA sobre a fonte do grupo — o produto não tem nível de asserção (docs/28 §1, nível 3), e esse salto é o pressuposto mais forte deste mecanismo",
+  "o payload SI de `normalize/detectors/quantities.py` está correto para as unidades que ele mapeia",
+]
+validity_scope = [
+  "SÓ dentro de grupos de identificador forte — acadêmicos (doi/isbn/issn/arxiv) e, desde a RFC-006 V1, NORMAS (iso/nbr/rfc/nist/ieee/eu_reg/circular). Divergência entre páginas que não compartilham identificador é invisível POR CONSTRUÇÃO — um corpus de notas sem DOI nem norma citada detecta zero conflitos",
+  "`regulator` (LGPD, GDPR, OWASP…) fica FORA do sujeito de propósito: nomeia um REFERENTE, não um documento — duas páginas que mencionam OWASP não afirmam sobre o mesmo texto, e incluí-lo compraria o sujeito inventado que a RFC-005 §3 recusou",
+  "páginas VIVAS do grupo, sem relação de sucessão entre os blocos e sem invalid_at — o refinamento herda todas as guardas do candidato genérico",
+  "quantidades de dimensão física com payload SI: comprimento, massa, tempo, dados, frequência, potência, energia, tensão, volume",
+  "`docs/14` §P-5 pediu quantity E date; `date` está FORA (RFC-005 §4) — a dívida sai de PROMISED paga em parte, e esta linha é o registro de qual parte",
+  "só lint de corpus (`check_corpus`) e a fila de atenção — jamais o gate de escrita, jamais severidade error",
+]
+known_failure_modes = [
+  "temperatura fica FORA: `quantities.py:65` suprime o payload SI para dim=temp porque não há conversão afim °C↔°F; conflito de temperatura não é detectado",
+  "porcentagem fica FORA: `%` não é dimensão física, e `50%` numa página contra `80%` noutra podem ser percentuais DE COISAS DIFERENTES — compará-los seria inventar o sujeito que o mecanismo se recusa a inventar",
+  "faixa contra valor único não é detectada: a guarda de precisão descarta a dimensão inteira quando uma página afirma dois valores (falso negativo declarado, o preço da precisão por construção)",
+  "unidade composta (`km/h`, `mg/L`) é LIDA COMO A UNIDADE-BASE pelo detector de quantidades — `12 km/h` sai como `dim=len, si=12000 m` — e por isso o adaptador do Harness DESCARTA quantidade seguida de `/`: sem esse descarte a velocidade viraria conflito de comprimento (falso positivo com dimensão errada, citando na mensagem texto que não existe na página) e mascararia conflito real pela guarda de faixa. O custo declarado é que conflito REAL em unidade composta não é detectado",
+  "tolerância alta demais deixa passar conflito real; baixa demais enche os grupos — o limiar não foi medido contra nenhum conjunto rotulado",
+  "herda os falsos positivos do grupo: identificador citado por engano em duas páginas produz um sujeito que não existe, e a divergência dentro dele não significa nada",
+  "versão de norma É sujeito distinto: `ISO 9001` e `ISO 9001:2015` têm canônicos diferentes e NÃO agrupam — no regime normativo a edição muda o texto, então isso é meio-feature; o custo é que citar a mesma norma com e sem ano esconde o conflito entre as duas páginas",
+  "norma citada pervasivamente (RFC 2119 aparece em quase todo documento técnico) forma grupo GIGANTE: o candidato genérico dispara para páginas que só compartilham o jargão, e o conflito factual herda o grupo — o custo é ruído de coexistência, não falso conflito (a divergência numérica ainda precisa existir)",
+  "o detector de circulares exige C maiúsculo e ponto de milhar ou marcador nº, e ignora os prefixos compostos declarados (Carta Circular, Portaria Circular — tipos documentais distintos). O FP residual REAL é Title Case seguido de número pontuado ('Economia Circular 2.030' casa); os FN declarados são o cabeçalho oficial em CAIXA-ALTA ('CIRCULAR Nº 3.978' não casa) e o órgão entre a palavra e o número ('Circular BCB nº 3.978' não casa)",
+  "numeração de circular NÃO é global: 'Circular 100' da SUSEP e 'Circular 100' do BCB têm o MESMO canônico e formam um sujeito que não existe — detecção de órgão emissor está fora deste pacote, e o grupo herda o falso positivo",
+  "prefixo nacional não agrupa com o internacional: 'ABNT NBR ISO/IEC 27001:2022' e 'ISO/IEC 27001:2022' têm canônicos distintos e NÃO formam grupo — o mesmo custo declarado da versão com/sem ano, na dimensão do órgão adotante",
+  "FUNDIR as páginas em conflito torna a divergência INDETECTÁVEL: os dois valores passam a conviver na mesma página e a guarda de faixa descarta a dimensão — o número errado continua no corpus, sem alarme. O preview do MergePages declara isso antes do efeito, mas nada impede o ato",
+  "o desfecho 'as duas estão certas em períodos diferentes' NÃO tem ato: escrever `valid_at` só ganha caminho humano depois do F4-PR3c (o legado do P-9 ainda está sujo)",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "divergência numérica acima da tolerância DECLARADA, entre páginas do mesmo grupo de identificador forte; NÃO que uma das páginas esteja errada, NÃO que o corpus esteja livre de conflitos factuais, NÃO que o número tenha sido calibrado"
+universal_guarantee = false
+fallback = ["request_human_review"]
+adaptive = false
+feedback_signal = ""
+composite = false
+side_effects = ["none"]
+evidence = ["deterministic_check", "property_test"]
+misinterpretations = [
+  "o finding NÃO marca a página como `contested` no canônico — o eixo `resolution_status` continua SEM escritor persistente (O-2 aberto). O que existe é o SINAL, recomputado a cada leitura; a marca exigiria o nível 3 da escada, que não existe",
+  "`contested` NÃO significa 'uma das páginas é falsa' — significa que a divergência não foi assentada; assentar é ato humano posterior",
+  "ausência de finding NÃO é ausência de conflito: temperatura, porcentagem, data, unidade composta, faixa e todo par sem identificador forte comum estão fora do escopo por decisão declarada",
+  "1% NÃO é limiar calibrado — é ponto de partida; ler o número como 'validado' é a alegação que este contrato existe para impedir",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.factual_conflict.parameters]
+relative_tolerance = 0.01
+excluded_dimensions = "temp,ratio"
+subject_identifiers = "arxiv,circular,doi,eu_reg,ieee,isbn,iso,issn,nbr,nist,rfc"
 
 # ============================================================ cognição
 [mechanisms.cognitive_priority]
@@ -465,6 +545,7 @@ composite_components = [
   "review_urgency", "accessibility_heat", "cost_penalty",
   "expected_information_gain",
 ]
+side_effects = ["none"]
 evidence = ["property_test", "human_feedback"]
 misinterpretations = [
   "expected_information_gain é PROXY heurístico (gap × conectividade), não informação esperada em sentido formal — o nome externo é preservado por compatibilidade; dívida registrada no ADR-38",
@@ -506,6 +587,7 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = true
 feedback_signal = "ask_outcomes via ask_context.strategy (RecordOutcome._update_strategy_credit; mesmo hedge com clamp)"
+side_effects = ["state_write"]
 evidence = ["human_feedback"]
 misinterpretations = [
   "não é diagnóstico de estilo de aprendizagem (VARK foi rejeitado, ADR-19): é preferência revelada por desfecho, revogável",
@@ -546,6 +628,7 @@ universal_guarantee = false
 fallback = ["request_human_review", "no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["state_write"]
 evidence = ["deterministic_check", "human_feedback"]
 misinterpretations = [
   "hipóteses NÃO são diagnóstico psicológico nem inferência de emoção (rejeitado por ADR-19/31)",
@@ -591,6 +674,7 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["property_test", "deterministic_check"]
 misinterpretations = [
   "Rust não melhora a qualidade epistemológica do retrieval — melhora LATÊNCIA; correção e performance são eixos separados",
@@ -627,6 +711,7 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["property_test", "deterministic_check"]
 misinterpretations = [
   "hamming baixo entre sketches indica near-duplicata textual, não equivalência semântica",
@@ -663,6 +748,7 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["property_test", "deterministic_check"]
 misinterpretations = [
   "hit de cache não significa índice atualizado — significa MESMA geração do último build",
@@ -700,6 +786,7 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["property_test", "deterministic_check"]
 misinterpretations = [
   "isolamento não torna o handler mais correto — torna a FALHA dele contível e o cancelamento real",
@@ -733,6 +820,7 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["none"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "a existência do crate não significa extração nativa — o status é PLANEJADO (ver ADR-39 Fase 3)",
@@ -764,6 +852,7 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["projection_write"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "o worker selfcheck/graph_metrics existente NÃO constrói índice — Fase 4 é alvo com porta declarada",
@@ -810,13 +899,14 @@ universal_guarantee = false
 fallback = ["deterministic_fallback"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write", "projection_write"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "carimbo NÃO é histórico: uma linha só, sobrescrita a cada execução — a série temporal do tema é entrega da F2-PR2",
   "o rótulo inteiro da comunidade não é identidade de tema; comparar rótulos entre bundles diferentes não significa nada",
   "INV-004 warn não é corrupção: mapa velho é servível com aviso, e é isso que torna o mapa usável numa máquina pequena",
 ]
-high_impact = false
+high_impact = true
 abstention_supported = false
 human_review_available = false
 
@@ -855,6 +945,7 @@ universal_guarantee = false
 fallback = ["no_decision"]
 adaptive = false
 feedback_signal = ""
+side_effects = ["canonical_write", "projection_write"]
 evidence = ["deterministic_check"]
 misinterpretations = [
   "theme_id NAO e um nome: e identificador opaco. O nome legivel esta no frontmatter e pode mudar sem criar pagina",
@@ -864,3 +955,443 @@ misinterpretations = [
 high_impact = true
 abstention_supported = true
 human_review_available = false
+
+# ============================ estabilidade editorial (RFC-006, V3)
+[mechanisms.editorial_stability]
+title = "Estabilidade editorial por página — o que menos muda"
+decision = "ordenar as páginas do bundle da mais quieta para a mais volátil no eixo de EDIÇÃO (commits que tocam a página), para quem estuda distinguir o núcleo durável da camada em movimento — nunca decidir o que é verdadeiro"
+implementation_refs = [
+  "backend/src/corpusmith/kernel/stability.py",
+  "backend/src/corpusmith/okf/git_store.py",
+  "backend/src/corpusmith/usecases/compute_stability.py",
+]
+inductive_biases = [
+  "frequência de gesto editorial é sinal de assentamento: página que ninguém precisa reescrever tende a estar assentada — TENDE, e o contrato existe para a distância entre 'tende' e 'está'",
+  "contagem por COMMIT, não por bytes: um commit que troca uma vírgula e um que reescreve tudo contam 1 cada — pesar por tamanho seria um segundo sentido escondido no mesmo número",
+  "a palavra 'estabilidade' tem QUATRO sentidos no produto (edição, ciclo de vida, uso, tema) e este mecanismo mede UM e lê OUTRO — os campos são separados de propósito (a lição do drift.time: quatro tempos exigiram quatro nomes)",
+]
+assumptions = [
+  "a história do Git é a história editorial: import em massa, rebase ou clone raso distorcem a contagem sem avisar",
+  "os caminhos regenerados pelo caminho de escrita são exatamente os declarados em parameters (index.md por diretório, log.md, reviews/) — página de máquina NOVA fora dessa lista conta como conteúdo",
+  "renomear é gesto editorial: --no-renames faz a página renomeada nascer de novo, com história zerada",
+]
+validity_scope = [
+  "só o eixo de EDIÇÃO: quantas vezes cada página foi escrita, quando começou, quando foi a última — mais o motivo de aposentadoria LIDO de vitality (nunca recalculado)",
+  "bundle + Git como únicas fontes: a projeção é 100% re-derivável do canônico (a razão declarada de reconcile_log/curation_acts ficarem FORA — misturá-los quebraria backup_restore)",
+  "ordenação determinística SEM limiar: onde cortar 'núcleo' de 'volátil' é decisão de leitura — qualquer corte fixo seria calibração que ninguém fez",
+]
+known_failure_modes = [
+  "estável NÃO é correto: página errada que ninguém revisita é perfeitamente quieta — o ranking mede quietude, e ler correção nele é a leitura que este contrato existe para impedir (capta ≠ data, docs/26)",
+  "primeira escrita de um import em massa dá edicoes=1 para centenas de páginas de uma vez: o corpus recém-migrado parece inteiro 'estável' até a vida editorial começar",
+  "rename quebra a continuidade (--no-renames declarado): reorganizar diretórios rejuvenesce a história de tudo que moveu",
+  "história reescrita (rebase, squash) muda a contagem retroativamente — o Git é a autoridade e a projeção segue a autoridade, mesmo quando a autoridade foi editada",
+  "página de máquina regenerada FORA da lista declarada de exclusões contaria como conteúdo volátil — a lista é fechada por caminho, não por natureza",
+  "commit de MERGE não lista arquivos no `git log --name-only`: o gesto de resolução de um merge é invisível para a contagem — página tocada em N commits dos quais um é merge conta N−1 (o fluxo normal do bundle é linear, mas histórico com merges subconta)",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "contagem exata de commits que tocam cada página viva do bundle, excluídos os caminhos regenerados declarados; NÃO que página quieta esteja correta, aprovada ou importante — quietude editorial é o que se mede, assentamento é o que se espera e correção é o que NÃO se pode ler daqui"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+composite = false
+side_effects = ["projection_write"]
+evidence = ["deterministic_check", "property_test"]
+misinterpretations = [
+  "'estável' NÃO significa 'verdadeiro' nem 'revisado' — significa que ninguém escreveu nela; as perguntas de correção têm outros donos (Harness, curadoria)",
+  "edicoes=0 NÃO é defeito: repo recém-inicializado ou página importada fora do Git — o dado diz 'nunca vi esta página ser escrita', e inventar 1 seria fabricar história",
+  "o ranking NÃO combina uso (page_heat) nem tema (theme_epochs): um score único somando os quatro sentidos seria o novo confidence-com-seis-perguntas",
+  "aposentada no ranking NÃO é erro: aposentar não é apagar (F3-PR2), e quem estuda quer saber que o núcleo dele inclui página já sucedida — o campo ciclo carrega o motivo",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.editorial_stability.parameters]
+excluded_basenames = "index.md,log.md"
+ritual_prefixes = "reviews/"
+
+# ============================ identidade-com-sentido (RFC-006, V2)
+[mechanisms.alias_conflict]
+title = "Alias disputado por duas identidades curadas"
+decision = "recusar a resolver um alias reivindicado por 2+ identidades da mesma camada — marcar o uso como AMBÍGUO e propor ao curador a edição que desambigua, nunca escolher um sentido"
+implementation_refs = [
+  "backend/src/corpusmith/normalize/gazetteer.py",
+  "backend/src/corpusmith/harness/local_policy.py",
+  "backend/src/corpusmith/okf/authorities.py",
+]
+inductive_biases = [
+  "precedência entre CAMADAS é resolução, colisão DENTRO da camada é ambiguidade: seeds embutidos e reference.db são defaults, authority_record no bundle é curadoria — a curadoria vence e isso não é conflito (regra de sempre, v0.22)",
+  "o sentido é parte da IDENTIDADE e mora no canônico (`Entropia (física)`), não num campo paralelo: campo `sense` separado criaria dois donos do mesmo fato, e o campo `authority` já carrega cinco sentidos (drift ABERTA)",
+  "não decidir é melhor que decidir errado: um alias disputado produz `confidence=ambiguous`, que toda a cadeia já respeita — não reescreve o texto, não indexa entidade e não lista no frontmatter; como aresta de grafo nasce de LINK e não de entidade, o termo deixa de LIGAR páginas em vez de ligá-las com peso menor",
+]
+assumptions = [
+  "dois registros curados que reivindicam o mesmo alias representam sentidos DIFERENTES — se representam o mesmo, o canônico é o mesmo e a dedup os funde antes de virar conflito",
+  "o parse do qualificador (um parêntese FINAL, sem aninhamento) reflete a intenção do curador; ele NÃO decide identidade, que é o canônico inteiro comparado por igualdade",
+]
+validity_scope = [
+  "aliases de ENTIDADE do gazetteer (seeds ∪ reference.db ∪ authority_records) — identificadores fortes, normas, datas e quantidades têm outros donos e não passam por aqui",
+  "conflito DENTRO da camada de maior precedência que reivindica cada alias",
+  "só lint de corpus (`check_corpus`) e painel — jamais o gate de escrita, jamais severidade error",
+]
+known_failure_modes = [
+  "RECALL LIMITADO AO QUE FOI CURADO — o modo de falha central: o detector só vê ambiguidade que alguém já escreveu em DOIS registros. Um bundle sem authority_record tem zero conflitos e vocabulário inteiramente por resolver; ausência de finding NÃO é vocabulário desambiguado",
+  "ambiguidade de sentido que ninguém declarou continua colapsando: se um único registro reivindica `entropia` para um sentido só, o outro sentido é lido como aquele — silenciosamente, como antes desta mudança",
+  "o qualificador é convenção de escrita, não campo validado: um canônico que termine em parêntese sem ser sentido (`Fulano (org)`) é rotulado errado na mensagem do finding — custa um rótulo, nunca uma identidade",
+  "marcar AMBÍGUO tem preço declarado: o termo deixa de ligar páginas no grafo e some do índice de entidades enquanto o conflito durar — recuperar recall exige o ato humano, e é essa a troca",
+  "alias disputado que ninguém usa gera finding sem página de uso: é dívida de vocabulário, não de conteúdo, e a mensagem diz isso em vez de inventar urgência",
+  "detector de PRIORIDADE MAIOR resolve o span antes: `PRIORITY` dá standard=4 e identifier=5 contra entity=1, então um alias curado que colida com uma norma (`iso 9001`) é lido como `standard` e resolve normal — a ambiguidade não aparece naquele span, a página não entra em `pages`, e o finding do vocabulário fica sem uso registrado",
+  "o dedup é por (canônico, autoridade, qid): dois registros com o MESMO canônico e autoridades diferentes são duas identidades, não uma — e aparecem como conflito, que é a leitura honesta de dois curadores discordando sobre o que a palavra classifica",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "igualdade exata de alias entre identidades da mesma camada de precedência; NÃO que o vocabulário esteja desambiguado, NÃO que os sentidos declarados sejam os corretos, NÃO que a ausência de conflito signifique ausência de ambiguidade"
+universal_guarantee = false
+fallback = ["request_human_review"]
+adaptive = false
+feedback_signal = ""
+composite = false
+side_effects = ["none"]
+evidence = ["deterministic_check"]
+misinterpretations = [
+  "'nenhum conflito' NÃO significa 'vocabulário desambiguado' — significa que ninguém curou dois registros disputando o mesmo alias",
+  "AMBÍGUO não é erro do curador: é o estado honesto de um termo que serve a dois sentidos, e o produto prefere não ligar páginas a ligá-las errado",
+  "o finding NÃO escolhe qual sentido é o certo, e nenhum ato automático o faz — a escolha é humana, e a mensagem nomeia qual edição a expressa",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.alias_conflict.parameters]
+tier_seed = 0
+tier_reference = 1
+tier_bundle = 2
+
+# --------------------------------------------------------------------------
+# F6 (P-8, RFC-006): a memória lembra o que falhou.
+[mechanisms.abstention_trace]
+title = "Rastro de abstenção com fechamento verificado por re-ask"
+decision = "gravar TODO /ask abstido como miss com chave determinística (conjunto de entidades da pergunta; sem entidade curada, SimHash do texto normalizado) e fechar o rastro APENAS quando uma consulta com a MESMA chave responder — recorrência vira sinal visível em vez de ignorância descartada"
+implementation_refs = [
+  "backend/src/corpusmith/kernel/sketch.py",
+  "backend/src/corpusmith/usecases/ask_memory.py",
+  "backend/src/corpusmith/retrieval/observatory.py",
+]
+inductive_biases = [
+  "a ignorância mais cara é a que o usuário tentou USAR: o rastro nasce do /ask real, nunca de varredura especulativa da base",
+  "perguntas sobre o MESMO conjunto de entidades curadas são o mesmo buraco, independentemente da frase — a identidade da falta é o sujeito, não a sintaxe",
+  "fechamento é prova, não inferência: só o re-ask que respondeu fecha (closed_by auditável); nenhum job adivinha cobertura — a lição das perguntas-que-nunca-fecham (docs/14 §6), paga ANTES de o rastro alimentar fila",
+]
+assumptions = [
+  "o gazetteer extrai as entidades relevantes da pergunta — a chave herda a cobertura (e os limites) do vocabulário curado",
+  "duas perguntas com o mesmo conjunto de entidades pedem conhecimento da mesma região da base — nem sempre verdade, e o custo está declarado nos failure modes",
+]
+validity_scope = [
+  "só o caminho de abstenção do AskMemory (fusão vazia ou abaixo do threshold) — bloqueio de privacidade e falha de modelo não são miss",
+  "recorrência agrupa por IGUALDADE de chave; sem entidade curada, só perguntas quase-idênticas (SimHash exato) recorrem",
+  "superfície de leitura: insights.gaps.abstention (abertos + recorrentes) — nenhum gate de escrita, nada tocado no canônico",
+]
+known_failure_modes = [
+  "RECALL LIMITADO — o modo central: paráfrase sem entidade curada gera chave NOVA, a recorrência subconta; ausência de recorrência não é ausência de buraco",
+  "fechamento por entidade pode fechar DEMAIS: uma pergunta DIFERENTE sobre os mesmos sujeitos que responde fecha o miss da outra — `closed_by` registra qual ask fechou, e o preço fica auditável",
+  "resposta extrativa fraca fecha como qualquer resposta: fechado = 'a base respondeu', não 'respondeu bem' — qualidade é problema de `evidence_sufficiency`, não deste rastro",
+  "o miss grava a pergunta em claro no runtime.db local — dado de uso sensível como `ask_outcomes` já é; o export do bundle não o inclui",
+  "auto_recycle que responde não deixa rastro do quase-miss: a reidratação venceu e o registro não diz que foi por um triz",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "igualdade exata da chave (entidades ordenadas, ou SimHash do texto normalizado); NÃO que a recorrência capture toda repetição semântica, NÃO que fechamento signifique resposta de qualidade"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+composite = false
+side_effects = ["state_write"]
+evidence = ["deterministic_check"]
+misinterpretations = [
+  "'zero misses' NÃO é 'base completa' — é 'ninguém perguntou o que ela não cobre' (ou perguntou com frase que a chave não junta)",
+  "miss aberto não é bug: é a fila de estudo dizendo onde a base ainda não chegou — o insumo do índice 'difícil de explicar' (V4)",
+  "fechado ≠ resolvido para sempre: nova abstenção com a mesma chave abre um miss NOVO — a linha do tempo preserva as idas e vindas",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.abstention_trace.parameters]
+key_prefix_entities = "e:"
+key_prefix_text = "s:"
+entity_digest_hex_chars = 16
+
+# --------------------------------------------------------------------------
+# V4 (RFC-006): onde o estudo trava. Composição — nenhum detector novo.
+[mechanisms.explanation_difficulty]
+title = "Índice de dificuldade de EXPLICAR por página"
+decision = "compor cinco sinais de donos distintos (falha de recuperação com sobreconfiança, conflito/contradição, pergunta aberta, vocabulário ambíguo, lacuna de abstenção reincidente) num índice por página com pesos FIXOS declarados, distinguindo 'nada observado' de 'fácil'"
+implementation_refs = [
+  "backend/src/corpusmith/kernel/difficulty.py",
+  "backend/src/corpusmith/usecases/compute_difficulty.py",
+]
+inductive_biases = [
+  "o sinal HUMANO pesa mais: alguém tentou explicar e falhou achando que sabia (0.35) vale mais que qualquer sinal derivado — sobreconfiança é o sinal de calibração mais caro (spaced-v1, Roediger & Karpicke)",
+  "cada componente SATURA no seu teto (3/2/2/2/3): uma sessão de prática ruim não pode afogar os outros quatro sinais, e a terceira falha sobre a mesma página já diz o que a quarta diria",
+  "`low_yield` fica FORA por decisão: 'ninguém achou útil' e 'é difícil de explicar' são perguntas diferentes — somá-las re-fundiria o que o F4-PR2 separou (ADR-52)",
+  "silêncio não é facilidade: sem sinal nenhum o resultado é `medida=false`, não score baixo — a mesma disciplina do `measurable=false` da profundidade (v0.20)",
+]
+assumptions = [
+  "uma página com conflito, pergunta aberta ou vocabulário ambíguo é mais difícil de explicar que uma sem — plausível e NÃO validado contra desfecho de aprendizagem",
+  "o `item` de uma tentativa de recuperação identifica a página que o estudante tentou explicar",
+  "uma página que carrega a entidade sobre a qual a base se absteve é sobre aquele assunto (`page_entities`) — aproximação de nível, declarada abaixo",
+]
+validity_scope = [
+  "granularidade de PÁGINA, falando de compreensão de AFIRMAÇÕES: enquanto o nível 3 da escada (docs/28) não existir, o índice aproxima o objeto que descreve",
+  "bundle local com lint de corpus disponível; os componentes de USO (prática e abstenção) existem apenas onde houve uso — um clone novo calcula o índice com os componentes determinísticos apenas",
+  "leitura e ordenação; nunca gate de escrita, nunca marca no canônico",
+]
+known_failure_modes = [
+  "PESOS NÃO CALIBRADOS — o modo central: 0.35/0.25/0.15/0.15/0.10 são projeto, não medição; não há ground truth de 'dificuldade' contra o qual ajustá-los, e a porta de reentrada é medir contra desfechos de prática reais",
+  "página nunca praticada, sem conflito e sem pergunta sai com score 0 e `medida=false` — pode ser a mais difícil da base e apenas nunca ter sido olhada",
+  "o salto de nível da lacuna: um miss é da PERGUNTA, e atribuí-lo à página que carrega a entidade pode marcar uma página que só menciona o assunto de passagem",
+  "conflito conta para todas as páginas do grupo: uma página correta ao lado de uma errada recebe o mesmo sinal — o índice diz 'aqui há desacordo', não 'esta página está errada'",
+  "vocabulário ambíguo herda o recall do `alias_conflict`: só vê ambiguidade curada em dois registros",
+  "índice recomputado sob demanda e SEM derivação declarada: dois dos cinco sinais não movem o HEAD do bundle, então um carimbo prometeria frescor que a cadeia não entrega — o número pode estar velho e o produto não tem como saber",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "os cinco sinais declarados, com os pesos e tetos deste bloco; NÃO que a página seja objetivamente difícil, NÃO que score baixo signifique fácil, NÃO que a ordem reflita esforço de aprendizagem medido"
+universal_guarantee = false
+fallback = ["request_human_review"]
+adaptive = false
+feedback_signal = ""
+composite = true
+composite_components = [
+  "falha_confiante", "conflito", "pergunta_aberta",
+  "vocabulario_ambiguo", "lacuna_recorrente",
+]
+side_effects = ["projection_write"]
+evidence = ["human_feedback", "deterministic_check"]
+misinterpretations = [
+  "score 0 NÃO é 'fácil de explicar' — leia `medida` antes do número",
+  "o índice não diz QUAL página está errada num conflito, só que há desacordo por resolver",
+  "'difícil de explicar' não é 'de baixo rendimento': a segunda é desfecho de uso e vive em `page_overlay`, com outro dono",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.explanation_difficulty.parameters]
+peso_falha_confiante = 0.35
+peso_conflito = 0.25
+peso_pergunta_aberta = 0.15
+peso_vocabulario_ambiguo = 0.15
+peso_lacuna_recorrente = 0.10
+saturacao_falha_confiante = 3
+saturacao_conflito = 2
+saturacao_pergunta_aberta = 2
+saturacao_vocabulario_ambiguo = 2
+saturacao_lacuna_recorrente = 3
+# mesmo limiar do spaced-v1 (cognitive/policy.py); repetido no código
+# porque a memória não importa `cognitive/`, e preso por teste
+limiar_sobreconfianca = 0.7
+
+# --------------------------------------------------------------------------
+# V5 (RFC-006): a ponte abstrato→prático, e a medição que a RFC-004 §6 pede.
+[mechanisms.typed_application_edges]
+title = "Aresta semântica tipada por ato humano (applies_to / exemplifies / refines)"
+decision = "aceitar apenas relações de um vocabulário FECHADO na escrita, projetá-las no grafo, responder 'que caso prático sustenta este conceito?' nas duas direções, e MEDIR o custo da granularidade de página em vez de estimá-lo"
+implementation_refs = [
+  "backend/src/corpusmith/kernel/semantics.py",
+  "backend/src/corpusmith/usecases/curate/link.py",
+  "backend/src/corpusmith/usecases/practical_cases.py",
+  "backend/src/corpusmith/retrieval/fts.py",
+]
+inductive_biases = [
+  "a relação é ATO HUMANO, nunca inferência: o produto não adivinha que um conceito se aplica a um caso — quem declara é quem curou, pelo caminho único de escrita (commit + preview + undo)",
+  "vocabulário fechado na ESCRITA e tolerante na LEITURA: o canônico é para sempre, então `rel:` inventado é recusado no ato; mas relação desconhecida já gravada (bundle antigo, link de prosa) vira `NULL` — nunca derruba um rebuild",
+  "as duas direções valem: quem escreveu `exemplifies` do lado prático respondeu à mesma pergunta pelo outro lado; exigir a direção 'certa' seria burocracia disfarçada de ontologia",
+  "link SEM relação não é caso prático: 'estas páginas se falam' e 'esta se aplica àquela' são perguntas diferentes — misturá-las devolveria o grafo inteiro como resposta",
+]
+assumptions = [
+  "o curador que declara `applies_to` conhece o conteúdo das duas páginas — a relação não é verificada contra o texto",
+  "sujeito forte (identificador acadêmico ou norma) aproxima 'assunto' de uma página: 2+ sujeitos distintos indicam que ela carrega afirmações separáveis. É PROXY declarado, não definição de assunto",
+]
+validity_scope = [
+  "arestas escritas pelo ato de curadoria ou presentes no corpo com `rel:` do vocabulário; granularidade de PÁGINA (o nível 3 da escada, a afirmação, segue vazio — docs/28)",
+  "leitura e medição; a relação não altera fusão do /ask, não pesa o Leiden e não marca nada no frontmatter",
+  "a medição descreve as arestas QUE EXISTEM no bundle local — não é amostra de um universo de consultas",
+]
+known_failure_modes = [
+  "ERRO DE NÍVEL DECLARADO — o modo central: 'aplica-se a esta página' afirma que a página INTEIRA é o caso; quando ela carrega várias afirmações, a declaração é mais grossa que a realidade. O preview do ato diz isso antes do efeito e a consulta MEDE a fração, mas o produto não resolve enquanto o nível da afirmação não existir",
+  "o proxy de ambiguidade conta SUJEITOS FORTES: uma página com duas afirmações sobre o MESMO sujeito conta como não-ambígua, e uma página que só cita duas normas de passagem conta como ambígua — subconta e superconta, em direções conhecidas",
+  "recall zero sem curadoria: base sem nenhuma aresta tipada responde 'nenhum caso prático' para todo conceito, e isso NÃO significa que o conceito não se aplica a nada",
+  "`refines` e `supersedes` são vizinhos perigosos: refinar convive, suceder aposenta — um curador que use `refines` onde queria `supersede` deixa as duas páginas vivas no retrieval, e nenhum lint detecta a troca",
+  "a relação vive no TÍTULO do link markdown: um editor externo que reescreva o link sem preservar o atributo apaga a relação em silêncio (o commit registra a mudança, mas nada avisa)",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "as arestas com `rel` do vocabulário presentes no índice; NÃO que a relação declarada seja verdadeira, NÃO que a ausência de arestas signifique ausência de aplicação, NÃO que a fração medida generalize para outros corpora"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+composite = false
+side_effects = ["canonical_write", "projection_write"]
+evidence = ["deterministic_check", "human_feedback"]
+misinterpretations = [
+  "a aresta tipada NÃO é a ponte topológica (`graph_bridges`): aquela é estrutura do grafo, esta é significado declarado — mesmo nome em português, perguntas diferentes",
+  "`ambiguous_fraction` NÃO diz que as arestas estão erradas: diz quantas apontam para páginas onde 'a qual afirmação isto se aplica?' fica sem resposta",
+  "medir o custo do nível de página NÃO é a decisão de criar o nível da afirmação — é a primeira das três condições de reentrada da RFC-004 §6",
+]
+high_impact = true
+abstention_supported = false
+human_review_available = true
+[mechanisms.typed_application_edges.parameters]
+relacoes = "applies_to,exemplifies,refines"
+kinds_de_sujeito = "identifier,standard"
+sujeitos_para_ambiguidade = 2
+
+# --------------------------------------------------------------------------
+# V6 (RFC-006): a ficha do conceito. Composição de projeções + borda LLM
+# DESLIGADA por default — e a recusa explícita de alegar ganho.
+[mechanisms.concept_sheet]
+title = "Ficha do conceito: custo de leitura, permanência, dificuldade e aplicações"
+decision = "reunir numa ficha só o que o produto MEDIU sobre uma página, com a ressalva de cada mecanismo ao lado do número que ela qualifica, e DECLARAR o que não foi medido (ganho, valor, importância) em vez de preencher com constante de projeto"
+implementation_refs = [
+  "backend/src/corpusmith/usecases/concept_sheet.py",
+]
+inductive_biases = [
+  "a ausência de campo é a defesa: não existe `value`/`gain`/`roi` na estrutura, então não há onde alguém escrever depois um número que ninguém mediu — a armadilha da autocertificação é fechada por CONSTRUÇÃO, não por disciplina",
+  "custo é TEMPO DE LEITURA e diz isso junto do número: '12 min a 150 palavras/min' não convida a ler como esforço de adoção, '12 min' sozinho convida",
+  "a ressalva viaja com o valor: `misinterpretations` numa página separada é uma página que ninguém abre, e o número circula sem ela",
+  "a prosa é ENFEITE da projeção: sem modelo, a ficha seca continua inteira; com modelo, as ressalvas são re-anexadas DEPOIS da geração, fora do que ele pode editar",
+]
+assumptions = [
+  "as projeções que a ficha compõe estão frescas — ela as RECOMPUTA ao montar (estabilidade e dificuldade), então o custo é o das duas somado",
+  "150 palavras/min aproxima leitura técnica; é a mesma constante da fila de atenção, não uma segunda definição de custo",
+]
+validity_scope = [
+  "uma página do bundle local; leitura pura — nada é escrito no canônico, nem com a prosa ligada",
+  "os números vêm de `editorial_stability` (V3), `explanation_difficulty` (V4) e `typed_application_edges` (V5): a ficha herda o escopo e os limites de cada um",
+  "a prosa é artefato de EXPORT, fora do bundle; persistir exigiria página de máquina pelo caminho único, com `generated_via` — e isso NÃO está implementado",
+]
+known_failure_modes = [
+  "NÃO RESPONDE 'quanto ganho' — a pergunta que mais se faz de um material de venda é a que a ficha recusa; quem quiser o número vai ter de medi-lo fora do produto",
+  "custo de LEITURA não é custo de ADOÇÃO: um conceito de 3 min pode custar semanas para aplicar, e a ficha não sabe disso",
+  "recomputa duas projeções por chamada (estabilidade percorre a história do Git): é leitura cara, imprópria para laço quente — resíduo de custo conhecido (P-11)",
+  "a prosa herda tudo o que o modelo local erra: ela é opcional, default desligada, e o rodapé determinístico é a única parte que não depende dele",
+  "página sem sinal nenhum produz ficha honesta e POBRE — e uma ficha pobre pode ser lida como 'conceito irrelevante', que é exatamente o que `medida=false` existe para negar",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "os números das projeções que compõe, no estado em que estão ao montar; NÃO que o conceito valha a pena, NÃO que o custo de leitura aproxime o custo de adotar, NÃO que a prosa gerada seja verificada"
+universal_guarantee = false
+fallback = ["degrade"]
+adaptive = false
+feedback_signal = ""
+composite = true
+composite_components = ["cost", "stability", "difficulty", "applications"]
+evidence = ["deterministic_check"]
+side_effects = ["none"]
+misinterpretations = [
+  "a ficha NÃO diz que adotar a ideia compensa — diz quanto custa LER, quanto ela mudou, onde travou e onde alguém declarou que se aplica",
+  "ficha pobre não é conceito ruim: é conceito sobre o qual nada foi observado ainda",
+  "a prosa gerada é PROPOSTA de linguagem, não afirmação verificada — e o rodapé que a acompanha não passou pelo modelo",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = true
+[mechanisms.concept_sheet.parameters]
+palavras_por_minuto = 150.0
+piso_de_custo_min = 2.0
+contratos_citados = "editorial_stability,explanation_difficulty,typed_application_edges"
+prosa_default = "desligada"
+
+# --------------------------------------------------------------------------
+# Dívida PROMISED paga (docs/14 §5): o mecanismo existia desde a v0.8 e o
+# contrato não. Um aviso que nunca some ensina a ignorar o lint.
+[mechanisms.temporal_partition]
+title = "Partição bi-temporal da evidência por `as_of`"
+decision = "quando a pergunta carrega uma data, REORDENAR a evidência pondo primeiro o que era válido naquele instante — e, sem data, FILTRAR duro o que foi substituído"
+implementation_refs = [
+  "backend/src/corpusmith/retrieval/streams.py",
+  "backend/src/corpusmith/usecases/ask_memory.py",
+]
+inductive_biases = [
+  "tempo de MUNDO e tempo de REGISTRO são eixos distintos: `valid_at`/`invalid_at` dizem quando o conhecimento valeu, `timestamp` diz quando alguém escreveu — perguntar 'o que valia em 2023' não é perguntar 'o que escrevemos em 2023'",
+  "com `as_of` a partição REORDENA em vez de filtrar: uma página fora da validade pedida ainda pode ser o contexto que explica a resposta, e sumir com ela seria decidir pelo leitor. Sem `as_of`, supersedida é filtro DURO (INV-003) — aí a substituição já foi um ato humano",
+  "página SEM `valid_at` é válida em QUALQUER `as_of`: a ausência significa 'nenhuma alegação temporal foi feita', não 'sem informação' — semântica pinada pelo P-9, quando o default de escrita morreu",
+]
+assumptions = [
+  "as datas do frontmatter são ISO e comparáveis por prefixo de string — `as_of` de granularidade menor (ano) compara contra o prefixo correspondente",
+  "a data extraída da pergunta reflete a intenção temporal de quem perguntou — extração determinística do detector de datas, nunca inferida por modelo",
+]
+validity_scope = [
+  "evidência já fundida (RRF): a partição é o último passo de ordenação, não um filtro de recuperação — o que não foi recuperado não é reordenado",
+  "páginas que declararam validade; as demais atravessam por construção",
+  "consulta HISTÓRICA (`as_of` presente) reordena; consulta corrente aplica o filtro duro de supersedida (INV-003)",
+]
+known_failure_modes = [
+  "GRANULARIDADE MUDA O RESULTADO: `as_of='2024'` compara prefixo de 4 caracteres e aceita qualquer mês de 2024; `as_of='2024-06-01'` compara o dia — a mesma pergunta com data mais precisa pode devolver ordem diferente",
+  "data ausente na pergunta é indistinguível de 'quero o estado atual': quem quer histórico e não datou recebe o filtro duro de supersedida, que é o oposto do que pediu",
+  "corpus sem `valid_at` nenhum torna a partição inerte — toda evidência atravessa, e o leitor pode ler ordem temporal onde não há nenhuma",
+  "a data extraída pode ser uma data CITADA no texto da pergunta e não a âncora desejada ('o que a norma de 2015 dizia em 2020?' tem duas datas e o detector escolhe uma)",
+]
+guarantee_kind = "deterministic"
+guarantee_relative_to = "as datas declaradas no frontmatter e a data extraída da pergunta; NÃO que a evidência ordenada primeiro seja a correta, NÃO que ausência de `valid_at` signifique validade verificada"
+universal_guarantee = false
+fallback = ["no_decision"]
+adaptive = false
+feedback_signal = ""
+composite = false
+evidence = ["deterministic_check", "golden_set"]
+side_effects = ["none"]
+evaluated_by = ["eval_memory"]
+misinterpretations = [
+  "reordenar NÃO é filtrar: com `as_of`, o que estava fora da validade continua na resposta, mais abaixo",
+  "página sem `valid_at` no topo de uma consulta histórica não é erro — é uma página que não fez alegação temporal nenhuma",
+]
+high_impact = false
+abstention_supported = true
+human_review_available = false
+[mechanisms.temporal_partition.parameters]
+comparacao = "prefixo de string ISO do tamanho do as_of"
+sem_valid_at = "válida em qualquer as_of"
+sem_as_of = "filtro duro de superseded (INV-003)"
+
+# --------------------------------------------------------------------------
+# Dívida PROMISED paga (docs/14 §4): co-menção materializada.
+[mechanisms.inferred_cooccurrence_edges]
+title = "Aresta INFERIDA por co-menção de entidade"
+decision = "materializar no grafo uma aresta fraca entre páginas que compartilham uma entidade, com teto anti-hub na origem — para que o particionamento veja proximidade temática que ninguém linkou"
+implementation_refs = [
+  "backend/src/corpusmith/usecases/detect_communities.py",
+]
+inductive_biases = [
+  "compartilhar entidade é indício FRACO de proximidade: a aresta nasce com metade do peso de uma inferida comum (0.25 contra 0.5) e um quarto de um link explícito — ela influencia o particionamento sem competir com o gesto humano de linkar",
+  "entidade onipresente não liga nada: o teto de 30 páginas corta o super-hub ANTES de gerar pares, porque uma entidade em 200 páginas produziria ~20 mil arestas e fundiria o grafo inteiro numa comunidade só",
+  "o piso de 2 páginas é definicional — co-menção exige dois",
+]
+assumptions = [
+  "as entidades do índice aproximam os assuntos da página (herda o recall e os limites do gazetteer, incluindo a ambiguidade não curada da V2)",
+  "proximidade temática justifica proximidade no particionamento — plausível e NÃO validado contra julgamento humano de tema",
+]
+validity_scope = [
+  "grafo de comunidades (job `leiden`) — a aresta vive na adjacência do particionamento",
+  "entidades presentes em 2..30 páginas distintas do índice",
+]
+known_failure_modes = [
+  "TETO ARBITRÁRIO NÃO CALIBRADO: 30 é limiar de projeto; num corpus grande, entidades legitimamente centrais passam do teto e a proximidade real some do grafo — falso negativo silencioso",
+  "co-menção não é relação: duas páginas que citam a mesma norma por motivos opostos ficam próximas no particionamento, e o mapa não distingue concordância de conflito",
+  "custo quadrático NA ENTIDADE: 30 páginas geram 435 pares; o teto é o que mantém isso viável, e não há guarda além dele",
+  "a aresta é invisível no canônico: ela existe só na projeção, então o usuário vê um tema formado por um vínculo que não consegue apontar numa página",
+]
+guarantee_kind = "heuristic"
+guarantee_relative_to = "as entidades indexadas e o teto declarado; NÃO que as páginas tratem do mesmo assunto, NÃO que a ausência de aresta signifique ausência de relação"
+universal_guarantee = false
+fallback = ["degrade"]
+adaptive = false
+feedback_signal = ""
+composite = false
+evidence = ["deterministic_check"]
+side_effects = ["projection_write"]
+misinterpretations = [
+  "aresta de co-menção NÃO é link: ninguém a escreveu, e ela não aparece em página nenhuma",
+  "peso menor não é 'menos verdadeiro' — é menos EVIDÊNCIA de que as páginas se relacionam",
+]
+high_impact = false
+abstention_supported = false
+human_review_available = false
+[mechanisms.inferred_cooccurrence_edges.parameters]
+min_paginas = 2
+max_paginas = 30
+peso_da_aresta = 0.25

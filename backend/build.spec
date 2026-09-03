@@ -31,13 +31,14 @@ if not _vec:
 a = Analysis(
     ["packaging_entry.py"],
     pathex=["src"],
-    # `epistemics.toml` mora na raiz do repo e é lido em RUNTIME (o painel
-    # Qualidade e `/cockpit/epistemics` chamam `lint()`). Fora dos `datas`, o
-    # app empacotado responderia `epistemic.registry_missing` e o painel
-    # mostraria "lint com erros" — o produto acusando a si mesmo de não saber
-    # o que afirma saber. Reproduzido no binário antes de acrescentar aqui.
+    # `epistemics.toml` e `ontology.toml` moram na raiz do repo e são lidos em
+    # RUNTIME (o painel Qualidade e `/cockpit/epistemics` chamam `lint()`).
+    # Fora dos `datas`, o app empacotado responderia `epistemic.registry_missing`
+    # e o painel mostraria "lint com erros" — o produto acusando a si mesmo de
+    # não saber o que afirma saber. Reproduzido no binário antes de acrescentar
+    # aqui; `ontology.toml` entrou junto por ser o mesmo modo de falha (RFC-004).
     datas=[("config/default.yaml", "config"), ("db", "db"),
-           ("../epistemics.toml", ".")],
+           ("../epistemics.toml", "."), ("../ontology.toml", ".")],
     binaries=_vec,                                 # extensão vec0 nativa
     hiddenimports=["sqlite_vec", "sse_starlette", "uvicorn.logging",
                    "uvicorn.protocols.http.auto", "uvicorn.lifespan.on"],

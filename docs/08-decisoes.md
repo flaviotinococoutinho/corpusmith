@@ -1,5 +1,7 @@
 # 08 · Registro de decisões arquiteturais (ADRs)
 
+> **Altitude:** governança · **Status:** vivo
+
 > Decisões deliberadas sobre conceitos avaliados — adotados, adaptados e
 > **rejeitados com razão registrada**, para que a mesma discussão não se
 > repita sem fatos novos. Formato: contexto → decisão → consequência.
@@ -1851,3 +1853,188 @@ A fronteira de honestidade fica fixada por escrito: a alegação atual é
 reverter"* — "Agents propose… Git remembers" é visão-alvo, e "source of
 truth"/"zero hallucination"/"somente humanos escrevem" são alegações
 proibidas no estado atual.
+
+### ADR-54 — Ontologia: um campo, um eixo (RFC-004, v2.1)
+**Documento completo em [`docs/22`](22-rfc-ontologia-da-assercao.md); léxico em
+[`docs/23`](23-ontologia-e-etimologia.md).** `confidence` respondia a seis
+perguntas, três delas dividindo literalmente o mesmo campo do frontmatter —
+`extracted`/`inferred` (como derivou), `ambiguous` (foi assentada?) e
+`human_approved` (quem autorizou) — e o Harness, que valida `privacy`, checksum,
+PII e sucessão, **não validava `confidence`**: sem vocabulário fechado, qualquer
+string passava.
+
+A conflação tinha consequência executável, não teórica: `merge_meta` ordenava por
+uma tabela de fraqueza de três valores num campo escrito com quatro, e
+`human_approved` caía no `default=0`. Medido: `merge("human_approved",
+"extracted")` devolvia `human_approved` e `merge("extracted", "human_approved")`
+devolvia `extracted` — a mesma fusão com dois resultados conforme a ordem dos
+argumentos, isto é, conforme qual página o curador clicou primeiro. Não é a regra
+errada; é a **ausência de regra**, com um acidente de dicionário respondendo no
+lugar dela.
+
+**Adotado**: três eixos com vocabulário fechado em `kernel/ontology.py`
+(`derivation_method`, `resolution_status`, `governance_status`); o quarto
+(`evaluation_status`) **não** é redefinido, porque já existe fechado em
+`epistemic/model.py` aplicado a mecanismo — a segunda definição do mesmo termo é
+o defeito que o ADR combate. A fusão passa a decidir eixo a eixo: derivação fica
+com a mais fraca, resolução fica ambígua se qualquer lado for, e governança só
+permanece `ratified` se **ambos** forem — ratificação é ato sobre um conteúdo, e a
+fusão produz outro conteúdo. `ontology.toml` vira o terceiro contrato
+legível-por-máquina, com verbetes que declaram a raiz etimológica e, sobretudo, o
+que a palavra **não** significa; `ontology lint` entra no gate nas três fontes
+que `test_pr0_gate` cruza.
+
+**Rejeitado**: renomear `confidence` agora (migração do bundle canônico por um
+ganho que não depende dela) e validar o campo contra os quatro valores sem
+separar os eixos (fecharia a porta congelando a conflação).
+
+**Adiado com condições de reentrada**: `Assertion`/`EvidenceLink`/`AuthorityGrant`
+como entidades (RFC-004 §6). Implementar antes de medir uma consulta que a
+granularidade de página responde errado seria fazer o que este ADR acusa —
+inventar estrutura onde falta evidência.
+
+### ADR-55 — A re-mira executada: as decisões técnicas de V1–V6 e F6 (RFC-006, PR #48)
+**Direção em [`docs/29`](29-rfc-006-re-mira.md); dicionário em [`docs/30`](30-dicionario-da-re-mira.md); fechamento em [`docs/18`](18-backlog-consolidado.md) §10.**
+Este ADR registra, depois do fato, as decisões que os oito pacotes tomaram sem
+ADR próprio — o `docs/14` §1 pedia "ao iniciar uma fase, ela vira ADR" e o
+`docs/15` §3 prescrevia ADR para schema aditivo; o PR mudou schema, modelo de
+contrato e domínio de sujeito e o registro de decisões parou na ADR-54.
+
+**Adotado (por pacote):**
+- **V1** — os subkinds de `standard` (iso/nbr/rfc/nist/ieee/eu_reg + o detector
+  novo de circulares) entram em `CONTRADICTION_IDS`, a MESMA maquinaria da
+  RFC-005; `regulator` fica fora (nomeia um referente, não um documento) e
+  `STRONG_IDS` da reconciliação não muda — congelado por teste;
+- **V2** — o sentido mora no CANÔNICO (`Entropia (física)`), não num campo
+  `sense` paralelo; precedência entre camadas (seed < reference < bundle) é
+  resolução, colisão dentro da camada é ambiguidade (`confidence=ambiguous`:
+  não reescreve, não indexa, não liga); `policy.alias_conflict` nomeia o ato
+  que resolve. Zero schema, zero migração;
+- **V3** — estabilidade editorial como DERIVAÇÃO declarada em `DERIVATIONS`
+  (lê Git + frontmatter, nunca `runtime.db`), um sentido só entre os quatro
+  de "estabilidade"; sem limiar de "núcleo";
+- **F6** — `ask_misses` em `runtime.db` como dado de USO (rebuild não apaga),
+  chave determinística (`kernel/sketch.miss_key`: entidades da pergunta;
+  sem entidade, SimHash), gravação no retorno TERMINAL da abstenção,
+  fechamento só por re-ask que responde;
+- **V4** — dificuldade como COMPOSIÇÃO pura de cinco sinais de cinco donos,
+  pesos e tetos DECLARADOS não calibrados, `low_yield` fora, silêncio ≠
+  facilidade (`medida=false`), SEM derivação em `DERIVATIONS` (dois sinais são
+  de uso e não movem o HEAD); o limiar de sobreconfiança é constante repetida
+  presa a `validate_policy({})`, porque a memória não importa `cognitive/`;
+- **V5** — vocabulário FECHADO de relações (`applies_to`/`exemplifies`/
+  `refines`), estrito na escrita (o ato recusa fora do vocabulário) e
+  tolerante na leitura (projeção converte desconhecido em `NULL`);
+  `graph_edges.rel` aditivo + migração idempotente + `INDEX_GENERATION` g6;
+  a aresta vale para a PÁGINA inteira e `ambiguous_fraction` mede o preço
+  do nível (zero aresta ⇒ `None`);
+- **V6** — a ficha sem campo de `value`/`gain`/`roi` (recusa estrutural:
+  não há onde escrever número não medido), `not_measured` como conteúdo,
+  borda LLM desligada por default e o rodapé de ressalvas re-anexado DEPOIS
+  do modelo.
+
+**Rejeitado**: campo `sense` separado (segundo dono do mesmo fato); campo de
+ganho na ficha (autocertificação); derivação declarada para a dificuldade
+(prometeria frescor que a cadeia não entrega); mudar `STRONG_IDS` por carona
+da V1.
+
+**Migrações e projeções**: `page_stability`, `page_difficulty` (projeções
+recomputáveis), `ask_misses` (uso), `graph_edges.rel` (`ALTER TABLE`
+idempotente); reindexação completa na primeira subida (g5 → g6).
+
+**Condições de reentrada**: a marca `contested` no canônico e o nível da
+AFIRMAÇÃO (RFC-004 §6) esperam `ambiguous_fraction` medido em corpus real
+(`docs/18` §11 Q-21); calibração de pesos de V4 e da tolerância de 1%
+esperam desfechos de prática e golden (idem); a superfície no cockpit das
+capacidades V3/V5/V6 é o primeiro bloco da fila corrente (Q-1…Q-7) — este
+ADR registra que elas saíram CLI/facade-only e que isso é dívida, não
+entrega.
+
+### ADR-56 — O contrato epistêmico declara o que ESCREVE (C6, PR #48)
+**Documento: [`docs/11`](11-epistemic-contracts.md) §7b; achado de origem:
+[`docs/17`](17-auditoria-integridade.md) C6.** Um `POST /ask` com
+`memory.auto_recycle` reidratava uma página, escrevia no bundle e movia o HEAD
+do Git — e o `EpistemicContract` não tinha campo onde isso pudesse ser dito,
+logo nenhuma regra de lint podia acusar. A lacuna era geradora.
+
+**Adotado**: enum fechado `SideEffect` (`none` · `canonical_write` ·
+`projection_write` · `state_write` — donos distintos, não graus); campo
+`side_effects` no contrato, opcional com default vazio (registro antigo segue
+válido; `schema_version` continua 1); duas regras de lint —
+`canonical_write` exige `high_impact` (o bundle é a autoridade e o commit é
+para sempre) e `none` ao lado de outro efeito é contradição; os 28 contratos
+declarados um a um; superfície no painel Qualidade.
+
+**A guarda, e a correção de nível que ela sofreu**: a declaração é cruzada
+com o código por AST — se um módulo citado em `implementation_refs` importa o
+`BundleWriter`, ALGUÉM entre os mecanismos que o citam tem de declarar
+`canonical_write`. A primeira versão procurava a substring (acusava sete,
+cinco eram comentário); a segunda exigia a declaração de TODO mecanismo do
+módulo — e `inferred_cooccurrence_edges` mostrou o erro de nível (`docs/28`
+§2): vive em `detect_communities.py`, que escreve páginas de comunidade, mas o
+MECANISMO só monta adjacência em memória; a regra forçaria uma declaração
+FALSA para calar o teste. O invariante honesto é por MÓDULO — mais fraco, e
+verdadeiro.
+
+**Rejeitado**: graus de efeito (uma escala) em vez de donos distintos;
+tornar o campo obrigatório de imediato (invalidaria 25 contratos por
+retroatividade).
+
+**Resíduo declarado**: a resposta do `/ask` ainda não diz que reciclou nem
+emite evento único — `docs/18` §11 Q-5.
+
+### ADR-57 — Registros com dentes: NFRs, invariantes, documentação e o mapa gerado (PR #48)
+**Contexto medido em 2026-09-02.** Seis lentes de auditoria sobre o
+repositório encontraram o mesmo padrão em quatro lugares: o que estava
+DECLARADO não era cobrado por nada. Os requisitos não funcionais viviam em
+prosa com selo (`docs/10` §5–§17), e o selo citava arquivo em vez de teste
+(`INV-PRIV-001 → harness/local_policy.py`, que só exige o campo); §5.2 e §15
+diziam coisas opostas sobre o mesmo `PRAGMA synchronous`; a tabela de
+invariantes tinha 15 linhas no `AGENTS.md` e 16 no `docs/10`; nenhum teste
+abria um documento de `docs/` (o índice dizia "17 verbetes" com 22 no
+registro; a spec dizia "1.5.0, 248 testes" com o produto em 2.0.0 e 900+); o
+mapa de camadas estava copiado em seis arquivos com quatro conteúdos; cinco
+planos congelados não diziam ao leitor que eram fotografias; e o context
+pack prometido em `docs/10` §18.4 nunca existiu.
+
+**Adotado** — o mesmo tratamento que `architecture.toml [gate]` e
+`epistemics.toml` já recebiam, agora para o resto:
+- [`nfr.toml`](../nfr.toml): um requisito por entrada com `level`
+  (`guarantee` · `premise` · `target`), `status` (`pinned` · `measured` ·
+  `declared`) e `verified_by` — `test_nfr_toml.py` recusa teste que não
+  existe, `pinned` sem prova, `declared` sem `notes`; três requisitos
+  ganharam a prova que não tinham (PRAGMAs aplicados, handshake 0600,
+  loopback por default). A contradição de durabilidade foi resolvida como
+  PREMISSA (NFR-DUR-003): "RPO 0 após ACK" vale contra crash de processo;
+- `architecture.toml [[invariant]]` como dono único da tabela do `AGENTS.md`
+  §4, com `verified_by` resolvendo (`test_architecture_toml.py`);
+  `INV-PRIV-001` passou a citar os testes reais e a metade sem teste virou
+  NFR-PRIV-002 `declared`;
+- `test_docs_contract.py`: todo `docs/*.md` declara `Altitude` e `Status`
+  (`vivo` \| `histórico`) na cabeça, histórico aponta para a fonte viva,
+  `AGENTS.md` não roteia histórico como destino, o índice lista todo
+  arquivo, todo link relativo resolve (fora de crase), doc VIVO não crava
+  contagem de mecanismos/termos/testes (ledgers e RFCs podem);
+- `corpusmith context` / `just context` (`context_pack.py`): o mapa
+  determinístico — versão, HEAD, camadas, gate, invariantes, NFRs por
+  status, registros, bancos, derivações, eventos, jobs, rotas, use cases,
+  ADRs, altitude/status de cada doc e a fila corrente — lido das fontes que
+  já são autoridade (TOMLs, constantes, o fonte por AST), preso por
+  `test_context_pack.py`. Regra: o que é enumerável é gerado; à mão fica só
+  o porquê;
+- as skills param de copiar o gate e de mandar cravar contagem
+  (`test_pr0_gate.py`); estratégia de merge única (squash, como o
+  CONTRIBUTING).
+
+**Rejeitado**: um documento novo de direção (RFC-007) — a direção do
+RFC-006 não mudou e seria o sexto plano sobre o mesmo assunto; tornar
+`test_docs_contract` capaz de verificar contagens dentro de ADRs e RFCs
+(eles registram o que era verdade no commit — é ledger, não estado);
+gerar os documentos conceituais inteiros (o porquê continua à mão).
+
+**Consequências**: `docs/10` deixa de carregar estado (contagens, versão,
+lista de comandos) e passa a ser doutrina; o estado vem dos registros e do
+mapa. Um selo ✅ que cite arquivo em vez de teste passa a ser bug de
+documentação com guarda. **Dívidas declaradas**: docs gerados com teste de
+frescor e cabeçalho de contrato por módulo (`docs/18` §11 Q-19); o ledger
+de versões (`v2.1` em `ontology.toml`/ADR-54 com produto 2.0.0 — Q-26).
