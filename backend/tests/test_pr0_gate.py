@@ -85,6 +85,43 @@ def test_agents_md_nao_finge_contagem_de_testes():
         "no primeiro PR que adiciona um teste")
 
 
+def test_a_extensao_nativa_e_instalada_e_exercitada_pela_ci():
+    """ADR-39 + ADR-47: construir não é o mesmo que funcionar.
+
+    O wheel do PyO3 era construído por `maturin build` e NUNCA instalado,
+    então `pytest.importorskip("corpusmith_native")` fazia os testes
+    diferenciais pularem em TODAS as pernas — a equivalência Rust≈Python,
+    única prova de que o acelerador não muda o significado, jamais era
+    exercitada. Medido em 2026-09-03, quando o bump do PyO3 (0.23 → 0.29)
+    quebrou a COMPILAÇÃO: fosse uma mudança de comportamento na fronteira
+    FFI em vez de sintaxe, a CI teria ficado verde.
+
+    Este teste asserta o ci.yml DIRETAMENTE, não pelo token de `[gate]`:
+    o token obriga a CI a citar o comando, mas nada obriga o token a
+    existir (medido por mutação — apagá-lo deixava a suíte verde). Aqui,
+    tirar a instalação OU a execução reprova."""
+    runs = _ci_runs()
+    # `.whl` explícito: a linha do `maturin build … -o native/target/wheels`
+    # também casa com "pip install .* native/target/wheels" (ela instala o
+    # maturin, não o wheel) — medido por mutação, era falso positivo meu.
+    assert re.search(r"pip install [^\n]*native/target/wheels/\S*\.whl",
+                     runs), (
+        "a CI constrói o wheel nativo e não o INSTALA — os testes "
+        "diferenciais voltam a pular em silêncio (verde-por-skip)")
+    assert re.search(
+        r"python -c [\"']import corpusmith_native[\"']",
+        runs,
+    ), (
+        "a perna native não prova que o wheel instalado é importável — "
+        "importorskip pode transformar uma quebra de carregamento em verde")
+    assert "test_compute_differential.py" in runs, (
+        "o wheel é instalado e ninguém o exercita: a equivalência "
+        "Rust≈Python do ADR-39 não é verificada por nenhuma perna")
+    assert "test_compute_differential.py" in _arch()["gate"]["ci_enforced"], (
+        "sem o token em [gate].ci_enforced, remover a perna nativa da CI "
+        "deixa de ser acusado por test_ci_executa_todo_o_gate_declarado")
+
+
 def test_skills_nao_copiam_o_gate_nem_cravam_contagem():
     """As skills de trabalho mandavam "atualizar a contagem de testes no
     AGENTS §2" (o que o teste acima proíbe) e listavam TRÊS comandos onde

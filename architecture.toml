@@ -104,11 +104,18 @@ schema_version = 1
 # sem o token, um eixo pode ganhar valor novo sem verbete e a suíte segue
 # verde no que importa (o lint tem findings que os testes de unidade não
 # alcançam: refs de `lives_in` e marcadores de deriva vivem no filesystem).
+# A extensão NATIVA entra no gate pelo mesmo motivo que o binário
+# empacotado entrou (ADR-47): o wheel era construído e nunca instalado, e
+# `pytest.importorskip("corpusmith_native")` fazia os testes diferenciais
+# do ADR-39 pularem em TODAS as pernas. Sem este token, a perna que
+# EXERCITA o acelerador pode ser removida da CI em silêncio e a suíte
+# segue verde — que é exatamente como o verde-por-skip sobrevive.
 ci_enforced = ["pytest", "tsc --noEmit", "npm test",
                "docker compose config",
                "cargo test", "epistemics lint", "ontology lint",
                "doctor", "backup",
-               "pyinstaller build.spec"]
+               "pyinstaller build.spec",
+               "test_compute_differential.py"]
 verify_enforced = ["pytest", "tsc --noEmit", "npm test",
                    "docker compose config", "epistemics lint",
                    "ontology lint"]

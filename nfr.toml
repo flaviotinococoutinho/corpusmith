@@ -419,6 +419,21 @@ notes = "O doctor verifica só invariantes de dados; /health/full expõe número
 
 # ------------------------------------------------------------- empacotamento
 [[nfr]]
+id = "NFR-PKG-002"
+category = "packaging"
+level = "guarantee"
+scope = "S0"
+status = "pinned"
+statement = "A extensão nativa (PyO3) é construída E EXERCITADA pela CI: o wheel é instalado e os testes diferenciais provam que o acelerador Rust concorda com o kernel Python (igualdade exata no determinístico; |Δ| ≤ 1e-8 em PPR/Brandes)."
+verified_by = [
+  "test_pr0_gate.py::test_ci_executa_todo_o_gate_declarado",
+  "test_compute_differential.py",
+  "test_compute_properties.py",
+]
+doc_anchor = "docs/10 §14.4"
+notes = "Os testes diferenciais usam `pytest.importorskip` — sem a extensão eles PULAM, e o fallback Python é comportamento suportado (ADR-39). Por isso a prova não é o teste sozinho: é o token `test_compute_differential.py` em `[gate].ci_enforced`, que obriga a CI a instalar o wheel e rodá-los. Medido em 2026-09-03: antes disso o wheel era construído e nunca instalado, e a equivalência Rust≈Python nunca era exercitada em nenhuma perna."
+
+[[nfr]]
 id = "NFR-PKG-001"
 category = "packaging"
 level = "guarantee"
