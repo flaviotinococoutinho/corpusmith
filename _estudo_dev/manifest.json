@@ -18,8 +18,10 @@
     "references": 38
   },
   "runtimeFiles": [
+    "./manifest.json",
     "./index.html",
     "./assets/styles.css",
+    "./assets/progress.js",
     "./assets/app.js",
     "./data/catalog.js",
     "./data/plan.js",
