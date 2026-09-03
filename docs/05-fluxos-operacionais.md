@@ -1,5 +1,7 @@
 # 05 · Fluxos operacionais
 
+> **Altitude:** fluxo · **Status:** vivo
+
 > QUANDO e ONDE cada coisa acontece — todos os fluxos fim-a-fim, com os
 > pontos de decisão e os artefatos tocados. Notação: `[tabela]` =
 > runtime.db/index.db; `(página)` = bundle+Git; `{evento}` = EventBus.

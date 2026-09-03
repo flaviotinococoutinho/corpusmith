@@ -1,5 +1,7 @@
 # 28 · A escada de abstração, e a topologia como instrumento epistêmico
 
+> **Altitude:** produto · **Status:** vivo
+
 > [`03`](03-teoria.md) fundamenta os mecanismos topológicos (persistência,
 > Brandes, lacuna estrutural). [`24`](24-axiomas-e-oticas.md) lista as óticas.
 > Falta a camada entre as duas: **em que NÍVEL cada coisa é verdade**, e o que a

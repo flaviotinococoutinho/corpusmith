@@ -76,7 +76,10 @@ jobs/ api/ cli/ daemon/ models/ desktop/   ← adapters (a única camada que fal
 ```
 
 Quanto mais interna: mais pura, menos volátil, menos consciente de
-transporte/persistência/UI. Regra completa: `architecture.toml`.
+transporte/persistência/UI. Regra completa (e dono desta lista):
+`architecture.toml`; `corpusmith context` (`just context`) imprime o mapa
+gerado — camadas, gate, invariantes, NFRs, registros, rotas, jobs, ADRs,
+docs e a fila corrente — leia-o antes de mudar algo.
 
 ## 4. Invariantes que você NÃO pode quebrar
 
@@ -92,11 +95,18 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | INV-DATA-002 | página supersedida fica auditável e FORA do retrieval padrão | `test_v22.py::test_inv003_*` |
 | INV-DATA-003 | `index.db` é reconstruível do bundle | `test_v13.py`, `test_doctor.py` |
 | INV-DATA-004 | falha cognitiva NÃO altera confiança/validade canônicas | `test_cognitive_journey.py` |
-| INV-PRIV-001 | conteúdo `local_only` não sai da máquina | `harness/local_policy.py` |
+| INV-PRIV-001 | conteúdo `local_only` não sai da máquina | `test_fase5.py` (export) + `test_local_policy.py` (campo obrigatório); a metade do MODELO está declarada como lacuna em `nfr.toml` NFR-PRIV-002 |
 | INV-OPS-001 | config aplicada tem linhagem, validação e rollback | `test_v16.py` |
 | INV-OPS-002 | todo job termina em estado terminal ou permanece recuperável | `test_jobs_reliability.py` |
 | INV-EPI-001 | mecanismo heurístico tem contrato em `epistemics.toml`: sem garantia universal, com vieses/failure modes/fallback declarados e sem autocertificação | `test_epistemics.py`, `test_epistemics_toml.py`, `corpusmith epistemics lint` |
 | INV-ONT-001 | todo valor de eixo epistêmico responde a UMA pergunta: vocabulário fechado em `kernel/ontology.py`, declarado em `ontology.toml`, e nenhum termo em dois eixos | `test_ontology.py`, `corpusmith ontology lint` |
+
+O dono desta tabela é `architecture.toml [[invariant]]`: os ids daqui são
+os de lá e cada `verified_by` resolve para um teste que existe
+(`test_architecture_toml.py`). Os requisitos NÃO funcionais (durabilidade,
+consistência, fila, SLO, segurança, privacidade) têm o mesmo tratamento em
+[`nfr.toml`](nfr.toml), com `status = pinned | measured | declared` cruzado
+pela suíte — um NFR só é ✅ quando cita teste, nunca arquivo.
 
 ## 5. Caminhos PROIBIDOS (MUST NOT)
 
@@ -122,7 +132,10 @@ transporte/persistência/UI. Regra completa: `architecture.toml`.
 | experiência cognitiva | `cognitive.db` | relatórios |
 | referência do mundo | `reference.db` | gazetteer (cache) |
 | contratos epistêmicos | `epistemics.toml` (raiz) | CLI/API/painel (mesma fonte); envelopes em `runtime.db` |
-| significado dos termos | `ontology.toml` (raiz) + `kernel/ontology.py` | CLI/painel; o TOML descreve o kernel e o lint prova |
+| significado dos termos | `ontology.toml` (raiz) + `kernel/ontology.py` | CLI (`corpusmith ontology`); o TOML descreve o kernel e o lint prova |
+| invariantes e gate | `architecture.toml` (raiz) | AGENTS §2/§4 e docs/10 citam DAQUI |
+| requisitos não funcionais | `nfr.toml` (raiz) | docs/10 §5–§17 é a doutrina; o status (`pinned`/`declared`) vem daqui |
+| mapa do repositório para agentes | `corpusmith context` (gerado; `just context`) | docs vivos citam o comando em vez de cravar contagens |
 | claims de performance | `benchmarks/baseline.json` (+METRICS.md) | ADRs citam DAQUI — ganho sem medição registrada é proibido |
 
 `index.db` NUNCA participa da transação canônica; converge para
@@ -177,6 +190,9 @@ Lista completa: `docs/10` §23.
 - **Referência dura** (endpoints, tabelas, regras, constantes): `docs/06-referencia.md`
 - **Fluxos operacionais**: `docs/05-fluxos-operacionais.md`
 - **Sinergias entre mecanismos**: `docs/07-sinergias.md`
-- **Governança** (decisões, backlog): `docs/08-decisoes.md`, `docs/09-backlog.md`
+- **Governança** (decisões): `docs/08-decisoes.md`
+- **O que AINDA falta, com evidência** (a única fila viva; §11 é a fila corrente): `docs/18-backlog-consolidado.md`
+- **Em que NÍVEL da escada uma coisa é verdade** (offset → menção → região → afirmação → página → tema → grafo; erro de nível como classe de defeito): `docs/28-escada-de-abstracao-e-topologia.md`
+- **Documentos históricos** (congelados; a linha `**Status:** histórico` na cabeça diz em que versão e aponta para `docs/18`): planos 13/14/15, auditoria 17, backlog antigo 09 — leia como registro do raciocínio, nunca como estado
 
 Índice navegável: [`docs/README.md`](docs/README.md).

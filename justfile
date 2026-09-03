@@ -27,6 +27,12 @@ verify:
     cd backend && .venv/bin/python -m corpusmith.cli epistemics lint
     cd backend && .venv/bin/python -m corpusmith.cli ontology lint
 
+# mapa determinístico do repositório para humanos e agentes (docs/10 §18.4):
+# camadas, gate, invariantes, NFRs, registros, rotas, jobs, ADRs, docs, fila.
+# Docs vivos citam ESTE comando em vez de cravar contagens (test_docs_contract).
+context:
+    cd backend && .venv/bin/python -m corpusmith.cli context
+
 # baixa modelos locais (Ollama)
 models:
     backend/scripts/pull_models.sh

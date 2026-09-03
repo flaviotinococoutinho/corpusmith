@@ -83,14 +83,15 @@ recusa cruzar).
 Para quem estuda de verdade — acumula PDFs, normas, artigos e notas — o
 produto compila conteúdo disperso em **conceitos comparáveis, rastreáveis,
 explicáveis e acionáveis**: não só o que uma ideia significa, mas **sob
-qual lente**, o que permanece, onde diverge e quanto custa adotá-la. Três
-das seis capacidades já estão entregues e presas por teste:
+qual lente**, o que permanece, onde diverge, como se aplica e quanto custa
+adotá-la. As seis capacidades estão entregues no núcleo, presas por teste
+e declaradas em contrato — cada uma com o que ela **não** alega:
 
 - **Normas como sujeitos fortes (V1)** — `ISO 27001`, `NBR 14724`,
   `RFC 9110`, `Circular BCB 3.978` são identidades de primeira classe:
   duas páginas afirmando coisas diferentes sobre a MESMA norma sem
   sucessão viram `policy.contradiction_candidate`, como já valia para
-  DOI/ISBN.
+  DOI/ISBN. Não detecta o órgão emissor: `SUSEP 100` e `BCB 100` colidem.
 - **Identidade-com-sentido (V2)** — "entropia (física)" ≠ "entropia
   (informação)": o sentido é grafado NO canônico; alias reivindicado por
   duas identidades da mesma camada vira uso `ambiguous` — nunca é
@@ -100,9 +101,29 @@ das seis capacidades já estão entregues e presas por teste:
 - **Estabilidade editorial (V3)** — o que menos muda no SEU corpus,
   medido do histórico Git (`corpusmith stability`): "estável" = quieto
   no eixo de edição, nunca "correto".
+- **Onde o estudo trava (V4)** — um índice de dificuldade por página que
+  COMPÕE cinco sinais que já existiam (falha de recuperação com
+  sobreconfiança, conflito, pergunta aberta, vocabulário ambíguo, lacuna
+  de abstenção reincidente): `corpusmith difficulty` e o painel
+  Indicadores. Os pesos são **declarados, não calibrados**, e silêncio
+  não é facilidade.
+- **A ponte abstrato→prático (V5)** — o curador declara `applies_to`,
+  `exemplifies` ou `refines` entre páginas (vocabulário fechado; a
+  projeção guarda a relação, não só a sintaxe do link) e `corpusmith
+  applications` responde "que caso prático sustenta X?" nas duas direções.
+  A aresta vale para a **página inteira**, e a fração de alvos ambíguos é
+  medida em vez de escondida.
+- **A ficha do conceito (V6)** — `corpusmith sheet` reúne custo de
+  LEITURA (método junto do número), estabilidade, dificuldade e
+  aplicações, com a ressalva de cada contrato ao lado do valor que ela
+  qualifica. Não existe campo de "ganho" nem de "importância": o produto
+  diz na ficha que não os mediu.
 
-A direção completa (V4–V6: índice "difícil de explicar", arestas tipadas
-"aplica-se a", ficha de conceito) está no
+O que falta — e é o primeiro bloco da fila corrente
+([`docs/18`](docs/18-backlog-consolidado.md) §11): levar V3, V5 e V6 ao
+cockpit (hoje só CLI), a ficha na tela, a aresta tipada a partir da página,
+o léxico navegável e a resposta do `/ask` explicando por que confia pouco
+ou por que se absteve. A direção está no
 [`docs/29`](docs/29-rfc-006-re-mira.md); os termos da re-mira fixados
 contra ambiguidade, no [`docs/30`](docs/30-dicionario-da-re-mira.md).
 
@@ -297,7 +318,7 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   schema 1) — gazetteer frio×quente medido 236×@150/636×@500 (o claim
   ~92× era conservador) e índice incremental 4–13× (**o claim 29× não
   se reproduziu**; ADRs-06/07 corrigidos — a doc nunca descreve o que o
-  teste não confirma); 17 testes de sensibilidade nos limiares críticos
+  teste não confirma); testes de sensibilidade nos limiares críticos
   (clamp Hedge, overlay RRF, abstain, orçamento, hamming, citação).
 - **v1.6.3** — QA-1 fechado: `corpusmith seed` distribui o golden eval
   (7 páginas avaliáveis + 12 casos nas 5 categorias — o eval funciona
@@ -332,7 +353,8 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   `benchmarks/baseline.json`); cache de grafo por geração; incremental
   do índice por DELTA DO GIT (1 página = 130 bytes lidos, antes tudo);
   isolamento de jobs pesados por processo com hard-kill REAL (REL-2b,
-  flag `compute.process_isolation`); 6 contratos epistemológicos novos;
+  flag `compute.process_isolation`); contratos epistemológicos novos para
+  o compute plane;
   `corpusmith bench ask|graph|consolidate|compare`; testes diferenciais
   (bit-idênticos p/ sketch; |Δ|≤1e-8 p/ PPR/Brandes) + Hypothesis (2
   divergências Unicode reais achadas e corrigidas). Rust calcula
@@ -477,19 +499,22 @@ backend/
                 descend, dense, related, streams (fusão RRF+Hedge)
     models/     router (local Ollama × API Anthropic, privacidade + orçamento)
     api/        system (auth header OU ?auth=), cockpit (+outcome/eval/
-                authorities/reflect, v0.8 §11), cognitive (/cognitive/* v0.19)
-    daemon.py · cli.py · settings.py (flags + get)
+                authorities/reflect, v0.8 §11), cognitive (/cognitive/* v0.19),
+                curation (atos com preview, F1)
+    daemon.py · cli.py · settings.py (flags + get) · context_pack.py
+                (o mapa gerado: `corpusmith context`)
   db/           schema_runtime.sql · schema_index.sql · schema_cognitive.sql
                 · schema_cold.sql · schema_reference.sql (5 bancos, v0.8 §2.1)
   config/       default.yaml (privacy.default: local_only · flags v0.8)
   build.spec    PyInstaller onedir (AGPL fora do binário)
 desktop/
   electron/     main, preload, sidecar (handshake via state/daemon.json)
-  src/panels/   Dashboard(+candidatos reflect), ChatEvidence(+desfechos,
-                as_of, trajetória, abstenção), PromoteDialog, Inbox,
-                Explorer(+filtro authority), Quality(+5 barras de eval),
-                Processes
-  src/lib/      daemonClient (extensões do cockpit + v0.8), client (singleton)
+  src/panels/   as abas do cockpit (a lista viva é `TABS` em src/App.tsx):
+                Dashboard, ChatEvidence, Inbox, Explorer, Quality, Processes,
+                Graph, Insights, Curation, Doctor, Focus, Cognition, Memory,
+                ActsHistory + diálogos (PromoteDialog, CurationDialog)
+  src/lib/      daemonClient (extensões do cockpit + v0.8), client (singleton),
+                live (SSE)
 ```
 
 ## Aceite da v0.7 (verificado por teste)

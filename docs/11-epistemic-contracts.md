@@ -1,5 +1,7 @@
 # 11 · Contratos Epistêmicos & Generalization Envelope (ADR-38)
 
+> **Altitude:** contrato · **Status:** vivo
+
 > **Especialidade deste documento:** epistemologia OPERACIONAL dos
 > mecanismos heurísticos/adaptativos — o que cada um pode legitimamente
 > alegar, sob quais pressupostos, e onde foi (e não foi) avaliado.
@@ -186,10 +188,11 @@ painel Qualidade → seção "Contratos epistêmicos"┘  (harness/epistemics)
 - ~~o golden set não é distribuído por default~~ — **pago pelo QA-1**:
   `seed_golden_eval` distribui 10+ casos out-of-the-box e o eval deixa de
   ser no-op (idempotente: nunca sobrescreve golden curado pelo usuário);
-- contratos cobrem **28 mecanismos** (registry 1.18.0) — a fonte viva é
+- a contagem e a versão do registro NÃO ficam aqui: a fonte viva é
   `epistemics.toml` (`[registry].version` + `EXPECTED_MECHANISMS` no
-  lint; este documento não acompanha o conjunto entrada a entrada; a
-  consolidação e o freeze/recycle, listados aqui como devidos, ganharam
-  contrato desde então). Candidatos ainda sem contrato: staleness e o
-  lint de citações — declarados devidos no
-  [`18`](18-backlog-consolidado.md) (F-EPIST).
+  lint) e `corpusmith context` imprime as duas; este documento não
+  acompanha o conjunto entrada a entrada (a consolidação e o
+  freeze/recycle, listados aqui como devidos, ganharam contrato desde
+  então, e as duas dívidas `PROMISED` foram pagas). Candidatos ainda sem
+  contrato: staleness e o lint de citações — na fila viva do
+  [`18`](18-backlog-consolidado.md).

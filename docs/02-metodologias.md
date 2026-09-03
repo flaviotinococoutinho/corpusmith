@@ -1,5 +1,7 @@
 # 02 · Metodologias
 
+> **Altitude:** engenharia · **Status:** vivo
+
 > COMO o sistema é construído. Cada metodologia aqui é executável — ou
 > está no caminho crítico da pipeline, ou é asserção em teste.
 

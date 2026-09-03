@@ -1,5 +1,7 @@
 # 29 · RFC-006 — A re-mira: do compilador de corpus ao instrumento de estudo
 
+> **Altitude:** governança · **Status:** vivo
+
 > Este documento fixa uma **direção de produto**, e direção não costuma exigir
 > RFC — mas esta exige, por três gatilhos do `AGENTS.md` §8 que as capacidades
 > abaixo vão tocar: **mudar o domínio de sujeito de uma heurística** (V1 amplia
@@ -346,31 +348,46 @@ linha aparece antes de o mecanismo que a alimenta ter contrato.
 
 ## 6. Ordem de ataque e o efeito na fila
 
-Por dependência real (a fila reordenada vive em `docs/18` §10):
+Por dependência real (a fila reordenada viveu em `docs/18` §10 e está
+**concluída**: os oito pacotes foram entregues; a fila corrente é a §11 do
+mesmo documento, que abre a trilha seguinte — a superfície de estudo que
+esta ordem deixou para depois):
 
-1. **V3** — dependência zero, conflito zero; produz o dado que V4 compõe e
-   V6 projeta;
-2. **V1 mínimo** — pequeno e localizado; dá sujeitos fortes ao regime
-   normativo (alimenta V3 com sucessão `:2015`→`:2022` e V5 com sujeitos);
-3. **V2** — a fase F5 da fila (P-10) **ressignificada**: de "preservar o
-   vínculo entidade↔página" para portadora da identidade-com-sentido
-   (alias multi-candidato, `policy.alias_conflict`, colisão de autoridade
-   como finding). Promovida a fase mais estratégica;
+1. **V3** ✅ **entregue** — dependência zero, conflito zero; produz o dado
+   que V4 compõe e V6 projeta;
+2. **V1 mínimo** ✅ **entregue** — pequeno e localizado; dá sujeitos fortes
+   ao regime normativo (alimenta V3 com sucessão `:2015`→`:2022` e V5 com
+   sujeitos);
+3. **V2** ✅ **entregue** — a fase F5 da fila (P-10) **ressignificada**: de
+   "preservar o vínculo entidade↔página" para portadora da
+   identidade-com-sentido (alias multi-candidato, `policy.alias_conflict`,
+   colisão de autoridade como finding). O resíduo original de P-10 (a
+   coluna de página em `entities`) ficou para a §11;
 4. **F6 promovida** ✅ **entregue** — o rastro de abstenção (P-8) deixou
    de ser "deliberadamente depois": `ask_misses` com chave determinística
    por entidades, fechamento verificado por re-ask, superfície nos
    Indicadores e contrato `abstention_trace` (docs/18 §10 item 4). O
    sinal que V4 consome existe;
-5. **V4** — composição pura + contrato, depois de F6;
-6. **V5 como medição** — arestas tipadas por ato humano + a consulta medida
-   que financia as condições de reentrada de RFC-004 §6. **O-2 fica
-   ressignificada, não resolvida**: a marca persistente continua esperando
-   o nível 3, e V5 é o caminho legítimo até lá;
-7. **V6 por último** — projeta o que os anteriores produzem; **C6**
-   (campo de efeito colateral no contrato) levemente promovida como
+5. **V4** ✅ **entregue** — composição pura + contrato, depois de F6;
+6. **V5 como medição** ✅ **entregue** — arestas tipadas por ato humano + a
+   consulta medida que financia as condições de reentrada de RFC-004 §6.
+   **O-2 fica ressignificada, não resolvida**: a marca persistente continua
+   esperando o nível 3, e V5 é o caminho legítimo até lá — a medição
+   (`ambiguous_fraction`) existe como instrumento; o NÚMERO exige corpus
+   real (§11);
+7. **V6 por último** ✅ **entregue** — projeta o que os anteriores
+   produzem; **C6** ✅ (campo de efeito colateral no contrato) como
    pré-requisito barato do fact sheet;
-8. **F7 rebaixada** — `temporal_partition` e o resíduo de custo (P-11) não
-   bloqueiam nenhuma capacidade. É performance, não visão.
+8. **F7 rebaixada** — o contrato `temporal_partition` foi pago no reforço
+   dos registros; o resíduo de custo (P-11) segue na §11. É performance,
+   não visão.
+
+**O que a ordem deixou para depois, e agora é a fila (§11):** V3, V5 e V6
+saíram por CLI e facade — a ficha do conceito da §5 tem zero linhas no
+cockpit, o ato `link` com `rel` só é alcançável pelo terminal, e o léxico
+que dá sentido a tudo isto não tem painel. A trilha seguinte é a
+**superfície de estudo**: entregar ao humano, na tela, o que a camada
+epistêmica já sabe dizer.
 
 ## 7. O que este RFC NÃO decide
 

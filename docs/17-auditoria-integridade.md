@@ -1,5 +1,7 @@
 # Verificação adversarial da auditoria do Corpusmith — relatório acionável
 
+> **Altitude:** governança · **Status:** histórico — congelado em v1.9.4 (HEAD `ebb1dff`); NÃO atualizar — o estado vivo do que falta está em [`18`](18-backlog-consolidado.md) §11
+
 HEAD auditado: `ebb1dff` (F2-PR1/PR2/PR3+4 dentro). 84 pontos levantados, os de gravidade ALTA submetidos a cético com obrigação de executar código: **18 confirmados por execução, 4 refutados**.
 
 ---

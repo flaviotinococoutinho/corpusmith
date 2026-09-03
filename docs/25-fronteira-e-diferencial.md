@@ -1,5 +1,7 @@
 # 25 · Fronteira e diferencial — o que o Corpusmith não faz, e por que isso é o produto
 
+> **Altitude:** produto · **Status:** vivo
+
 > Um produto se define tanto pelo que recusa quanto pelo que entrega. Esta
 > página delimita as três fronteiras que o Corpusmith **não** cruza, mostra o
 > lugar exato que ele ocupa numa cadeia que já existe, e registra a evidência de

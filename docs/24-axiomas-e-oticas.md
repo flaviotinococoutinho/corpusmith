@@ -1,5 +1,7 @@
 # 24 · Axiomas e óticas — o que o produto assume, e por quantos ângulos ele olha
 
+> **Altitude:** produto · **Status:** vivo
+
 > **Axioma**, aqui, não é frase de efeito: é uma proposição que o produto assume
 > **e paga** — cada uma tem uma asserção executável que quebra a suíte se a
 > proposição for violada. Uma proposição sem asserção não é axioma; é slogan, e

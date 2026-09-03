@@ -1,5 +1,7 @@
 # 27 · RFC-005 — Conflito factual: o primeiro limiar do Harness, e o primeiro leitor de `contested`
 
+> **Altitude:** governança · **Status:** vivo
+
 > `AGENTS.md` §8 exige RFC para **heurística no caminho de escrita** e para
 > **termo novo em eixo epistêmico**. Este toca as duas: introduz a primeira
 > constante calibrável do Harness e produz o primeiro valor `contested` do eixo

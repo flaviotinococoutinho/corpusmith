@@ -1,5 +1,7 @@
 # 12 — Instalação e verificação do ambiente
 
+> **Altitude:** fluxo · **Status:** vivo
+
 > Guia **validado em máquina real** (macOS arm64, 2026-07; revalidado em
 > Linux x86_64, 2026-08 — bootstrap, seed, lint, doctor, epistemics, daemon
 > e `/ask`): cada comando daqui foi executado e o resultado esperado
@@ -98,8 +100,10 @@ A contagem da suíte cresce a cada versão; o que importa é **zero falhas**.
 A suíte é **hermética**: não conversa com o Ollama da máquina
 (`tests/conftest.py` aponta o roteador para uma porta morta). Isso é
 proposital — antes o resultado dependia de quais modelos o dev tinha
-instalado, e 25 testes ficavam vermelhos numa máquina com Ollama de pé e
-o modelo da config ausente.
+instalado, e dezenas de casos ficavam vermelhos numa máquina com Ollama de
+pé e o modelo da config ausente. Os números nos exemplos acima são os do
+dia em que este guia foi validado; a contagem viva sai de
+`corpusmith context`.
 
 Smoke de runtime (não destrutivo — use um HOME descartável):
 

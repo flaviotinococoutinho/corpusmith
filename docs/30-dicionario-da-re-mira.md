@@ -1,5 +1,7 @@
 # 30 · Dicionário da re-mira e a disciplina que a sustenta
 
+> **Altitude:** governança · **Status:** vivo
+
 > **Para que serve.** A RFC-006 nomeou as duas patologias mais caras deste
 > repositório: *um nome carregando várias perguntas* e *atributo afirmado
 > no nível errado*. Este documento é a vacina de vocabulário: onde uma
@@ -165,12 +167,12 @@ estilo, e estilo não sobrevive a refactor.
 | 1 | **Núcleo funcional, casca imperativa** — regra pura em `kernel/`; I/O nas bordas | testável sem disco/rede; a regra tem UM lugar | `test_architecture.py::test_kernel_and_normalize_are_pure` |
 | 2 | **Gradiente de mutabilidade** — quanto mais interna a camada, menos volátil | mudança cara fica rara; mudança barata fica barata | `architecture.toml` + INV-ARCH-001..006 |
 | 3 | **Um nome, uma pergunta** — vocabulário fechado; deriva REGISTRADA quando existe | a conversa não degrada; `grep` volta a ser confiável | INV-ONT-001, `ontology lint`, varredura por SENTIDO no fonte |
-| 4 | **Nível certo da escada** — atributo afirmado onde é verdade para o objeto inteiro | evita a classe de defeito mais cara (docs/28 §2) | revisão obrigatória da RFC-006 §8 |
+| 4 | **Nível certo da escada** — atributo afirmado onde é verdade para o objeto inteiro | evita a classe de defeito mais cara (docs/28 §2) | ⚠️ **guarda humana**: revisão obrigatória da RFC-006 §8 + a pergunta de nível no template de PR; a guarda executável (campo `level` nos contratos que escrevem atributo) é `docs/18` §11 Q-26 |
 | 5 | **Autoridade única + projeções recomputáveis** — Git é o juiz; o resto deriva | experimento seguro: o pior caso é reindexar | INV-DATA-003, `DERIVATIONS` |
 | 6 | **Um caminho de escrita** — todo byte canônico passa pelo gate | política impossível de pular por construção | INV-DATA-001, Template Method fechado (INV-ARCH-006) |
 | 7 | **1 use case = 1 `execute()`; facades onde 2+ domínios se encontram** — API só fala com facades | a intenção cabe no nome; orquestração tem endereço | INV-ARCH-004/005 |
-| 8 | **Contratos executáveis** — architecture/epistemics/ontology.toml presos a testes | doc que mente QUEBRA a suíte, em vez de envelhecer | `test_pr0_gate`, `test_epistemics_toml`, `test_ontology` |
-| 9 | **Falsificabilidade por mutação (A-6)** — teste que passa com e sem a mudança é teatro | a suíte prova que vigia, não só que passa | mutações executadas e registradas por PR |
+| 8 | **Contratos executáveis** — architecture/epistemics/ontology/nfr.toml presos a testes; a documentação também (altitude/status, índice, links, contagens) e o mapa gerado (`corpusmith context`) | doc que mente QUEBRA a suíte, em vez de envelhecer | `test_pr0_gate`, `test_epistemics_toml`, `test_ontology`, `test_nfr_toml`, `test_docs_contract`, `test_context_pack` |
+| 9 | **Falsificabilidade por mutação (A-6)** — teste que passa com e sem a mudança é teatro | a suíte prova que vigia, não só que passa | ⚠️ **guarda humana**: mutações executadas e registradas por PR (a contagem declarada tem de ser a medida); registro lido por teste é `docs/18` §11 Q-26 |
 | 10 | **Complexidade isolada atrás de porta** — otimização (Rust, caches) NUNCA decide domínio; fallback declarado | o difícil fica documentado num lugar só e removível | ADR-39, `compute/` como porta, `bench compare` fora do gate |
 | 11 | **Resiliência declarada** — erro com código estável; retry só idempotente; job termina ou é recuperável; preview antes do efeito; lote com teto | falha vira estado nomeado, não surpresa | INV-OPS-001/002, `LOTE_MAXIMO` guardado, 409 nomeado |
 

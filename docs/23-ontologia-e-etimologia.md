@@ -1,5 +1,7 @@
 # 23 · Ontologia e etimologia — o léxico do Corpusmith
 
+> **Altitude:** contrato · **Status:** vivo
+
 > **O que este documento é.** A leitura humana de [`ontology.toml`](../ontology.toml),
 > que é a fonte executável. O TOML declara; `corpusmith ontology lint` prova;
 > aqui está o **argumento**: por que cada palavra foi escolhida, o que a raiz

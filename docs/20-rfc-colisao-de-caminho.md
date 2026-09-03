@@ -1,5 +1,7 @@
 # 20 · RFC-003 — Colisão de caminho: o gesto de captura para de destruir em silêncio
 
+> **Altitude:** governança · **Status:** vivo
+
 > `AGENTS.md` §8 exige RFC para **heurística no caminho de escrita**. Este RFC
 > põe a escada de reconciliação — ressuscitada pelo RFC-002, com árbitro LLM
 > opcional — dentro do `promote`, que é o caminho de escrita **humano** mais

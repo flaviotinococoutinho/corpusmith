@@ -1,5 +1,7 @@
 # 14 · Plano de viabilidade — do sinal ao ATO
 
+> **Altitude:** governança · **Status:** histórico — congelado em v1.8; NÃO atualizar — o estado vivo do que falta está em [`18`](18-backlog-consolidado.md) §11
+
 > **Especialidade deste documento:** produto + arquitetura de software +
 > epistemologia aplicada. Não é ADR (nenhuma decisão foi tomada) nem
 > código — é o **plano de viabilidade** priorizado por **complexidade

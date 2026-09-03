@@ -1,5 +1,7 @@
 # 04 · Tecnologias e contratos de infraestrutura
 
+> **Altitude:** engenharia · **Status:** vivo
+
 > COM O QUE o sistema é feito — e, mais importante, o CONTRATO que cada
 > tecnologia cumpre. Trocar a tecnologia preservando o contrato é sempre
 > permitido; violar o contrato nunca é.

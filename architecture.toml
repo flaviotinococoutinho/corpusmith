@@ -113,6 +113,84 @@ verify_enforced = ["pytest", "tsc --noEmit", "npm test",
                    "docker compose config", "epistemics lint",
                    "ontology lint"]
 
+# --- INVARIANTES: dono único da tabela do AGENTS.md §4 ---
+# Antes daqui a tabela vivia em prosa em DOIS lugares (AGENTS §4 com 15
+# linhas, docs/10 §1.2 com 16) e a coluna "Verificado por" citava arquivos
+# que não são testes (INV-PRIV-001 → harness/local_policy.py, que só exige
+# o campo `privacy`). `test_architecture_toml.py` cruza: os ids daqui são os
+# do AGENTS §4, e todo `verified_by` resolve para um teste que existe.
+# `arquivo.py::função`, ou só `arquivo.py` quando o arquivo inteiro é a prova.
+[[invariant]]
+id = "INV-ARCH-001"
+rule = "kernel/, normalize/, cognitive/, epistemic/ sem I/O, rede, framework ou filesystem"
+verified_by = ["test_architecture.py::test_kernel_and_normalize_are_pure"]
+[[invariant]]
+id = "INV-ARCH-002"
+rule = "a memória NÃO importa o domínio cognitivo (dependência unidirecional)"
+verified_by = ["test_architecture.py::test_memory_domain_does_not_depend_on_cognitive_domain"]
+[[invariant]]
+id = "INV-ARCH-003"
+rule = "usecases/ não importam api/, jobs/ nem facades/"
+verified_by = ["test_architecture.py::test_usecases_do_not_reach_outward"]
+[[invariant]]
+id = "INV-ARCH-004"
+rule = "api/ só chama facades"
+verified_by = ["test_architecture.py::test_api_speaks_only_to_facades"]
+[[invariant]]
+id = "INV-ARCH-005"
+rule = "todo UseCase expõe só execute()"
+verified_by = ["test_architecture.py::test_every_usecase_has_single_public_method"]
+[[invariant]]
+id = "INV-ARCH-006"
+rule = "subclasses de MachinePageUseCase não sobrescrevem execute()"
+verified_by = ["test_architecture.py::test_machine_page_template_is_closed_for_modification"]
+[[invariant]]
+id = "INV-DATA-001"
+rule = "escrita canônica passa pelo Harness + BundleWriter (página + log + commit)"
+verified_by = ["test_writer.py::test_write_creates_page_log_and_commit",
+               "test_local_policy.py::test_privacy_is_required_for_every_written_page"]
+[[invariant]]
+id = "INV-DATA-002"
+rule = "página supersedida fica auditável e FORA do retrieval padrão"
+verified_by = ["test_v22.py::test_inv003_superseded_out_of_default_retrieval"]
+[[invariant]]
+id = "INV-DATA-003"
+rule = "index.db é reconstruível do bundle"
+verified_by = ["test_v22.py::test_inv002_index_generation_change_forces_full_rebuild",
+               "test_doctor.py::test_repair_rebuilds_and_clears_orphan"]
+[[invariant]]
+id = "INV-DATA-004"
+rule = "falha cognitiva NÃO altera confiança/validade canônicas"
+verified_by = ["test_cognitive_journey.py::test_full_journey_preserves_canonical_memory"]
+[[invariant]]
+id = "INV-PRIV-001"
+rule = "conteúdo local_only não sai da máquina"
+# A metade do EXPORT está presa; a metade do MODELO (o roteador nunca
+# chama o provedor de API para local_only) segue sem teste — nfr.toml
+# NFR-PRIV-002 declara a lacuna em vez de fingir que local_policy.py a cobre.
+verified_by = ["test_fase5.py::test_export_respects_privacy_and_formats",
+               "test_local_policy.py::test_privacy_is_required_for_every_written_page"]
+[[invariant]]
+id = "INV-OPS-001"
+rule = "config aplicada tem linhagem, validação e rollback"
+verified_by = ["test_v16.py::test_tune_records_history_and_ring_evicts_beyond_30",
+               "test_v16.py::test_rollback_returns_to_previous_generation",
+               "test_v16.py::test_tune_rejects_wrong_type_and_unknown_key_without_side_effects"]
+[[invariant]]
+id = "INV-OPS-002"
+rule = "todo job termina em estado terminal ou permanece recuperável"
+verified_by = ["test_jobs_reliability.py::test_orphaned_lease_is_recovered",
+               "test_jobs_reliability.py::test_startup_sweep_recovers_leased_and_cancel_requested"]
+[[invariant]]
+id = "INV-EPI-001"
+rule = "mecanismo heurístico tem contrato em epistemics.toml: sem garantia universal, com vieses/failure modes/fallback e sem autocertificação"
+verified_by = ["test_epistemics.py", "test_epistemics_toml.py"]
+[[invariant]]
+id = "INV-ONT-001"
+rule = "todo valor de eixo epistêmico responde a UMA pergunta: vocabulário fechado no kernel, declarado em ontology.toml, nenhum termo em dois eixos"
+verified_by = ["test_ontology.py::test_toml_declara_o_vocabulario_real_do_kernel",
+               "test_ontology.py::test_nenhum_valor_responde_a_duas_perguntas"]
+
 # --- comandos de verificação (o gate único da spec §14.4). ---
 [commands]
 backend_tests = "cd backend && .venv/bin/python -m pytest tests -q"

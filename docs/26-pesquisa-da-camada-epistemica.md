@@ -1,5 +1,7 @@
 # 26 · A pesquisa por trás da camada epistêmica — e onde o Corpusmith **não** é novo
 
+> **Altitude:** ciência · **Status:** vivo
+
 > [`03-teoria.md`](03-teoria.md) fundamenta os mecanismos: NCD, entropia, Hedge,
 > persistência, Brandes, RRF. Nenhum deles responde à pergunta da camada
 > epistêmica — *o que é uma afirmação, e o que se pode dizer sobre ela*. Esta

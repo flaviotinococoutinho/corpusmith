@@ -1,5 +1,7 @@
 # 01 · Conceitos abstratos
 
+> **Altitude:** produto · **Status:** vivo
+
 > O QUE o sistema acredita. Cada conceito aqui tem um mecanismo concreto
 > (documento 05) e um fundamento teórico (documento 03). Este documento é
 > o vocabulário compartilhado — quando dois módulos discordarem sobre um

@@ -479,6 +479,21 @@ def cmd_ontology(s: Settings, args) -> int:
     return 0 if data["ok"] else 1
 
 
+def cmd_context(s: Settings, args) -> int:
+    """context [--json] — o mapa determinístico do repositório (docs/10
+    §18.4): camadas, gate, invariantes, NFRs, registros, bancos, rotas,
+    jobs, use cases, ADRs, docs e a fila corrente. Lê o FONTE; fora de um
+    checkout falha alto."""
+    from .context_pack import NaoEhUmCheckout, build, render, to_json
+    try:
+        pack = build()
+    except NaoEhUmCheckout as e:
+        print(str(e), file=sys.stderr)
+        return 2
+    print(to_json(pack) if args.json else render(pack))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="corpusmith")
     ap.add_argument("--config", help="caminho de config YAML alternativo")
@@ -553,6 +568,11 @@ def main(argv: list[str] | None = None) -> int:
         "ontology", help="eixos, termos e deriva semântica (ontology.toml)")
     ontology.add_argument("op", choices=["lint", "axes", "terms", "drift"])
     ontology.set_defaults(fn=cmd_ontology)
+    context = sub.add_parser(
+        "context", help="mapa determinístico do repositório para agentes "
+                        "(docs/10 §18.4)")
+    context.add_argument("--json", action="store_true")
+    context.set_defaults(fn=cmd_context)
     seed = sub.add_parser("seed", help="dados pré-definidos (idempotente)")
     seed.add_argument("--file", default=None)
     seed.set_defaults(fn=cmd_seed)

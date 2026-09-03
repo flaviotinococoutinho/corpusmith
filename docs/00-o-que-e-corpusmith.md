@@ -1,5 +1,7 @@
 # 00 · O que é o Corpusmith
 
+> **Altitude:** produto · **Status:** vivo
+
 > **A explicação inteira, do zero, em uma sentada.** Os outros documentos
 > deste diretório são roteados por especialidade — ótimos quando você já sabe
 > o que procura. Este é o único que assume que você não sabe nada, e conta a
@@ -189,9 +191,10 @@ Cada elo da combinação é **asserção executável**, não promessa de README:
 - **arquitetura como teste** — um `import sqlite3` dentro do núcleo puro
   quebra a suíte; `usecases` que importe `api` quebra a suíte; um `UseCase`
   com dois métodos públicos quebra a suíte;
-- **contratos epistêmicos** ([`epistemics.toml`](../epistemics.toml)) — 19
-  mecanismos heurísticos declaram pressupostos, garantia **relativa a quê**,
-  modos de falha e fallback. Garantia universal é **proibida** pelo lint, e
+- **contratos epistêmicos** ([`epistemics.toml`](../epistemics.toml)) — cada
+  mecanismo heurístico (a contagem viva sai de `corpusmith context`) declara
+  pressupostos, garantia **relativa a quê**, modos de falha, fallback e o que
+  ESCREVE. Garantia universal é **proibida** pelo lint, e
   o teste cruza os parâmetros declarados com as constantes reais: um
   contrato que mente sobre o código **quebra a suíte**;
 - **invariantes com reparo** — INV-001..006 verificam índice órfão, índice

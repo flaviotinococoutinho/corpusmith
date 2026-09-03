@@ -1,5 +1,7 @@
 # 22 · RFC-004 — A ontologia da asserção: separar os eixos que `confidence` fundiu
 
+> **Altitude:** governança · **Status:** vivo
+
 > `AGENTS.md` §8 exige RFC para **heurística no caminho de escrita** e para
 > **mudança de schema não-aditiva**. Este RFC toca as duas coisas: a regra que
 > decide `confidence` numa fusão está no caminho de escrita, e a entidade

@@ -1,5 +1,7 @@
 # 03 · Fundamentos teóricos
 
+> **Altitude:** ciência · **Status:** vivo
+
 > POR QUE as escolhas funcionam. Cada fundamento cita o paper de origem,
 > a implementação (`kernel/` — stdlib pura, protegida por teste de
 > arquitetura) e o ponto exato de uso. A seção final explica a disciplina

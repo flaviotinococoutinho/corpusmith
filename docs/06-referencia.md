@@ -1,5 +1,7 @@
 # 06 · Referência dura
 
+> **Altitude:** referência · **Status:** vivo
+
 > A tabela da verdade que a skill `docs-sync` audita contra o código.
 > Se algo aqui divergir do código, o CÓDIGO vence e este arquivo deve
 > ser corrigido (nunca o contrário sem commit no código).
@@ -401,6 +403,12 @@ quantity 2 > geo/entity 1 (mais longo vence; empate → prioridade).
 PII sensível: cpf, cnpj, iban (com DV válido).
 
 ## 9. Camadas e regras de import (test_architecture.py)
+
+Dono desta lista: `architecture.toml` (`[project].layers`, `[pure]`,
+`[domain]`, `[[invariant]]`), cruzado com o código por
+`test_architecture_toml.py` e renderizado por `corpusmith context`. O
+desenho abaixo é ilustração; `compute/` (porta de cômputo, ADR-39) está no
+domínio livre de transporte.
 
 ```
 kernel/, normalize/,    PURO: proibido sqlite3, httpx, subprocess, fastapi,
