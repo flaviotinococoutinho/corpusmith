@@ -89,6 +89,10 @@ jobs:
       # deixado passar em silêncio é a mudança de COMPORTAMENTO na
       # fronteira FFI, não a de sintaxe.
       - run: pip install -e "backend[dev]" && pip install native/target/wheels/*.whl
+      # Falha alto antes do pytest: os testes mantêm importorskip para o
+      # fallback local suportado, mas a perna native exige o wheel.
+      - name: o wheel instalado precisa ser importável
+        run: python -c "import corpusmith_native"
       - name: a extensão nativa é EXERCITADA, não só construída
         run: python -m pytest backend/tests/test_compute_differential.py backend/tests/test_compute_properties.py -q
 
