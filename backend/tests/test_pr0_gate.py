@@ -108,6 +108,12 @@ def test_a_extensao_nativa_e_instalada_e_exercitada_pela_ci():
                      runs), (
         "a CI constrói o wheel nativo e não o INSTALA — os testes "
         "diferenciais voltam a pular em silêncio (verde-por-skip)")
+    assert re.search(
+        r"python -c [\"']import corpusmith_native[\"']",
+        runs,
+    ), (
+        "a perna native não prova que o wheel instalado é importável — "
+        "importorskip pode transformar uma quebra de carregamento em verde")
     assert "test_compute_differential.py" in runs, (
         "o wheel é instalado e ninguém o exercita: a equivalência "
         "Rust≈Python do ADR-39 não é verificada por nenhuma perna")
