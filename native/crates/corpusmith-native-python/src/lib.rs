@@ -1,6 +1,9 @@
 //! corpusmith_native — bindings PyO3 do compute plane (ADR-39).
 //!
-//! Regras: GIL LIBERADO durante todo trabalho pesado (allow_threads);
+//! Regras: intérprete DESANEXADO durante todo trabalho pesado
+//! (`Python::detach` — o `allow_threads` de PyO3 ≤ 0.24, renomeado em
+//! 0.25 junto com `with_gil` → `attach`; a semântica é a mesma: o GIL
+//! sai enquanto o Rust calcula, e o `py` prova que ele volta);
 //! resultados voltam como SoA (listas paralelas), nunca list[dict];
 //! erros viram exceções Python estáveis (ValueError/RuntimeError).
 
@@ -52,7 +55,7 @@ impl Graph {
                 "seed_ids e seed_weights com tamanhos diferentes"));
         }
         let csr = &self.csr;
-        let ranked = py.allow_threads(|| {
+        let ranked = py.detach(|| {
             ppr(csr, &seed_ids, &seed_weights, outside_restart, damping,
                 iterations, tolerance, top_k)
         });
@@ -63,7 +66,7 @@ impl Graph {
     fn brandes(&self, py: Python<'_>, top_k: usize)
                -> PyResult<(Vec<u32>, Vec<f64>)> {
         let csr = &self.csr;
-        let mut scored = py.allow_threads(|| brandes(csr));
+        let mut scored = py.detach(|| brandes(csr));
         scored.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1)
             .unwrap_or(std::cmp::Ordering::Equal)
             .then(a.0.cmp(&b.0)));
@@ -76,7 +79,7 @@ impl Graph {
     /// Rótulo de componente por nó (rótulo = menor id do componente).
     fn components(&self, py: Python<'_>) -> Vec<u32> {
         let csr = &self.csr;
-        py.allow_threads(|| components(csr))
+        py.detach(|| components(csr))
     }
 }
 
@@ -84,7 +87,7 @@ impl Graph {
 #[pyfunction]
 fn build_graph(py: Python<'_>, sources: Vec<u32>, targets: Vec<u32>,
                weights: Vec<f32>, n_nodes: usize) -> PyResult<Graph> {
-    let csr = py.allow_threads(
+    let csr = py.detach(
         || Csr::from_edges(&sources, &targets, &weights, n_nodes))
         .map_err(to_py_err)?;
     Ok(Graph { csr })
@@ -95,7 +98,7 @@ fn build_graph(py: Python<'_>, sources: Vec<u32>, targets: Vec<u32>,
 #[pyo3(signature = (texts, shingle = 3))]
 fn simhash64_batch(py: Python<'_>, texts: Vec<String>, shingle: usize)
                    -> Vec<u64> {
-    py.allow_threads(|| simhash_batch(&texts, shingle))
+    py.detach(|| simhash_batch(&texts, shingle))
 }
 
 #[pyfunction]
@@ -107,7 +110,7 @@ fn hamming64(a: u64, b: u64) -> u32 {
 #[pyfunction]
 fn candidate_pairs64(py: Python<'_>, sketches: Vec<u64>, max_hamming: u32)
                      -> (Vec<u32>, Vec<u32>) {
-    py.allow_threads(|| candidate_pairs(&sketches, max_hamming))
+    py.detach(|| candidate_pairs(&sketches, max_hamming))
 }
 
 /// Proveniência do backend: versão, build e protocolo.

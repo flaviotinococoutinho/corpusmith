@@ -2038,3 +2038,52 @@ mapa. Um selo ✅ que cite arquivo em vez de teste passa a ser bug de
 documentação com guarda. **Dívidas declaradas**: docs gerados com teste de
 frescor e cabeçalho de contrato por módulo (`docs/18` §11 Q-19); o ledger
 de versões (`v2.1` em `ontology.toml`/ADR-54 com produto 2.0.0 — Q-26).
+
+### ADR-58 — PyO3 0.29 e a extensão nativa que passa a ser EXERCITADA, não só construída (v2.0.0)
+**Compute plane: ADR-39; precedente de processo: ADR-47 (o binário
+empacotado) e G-2 (o ramo `[ml]`).**
+
+**Contexto medido.** O Dependabot abriu o bump de `pyo3` 0.23.5 → 0.29.0 e a
+perna `native` da CI reprovou com **seis** erros `E0599`, todos o mesmo:
+`no method named allow_threads found for struct Python<'py>`. A causa não é
+defeito do bump — é renomeação de API: o PyO3 0.25 trocou o vocabulário do
+GIL (`Python::allow_threads` → `Python::detach`, `Python::with_gil` →
+`Python::attach`) e o 0.29 removeu os nomes antigos. Os seis erros são os
+seis pontos onde este crate libera o intérprete durante trabalho pesado —
+nenhuma outra parte da migração de seis versões menores tocou o código, que
+já usava a API `Bound` desde a 0.23.
+
+**O achado que o bump revelou, e que é maior que ele.** A perna `native`
+construía o wheel com `maturin build` e **nunca o instalava**. Como
+`backend/tests/test_compute_differential.py` abre com
+`pytest.importorskip("corpusmith_native")`, os testes diferenciais do
+ADR-39 — igualdade exata no determinístico, `|Δ| ≤ 1e-8` em PPR/Brandes —
+**pulavam em todas as pernas da CI**. A equivalência Rust≈Python, que é a
+única prova de que o acelerador não muda o significado, nunca era
+exercitada. O bump quebrou a COMPILAÇÃO e por isso foi visto; uma mudança
+de COMPORTAMENTO na fronteira FFI teria passado verde.
+
+**Adotado**: (1) `pyo3 = "0.29"` e os seis `py.allow_threads(…)` →
+`py.detach(…)` — mesma semântica, nome novo, com a razão registrada no
+docstring do módulo para quem vier do vocabulário antigo; (2) a CI instala
+o wheel e **roda** os diferenciais; (3) o token
+`test_compute_differential.py` entra em `[gate].ci_enforced`; (4) uma
+asserção direta sobre o `ci.yml`
+(`test_a_extensao_nativa_e_instalada_e_exercitada_pela_ci`) exige a
+instalação **e** a execução — porque o token não guarda a si mesmo:
+medido por mutação, apagá-lo deixava a suíte verde; (5) `nfr.toml`
+NFR-PKG-002 registra o requisito com o limite dito (o `importorskip`
+continua pulando fora da CI, e o fallback Python segue suportado).
+
+**Rejeitado**: permanecer em 0.23 e fechar o PR do Dependabot — a migração
+custou seis renomeações e a dívida na única dependência de fronteira FFI
+cresceria a cada versão; trocar o `importorskip` por falha dura — o
+fallback Python é comportamento suportado pelo ADR-39, e exigir Rust para
+rodar a suíte contradiria "o produto funciona sem Rust".
+
+**Consequências**: a suíte local com a extensão instalada passa de 1098
+para 1112 testes (os 14 diferenciais deixam de pular); o wheel abi3-py311
+segue compatível; nenhuma mudança de comportamento, de schema ou de
+autoridade. **Limite declarado**: nem o token nem a asserção provam que o
+wheel instalado é o do commit — a CI o constrói e instala no mesmo job, e
+essa cadeia é premissa, não garantia.

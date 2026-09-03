@@ -74,9 +74,23 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
+      - run: git config --global user.email ci@corpusmith && git config --global user.name CI
       - run: cargo test --workspace --manifest-path native/Cargo.toml
       - run: pip install maturin && maturin build --release -m native/crates/corpusmith-native-python/Cargo.toml -o native/target/wheels
       - run: cargo build --release --manifest-path native/Cargo.toml -p corpusmith-native-worker
+      # O wheel era CONSTRUÍDO e nunca instalado, então
+      # `pytest.importorskip("corpusmith_native")` fazia os testes
+      # diferenciais do ADR-39 pularem em TODAS as pernas da CI: a
+      # equivalência Rust≈Python — a única prova de que o acelerador não
+      # muda o significado — nunca era exercitada. É o mesmo verde-por-skip
+      # que a G-2 fechou para o ramo [ml] e o ADR-47 para o binário
+      # empacotado: construir não é o mesmo que funcionar. Medido quando o
+      # bump do PyO3 (0.23 → 0.29) quebrou a compilação: o que a CI teria
+      # deixado passar em silêncio é a mudança de COMPORTAMENTO na
+      # fronteira FFI, não a de sintaxe.
+      - run: pip install -e "backend[dev]" && pip install native/target/wheels/*.whl
+      - name: a extensão nativa é EXERCITADA, não só construída
+        run: python -m pytest backend/tests/test_compute_differential.py backend/tests/test_compute_properties.py -q
 
   # PR-0.1: o caminho EMPACOTADO passa a ser construído E EXECUTADO pela CI.
   #
