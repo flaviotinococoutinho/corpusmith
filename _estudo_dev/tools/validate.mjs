@@ -5,15 +5,17 @@ import { fileURLToPath } from "node:url";
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const runtimeFiles=[
-  "index.html","assets/styles.css","assets/app.js",
+  "manifest.json","index.html","assets/styles.css","assets/progress.js","assets/app.js",
   "data/catalog.js","data/plan.js","data/questions.js",
   "data/commands.js","data/references.js","data/evidence.js"
 ];
 const text=Object.fromEntries(runtimeFiles.map((p)=>[p,fs.readFileSync(path.join(root,p),"utf8")]));
+const manifest=JSON.parse(text["manifest.json"]);
 const context={window:{}};
 for(const p of runtimeFiles.filter((x)=>x.startsWith("data/"))){
   vm.runInNewContext(text[p],context,{filename:p,timeout:2000});
 }
+vm.runInNewContext(text["assets/progress.js"],context,{filename:"assets/progress.js",timeout:2000});
 const E=context.window.ESTUDO;
 const errors=[];
 const assert=(condition,message)=>{if(!condition)errors.push(message);};
@@ -22,12 +24,18 @@ const unique=(items,key,label)=>{
   assert(values.length===new Set(values).size,label+" possui IDs duplicados");
 };
 
-assert(E.modules.length===15,"esperado 15 módulos");
-assert(E.concepts.length===203,"esperado 203 conceitos");
-assert(E.questions.length===105,"esperado 105 questões");
-assert(E.plan.length===21,"esperado 21 dias");
-assert(E.labs.length===21,"esperado 21 laboratórios");
-assert(E.claims.length===15&&E.evidence.length===15,"esperado ledger de 15 claims/evidências");
+const actualCounts={
+  modules:E.modules.length,concepts:E.concepts.length,relations:E.relations.length,
+  claims:E.claims.length,evidence:E.evidence.length,questions:E.questions.length,
+  days:E.plan.length,labs:E.labs.length,commands:E.commands.length,references:E.references.length
+};
+for(const [name,expected] of Object.entries(manifest.counts||{})){
+  assert(Object.hasOwn(actualCounts,name),"contagem desconhecida no manifest: "+name);
+  assert(actualCounts[name]===expected,`manifest declara ${expected} ${name}; runtime contém ${actualCounts[name]}`);
+}
+for(const name of Object.keys(actualCounts))assert(Object.hasOwn(manifest.counts||{},name),"contagem ausente no manifest: "+name);
+const declaredRuntime=(manifest.runtimeFiles||[]).map((p)=>p.replace(/^\.\//,""));
+assert(JSON.stringify(declaredRuntime)===JSON.stringify(runtimeFiles),"runtimeFiles do manifest diverge do pacote validado");
 unique(E.modules,(x)=>x.id,"módulos");
 unique(E.concepts,(x)=>x.id,"conceitos");
 unique(E.questions,(x)=>x.id,"questões");
@@ -35,6 +43,24 @@ unique(E.commands,(x)=>x.id,"comandos");
 unique(E.references,(x)=>x.id,"fontes");
 unique(E.claims,(x)=>x.id,"claims");
 unique(E.evidence,(x)=>x.id,"evidências");
+
+const blankProgress={format:"estudo-dev-progress",schemaVersion:"1.0.0",completedDays:[],dayScores:{},questionScores:{},checkpoints:[],reviews:[]};
+const normalizeProgress=(candidate)=>vm.runInNewContext(
+  "window.ESTUDO.normalizeProgressState("+JSON.stringify(candidate)+")",
+  context,
+  {filename:"progress-validation",timeout:2000}
+);
+assert(JSON.stringify(normalizeProgress(blankProgress))===JSON.stringify(blankProgress),"progresso vazio válido não normaliza de forma estável");
+for(const [label,candidate] of [
+  ["reviews nulo",{...blankProgress,reviews:null}],
+  ["score fora da faixa",{...blankProgress,dayScores:{1:5}}],
+  ["dia duplicado",{...blankProgress,completedDays:[1,1]}],
+  ["prototype escapado",JSON.parse('{"format":"estudo-dev-progress","schemaVersion":"1.0.0","completedDays":[],"dayScores":{},"questionScores":{},"checkpoints":[],"reviews":[],"\\u005f\\u005fproto\\u005f\\u005f":{}}')]
+]){
+  let rejected=false;
+  try{normalizeProgress(candidate);}catch(_){rejected=true;}
+  assert(rejected,"importação aceitou "+label);
+}
 
 const moduleIds=new Set(E.modules.map((x)=>x.id));
 const sourceIds=new Set(E.references.map((x)=>x.id));
@@ -88,8 +114,6 @@ if(errors.length){
   process.exit(1);
 }
 console.log(JSON.stringify({
-  status:"ok",modules:E.modules.length,concepts:E.concepts.length,
-  questions:E.questions.length,days:E.plan.length,labs:E.labs.length,
-  commands:E.commands.length,references:E.references.length,
+  status:"ok",...actualCounts,
   absoluteRemoteLinks:0
 },null,2));
