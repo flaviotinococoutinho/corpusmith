@@ -1,0 +1,10 @@
+{
+  "name": "estudo-dev-portal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Portal local-first e auditável para estudo Backend Senior/Staff",
+  "scripts": {
+    "validate": "node ./tools/validate.mjs"
+  }
+}

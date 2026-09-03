@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Portal offline de estudo para Backend Java/Kotlin Senior/Staff">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'">
+  <title>Estudo Dev · Backend Senior/Staff</title>
+  <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Pular para o conteúdo</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navegação principal">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">ED</span>
+        <div><strong>Estudo Dev</strong><small>Backend · Senior/Staff</small></div>
+      </div>
+      <nav id="primary-nav">
+        <a href="#/inicio" data-route="inicio"><span aria-hidden="true">⌂</span>Visão geral</a>
+        <a href="#/mapa" data-route="mapa"><span aria-hidden="true">◇</span>Mapa ontológico</a>
+        <a href="#/conceitos" data-route="conceitos"><span aria-hidden="true">▤</span>Conceitos</a>
+        <a href="#/trilhas" data-route="trilhas"><span aria-hidden="true">↗</span>Trilhas</a>
+        <a href="#/entrevistas" data-route="entrevistas"><span aria-hidden="true">◉</span>Entrevistas</a>
+        <a href="#/laboratorios" data-route="laboratorios"><span aria-hidden="true">⌘</span>Laboratórios</a>
+        <a href="#/comandos" data-route="comandos"><span aria-hidden="true">›_</span>Comandos</a>
+        <a href="#/fontes" data-route="fontes"><span aria-hidden="true">≡</span>Fontes</a>
+        <a href="#/checkpoint" data-route="checkpoint"><span aria-hidden="true">✓</span>Checkpoint</a>
+      </nav>
+      <div class="sidebar-footer">
+        <p><span class="status-dot"></span>Offline · sem telemetria</p>
+        <button id="export-button" class="quiet-button" type="button">Exportar progresso</button>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <button id="menu-button" class="icon-button mobile-only" type="button" aria-label="Abrir navegação" aria-expanded="false">☰</button>
+        <button id="search-button" class="search-trigger" type="button">
+          <span aria-hidden="true">⌕</span>
+          <span>Buscar conceitos, regras e perguntas</span>
+          <kbd>/</kbd>
+        </button>
+        <div class="topbar-actions">
+          <button id="density-button" class="icon-button" type="button" aria-label="Alternar densidade">≣</button>
+          <button id="theme-button" class="icon-button" type="button" aria-label="Alternar tema">◐</button>
+        </div>
+      </header>
+
+      <main id="main" tabindex="-1">
+        <section id="screen-inicio" class="screen" data-screen="inicio">
+          <div class="hero">
+            <div>
+              <p class="eyebrow">SISTEMA DE ESTUDO · EDIÇÃO 1.0</p>
+              <h1>Conhecimento que pode ser <em>explicado, testado e defendido</em></h1>
+              <p class="lede">Percorra mecanismo, falha, evidência e decisão. Sua nota mede o que você consegue provar — não o que parece familiar.</p>
+              <div class="hero-actions">
+                <a class="button primary" id="continue-link" href="#/trilhas">Continuar próxima sessão</a>
+                <a class="button secondary" href="#/mapa">Explorar o mapa</a>
+              </div>
+            </div>
+            <div class="hero-compass" aria-label="Ciclo de domínio">
+              <div class="orbit orbit-a"><span>mecanismo</span></div>
+              <div class="orbit orbit-b"><span>evidência</span></div>
+              <div class="orbit orbit-c"><span>trade-off</span></div>
+              <div class="core"><strong>0–4</strong><small>domínio</small></div>
+            </div>
+          </div>
+
+          <div class="metric-grid" id="metric-grid"></div>
+
+          <div class="dashboard-grid">
+            <section class="panel span-2">
+              <div class="section-heading">
+                <div><p class="eyebrow">PRÓXIMA AÇÃO</p><h2 id="next-day-title">Sessão de estudo</h2></div>
+                <span class="pill" id="next-day-duration">75 min</span>
+              </div>
+              <p id="next-day-objective"></p>
+              <div id="next-day-evidence" class="evidence-callout"></div>
+              <a class="text-link" href="#/trilhas">Abrir plano e critério de conclusão →</a>
+            </section>
+            <section class="panel">
+              <p class="eyebrow">REVISÕES</p>
+              <h2>Fila cognitiva</h2>
+              <div id="review-queue" class="mini-list"></div>
+            </section>
+            <section class="panel">
+              <p class="eyebrow">LACUNAS</p>
+              <h2>Menores notas</h2>
+              <div id="gap-list" class="mini-list"></div>
+            </section>
+            <section class="panel span-2">
+              <div class="section-heading">
+                <div><p class="eyebrow">ROTA TOPOLOGICA</p><h2>Da invariante ao mecanismo durável</h2></div>
+              </div>
+              <ol class="causal-chain">
+                <li><strong>Negócio</strong><span>invariante</span></li>
+                <li><strong>Contrato</strong><span>dados</span></li>
+                <li><strong>Consistência</strong><span>eventos</span></li>
+                <li><strong>Falhas</strong><span>recuperação</span></li>
+                <li><strong>SLO</strong><span>telemetria</span></li>
+                <li><strong>Evolução</strong><span>guardrail</span></li>
+              </ol>
+            </section>
+          </div>
+        </section>
+
+        <section id="screen-mapa" class="screen" data-screen="mapa" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">ONTOLOGIA</p><h1>Mapa de competências</h1><p>Os módulos mostram dependências; selecione um nó para abrir conceitos e relações.</p></div>
+          </div>
+          <div class="graph-layout">
+            <section class="panel graph-panel" aria-labelledby="graph-title">
+              <h2 id="graph-title" class="sr-only">Grafo visual</h2>
+              <svg id="knowledge-graph" viewBox="0 0 1000 680" role="img" aria-describedby="graph-description"></svg>
+              <p id="graph-description" class="sr-only">Grafo dos quinze módulos e suas dependências. Há uma lista textual equivalente ao lado.</p>
+              <div class="graph-legend">
+                <span><i class="dot p0"></i>P0</span><span><i class="dot p1"></i>P1</span><span><i class="line"></i>pré-requisito</span>
+              </div>
+            </section>
+            <aside class="panel graph-detail" id="graph-detail">
+              <p class="eyebrow">NÓ SELECIONADO</p>
+              <h2>Selecione um módulo</h2>
+              <p>Use mouse, toque ou Tab. A lista abaixo oferece a mesma navegação sem depender do desenho.</p>
+              <div id="graph-text-list" class="graph-text-list"></div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="screen-conceitos" class="screen" data-screen="conceitos" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">CATÁLOGO</p><h1>Conceitos e regras</h1><p id="concept-count-label"></p></div>
+          </div>
+          <div class="filter-bar" aria-label="Filtros do catálogo">
+            <label>Buscar <input id="concept-search" type="search" placeholder="JMM, outbox, SLO…"></label>
+            <label>Módulo <select id="module-filter"><option value="">Todos</option></select></label>
+            <label>Prioridade <select id="priority-filter"><option value="">Todas</option><option>P0</option><option>P1</option><option>P2</option><option>P3</option></select></label>
+            <label>Natureza <select id="kind-filter"><option value="">Todas</option></select></label>
+            <button id="clear-filters" class="quiet-button" type="button">Limpar</button>
+          </div>
+          <div id="concept-grid" class="card-grid"></div>
+          <nav class="pagination" aria-label="Paginação do catálogo">
+            <button id="concept-prev" type="button">Anterior</button><span id="concept-page"></span><button id="concept-next" type="button">Próxima</button>
+          </nav>
+        </section>
+
+        <section id="screen-trilhas" class="screen" data-screen="trilhas" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">PRÁTICA DELIBERADA</p><h1>Plano de 21 dias</h1><p>45–90 minutos, artefato verificável e revisão espaçada.</p></div>
+            <div class="progress-ring" id="plan-progress" aria-label="Progresso do plano"></div>
+          </div>
+          <div class="plan-layout">
+            <div id="plan-list" class="plan-list"></div>
+            <aside class="panel sticky-panel">
+              <p class="eyebrow">CICLO DA SESSÃO</p>
+              <ol class="session-cycle">
+                <li><strong>20%</strong><span>recuperar sem consulta</span></li>
+                <li><strong>60%</strong><span>construir e executar</span></li>
+                <li><strong>30%</strong><span>testar adversarialmente</span></li>
+                <li><strong>10%</strong><span>registrar e responder</span></li>
+              </ol>
+              <p class="note">Os percentuais representam ênfase e podem se sobrepor durante a prática.</p>
+            </aside>
+          </div>
+        </section>
+
+        <section id="screen-entrevistas" class="screen" data-screen="entrevistas" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">SIMULADOR</p><h1>Entrevistas em 120 segundos</h1><p>Conclusão primeiro; revele o gabarito somente após responder.</p></div>
+            <div id="timer" class="timer" aria-live="polite"><strong>02:00</strong><span>pronto</span></div>
+          </div>
+          <div class="interview-layout">
+            <section class="panel interview-card">
+              <div class="question-meta"><span id="question-id"></span><span id="question-module"></span></div>
+              <h2 id="question-prompt"></h2>
+              <div class="timer-actions">
+                <button id="timer-start" class="button primary" type="button">Iniciar</button>
+                <button id="timer-reset" class="button secondary" type="button">Reiniciar</button>
+                <button id="next-question" class="quiet-button" type="button">Sortear outra</button>
+              </div>
+              <label for="answer-notes">Notas da sua resposta</label>
+              <textarea id="answer-notes" rows="7" placeholder="Conclusão → mecanismo → falhas → trade-off → produção"></textarea>
+              <details id="answer-details">
+                <summary>Revelar resposta esperada</summary>
+                <div class="answer-block"><h3>Versão de 30 segundos</h3><p id="answer-30"></p></div>
+                <div class="answer-block"><h3>Versão de 120 segundos</h3><p id="answer-120"></p></div>
+                <div class="answer-block"><h3>Deve mencionar</h3><ul id="must-mention"></ul></div>
+              </details>
+              <fieldset class="score-picker">
+                <legend>Sua nota com evidência</legend>
+                <div id="question-score-buttons"></div>
+              </fieldset>
+            </section>
+            <aside class="panel">
+              <p class="eyebrow">RÉGUA 0–4</p>
+              <ol class="rubric-list">
+                <li><b>0</b><span>inseguro ou incorreto</span></li>
+                <li><b>1</b><span>superficial, sem mecanismo</span></li>
+                <li><b>2</b><span>happy path</span></li>
+                <li><b>3</b><span>produção, falhas e operação</span></li>
+                <li><b>4</b><span>influência e mecanismo durável</span></li>
+              </ol>
+            </aside>
+          </div>
+        </section>
+
+        <section id="screen-laboratorios" class="screen" data-screen="laboratorios" hidden>
+          <div class="page-heading"><div><p class="eyebrow">EVIDÊNCIA EXECUTÁVEL</p><h1>Laboratórios</h1><p>Cada sessão termina com uma saída que outra pessoa pode verificar.</p></div></div>
+          <div id="lab-grid" class="card-grid wide"></div>
+        </section>
+
+        <section id="screen-comandos" class="screen" data-screen="comandos" hidden>
+          <div class="page-heading"><div><p class="eyebrow">CONSULTA RÁPIDA</p><h1>Comandos e sequências</h1><p>Leia o risco antes de copiar; ambiente e versão fazem parte do comando.</p></div></div>
+          <div class="filter-bar">
+            <label>Ferramenta <select id="command-tool-filter"><option value="">Todas</option></select></label>
+            <label>Risco <select id="command-risk-filter"><option value="">Todos</option><option value="R">R · leitura</option><option value="M">M · mutação</option><option value="P">P · produção</option><option value="S">S · sandbox</option><option value="V">V · versão</option></select></label>
+          </div>
+          <div id="command-grid" class="command-grid"></div>
+        </section>
+
+        <section id="screen-fontes" class="screen" data-screen="fontes" hidden>
+          <div class="page-heading"><div><p class="eyebrow">PROVENIÊNCIA</p><h1>Documentos e referências</h1><p>Catálogo por identificador relativo; nenhuma requisição externa é feita.</p></div></div>
+          <div class="epistemic-strip">
+            <span data-e="OF">OF · oficial</span><span data-e="PU">PU · prática geral</span><span data-e="INF">INF · inferência</span><span data-e="PF">PF · pessoal</span><span data-e="PS">PS · síntese pessoal</span>
+          </div>
+          <section class="panel claim-panel"><div class="section-heading"><div><p class="eyebrow">CLAIM → EVIDÊNCIA → FONTE</p><h2>Ledger epistemológico</h2></div><span class="pill">15 afirmações auditáveis</span></div><div class="table-wrap"><table><caption class="sr-only">Afirmações, status, confiança e evidência</caption><thead><tr><th>Afirmação</th><th>Natureza</th><th>Status</th><th>Confiança</th><th>Fonte</th></tr></thead><tbody id="claim-ledger"></tbody></table></div></section><h2 class="catalog-title">Catálogo de fontes</h2><div id="reference-grid" class="card-grid wide"></div>
+        </section>
+
+        <section id="screen-checkpoint" class="screen" data-screen="checkpoint" hidden>
+          <div class="page-heading"><div><p class="eyebrow">FEEDBACK LOOP</p><h1>Checkpoint de aprendizagem</h1><p>Registre erro e próxima correção enquanto a evidência ainda está fresca.</p></div></div>
+          <form id="checkpoint-form" class="panel form-grid">
+            <label>Dia <select id="checkpoint-day" required></select></label>
+            <label>Foco <input id="checkpoint-focus" required></label>
+            <label class="span-2">Prática executada <textarea id="checkpoint-practice" rows="3" required></textarea></label>
+            <label class="span-2">Saída / artefato <input id="checkpoint-output" required></label>
+            <fieldset class="span-2 score-picker"><legend>Nota 0–4</legend><div id="checkpoint-score-buttons"></div></fieldset>
+            <label class="span-2">Erros e lacunas <textarea id="checkpoint-errors" rows="3" required></textarea></label>
+            <label>Próxima correção <input id="checkpoint-next" required></label>
+            <label>Evidência relativa <input id="checkpoint-evidence" required placeholder="evidence/dia-08/test-output.txt"></label>
+            <div class="span-2 form-actions"><button class="button primary" type="submit">Salvar checkpoint</button><button id="import-button" class="button secondary" type="button">Importar progresso</button><input id="import-file" type="file" accept="application/json" hidden></div>
+          </form>
+          <section class="panel history-panel"><h2>Histórico local</h2><div id="checkpoint-history"></div></section>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="concept-dialog" aria-labelledby="concept-dialog-title">
+    <button class="dialog-close" type="button" aria-label="Fechar">×</button>
+    <div id="concept-dialog-content"></div>
+  </dialog>
+  <dialog id="global-search-dialog" aria-labelledby="global-search-title">
+    <button class="dialog-close" type="button" aria-label="Fechar">×</button>
+    <h2 id="global-search-title">Busca global</h2>
+    <input id="global-search-input" type="search" placeholder="Digite pelo menos 2 caracteres" autocomplete="off">
+    <div id="global-search-results"></div>
+  </dialog>
+  <div id="live-region" class="sr-only" aria-live="polite"></div>
+
+  <script defer src="./data/catalog.js"></script>
+  <script defer src="./data/plan.js"></script>
+  <script defer src="./data/questions.js"></script>
+  <script defer src="./data/commands.js"></script>
+  <script defer src="./data/references.js"></script>
+  <script defer src="./data/evidence.js"></script>
+  <script defer src="./assets/progress.js"></script>
+  <script defer src="./assets/app.js"></script>
+</body>
+</html>

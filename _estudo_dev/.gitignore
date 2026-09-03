@@ -1,0 +1,12 @@
+data/private/
+references/private/
+documentos/private/
+recordings/
+exports/
+*.jfr
+*.m4a
+*.mp3
+*.key
+*.pem
+.env
+.DS_Store

@@ -1,0 +1,26 @@
+name: Estudo Dev
+
+on:
+  pull_request:
+    paths:
+      - "_estudo_dev/**"
+      - ".github/workflows/estudo-dev.yml"
+  push:
+    branches: [main]
+    paths:
+      - "_estudo_dev/**"
+      - ".github/workflows/estudo-dev.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm --prefix _estudo_dev run validate
