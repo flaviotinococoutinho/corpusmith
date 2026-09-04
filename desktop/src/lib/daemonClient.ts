@@ -175,6 +175,100 @@ export interface NextActionsQueue {
   by_origin: Record<string, number>;
 }
 
+// -------------------------------------------------- Q-1: a ficha do conceito
+// Tipar a ficha aqui é o que faz `tsc --noEmit` cobrar a tela quando o
+// backend renomear um campo. `computed` aparece em TODA projeção lida de
+// propósito: é o campo que separa "ainda não calculado" de "nada
+// observado", e uma tela que o ignore diz a segunda frase nos dois casos.
+export interface Guarantee {
+  mechanism_id: string;
+  guarantee: string;
+  relative_to: string;
+  misinterpretations: string[];
+}
+
+export interface SheetStability {
+  computed: boolean;
+  edits: number | null;
+  lifecycle: string | null;
+  last_edit_at: number | null;
+  computed_from: string | null;
+  freshness: { state: string; reason: string } | null;
+  refresh: string;
+  means: string;
+}
+
+export interface SheetDifficulty {
+  computed: boolean;
+  score: number | null;
+  measured: boolean;
+  reason: string;
+  components: Record<string, number>;
+  refresh: string;
+  means: string;
+}
+
+export interface SheetLens {
+  computed: boolean;
+  entities: {
+    canonical: string; base: string; sense: string | null;
+    authority: string | null; kind: string;
+    ambiguous: boolean; mentions: number;
+  }[];
+  total: number;
+  qualified: number;
+  level: string;
+  means: string;
+  refresh: string;
+}
+
+export interface SheetDivergence {
+  computed: boolean;
+  conflicts: {
+    rule: string; identifier: string;
+    with_pages: string[]; message: string;
+  }[];
+  means: string;
+  refresh: string;
+}
+
+export interface Applications {
+  page: string;
+  cases: { page: string; rel: string; via: string }[];
+  measurement: {
+    edges: number; ambiguous_targets: number;
+    ambiguous_fraction: number | null; note: string;
+  };
+}
+
+export interface ConceptSheet {
+  page: string;
+  title: string;
+  cost: { read_minutes: number; words: number; how: string };
+  stability: SheetStability;
+  difficulty: SheetDifficulty;
+  applications: Applications;
+  lens: SheetLens;
+  divergence: SheetDivergence;
+  guarantees: Guarantee[];
+  not_measured: string[];
+  prose_enabled: boolean;
+  prose: string | null;
+}
+
+export interface StabilityView {
+  computed: boolean;
+  computed_from: string | null;
+  freshness: { state: string; reason: string } | null;
+  pages: number;
+  stability: {
+    rel_path: string; edits: number; first_commit_at: number | null;
+    last_edit_at: number | null; lifecycle: string; computed_from: string;
+  }[];
+  means: string;
+  refresh: string;
+}
+
 /** Erro de ato com o CORPO preservado (F1-PR6).
  *
  *  `get`/`post` genéricos descartam `r.json()` em `!r.ok` — um 422 virava
@@ -330,6 +424,19 @@ export class DaemonClient {
   page = (path: string) =>
     this.get<PageDetail>(`/cockpit/page?path=${encodeURIComponent(path)}`);
   markStale = (path: string) => this.post("/cockpit/page/stale", { path });
+  // ------------------------------------- Q-1: a superfície de estudo (V3/V5/V6)
+  // Três capacidades que existiam só no CLI. Nenhuma delas recomputa nada:
+  // o refresh é `corpusmith stability` / `corpusmith difficulty`, e é por
+  // isso que a resposta traz `computed`/`freshness` em vez de números que
+  // fingem ser de agora.
+  sheet = (path: string) =>
+    this.get<ConceptSheet>(`/cockpit/sheet?page=${encodeURIComponent(path)}`);
+  stability = (limit = 0) =>
+    this.get<StabilityView>(
+      `/cockpit/stability${limit ? `?limit=${limit}` : ""}`);
+  applications = (path: string) =>
+    this.get<Applications>(
+      `/cockpit/applications?page=${encodeURIComponent(path)}`);
   promote = (body: PromoteBody) => this.post<PromoteResult>("/cockpit/promote", body);
   memory = () => this.get<any>("/cockpit/memory");
   quality = () => this.get<any>("/cockpit/quality");

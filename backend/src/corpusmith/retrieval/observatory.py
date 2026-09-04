@@ -12,6 +12,7 @@ from ..kernel.topology import (fragile_bridges,
 from ..okf.bundle import BundleReader
 from ..runtime.db import connect
 from ..settings import Settings
+from . import projections
 
 EDGE_WEIGHT = {"extracted": 1.0, "inferred": 0.5, "ambiguous": 0.15}
 
@@ -200,9 +201,16 @@ def insights(settings: Settings) -> dict:
     # a projeção tem comando próprio: `corpusmith difficulty`). Só as
     # MEDIDAS entram: `measured=0` é "nada observado", não "fácil", e
     # listá-las empataria o topo com páginas sobre as quais nada se sabe.
-    difficulty = [dict(r) for r in idx.execute(
-        "SELECT rel_path, score, reason FROM page_difficulty "
-        "WHERE measured = 1 ORDER BY score DESC, rel_path LIMIT 5")]
+    #
+    # Q-1: a leitura passa por `projections` — o mesmo leitor da ficha, e
+    # é ele que traz `computed`. Lista vazia tinha DUAS causas indistintas
+    # aqui ("nunca rodou" e "rodou, nada medido") e o painel dizia a
+    # segunda nos dois casos.
+    difficulty_view = projections.difficulty(settings, limit=5,
+                                             measured_only=True)
+    difficulty = [{"rel_path": r["rel_path"], "score": r["score"],
+                   "reason": r["reason"]}
+                  for r in difficulty_view["difficulty"]]
     bridge_rows = [dict(r) for r in idx.execute(
         "SELECT src, dst, weight FROM graph_bridges ORDER BY weight LIMIT 5")]
     idx.close()
@@ -275,6 +283,9 @@ def insights(settings: Settings) -> dict:
             "eval": eval_rows,
             "abstention": {"open": miss_open, "recurrent": miss_recurrent},
             "difficulty": difficulty,
+            # "rodou e nada foi medido" ≠ "nunca rodou" — sem este campo
+            # a tela dizia a primeira frase nos dois casos
+            "difficulty_computed": difficulty_view["computed"],
         },
         "topology": {
             "nodes": len(graph["nodes"]), "edges": len(graph["edges"]),

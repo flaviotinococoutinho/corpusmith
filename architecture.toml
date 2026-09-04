@@ -63,7 +63,7 @@ schema_version = 10         # + pattern_verdicts (juízo humano sobre padrão co
 name = "index.db"
 authority = "nenhuma (projeção)"
 rebuildable = true
-schema_version = 10         # F4-PR2: page_overlay contested → low_yield (ADR-52)
+schema_version = 11         # Q-1: page_divergence (com QUEM a página desacorda)
 [[database]]
 name = "cold.db"
 authority = "memória fria"

@@ -197,3 +197,28 @@ CREATE TABLE IF NOT EXISTS page_difficulty(
   measured   INTEGER NOT NULL DEFAULT 0,
   reason     TEXT NOT NULL DEFAULT '',
   components TEXT NOT NULL DEFAULT '{}');   -- JSON: parcela por componente
+
+-- Q-1 (RFC-006 V6 no cockpit): "onde diverge" — com QUEM esta página
+-- desacorda, persistido.
+--
+-- Por que uma tabela e não uma leitura ao vivo: a ficha do conceito é uma
+-- TELA, e `check_corpus` percorre o bundle inteiro. Recomputar o lint na
+-- abertura seria o resíduo de custo P-11 exatamente onde ele mais dói — e
+-- foi por isso que a ficha deixou de recomputar estabilidade e dificuldade.
+-- A passada de lint tem UM dono (`ComputeDifficulty`) e alimenta DUAS
+-- projeções: o índice (os números) e a divergência (com quem). Duas
+-- passadas custariam o dobro e poderiam discordar entre si.
+--
+-- `with_pages` é o GRUPO inteiro do finding (inclusive esta página): quem
+-- lê "diverge" precisa saber de quem. Tabela VAZIA é ambíguo por
+-- construção — "nunca computado" e "nenhuma divergência" se distinguem
+-- pela EXISTÊNCIA de `page_difficulty` (mesma passada), nunca por esta.
+CREATE TABLE IF NOT EXISTS page_divergence(
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  rel_path   TEXT NOT NULL,
+  rule       TEXT NOT NULL,          -- policy.contradiction_candidate | policy.factual_conflict
+  identifier TEXT NOT NULL DEFAULT '',
+  with_pages TEXT NOT NULL DEFAULT '[]',   -- JSON: o grupo do finding
+  message    TEXT NOT NULL DEFAULT '');
+CREATE INDEX IF NOT EXISTS idx_page_divergence_path
+  ON page_divergence(rel_path);

@@ -115,6 +115,26 @@ def test_fila_corrente_le_a_secao_11(pack):
     assert not (set(b["open"]) & set(b["closed"]))
 
 
+def test_nenhuma_linha_da_fila_e_largada_em_silencio(pack):
+    """O parser tem que VER toda linha `| Q-n |` da §11.
+
+    Medido ao fechar a Q-1: pôr o ✅ na PRIMEIRA célula (`| **Q-1** ✅ |`)
+    faz `_BACKLOG_ROW` não casar, e o item desaparece do mapa — nem
+    aberto nem fechado. O mapa continuava "verde" enquanto perdia um item,
+    que é a falha silenciosa que este arquivo existe para impedir. A
+    contagem por regex frouxa é a testemunha independente da regex
+    estrita do produto."""
+    secao = re.search(r"^## 11\..*?(?=^## |\Z)",
+                      (_ROOT / "docs/18-backlog-consolidado.md").read_text(),
+                      re.S | re.M).group(0)
+    citados = {m.group(1) for m in
+               re.finditer(r"^\|\s*\**(Q-\d+)\b", secao, re.M)}
+    vistos = set(pack["backlog"]["open"]) | set(pack["backlog"]["closed"])
+    assert citados == vistos, (
+        "linhas da fila que o mapa não enxerga: "
+        f"{sorted(citados - vistos)} — o ✅ vai na SEGUNDA coluna")
+
+
 def test_render_e_markdown_completo(pack):
     md = render(pack)
     for titulo in ("## Camadas", "## Gate", "## Invariantes",

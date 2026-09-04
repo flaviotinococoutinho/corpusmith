@@ -26,19 +26,37 @@ class MemoryFacade:
     def evaluate(self, notify=None) -> dict:
         return EvaluateMemory(self._settings, notify).execute()
 
+    # --- REFRESH: recomputa e persiste. Este é o ÚNICO dono (Q-1) ---------
     def stability(self, *, limit: int | None = None) -> dict:
         """O que menos muda (RFC-006 V3): recomputa a projeção de
         estabilidade editorial e devolve o ranking. Determinística para o
-        mesmo HEAD; "estável" = quieto no eixo de EDIÇÃO, nunca "correto"."""
+        mesmo HEAD; "estável" = quieto no eixo de EDIÇÃO, nunca "correto".
+
+        **Escreve.** Percorre a história do Git inteira — é comando de
+        refresh (CLI/job), nunca caminho de abertura de tela."""
         from ..usecases.compute_stability import ComputeStability
         return ComputeStability(self._settings, limit=limit).execute()
 
     def difficulty(self, *, limit: int | None = None) -> dict:
         """Onde o estudo trava (RFC-006 V4): recomputa o índice composto
         de dificuldade de EXPLICAR e devolve o ranking. Página sem sinal
-        sai com `medida=False` — silêncio não é facilidade."""
+        sai com `medida=False` — silêncio não é facilidade.
+
+        **Escreve.** Roda o lint do corpus inteiro e persiste as DUAS
+        projeções da passada (`page_difficulty` e `page_divergence`)."""
         from ..usecases.compute_difficulty import ComputeDifficulty
         return ComputeDifficulty(self._settings, limit=limit).execute()
+
+    # --- LEITURA: o que o cockpit consome; jamais recomputa ---------------
+    def stability_view(self, *, limit: int | None = None) -> dict:
+        """"O que menos muda" como está PERSISTIDO, com frescor.
+
+        A rota do cockpit passa por aqui e não por `stability()`: abrir um
+        painel não pode disparar `git log` da história inteira (P-11).
+        `computed: false` diz "ainda não calculado" — que não é o mesmo
+        que "nenhuma página é estável"."""
+        from ..retrieval import projections
+        return projections.stability(self._settings, limit=limit)
 
     def practical_cases(self, page: str) -> dict:
         """Onde este conceito se aplica (RFC-006 V5): casos declarados por

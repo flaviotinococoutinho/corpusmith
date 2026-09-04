@@ -2,12 +2,18 @@ import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { client } from "../lib/client";
+import type { ConceptSheet } from "../lib/daemonClient";
+import { ConceptSheetView } from "./ConceptSheetView";
 
 export function ExplorerPanel() {
   const [pages, setPages] = useState<any[]>([]);
   const [sel, setSel] = useState<any>(null);
   const [authOnly, setAuthOnly] = useState(false);          // v0.8 §11.2
   const [uses, setUses] = useState<Record<string, number>>({});
+  // Q-1: a ficha do conceito ao abrir a página. `null` é "sem ficha"
+  // (página que não existe mais no bundle, ou daemon fora) e não trava a
+  // leitura do texto — a ficha é COMPOSIÇÃO, o canônico é a autoridade.
+  const [sheet, setSheet] = useState<ConceptSheet | null>(null);
   useEffect(() => {
     client.pages().then(r => setPages(r.pages));
     client.authorities().then(r => {
@@ -24,7 +30,11 @@ export function ExplorerPanel() {
     }
     return g;
   }, [pages, authOnly]);
-  const open = (path: string) => client.page(path).then(setSel);
+  const open = (path: string) => {
+    setSheet(null);
+    client.sheet(path).then(setSheet).catch(() => setSheet(null));
+    return client.page(path).then(setSel);
+  };
 
   return (
     <div className="flex h-full text-sm">
@@ -52,7 +62,8 @@ export function ExplorerPanel() {
              : <p className="text-neutral-400">Selecione uma página.</p>}
       </div>
       {sel && (
-        <aside className="w-72 border-l p-3 overflow-auto">
+        <aside className="w-80 border-l p-3 overflow-auto">
+          {sheet && <div className="mb-4"><ConceptSheetView sheet={sheet} /></div>}
           <h3 className="font-medium mb-2">Frontmatter</h3>
           <table className="text-xs w-full">
             <tbody>{Object.entries(sel.meta).map(([k, v]) => (

@@ -248,6 +248,33 @@ def mount_cockpit(app: FastAPI, s: Settings, queue, gov, bus, auth) -> None:
                 "active_adapter": adapters.read_text().strip()
                                    if adapters.exists() else None}}
 
+    # ---------- A superfície de estudo (Q-1): a re-mira chega ao cockpit ---
+    # V3, V5 e V6 saíram CLI/facade-only — a reincidência da patologia de
+    # `docs/17` §1.4 ("o backend termina onde a interface começa"). As três
+    # rotas são LEITURA e passam pela facade (INV-ARCH-004); nenhuma delas
+    # recomputa projeção: refresh é `corpusmith stability` / `difficulty`,
+    # e abrir uma tela não pode disparar `git log` da história inteira nem
+    # o lint do corpus (P-11).
+    @app.get("/cockpit/sheet", dependencies=[Depends(auth)])
+    def concept_sheet(page: str):
+        """A ficha do conceito (V6): custo, o que permanece, onde trava,
+        sob que lente fala, onde diverge e onde se aplica."""
+        try:
+            return memory_facade.concept_sheet(page)
+        except KeyError as e:
+            raise HTTPException(404, str(e).strip("'"))
+
+    @app.get("/cockpit/stability", dependencies=[Depends(auth)])
+    def stability(limit: int = 0):
+        """O que menos muda (V3), do PERSISTIDO — com carimbo e frescor."""
+        return memory_facade.stability_view(limit=limit or None)
+
+    @app.get("/cockpit/applications", dependencies=[Depends(auth)])
+    def applications(page: str):
+        """Onde este conceito se aplica (V5): arestas TIPADAS declaradas
+        por ato humano, mais a medição do custo da granularidade."""
+        return memory_facade.practical_cases(page)
+
     # ---------- Qualidade epistêmica ----------
     @app.get("/cockpit/quality", dependencies=[Depends(auth)])
     def quality(mode: str = "write"):

@@ -37,7 +37,7 @@ _SCHEMAS = {
 # CREATE IF NOT EXISTS + _migrate idempotente ao abrir o banco restaurado).
 SCHEMA_VERSIONS = {
     "runtime.db": 10,    # + pattern_verdicts (juízo humano sobre padrão)
-    "index.db": 10,      # F4-PR2 (ADR-52): page_overlay contested → low_yield
+    "index.db": 11,      # Q-1: page_divergence (com QUEM a página desacorda)
     "cold.db": 1,
     "cognitive.db": 2,   # v0.19 base + v0.20 experiências/analogias
     "reference.db": 1,

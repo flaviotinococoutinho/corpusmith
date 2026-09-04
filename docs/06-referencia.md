@@ -272,6 +272,11 @@ difficulty`; pesos e tetos no `kernel/difficulty.py`, cruzados com
 `[mechanisms.explanation_difficulty]`). `measured=0` é **nada
 observado**, nunca "fácil"; SEM derivação declarada de propósito (dois
 dos cinco sinais são de uso e não movem o HEAD) ·
+`page_divergence(rel_path, rule, identifier, with_pages json, message)`
+— Q-1: COM QUEM a página desacorda, escrita na MESMA passada de lint que
+a dificuldade (um dono só do lint; a ficha lê, nunca recomputa). Tabela
+vazia é o estado normal de corpus sem conflito — "nunca calculado" se lê
+de `page_difficulty`, não daqui ·
 `page_stability(rel_path,edits,first_commit_at,last_edit_at,lifecycle,
 computed_from)` — RFC-006 V3: estabilidade EDITORIAL, projeção de
 bundle+Git (`corpusmith stability`; checkpoint `stability` em runtime.db;

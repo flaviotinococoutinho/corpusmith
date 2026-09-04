@@ -98,6 +98,23 @@ def test_as_superficies_orfas_do_f_ui_ganharam_consumidor():
         assert rota not in orfas, f"{rota} voltou a ficar sem superfície"
 
 
+def test_a_superficie_de_estudo_da_re_mira_tem_consumidor():
+    """Q-1: as três capacidades que saíram CLI/facade-only.
+
+    V3 ("o que menos muda"), V5 ("onde se aplica") e V6 (a ficha) tinham
+    use case, facade e comando de CLI — e nenhuma tela. É a reincidência
+    de `docs/17` §1.4 medida na trilha da re-mira, e a asserção positiva
+    (em vez de uma linha a menos no teto) é o que impede a superfície de
+    ser removida em silêncio: perder qualquer uma delas reprova AQUI, com
+    o nome da rota, não como um número que voltou a subir."""
+    orfas = {r for _, r, _ in _orfas()}
+    for rota in ("/cockpit/sheet", "/cockpit/stability",
+                 "/cockpit/applications"):
+        assert rota not in orfas, (
+            f"{rota} não tem superfície — a capacidade volta a existir só "
+            "no terminal")
+
+
 def _eventos_emitidos() -> set[str]:
     tipos = set()
     padrao = re.compile(
