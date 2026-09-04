@@ -2,6 +2,7 @@
 // tracing de consultas — cada item com a ação de curadoria mais provável.
 import { useEffect, useState } from "react";
 import { client } from "../lib/client";
+import type { StabilityView } from "../lib/daemonClient";
 import { DaemonUnavailable } from "./DaemonUnavailable";
 
 function Section({ title, children }: { title: string; children: any }) {
@@ -41,11 +42,16 @@ export function InsightsPanel() {
   const [traces, setTraces] = useState<any[]>([]);
   const [detail, setDetail] = useState<any>(null);
   const [gaps, setGaps] = useState<any>(null);
+  // Q-1 (V3): "o que menos muda" lê a projeção PERSISTIDA com o carimbo do
+  // checkpoint `stability`. Nunca recomputa na abertura do painel — o
+  // cálculo percorre a história do Git inteira (P-11) e tem comando próprio.
+  const [estab, setEstab] = useState<StabilityView | null>(null);
   const [notice, setNotice] = useState("");
   const load = () => {
     client.insights().then(setIns);
     client.traces().then(r => setTraces(r.traces));
     client.gaps().then(setGaps).catch(() => {});
+    client.stability(8).then(setEstab).catch(() => setEstab(null));
   };
   const [erro, setErro] = useState<unknown>(null);
   useEffect(() => { client.connect().then(load).catch(setErro); }, []);
@@ -124,9 +130,43 @@ export function InsightsPanel() {
                   <span className="text-neutral-500">{d.reason}</span>
                   <span className="tabular-nums">
                     {d.score.toFixed(2)}</span>
-                </div>)) : <div className="text-neutral-400">
-                nada observado ainda — rode `corpusmith difficulty` depois de
-                praticar; silêncio aqui não significa fácil</div>}
+                </div>))
+               /* Q-1: os DOIS vazios deixam de ser um só. Até aqui a
+                  segunda frase era dita nos dois casos — inclusive quando
+                  a projeção nunca tinha rodado, e portanto não dizia nada
+                  sobre página nenhuma. */
+               : g.difficulty_computed === false
+                 ? <div className="text-neutral-400">
+                     ainda não calculado — rode `corpusmith difficulty`</div>
+                 : <div className="text-neutral-400">
+                     nada observado ainda — rode `corpusmith difficulty` depois
+                     de praticar; silêncio aqui não significa fácil</div>}
+            </div>)}
+          {/* Q-1 (RFC-006 V3): o que menos muda. "Estável" é quieto no eixo
+              de EDIÇÃO — nunca "correto" nem "aprovado", e a ressalva vem do
+              contrato `editorial_stability` junto do número. */}
+          {estab && (
+            <div className="pt-1 border-t" aria-label="O que menos muda">
+              <b>🪨 O que menos muda</b>
+              {!estab.computed ? (
+                <div className="text-neutral-400">
+                  ainda não calculado — rode <code>{estab.refresh}</code></div>
+              ) : (<>
+                {estab.stability.map(p => (
+                  <div key={p.rel_path} className="flex items-baseline gap-1">
+                    <span className="font-mono truncate flex-1">
+                      {p.rel_path}</span>
+                    <span className="text-neutral-500">{p.lifecycle}</span>
+                    <span className="tabular-nums">{p.edits} ed.</span>
+                  </div>))}
+                <div className="text-neutral-400">
+                  {estab.means}
+                  {estab.computed_from &&
+                    ` · de ${estab.computed_from.slice(0, 7)}`}
+                  {estab.freshness && estab.freshness.state !== "fresh" &&
+                    ` · projeção ${estab.freshness.state}`}
+                </div>
+              </>)}
             </div>)}
           {/* F6 (P-8): o que a base JÁ falhou — misses abertos; fecham
               sozinhos quando um re-ask com a mesma chave responde */}

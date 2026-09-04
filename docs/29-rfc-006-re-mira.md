@@ -274,11 +274,15 @@ fila com o mesmo kind, é deriva nova no dia um.
 ### V6 · Linguagem ubíqua — custo, tempo, trade-offs e ganhos como projeção
 
 > **Estado: ENTREGUE, com a armadilha fechada por construção** (`docs/18`
-> §10 item 8). A ficha reúne o que foi MEDIDO e **não tem campo de
-> ganho** — a autocertificação que esta capacidade convidava é impedida
-> pela estrutura, não pela disciplina de quem escreve. O que NÃO entrou:
-> persistir a prosa como página de máquina (exigiria o caminho único de
-> escrita, com `generated_via`) e qualquer calibração de valor.
+> §10 item 8) **e com superfície no cockpit** (`docs/18` §11, Q-1: rota
+> `/cockpit/sheet`, ficha no Explorer, seis linhas — as duas últimas
+> "sob qual lente" e "onde diverge"). A ficha reúne o que foi MEDIDO e
+> **não tem campo de ganho** — a autocertificação que esta capacidade
+> convidava é impedida pela estrutura, não pela disciplina de quem
+> escreve. Desde a Q-1 ela **lê** as projeções persistidas em vez de
+> recomputá-las ao montar, e mostra o frescor de cada uma. O que NÃO
+> entrou: persistir a prosa como página de máquina (exigiria o caminho
+> único de escrita, com `generated_via`) e qualquer calibração de valor.
 
 **Já existe.** Metade do trade-off já é legível: custo em **minutos** em
 toda parte (150 wpm, piso de 2 min, mochila com `budget_min`), `reason`

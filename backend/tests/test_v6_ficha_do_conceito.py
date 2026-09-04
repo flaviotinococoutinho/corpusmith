@@ -38,14 +38,27 @@ def _write(settings, kb, *docs):
     rebuild_index(settings)
 
 
+def _refresh(settings):
+    """O DONO do refresh (Q-1): quem quiser número na ficha roda isto.
+
+    Antes da Q-1 a ficha recomputava ao montar e os testes não precisavam
+    desta linha — que é exatamente o problema: a tela pagava o custo e o
+    teste não via. Agora o gesto de calcular é explícito aqui como é
+    explícito no produto."""
+    from corpusmith.usecases.compute_difficulty import ComputeDifficulty
+    from corpusmith.usecases.compute_stability import ComputeStability
+    ComputeStability(settings).execute()
+    ComputeDifficulty(settings).execute()
+
+
 # ------------------------------------------------------- o que a ficha É
-def test_ficha_reune_as_quatro_projecoes_da_re_mira(settings, kb):
+def test_ficha_reune_as_projecoes_da_re_mira(settings, kb):
     _write(settings, kb, _doc("concepts/x.md", "X", "# X\n\nUm conceito."))
     ficha = ConceptSheet(settings, "concepts/x.md").execute()
     assert ficha["page"] == "concepts/x.md"
     assert ficha["title"] == "X"
     for chave in ("cost", "stability", "difficulty", "applications",
-                  "guarantees", "not_measured"):
+                  "lens", "divergence", "guarantees", "not_measured"):
         assert chave in ficha, chave
 
 
@@ -99,7 +112,9 @@ def test_ficha_carrega_as_ressalvas_dos_contratos_que_usa(settings, kb):
     g = ConceptSheet(settings, "concepts/x.md").execute()["guarantees"]
     ids = {item["mechanism_id"] for item in g}
     assert {"editorial_stability", "explanation_difficulty",
-            "typed_application_edges"} <= ids
+            "typed_application_edges",
+            # Q-1: as duas linhas novas trouxeram os contratos delas junto
+            "alias_conflict", "factual_conflict"} <= ids
     assert all(item["misinterpretations"] for item in g)
     estab = next(i for i in g if i["mechanism_id"] == "editorial_stability")
     # a ressalva que importa para quem lê a ficha: estável ≠ verdadeiro.
@@ -111,14 +126,18 @@ def test_ficha_carrega_as_ressalvas_dos_contratos_que_usa(settings, kb):
 # ----------------------------------------------- composição das projeções
 def test_estabilidade_entra_com_o_sentido_declarado(settings, kb):
     _write(settings, kb, _doc("concepts/x.md", "X", "# X\n\nTexto."))
+    _refresh(settings)
     e = ConceptSheet(settings, "concepts/x.md").execute()["stability"]
+    assert e["computed"] is True
     assert e["edits"] >= 1                     # o commit de criação conta
     assert "edição" in e["means"].lower()      # NUNCA "correto"
 
 
 def test_dificuldade_entra_com_a_distincao_medida_vs_sem_sinal(settings, kb):
     _write(settings, kb, _doc("concepts/x.md", "X", "# X\n\nTexto."))
+    _refresh(settings)
     d = ConceptSheet(settings, "concepts/x.md").execute()["difficulty"]
+    assert d["computed"] is True
     assert d["measured"] is False
     assert "não" in d["means"].lower() and "fácil" in d["means"].lower()
 
@@ -159,6 +178,7 @@ def test_modelo_indisponivel_degrada_para_a_ficha_seca(settings, kb):
     """Sem modelo, a ficha determinística continua inteira — a prosa é
     ENFEITE da projeção, nunca o produto."""
     _write(settings, kb, _doc("concepts/x.md", "X", "# X\n\nTexto."))
+    _refresh(settings)
     ficha = ConceptSheet(settings, "concepts/x.md",
                          prose=True, _router=_RouterFake(None)).execute()
     assert ficha["prose"] is None

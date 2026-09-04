@@ -457,7 +457,7 @@ status = "declared"
 statement = "Os painéis do cockpit são navegáveis por teclado e legíveis por leitor de tela (role/aria-label nos controles e nos números epistêmicos)."
 verified_by = []
 doc_anchor = "docs/10 §10"
-notes = "Zero atributos aria/role no desktop. A ficha do conceito (RFC-006 §5) é a superfície certa para começar — docs/18 §11."
+notes = "PRIMEIRA superfície paga (Q-1): a ficha do conceito tem `role=\"region\"` e `aria-label` por linha (uma delas asserida em `ConceptSheetView.test.tsx`). Continua `declared` porque o enunciado fala dos PAINÉIS no plural e de navegação por TECLADO, e nenhum dos dois foi provado — um vitest de uma linha de uma ficha não é o requisito. Falta: varredura dos demais painéis e um teste de foco/ordem de tabulação."
 
 [[nfr]]
 id = "NFR-I18N-001"

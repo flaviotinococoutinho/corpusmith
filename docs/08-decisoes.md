@@ -2087,3 +2087,79 @@ segue compatível; nenhuma mudança de comportamento, de schema ou de
 autoridade. **Limite declarado**: nem o token nem a asserção provam que o
 wheel instalado é o do commit — a CI o constrói e instala no mesmo job, e
 essa cadeia é premissa, não garantia.
+
+### ADR-59 — Um dono para o refresh das projeções, e o vazio que diz qual vazio é (Q-1)
+
+**Contexto.** As três capacidades da re-mira que o cockpit não alcançava
+(V3 "o que menos muda", V5 "onde se aplica", V6 "a ficha") são também as
+três que dependem de projeções calculadas. Ao levá-las à tela, a auditoria
+da Q-1 mediu um defeito de desenho que estava debaixo delas: **havia três
+caminhos para o mesmo número**. `ComputeStability`/`ComputeDifficulty`
+recomputavam e persistiam (CLI); `observatory.insights` lia o persistido;
+e `ConceptSheet` recomputava ao montar — `git log` da história inteira
+mais o lint do corpus inteiro, por abertura de ficha. Três donos do mesmo
+valor podem responder três coisas diferentes à mesma pergunta na mesma
+máquina, e o terceiro cobrava o preço mais alto no momento mais sensível
+(o resíduo de custo P-11 dentro de um clique).
+
+**Decisão.**
+
+1. **Quem escreve é o refresh, e ele é um só**: os comandos/jobs que já
+   persistiam (`corpusmith stability`, `corpusmith difficulty`, e a
+   reindexação para `page_entities`). Nenhuma leitura recomputa.
+2. **Quem lê passa por `retrieval/projections.py`** — ficha, rotas do
+   cockpit e painel Indicadores. Um leitor, uma SQL, um vocabulário.
+3. **A passada de lint tem um dono** (`ComputeDifficulty`) e alimenta
+   DUAS projeções na mesma transação: `page_difficulty` (os números) e a
+   nova `page_divergence` (com QUEM a página desacorda). Rodar o lint uma
+   segunda vez na abertura da ficha custaria o dobro e as duas leituras
+   poderiam discordar.
+4. **`computed` viaja em toda projeção lida.** São três estados, não
+   dois: nunca calculado (não diz nada sobre página nenhuma), calculado e
+   sem sinal (`measured=false` — um resultado), calculado com número.
+
+**Por que não um "job leve" no scheduler.** Era a alternativa óbvia e
+teria criado um TERCEIRO recomputador ao lado do CLI e da ficha, movendo
+o problema em vez de resolvê-lo. O refresh já tem dono; o que faltava era
+tirar os outros dois, não acrescentar mais um.
+
+**Consequência aceita, e dita na tela.** A ficha pode servir projeção
+velha. É o preço de não pagar o corpus por clique, e por isso ela mostra
+`freshness` (do checkpoint `stability`), `computed_from` (o HEAD do
+cálculo) e o comando que atualiza — em vez de esconder a idade
+recomputando. Um número velho rotulado como velho é honesto; um número
+fresco cobrado em silêncio a cada abertura de tela não é sustentável.
+
+**O que o vazio deixou de poder mentir.** Antes daqui a ficha e o painel
+diziam "nada observado ainda" para os DOIS vazios — inclusive quando a
+projeção nunca havia rodado. Isso é vender silêncio como medição: o
+avesso exato da autocertificação que o contrato `concept_sheet` recusa, e
+igualmente falso. O `computed` separa os casos, `_CONTRATOS` ganhou
+`alias_conflict` e `factual_conflict` (as duas linhas novas da ficha), e
+`epistemics.toml` foi atualizado no MESMO commit — inclusive a suposição
+que dizia, literalmente, que a ficha recomputava.
+
+**Verificado por execução.** `test_q1_ficha_no_cockpit.py` e
+`ConceptSheetView.test.tsx`, com onze mutações executadas: empatar "nunca
+calculado" com `0`; a ficha voltar a chamar `Compute*`; remover o
+`DELETE FROM page_divergence`; remover o consumidor da rota; tirar
+`alias_conflict` de `_CONTRATOS`; deixar a própria página no grupo de
+divergência; remover `difficulty_computed` do observatório; dar aos dois
+vazios a mesma frase no cockpit; remover o bloco do que NÃO foi medido;
+pôr o ✅ na primeira célula da linha da fila (o mapa larga o item em
+silêncio); e trocar a testemunha da lente. Todas mataram.
+
+**Um achado que só a execução deu.** A primeira versão usava
+`page_entities` como testemunha de "o índice rodou" — e numa execução
+sobre bundle sintético a ficha respondeu "ainda não calculado" para um
+índice FRESCO que simplesmente não reconheceu identidade nenhuma. É o
+mesmo erro deste ADR cometido do outro lado: resultado lido como
+silêncio. A testemunha certa é `page_index_state` (o índice VIU a página,
+ache ele o que achar), e a lição — a testemunha de "calculado" tem de ser
+o registro do CÁLCULO, nunca o do achado — está presa por teste.
+
+**Limite declarado.** `page_divergence` herda o recall do lint: só enxerga
+desacordo entre páginas que compartilham identificador forte (DOI/ISBN/
+norma). Duas páginas que se contradizem em prosa, sem identificador
+comum, saem da ficha como se não divergissem — está no
+`known_failure_modes` do contrato, não só aqui.

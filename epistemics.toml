@@ -1249,6 +1249,7 @@ title = "Ficha do conceito: custo de leitura, permanência, dificuldade e aplica
 decision = "reunir numa ficha só o que o produto MEDIU sobre uma página, com a ressalva de cada mecanismo ao lado do número que ela qualifica, e DECLARAR o que não foi medido (ganho, valor, importância) em vez de preencher com constante de projeto"
 implementation_refs = [
   "backend/src/corpusmith/usecases/concept_sheet.py",
+  "backend/src/corpusmith/retrieval/projections.py",
 ]
 inductive_biases = [
   "a ausência de campo é a defesa: não existe `value`/`gain`/`roi` na estrutura, então não há onde alguém escrever depois um número que ninguém mediu — a armadilha da autocertificação é fechada por CONSTRUÇÃO, não por disciplina",
@@ -1257,18 +1258,21 @@ inductive_biases = [
   "a prosa é ENFEITE da projeção: sem modelo, a ficha seca continua inteira; com modelo, as ressalvas são re-anexadas DEPOIS da geração, fora do que ele pode editar",
 ]
 assumptions = [
-  "as projeções que a ficha compõe estão frescas — ela as RECOMPUTA ao montar (estabilidade e dificuldade), então o custo é o das duas somado",
+  "as projeções que a ficha compõe são LIDAS do banco, nunca recomputadas ao montar (Q-1): o refresh tem um dono só (`corpusmith stability` / `corpusmith difficulty` / `okf index`), e a ficha mostra o frescor de cada uma em vez de escondê-lo recomputando",
+  "uma projeção pode estar VELHA, e a ficha assume que dizer a idade é melhor que pagar o corpus inteiro por abertura de tela (o resíduo de custo P-11)",
   "150 palavras/min aproxima leitura técnica; é a mesma constante da fila de atenção, não uma segunda definição de custo",
 ]
 validity_scope = [
   "uma página do bundle local; leitura pura — nada é escrito no canônico, nem com a prosa ligada",
-  "os números vêm de `editorial_stability` (V3), `explanation_difficulty` (V4) e `typed_application_edges` (V5): a ficha herda o escopo e os limites de cada um",
+  "os números vêm de `editorial_stability` (V3), `explanation_difficulty` (V4), `typed_application_edges` (V5), `alias_conflict` (V2, a linha 'sob qual lente') e `factual_conflict` (a linha 'onde diverge'): a ficha herda o escopo e os limites de cada um",
   "a prosa é artefato de EXPORT, fora do bundle; persistir exigiria página de máquina pelo caminho único, com `generated_via` — e isso NÃO está implementado",
 ]
 known_failure_modes = [
   "NÃO RESPONDE 'quanto ganho' — a pergunta que mais se faz de um material de venda é a que a ficha recusa; quem quiser o número vai ter de medi-lo fora do produto",
   "custo de LEITURA não é custo de ADOÇÃO: um conceito de 3 min pode custar semanas para aplicar, e a ficha não sabe disso",
-  "recomputa duas projeções por chamada (estabilidade percorre a história do Git): é leitura cara, imprópria para laço quente — resíduo de custo conhecido (P-11)",
+  "SERVE PROJEÇÃO VELHA sem pedir licença: desde a Q-1 ela lê o persistido, então uma página editada depois do último `corpusmith stability` aparece com o número anterior — o `freshness` ao lado diz isso, e quem ignorar o carimbo lerá um retrato antigo como atual",
+  "'sob qual lente' é MENÇÃO: a página que cita um termo três vezes pode não ser sobre ele, e a contagem não distingue — é o salto de nível de `docs/28` §2, declarado em vez de escondido",
+  "'onde diverge' herda o recall do lint: só enxerga desacordo entre páginas que compartilham um identificador forte (DOI/ISBN/norma). Duas páginas que se contradizem em prosa, sem identificador comum, saem da ficha como se não divergissem",
   "a prosa herda tudo o que o modelo local erra: ela é opcional, default desligada, e o rodapé determinístico é a única parte que não depende dele",
   "página sem sinal nenhum produz ficha honesta e POBRE — e uma ficha pobre pode ser lida como 'conceito irrelevante', que é exatamente o que `medida=false` existe para negar",
 ]
@@ -1279,12 +1283,15 @@ fallback = ["degrade"]
 adaptive = false
 feedback_signal = ""
 composite = true
-composite_components = ["cost", "stability", "difficulty", "applications"]
+composite_components = ["cost", "stability", "difficulty", "applications",
+                        "lens", "divergence"]
 evidence = ["deterministic_check"]
 side_effects = ["none"]
 misinterpretations = [
-  "a ficha NÃO diz que adotar a ideia compensa — diz quanto custa LER, quanto ela mudou, onde travou e onde alguém declarou que se aplica",
+  "a ficha NÃO diz que adotar a ideia compensa — diz quanto custa LER, quanto ela mudou, onde travou, sob que lente fala, onde diverge e onde alguém declarou que se aplica",
   "ficha pobre não é conceito ruim: é conceito sobre o qual nada foi observado ainda",
+  "'ainda não calculado' NÃO é 'nada observado': o primeiro é a projeção que nunca rodou nesta máquina (não diz nada sobre página nenhuma), o segundo é a projeção que rodou e não achou sinal nesta página. Empatá-los vende silêncio como resultado",
+  "'onde diverge' aponta o desacordo, NUNCA o lado certo — resolver é ato humano (supersede, invalidate, merge)",
   "a prosa gerada é PROPOSTA de linguagem, não afirmação verificada — e o rodapé que a acompanha não passou pelo modelo",
 ]
 high_impact = false
@@ -1293,7 +1300,7 @@ human_review_available = true
 [mechanisms.concept_sheet.parameters]
 palavras_por_minuto = 150.0
 piso_de_custo_min = 2.0
-contratos_citados = "editorial_stability,explanation_difficulty,typed_application_edges"
+contratos_citados = "editorial_stability,explanation_difficulty,typed_application_edges,alias_conflict,factual_conflict"
 prosa_default = "desligada"
 
 # --------------------------------------------------------------------------

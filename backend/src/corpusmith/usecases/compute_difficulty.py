@@ -27,6 +27,13 @@ determinísticos apenas — e o campo `medida` já distingue isso de "fácil".
 *sobre* aquela entidade, o que se lê de `page_entities`. É aproximação
 declarada, não precisão fingida — e o teto de saturação 3 limita o quanto
 ela pode empurrar o índice.
+
+**Duas projeções, uma passada (Q-1).** O lint do corpus é caro e já era
+percorrido aqui inteiro. A ficha do conceito precisa de "onde diverge" —
+COM QUEM a página desacorda, não só quantas vezes — e recomputá-lo na
+abertura da tela seria pagar o corpus inteiro por clique (o resíduo P-11).
+Então esta execução escreve também `page_divergence`, na mesma transação:
+o lint tem um dono, e quem lê passa por `retrieval/projections.py`.
 """
 from __future__ import annotations
 import json
@@ -62,11 +69,28 @@ _REGRA_COMPONENTE = {
 }
 
 
+#: As regras cujo GRUPO vira "onde diverge" na ficha (Q-1).
+#: `alias_conflict` fica FORA: ele é sobre o VOCABULÁRIO (duas identidades
+#: disputando um alias), não sobre duas páginas discordando de um fato —
+#: misturá-los daria à ficha uma linha "diverge de" apontando para páginas
+#: que nunca falaram do mesmo assunto.
+_REGRAS_DE_DIVERGENCIA = ("policy.contradiction_candidate",
+                          "policy.factual_conflict")
+
+
 class ComputeDifficulty(UseCase):
-    """Recomputa e persiste `page_difficulty`; devolve o ranking.
+    """Recomputa e persiste `page_difficulty` + `page_divergence`.
 
     `limit` corta só o RETORNO — a persistência é sempre completa, porque
-    a projeção serve outros leitores (painel, fila)."""
+    a projeção serve outros leitores (painel, fila, ficha).
+
+    **Este use case é o DONO ÚNICO da passada de lint sobre o corpus para
+    fins de projeção** (Q-1). Ele já percorria `check_corpus` inteiro para
+    contar conflito e vocabulário ambíguo; a partir daqui a mesma passada
+    também registra COM QUEM cada página diverge. Uma segunda passada
+    (na abertura da ficha, por exemplo) custaria o dobro e poderia
+    discordar desta — que é como o produto acabou com três caminhos para
+    o mesmo número antes da Q-1."""
 
     def __init__(self, settings: Settings, *, limit: int | None = None):
         self._settings = settings
@@ -78,21 +102,23 @@ class ComputeDifficulty(UseCase):
         docs = list(reader.iter_concepts())
         sinais: dict[str, dict[str, int]] = {
             d.rel_path: {c: 0 for c in COMPONENTES} for d in docs}
+        divergencias: list[tuple] = []
 
-        self._do_lint(docs, reader, sinais)
+        self._do_lint(docs, reader, sinais, divergencias)
         self._de_perguntas(docs, sinais)
         self._de_pratica(sinais)
         self._de_lacunas(sinais)
 
         ranking = consolidar(sinais)
-        self._persistir(ranking)
+        self._persistir(ranking, divergencias)
         visiveis = ranking[:self._limit] if self._limit else ranking
         return {"pages": len(ranking),
                 "measured": sum(1 for e in ranking if e.medida),
+                "divergences": len(divergencias),
                 "difficulty": [asdict(e) for e in visiveis]}
 
     # ------------------------------------------------------------ coleta
-    def _do_lint(self, docs, reader, sinais) -> None:
+    def _do_lint(self, docs, reader, sinais, divergencias) -> None:
         """Conflito e vocabulário ambíguo saem do MESMO lint — uma passada
         só, e a mesma fonte do painel Qualidade (nunca uma segunda
         implementação da mesma regra)."""
@@ -107,6 +133,14 @@ class ComputeDifficulty(UseCase):
             for alvo in alvos:
                 if alvo in sinais:
                     sinais[alvo][componente] += 1
+            if f.rule not in _REGRAS_DE_DIVERGENCIA:
+                continue
+            grupo = sorted(alvos)
+            for alvo in grupo:
+                if alvo in sinais:
+                    divergencias.append(
+                        (alvo, f.rule, str(f.meta.get("identifier") or ""),
+                         json.dumps(grupo, ensure_ascii=False), f.message))
 
     def _de_perguntas(self, docs, sinais) -> None:
         """Pergunta ABERTA (sem `answered_by`) que aponta para a página.
@@ -171,7 +205,13 @@ class ComputeDifficulty(UseCase):
             idx.close()
 
     # --------------------------------------------------------- persistir
-    def _persistir(self, ranking) -> None:
+    def _persistir(self, ranking, divergencias: list[tuple]) -> None:
+        """As DUAS projeções na MESMA transação.
+
+        Escrever uma e falhar na outra deixaria a ficha lendo "nada
+        diverge" sobre um corpus cujo índice acabou de contar conflito —
+        e a distinção `computed` (que a `retrieval/projections.py` faz a
+        partir de `page_difficulty`) mentiria sobre a divergência."""
         idx = connect(self._settings.app_support / "index.db")
         try:
             idx.execute("DELETE FROM page_difficulty")
@@ -181,6 +221,10 @@ class ComputeDifficulty(UseCase):
                 [(e.rel_path, e.score, int(e.medida), e.motivo,
                   json.dumps(e.componentes, ensure_ascii=False))
                  for e in ranking])
+            idx.execute("DELETE FROM page_divergence")
+            idx.executemany(
+                "INSERT INTO page_divergence(rel_path, rule, identifier, "
+                "with_pages, message) VALUES (?,?,?,?,?)", divergencias)
             idx.commit()
         finally:
             idx.close()
