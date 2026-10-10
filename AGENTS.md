@@ -40,14 +40,17 @@ cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # eixos, termo
 ```
 
 A CI impõe, além destes: `cargo test --workspace --manifest-path
-native/Cargo.toml` (kernels nativos), `doctor`, `backup create/verify` e
-`pyinstaller build.spec` (o caminho empacotado é construído E executado).
+native/Cargo.toml` (kernels nativos), os testes diferenciais com o wheel
+nativo INSTALADO (`test_compute_differential.py`, ADR-58), o protocolo do
+worker nativo COMPILADO (`test_worker_isolation.py`), `doctor`,
+`backup create/verify` e `pyinstaller build.spec` (o caminho empacotado é
+construído E executado).
 
 Integridade em runtime (ferramentas de operação — as duas de lint acima
 também são gate; `doctor` e `backup` são impostos na CI):
 
 ```bash
-cd backend && .venv/bin/python -m corpusmith.cli doctor          # invariantes INV-*
+cd backend && .venv/bin/python -m corpusmith.cli doctor          # invariantes de dados em runtime (INV-001…, numeração do doctor)
 cd backend && .venv/bin/python -m corpusmith.cli backup create   # backup verificável
 cd backend && .venv/bin/python -m corpusmith.cli epistemics lint # contratos epistêmicos
 cd backend && .venv/bin/python -m corpusmith.cli ontology lint   # eixos, termos e deriva
@@ -95,15 +98,15 @@ declaração, reprova o lint — a decisão aparece no diff do registro.
 
 | ID | Regra | Verificado por |
 |---|---|---|
-| INV-ARCH-001 | `kernel/`, `normalize/`, `cognitive/` sem I/O/rede/framework/fs | `test_architecture.py::test_kernel_and_normalize_are_pure` |
+| INV-ARCH-001 | `kernel/`, `normalize/`, `cognitive/`, `epistemic/` sem I/O/rede/framework/fs | `test_architecture.py::test_kernel_and_normalize_are_pure` |
 | INV-ARCH-002 | memória NÃO importa cognitivo (dependência unidirecional) | `::test_memory_domain_does_not_depend_on_cognitive_domain` |
 | INV-ARCH-003 | `usecases/` não importam `api/`/`jobs/`/`facades/` | `::test_usecases_do_not_reach_outward` |
-| INV-ARCH-004 | `api/` só chama facades | `::test_api_speaks_only_to_facades` |
+| INV-ARCH-004 | `api/` nunca chama use case nem job direto — orquestra por facades; o que ela lê FORA da facade é dívida declarada, aresta por aresta, em `ontology.toml` §4 | `::test_api_speaks_only_to_facades` |
 | INV-ARCH-005 | todo `UseCase` expõe só `execute()` | `::test_every_usecase_has_single_public_method` |
 | INV-ARCH-006 | subclasses de `MachinePageUseCase` não sobrescrevem `execute()` | `::test_machine_page_template_is_closed_for_modification` |
 | INV-DATA-001 | escrita canônica passa pelo Harness + `BundleWriter` | `test_writer.py` |
 | INV-DATA-002 | página supersedida fica auditável e FORA do retrieval padrão | `test_v22.py::test_inv003_*` |
-| INV-DATA-003 | `index.db` é reconstruível do bundle | `test_v13.py`, `test_doctor.py` |
+| INV-DATA-003 | `index.db` é reconstruível do bundle | `test_v22.py`, `test_doctor.py` |
 | INV-DATA-004 | falha cognitiva NÃO altera confiança/validade canônicas | `test_cognitive_journey.py` |
 | INV-PRIV-001 | conteúdo `local_only` não sai da máquina | `test_fase5.py` (export) + `test_local_policy.py` (campo obrigatório); a metade do MODELO está declarada como lacuna em `nfr.toml` NFR-PRIV-002 |
 | INV-OPS-001 | config aplicada tem linhagem, validação e rollback | `test_v16.py` |
@@ -122,7 +125,8 @@ pela suíte — um NFR só é ✅ quando cita teste, nunca arquivo.
 ## 5. Caminhos PROIBIDOS (MUST NOT)
 
 - adicionar `import sqlite3/httpx/subprocess/fastapi/git/pydantic/pathlib`
-  em `kernel/`, `normalize/` ou `cognitive/`;
+  (lista completa: `architecture.toml [pure].forbidden_imports`) em
+  `kernel/`, `normalize/`, `cognitive/` ou `epistemic/`;
 - escrever no bundle fora do `BundleWriter`/Harness;
 - fazer `api/` chamar use cases ou jobs direto;
 - publicar evento antes do commit correspondente;

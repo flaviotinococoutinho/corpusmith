@@ -154,7 +154,7 @@ class Settings(BaseModel):
     @classmethod
     def load(cls, config_path: str | Path | None = None) -> "Settings":
         data: dict = {}
-        # LLMWIKI_* aceito como fallback (ADR-52): instalação existente com o
+        # LLMWIKI_* aceito como fallback (ADR-53): instalação existente com o
         # env var antigo continua encontrando o próprio HOME — renomear o
         # produto não pode desligar a memória de ninguém em silêncio.
         candidate = (config_path or os.environ.get("CORPUSMITH_CONFIG")

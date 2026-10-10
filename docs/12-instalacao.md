@@ -85,25 +85,25 @@ Gate completo (o mesmo do CI e do `AGENTS.md` §2; a lista é presa por
 `architecture.toml [gate]` + `test_pr0_gate.py` — atalho: `just verify`):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # → todos passam (941 na v2.0)
+cd backend && .venv/bin/python -m pytest tests -q   # → zero falhas (a contagem cresce a cada versão)
 cd desktop && npx tsc --noEmit                      # → sem erros
 cd desktop && npm test                              # → smoke da UI verde
 docker compose config -q                            # → sem saída = ok
-cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # → 28 mecanismo(s)
-cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # → 4 eixos, 22 termos, 0 findings
+cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # → N mecanismo(s), 0 finding(s)
+cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # → N eixo(s), N termo(s), N deriva(s), 0 finding(s)
 ```
 
 A CI roda ainda `cargo test --workspace --manifest-path native/Cargo.toml`
-(kernels nativos — 8 passed) e constrói+executa o binário PyInstaller.
+(kernels nativos) e constrói+executa o binário PyInstaller.
 A contagem da suíte cresce a cada versão; o que importa é **zero falhas**.
 
 A suíte é **hermética**: não conversa com o Ollama da máquina
 (`tests/conftest.py` aponta o roteador para uma porta morta). Isso é
 proposital — antes o resultado dependia de quais modelos o dev tinha
 instalado, e dezenas de casos ficavam vermelhos numa máquina com Ollama de
-pé e o modelo da config ausente. Os números nos exemplos acima são os do
-dia em que este guia foi validado; a contagem viva sai de
-`corpusmith context`.
+pé e o modelo da config ausente. Os exemplos acima mostram a FORMA da
+saída, não números: mecanismos, eixos, termos e blocos são contados por
+`corpusmith context`, e a suíte, pelo próprio pytest.
 
 Smoke de runtime (não destrutivo — use um HOME descartável):
 
@@ -113,7 +113,7 @@ backend/scripts/corpusmith okf bootstrap    # bundle criado
 backend/scripts/corpusmith seed             # seed ok (idempotente)
 backend/scripts/corpusmith okf lint         # 0 finding(s), 0 erro(s)
 backend/scripts/corpusmith doctor           # {"ok": true, ...}
-backend/scripts/corpusmith epistemics lint  # 28 mecanismo(s), 0 finding(s) na v2.0 — os avisos
+backend/scripts/corpusmith epistemics lint  # N mecanismo(s), 0 finding(s) — os avisos
     # `mechanism_promised` (dívida de contrato prometido em doc e não
     # escrito) foram todos PAGOS: hoje o lint sai limpo
 ```

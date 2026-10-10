@@ -93,8 +93,14 @@ jobs:
       # fallback local suportado, mas a perna native exige o wheel.
       - name: o wheel instalado precisa ser importável
         run: python -c "import corpusmith_native"
-      - name: a extensão nativa é EXERCITADA, não só construída
-        run: python -m pytest backend/tests/test_compute_differential.py backend/tests/test_compute_properties.py -q
+      # O mesmo verde-por-skip, no worker: o binário era construído acima e o
+      # único teste do protocolo (`test_worker_isolation.py`) rodava só na
+      # perna `backend`, sem Rust — logo PULAVA em todas (auditoria de
+      # 2026-10-10). Existência checada antes, para o skip não voltar mudo.
+      - name: o worker nativo compilado existe
+        run: test -x native/target/release/corpusmith-native-worker
+      - name: a extensão nativa e o worker são EXERCITADOS, não só construídos
+        run: python -m pytest backend/tests/test_compute_differential.py backend/tests/test_compute_properties.py backend/tests/test_worker_isolation.py -q
 
   # PR-0.1: o caminho EMPACOTADO passa a ser construído E EXECUTADO pela CI.
   #

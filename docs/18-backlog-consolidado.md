@@ -444,11 +444,14 @@ LEITURA); e o merge invisível ao `git log --name-only` entrou no contrato.
 > **Esta é a única fila viva.** Aberta em 2026-09-02 a partir de uma
 > auditoria de seis lentes (produto, roadmap, experiência onto-epistêmica,
 > NFRs, documentação para agentes, pontas soltas no código) consolidada em
-> 57 achados e verificada contra o working tree. Cada `Q-n` fecha movendo
-> a linha para a seção histórica **no mesmo commit**, com o teste ou ADR
-> que a fechou; `corpusmith context` conta abertos e fechados daqui.
-> Ordem = dependência real; dentro de um bloco, o que destrava mais vem
-> primeiro.
+> 57 achados e verificada contra o working tree. Cada `Q-n` fecha com ✅
+> na **própria linha**, no mesmo commit, com o teste ou ADR que a fechou —
+> a linha FICA aqui: `corpusmith context` conta abertos e fechados lendo
+> esta seção, e movê-la faria o item sumir do mapa em vez de constar como
+> entregue (normalizado em 2026-10-10: a regra antiga mandava mover, e o
+> código sempre contou ✅ no lugar). Fechamento PARCIAL não leva ✅ — o
+> mapa contaria a linha como fechada. Ordem = dependência real; dentro de
+> um bloco, o que destrava mais vem primeiro.
 
 **O que este mesmo PR já pagou, e que a fila usa como base**: o registro de
 requisitos não funcionais [`nfr.toml`](../nfr.toml) com `status`
@@ -507,7 +510,7 @@ Cada item muda o `status` do NFR em `nfr.toml` **só com o teste em
 
 | # | Pacote | O quê (entrega + prova) | Depende de | Gate | Fecha |
 |---|---|---|---|---|---|
-| **Q-19** | **Docs gerados, cabeçalho por módulo, camadas × árvore** | `docs/generated/{reference,epistemics-registry,ontology-lexicon}.md` produzidos pelo `context_pack` (uma linha por rota/mecanismo/termo com link para `implementation_refs`/`lives_in`) + `test_generated_docs_estao_frescos`; `docs/06` §2, `docs/05` §11, `docs/11` e `docs/23` mantêm só semântica e porquê; lista fechada `architecture.toml [[module_contract]]` com docstring de módulo em seções fixas (`Purpose:` / `Authority:` / `Side effects:` / `Invariants:` / `Related:`) presa por AST e cruzada com `side_effects` do contrato; teste de que a união de `layers`/`pure`/`domain` cobre `src/corpusmith` (iterdir) com a lista explícita de módulos de topo; `AGENTS` §3, `docs/06` §9 e README remetem ao TOML; decisão sobre `time`/`threading` no núcleo (injeção de relógio ou exceção declarada) | nada (o context pack existe) | PR | M-53, M-55, M-40 |
+| **Q-19** | **Docs gerados e cabeçalho por módulo** (a parte *camadas × árvore* foi ENTREGUE no ADR-60) | **Entregue (ADR-60)**: `architecture.toml [[tier]]` substituiu a lista plana e cobre a árvore nas duas direções (`ontology lint`: `ontology.tier_mismatch`); `AGENTS` §3, `docs/06` §9, `docs/10` §1.1 e o README remetem ao TOML; e o índice dos blocos do projeto (`ontology.toml` §4, `corpusmith ontology blocks|where`) dá a cada parte pergunta, fronteira, dependências declaradas e dívidas — provado por `test_ontologia_dos_blocos.py`. **Resta**: `docs/generated/{reference,epistemics-registry,ontology-lexicon}.md` produzidos pelo `context_pack` + `test_generated_docs_estao_frescos`; `docs/06` §2, `docs/05` §11, `docs/11` e `docs/23` mantêm só semântica e porquê; docstring de módulo em seções fixas (`Purpose:` / `Authority:` / `Side effects:` / `Invariants:` / `Related:`) presa por AST e cruzada com `side_effects` do contrato — o bloco declara pergunta e fronteira por PARTE, não por módulo; decisão sobre `time`/`threading` no núcleo (injeção de relógio ou exceção declarada) | nada (o context pack e o índice de blocos existem) | PR | M-53, M-55, M-40 |
 | **Q-20** | **Guia de estudo e ajuda por painel** | doc de altitude produto — "quem estuda": jogar PDF → compilar → perguntar → ler evidência → curar → ficha → exportar citação — roteado do `docs/README` como entrada "quem estuda"; um "?" por painel abrindo o trecho correspondente (texto embutido, sem rede); o card "Dicionário do domínio" renomeado "Vocabulário em uso (contagens)"; `cli.py:1` deixa de citar um manual que não existe | Q-1, Q-4 | PR | M-12 |
 
 ### 11.5 Condições e portas — dependem de DADO ou de decisão, não de código
@@ -524,7 +527,7 @@ Cada item muda o `status` do NFR em `nfr.toml` **só com o teste em
 |---|---|---|---|---|
 | **Q-24** | **Quatro achados vivos do `docs/17` + dois no-ops** | `recommended_actions` removido ou renderizado; `pending_count` único para `/cockpit/dashboard` e `/status` (teste com `retry_scheduled`); o plano da Cognição abre o `CurationDialog` como a fila; `plan_attention` aceita os sufixos do inbox (`.pdf`/`.epub`); `local_only` deixa de ser parâmetro no-op em `fts.search`; o `bang` de imagem capturado e nunca consumido é removido ou consumido | PR | M-38, M-28 (parte) |
 | **Q-25** | **Rotas órfãs por decisão, e o preset honesto** | decisão por rota — analogias (superfície no Foco ou rebaixar), referência (Curadoria), episódios — cada uma baixando `MAX_ROTAS_ORFAS` no mesmo commit; o preset `exploracao` só liga `profile.analogies` quando houver superfície (teste); `GET /cockpit/themes` (identidade, épocas) + rótulo do tema no Grafo + toast em `themes.adopt_refused` | ADR | M-36, M-39 |
-| **Q-26** | **Guardas de processo** | PR template com duas linhas obrigatórias — "termo novo responde a UMA pergunta (eixo em `ontology.toml`)?" e "em que nível da escada o atributo é afirmado, e por quê?"; `docs/30` §3 linhas 4 e 9 marcadas ⚠️ **guarda humana** até existirem guardas executáveis (campo `level` nos contratos que escrevem atributo; registro de mutações lido por teste); ledger de versões: "v2.1" em `ontology.toml`/ADR-54 com produto 2.0.0 — decidir o bump ou corrigir os rótulos, e um teste que impede versão citada > `__version__` | PR | M-56, M-54 |
+| **Q-26** | **Guardas de processo** ✅ **ENTREGUE** | PR template com as duas linhas obrigatórias ("termo novo responde a UMA pergunta?" · "em que nível da escada o atributo é afirmado, e por quê?") e `docs/30` §3 linhas 4 e 9 marcadas ⚠️ **guarda humana** — os dois entregues no PR #48 e nunca anotados aqui; a skill `ship-pr` passa a exigir o template no corpo do PR (ADR-60); ledger de versões: o "v2.1" de `ontology.toml` e do ADR-54 — versão que nunca existiu — virou o rótulo real (RFC-004, PR #48), e **título de ADR ou cabeçalho de registro não pode carimbar versão maior que `__version__`**. **Provado por**: `test_pr0_gate.py::test_versao_citada_nao_vem_do_futuro` (reprovava no ADR-54 antes da correção) e `test_pr0_gate.py::test_versao_unica_entre_produto_arquitetura_e_app` (passa a incluir o `pyproject.toml`, antes conferido só pelo release, que nunca rodou) | PR | M-56, M-54 |
 | **Q-27** | **Smoke de UI nos painéis de estudo** | Explorer, Qualidade (contratos), Curadoria, Grafo, Foco, Cognição, Memória — cada um com vitest do caso enganoso antes de ser tocado por Q-1/Q-3/Q-4 (nunca computado ≠ vazio; ressalva ao lado do número) | PR | M-15 |
 
 **Aceitas como premissa ou fora, com razão** (não são itens; mudar de ideia
@@ -562,8 +565,52 @@ exige ADR):
    `AGENTS.md` não roteia histórico como destino** — `test_docs_contract.py`;
 5. **Skills citam `just verify` e nunca copiam o gate; uma estratégia de
    merge** — `test_pr0_gate.py`;
-6. **Uma linha fecha movendo-se, no mesmo commit, com o teste** — guarda
-   humana (skill `ship-pr`) + `corpusmith context` conta;
+6. **Uma linha fecha com ✅ na própria linha, no mesmo commit, com o
+   teste** — guarda humana (skills `ship-pr` e `docs-sync`) + `corpusmith
+   context` conta (fechamento parcial não leva ✅);
 7. **Um nome, uma pergunta; ids com prefixo próprio (`S-`/`P-`/`T-`/`O-`/
-   `Q-`)** — cabeçalho deste documento; Q-26 leva ao template de PR.
+   `Q-`)** — cabeçalho deste documento; Q-26 leva ao template de PR;
+8. **Toda parte do repositório tem bloco, e acoplamento novo entre blocos
+   é declarado** — `ontology lint` (INV-ONT-002, ADR-60): arquivo
+   versionado sem bloco, unidade sem camada, import entre blocos sem
+   `depends_on` e aresta para fora do gradiente sem dívida reprovam o gate.
+
+### 11.8 Normalização de 2026-10-10 — o que o índice dos blocos e a auditoria de integridade deixaram
+
+Duas fontes, as duas medidas: a primeira execução do `ontology lint` com os
+blocos do projeto (ADR-60) e uma auditoria de integridade sobre a `main`
+(`79b0613`) que procurou o que a suíte NÃO pega — 32 achados, seis defeitos.
+O que era barato e verificável fechou no próprio PR da normalização (camadas
+× árvore, `eval_memory` fora do domínio, os dois blocos sem prova, a coluna
+"Verificado por" do AGENTS §4 presa ao TOML, INV-ARCH-001/002 enxergando
+import absoluto, INV-ARCH-006 achando a quarta subclasse que a lista à mão
+omitia, o worker nativo exercitado pela CI, versões, rotas para doc
+histórico, skills). O resto é fila — com o defeito mais caro primeiro.
+
+| # | Pacote | O quê (entrega + prova) | Depende de | Gate | Fecha |
+|---|---|---|---|---|---|
+| **Q-28** | **Escrita no bundle fora do Harness** (P0) | `usecases/seed_eval.py` escreve `bundle/harness/golden_eval.jsonl` com `write_text` e commita por `GitStore.commit` (`git add -A`) — fora do `BundleWriter`, contra o AGENTS §5 e o INV-DATA-001. Decidir: o golden passa pelo escritor (artefato não-página com lock, log e commit nomeado) ou sai do bundle (é instrumento do produto, não conhecimento do usuário). **Prova**: teste que falha antes — seed sob escritor concorrente / sujeira alheia no kb não entra no commit do seed | nada | ADR | auditoria I-30 |
+| **Q-29** | **Pagar as dívidas estruturais declaradas** (`ontology.toml` §4, `debts`) | `runtime → jobs` (o daemon e o `jobs_proc` injetam o REGISTRY no worker); `runtime → okf` (o HEAD do bundle chega por parâmetro); `api → okf`/`retrieval`/`runtime` (Dashboard, Explorer, Indicadores e o SQL inline passam por `MemoryFacade`/`SystemFacade`); `api → harness`/`kernel` (o erro atravessa a facade com código estável); `api → settings` (decidir: configuração entra na allowlist, ou a facade é montada fora da rota). **Prova**: cada dívida paga sai de `debts` no MESMO commit (senão `ontology.block_debt_paid` avisa); quando `api.debts` esvaziar, `test_api_speaks_only_to_facades` vira allowlist (`internal ⊆ api_allowed_internal`) | nada | PR por dívida | auditoria I-2, I-3 |
+| **Q-30** | **O caminho de release e de container EXECUTADO** | `release.yml` nunca rodou (zero tags): smoke `/health` + `/system/doctor` do binário macOS depois do `pyinstaller` (hoje só se confere que `vec0.dylib` existe); `npm run build` já termina em `electron-builder` e a segunda chamada sai; release condicionado à CI; a imagem Docker não carrega `epistemics.toml`/`ontology.toml` (contexto `./backend`) — build a partir da raiz e `docker build` + smoke na CI; `dependabot.yml` (npm, pip, cargo, github-actions, docker) **só depois do descongelamento da §11.9**. **Prova**: perna `docker` batendo em `/cockpit/epistemics` com `lint.ok`; release de ensaio em tag `-rc` | nada | PR | auditoria I-10…I-13 |
+| **Q-31** | **Resíduos da auditoria de integridade** | (a) **suspeita S-1, verificar primeiro**: no binário PyInstaller `sys.executable` é o próprio `corpusmith-server`, e `ingestion/extract.py` (`-c`) e `runtime/procjobs.py` (`-m`) o invocam — ingerir PDF/EPUB no app instalado provavelmente sobe um SEGUNDO daemon; (b) `INV-AI-001` citado (AGENTS §8, `docs/10`, `ship-pr`) e ausente de `[[invariant]]` — registrar com teste do instrumento ou rebatizar como regra de processo; (c) o doctor numera `INV-001…006` num espaço que cruza com `INV-DATA-*` (o INV-002 do doctor é o INV-DATA-003) — mapear; (d) `corpusmith context` não vê rota `async def` (`GET /events`) nem os atos de curadoria (classe base sem sufixo `UseCase`), e `test_pontas_soltas` tem o mesmo ponto cego; (e) INV-ARCH-005 ignora funções públicas de módulo nos arquivos de use case; (f) desktop: `Inbox`, `CurationDialog` e `StatusBar` fora até da Q-27. **Prova**: um teste por item, falhando antes | nada | PR | auditoria I-16…I-31, S-1 |
+
+### 11.9 Congelamento das PRs abertas (2026-10-10)
+
+Antes da normalização, as seis PRs abertas foram **congeladas**: nenhuma é
+mergeada nem fechada; cada uma recebeu no GitHub o rótulo `frozen`, o
+estado de rascunho e um comentário com o veredito e a condição de
+descongelamento. O que fica congelado é o **conteúdo** (a mudança e a
+versão de→para); o Dependabot pode rebasear e mudar o head. **Descongelar =**
+rebase sobre a `main` normalizada + `ontology lint` sem erro (a partição e a
+allowlist de dependências valem para toda PR) + CI verde + a condição da
+linha. A ordem é a do risco crescente.
+
+| PR | O que é | Head congelado | Veredito da revisão | Condição de descongelamento | Ordem |
+|---|---|---|---|---|---|
+| [#56](https://github.com/flaviotinococoutinho/corpusmith/pull/56) | `fast-uri` 3.1.5 → 3.1.7 (lockfile; transitiva de `ajv` ← `electron-builder`) | `cb968fd` | seguro: patch de toolchain de empacotamento; a CI não executa o `electron-builder` | rebase (`@dependabot rebase`) + CI verde | 1 |
+| [#57](https://github.com/flaviotinococoutinho/corpusmith/pull/57) | `@xmldom/xmldom` 0.8.14 → 0.8.15 (lockfile; via `plist` ← `electron-builder`) | `15ae877` | seguro: idem | idem | 1 |
+| [#60](https://github.com/flaviotinococoutinho/corpusmith/pull/60) | `js-yaml` 4.3.1 → 4.3.2 (lockfile; `app-builder-lib`, `builder-util`, `dmg-builder`) | `a01b80a` | seguro: idem | idem | 1 |
+| [#61](https://github.com/flaviotinococoutinho/corpusmith/pull/61) | `electron` 39.8.10 → 41.10.6 (MAJOR do runtime do cockpit) | `ebb7ea9` | CI verde e VAZIA para a mudança: a perna `desktop` roda com `ELECTRON_SKIP_BINARY_DOWNLOAD=1`, então o runtime nunca é baixado nem executado. Risco de código baixo (main process mínimo: `contextIsolation`, sem `nodeIntegration`, sem protocol handlers nem `webview`) | smoke do app registrado no PR (cockpit abre e fala com o daemon), ou uma perna que execute o Electron (Q-30) | 2 |
+| [#59](https://github.com/flaviotinococoutinho/corpusmith/pull/59) | Q-1: a ficha do conceito no cockpit e um dono só para o refresh das projeções | `0f1d6ed` | mergeável DEPOIS de correções. Bloqueantes: `computed` é medido por TABELA, não por página (página criada depois do último refresh lê "nada observado"); banco migrado v10 → v11 diz "nenhum desacordo" sem a passada nova ter rodado. Should-fix: frescor ausente em dificuldade/divergência/lente, refresh inalcançável do cockpit, corrida no Explorer (a ficha de outra página), linhas duplicadas em "onde diverge", identificador/quantidade/data como "lente", rota `/cockpit/applications` sem consumidor real, testes que sobrevivem a mutação | os dois bloqueantes com teste por página e por banco migrado; rebase com conflito previsto e trivial em `docs/18` (linhas Q-19/Q-20 e a regra de fechamento, que esta normalização já reescreveu no mesmo sentido) e em `docs/08` (o ADR dele antes do 60 — o número seguinte ao 58 fica reservado a ele); declarar `facades → retrieval` em `[blocks.facades].depends_on` (o lint acusa) | 3 |
+| [#55](https://github.com/flaviotinococoutinho/corpusmith/pull/55) | portal estático `_estudo_dev/` (material de estudo para entrevista de backend Java/Kotlin) + workflow próprio | `14c319a` | fora do produto: sem camada nem bloco, e com contratos próprios de ontologia e epistemologia (`_estudo_dev/docs/`) que nenhum lint cruza — a segunda definição dos mesmos termos que a RFC-004 combate; a QA visual que o próprio autor exigiu não rodou | **decisão do dono**: mover para um repositório próprio (recomendado) ou declarar o bloco em `ontology.toml` §4 e reconciliar o vocabulário; até lá o lint acusa `ontology.block_orphan_file` para `_estudo_dev/` | decisão |
 

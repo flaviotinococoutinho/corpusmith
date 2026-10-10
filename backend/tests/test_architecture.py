@@ -81,11 +81,16 @@ def test_kernel_and_normalize_are_pure():
         "ontology",   # RFC-004: curation.py delega a regra de eixos
         "vitality"}   # RFC-006 V3: stability.py LÊ `aposentada` de lá —
                       # o sentido de ciclo tem UM dono, não dois
+    # `_internal_imports`, não `_relative_imports` (ADR-60): o vão que a T7
+    # fechou em INV-ARCH-003/004 seguia aberto AQUI — `from corpusmith.facades
+    # import x` dentro do kernel passava verde. A forma `from .. import x`
+    # escapa deste teste (o "" de `own_modules`), e o `ontology lint` dos
+    # blocos do projeto a pega: `kernel` declara `depends_on = []`.
     for package in PURE_PACKAGES:
         for module in (SRC / package).rglob("*.py"):
             leaked = _absolute_imports(module) & FORBIDDEN_IN_PURE
             assert not leaked, f"{module}: núcleo puro importou {leaked}"
-            outward = _relative_imports(module) - own_modules - {package}
+            outward = _internal_imports(module) - own_modules - {package}
             assert not outward, \
                 f"{module}: núcleo importou camada externa {outward}"
 
@@ -98,8 +103,8 @@ def test_memory_domain_does_not_depend_on_cognitive_domain():
     for package in ("kernel", "normalize", "okf", "harness", "retrieval",
                     "epistemic"):
         for module in (SRC / package).rglob("*.py"):
-            relative = _relative_imports(module)
-            assert "cognitive" not in relative, \
+            alcancados = _internal_imports(module)   # relativo E absoluto
+            assert "cognitive" not in alcancados, \
                 f"{module}: domínio de memória importou cognitive/"
 
 
@@ -167,13 +172,27 @@ def test_domain_is_free_of_framework_and_transport():
 
 def test_machine_page_template_is_closed_for_modification():
     """Template Method: nenhuma subclasse pode REDEFINIR o esqueleto
-    execute() — só preencher hooks (OCP/LSP)."""
+    execute() — só preencher hooks (OCP/LSP).
+
+    A lista de subclasses era escrita à mão (três) e a quarta,
+    `_ConsolidatedPage`, ficava fora: regra que cita pelo nome não vale
+    para o que ela não cita (docs/17; ADR-60). A varredura acha todas."""
+    import importlib
+    import pkgutil
+    import corpusmith.usecases as usecases_pkg
     from corpusmith.usecases.base import MachinePageUseCase
-    from corpusmith.usecases.compile_source import CompileSource
-    from corpusmith.usecases.weekly_review import PublishWeeklyReview
-    from corpusmith.usecases.detect_communities import _CommunitySummaryPage
-    for subclass in (CompileSource, PublishWeeklyReview,
-                     _CommunitySummaryPage):
+    achadas = []
+    for info in pkgutil.walk_packages(usecases_pkg.__path__,
+                                      prefix="corpusmith.usecases."):
+        module = importlib.import_module(info.name)
+        for _, cls in inspect.getmembers(module, inspect.isclass):
+            if (issubclass(cls, MachinePageUseCase)
+                    and cls is not MachinePageUseCase
+                    and cls.__module__ == module.__name__):
+                achadas.append(cls)
+    assert {"CompileSource", "PublishWeeklyReview", "_CommunitySummaryPage",
+            "_ConsolidatedPage"} <= {c.__qualname__ for c in achadas}
+    for subclass in achadas:
         assert "execute" not in vars(subclass), \
             f"{subclass.__qualname__} sobrescreveu o esqueleto do template"
         assert subclass.execute is MachinePageUseCase.execute

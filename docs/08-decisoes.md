@@ -1854,7 +1854,7 @@ reverter"* — "Agents propose… Git remembers" é visão-alvo, e "source of
 truth"/"zero hallucination"/"somente humanos escrevem" são alegações
 proibidas no estado atual.
 
-### ADR-54 — Ontologia: um campo, um eixo (RFC-004, v2.1)
+### ADR-54 — Ontologia: um campo, um eixo (RFC-004, PR #48)
 **Documento completo em [`docs/22`](22-rfc-ontologia-da-assercao.md); léxico em
 [`docs/23`](23-ontologia-e-etimologia.md).** `confidence` respondia a seis
 perguntas, três delas dividindo literalmente o mesmo campo do frontmatter —

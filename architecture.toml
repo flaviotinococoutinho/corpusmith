@@ -152,12 +152,16 @@ schema_version = 1
 # do ADR-39 pularem em TODAS as pernas. Sem este token, a perna que
 # EXERCITA o acelerador pode ser removida da CI em silêncio e a suíte
 # segue verde — que é exatamente como o verde-por-skip sobrevive.
+# O worker nativo (`corpusmith-native-worker`) tinha o mesmo defeito: era
+# compilado pela CI e o teste do protocolo pulava em todas as pernas — o
+# token abaixo prende a perna que o EXERCITA (auditoria de 2026-10-10).
 ci_enforced = ["pytest", "tsc --noEmit", "npm test",
                "docker compose config",
                "cargo test", "epistemics lint", "ontology lint",
                "doctor", "backup",
                "pyinstaller build.spec",
-               "test_compute_differential.py"]
+               "test_compute_differential.py",
+               "test_worker_isolation.py"]
 verify_enforced = ["pytest", "tsc --noEmit", "npm test",
                    "docker compose config", "epistemics lint",
                    "ontology lint"]
@@ -183,7 +187,11 @@ rule = "usecases/ não importam api/, jobs/ nem facades/"
 verified_by = ["test_architecture.py::test_usecases_do_not_reach_outward"]
 [[invariant]]
 id = "INV-ARCH-004"
-rule = "api/ só chama facades"
+# A regra dizia "api/ só chama facades" e o teste só proíbe usecases/jobs —
+# o vão que docs/17 mediu (api lê bundle, índice e runtime direto). Agora a
+# regra diz o que é verificado, e o excesso sobre `api_allowed_internal` é
+# dívida declarada aresta por aresta em ontology.toml §4 (ADR-60).
+rule = "api/ nunca chama use case nem job direto — orquestra por facades; o que lê fora da facade é dívida declarada em ontology.toml §4"
 verified_by = ["test_architecture.py::test_api_speaks_only_to_facades"]
 [[invariant]]
 id = "INV-ARCH-005"

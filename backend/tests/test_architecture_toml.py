@@ -80,3 +80,23 @@ def test_todo_invariante_e_verificado_por_teste_que_existe():
     assert fantasmas == [], f"invariante citando teste inexistente: {fantasmas}"
     sem_prova = [i["id"] for i in _load()["invariant"] if not i["verified_by"]]
     assert sem_prova == []
+
+
+def test_agents_so_cita_testes_que_o_toml_cita():
+    """A coluna "Verificado por" do AGENTS §4 citava `test_v13.py` para
+    INV-DATA-003 enquanto o dono (`architecture.toml`) cita `test_v22.py` —
+    e o teste acima só comparava os ids. O AGENTS pode abreviar (citar menos
+    arquivos), nunca citar prova que o registro não reconhece."""
+    toml = {i["id"]: {ref.partition("::")[0] for ref in i["verified_by"]}
+            for i in _load()["invariant"]}
+    divergentes = {}
+    for linha in (_ROOT / "AGENTS.md").read_text().splitlines():
+        m = _re.match(r"\| (INV-[A-Z]+-\d{3}) \|(.*)\|\s*$", linha)
+        if not m:
+            continue
+        citados = set(_re.findall(r"\b(test_\w+\.py)\b", m.group(2)))
+        fora = citados - toml.get(m.group(1), set())
+        if fora:
+            divergentes[m.group(1)] = sorted(fora)
+    assert divergentes == {}, (
+        f"AGENTS §4 cita testes que architecture.toml não cita: {divergentes}")
