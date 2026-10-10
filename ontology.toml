@@ -1,4 +1,4 @@
-# ontology.toml — ONTOLOGIA E ETIMOLOGIA DO CORPUSMITH (RFC-004, v2.1).
+# ontology.toml — ONTOLOGIA E ETIMOLOGIA DO CORPUSMITH (RFC-004; §4 ADR-60).
 #
 # Terceiro contrato legível-por-máquina do produto, ao lado de
 # `architecture.toml` (o que o software PODE depender de quê) e
@@ -22,10 +22,15 @@
 # indicador" — por isso o índice APONTA e nunca é a coisa apontada, que é
 # o axioma A-1 inteiro em uma etimologia. Cada verbete abaixo carrega o
 # campo `constrains`: a regra operacional que a raiz impõe.
+#
+# §4 (ADR-60) aplica a mesma disciplina às PARTES do repositório: cada
+# bloco do projeto responde a UMA pergunta, todo arquivo versionado
+# pertence a UM bloco, e a dependência entre blocos de código é declarada
+# e conferida contra os imports reais — o índice semântico do projeto.
 schema_version = 1
 
 [ontology]
-version = "1.1.0"  # vocabulários fechados de outros objetos + 4 termos (V3–V6, C6)
+version = "1.2.0"  # §4 blocos do projeto + `block_kind` + `project_block` + [drift.block]
 
 # =====================================================================
 # 1. EIXOS — as perguntas independentes sobre uma afirmação
@@ -231,6 +236,13 @@ not_means = "erro nem bug: um efeito colateral declarado é legítimo — o que 
 constrains = "escrita no CANÔNICO obriga `high_impact`; um `/ask` que move o HEAD do Git é exatamente o caso que criou este verbete, e ele agora não pode existir sem estar declarado"
 lives_in = ["backend/src/corpusmith/epistemic/model.py"]
 
+[terms.project_block]
+roots = "bloco: fr. bloc ← neerl. médio blok, 'tronco cortado, peça maciça' — o que tem FRONTEIRA e se move inteiro"
+means = "uma parte do repositório — um conjunto de caminhos — que responde a UMA pergunta, com o que ela NÃO é declarado ao lado (ontology.toml §4)"
+not_means = "uma pasta qualquer, um arquivo solto, um pacote só porque existe; nem o bloco do corpo, do grafo, de sucessão ou de estudo, que são outros sentidos ([drift.block])"
+constrains = "o tronco cortado tem fronteira: todo arquivo versionado pertence a UM bloco, a dependência entre blocos de código é declarada, e a aresta que contraria o gradiente só existe como dívida com motivo — o qualificador 'do projeto' é obrigatório porque 'bloco' sozinho já responde a quatro perguntas"
+lives_in = ["backend/src/corpusmith/kernel/blocks.py", "backend/src/corpusmith/harness/ontology.py"]
+
 # =====================================================================
 # 2b. VOCABULÁRIOS FECHADOS DE OUTROS OBJETOS
 # =====================================================================
@@ -260,6 +272,14 @@ applies_to = "mechanism"
 etymology = "lat. effectus, 'o que foi levado a cabo' (ex + facere) + colateral, 'do mesmo lado' — o que se realiza ao lado do que se pediu"
 constrains = "os três destinos não são graus do mesmo eixo: canônico é AUTORIDADE (e obriga `high_impact`), projeção é recomputável, estado é uso — e `none` ao lado de outro valor é contradição, não ênfase"
 lives_in = ["backend/src/corpusmith/epistemic/model.py"]
+
+[vocabularies.block_kind]
+question = "que TIPO de artefato este bloco do projeto agrupa — e portanto que verificação o protege?"
+values = ["code", "test", "registry", "doc", "build"]
+applies_to = "project_block"
+etymology = "ing. ant. cynd, 'natureza, linhagem' (a raiz de kin) — o tipo diz de que NATUREZA é o artefato, não onde ele mora nem quanto importa"
+constrains = "cada tipo tem a SUA verificação — código: arquitetura e suíte; teste: execução; registro: lint cruzado com o código; doc: contrato de documentação; build: o gate que o executa. Um bloco que precisasse de duas verificações está grande demais, e tipo novo é decisão (ADR), não digitação"
+lives_in = ["backend/src/corpusmith/kernel/blocks.py"]
 
 # =====================================================================
 # 3. DERIVA SEMÂNTICA — onde uma palavra ainda responde a duas perguntas
@@ -328,6 +348,31 @@ markers = [
 ]
 paid = "nenhum — os três sentidos são legítimos e distintos; falta o qualificador no nome"
 
+# Medida ao criar §4 (ADR-60): a palavra que o pedido usou — "blocos do
+# projeto" — já respondia a cinco perguntas no código. O sexto sentido
+# nasceu QUALIFICADO (`project_block`) para não engrossar a deriva; os
+# outros seguem sem qualificador, e cada marcador prova que o sentido vive.
+[drift.block]
+field = "bloco"
+status = "open"
+senses = [
+  "bloco SENTINELADO do corpo: região canônica delimitada por sentinelas (okf/relations.py, okf/absorbed.py)",
+  "bloco do GRAFO: comunidade/componente ligada por arestas (kernel/topology.py, kernel/semantics.py)",
+  "bloco de SUCESSÃO: páginas ligadas por supersede, resolvidas entre si (harness/local_policy.py)",
+  "bloco de ESTUDO: unidade de trabalho que cabe na carga cognitiva (usecases/plan_attention.py)",
+  "bloco de RESPOSTA: seção de um payload ou painel (api/system.py)",
+  "bloco do PROJETO: parte do repositório com pergunta e fronteira (kernel/blocks.py, §4 deste arquivo)",
+]
+markers = [
+  ["backend/src/corpusmith/okf/absorbed.py", "_NOME = \"bloco de absorção\""],
+  ["backend/src/corpusmith/kernel/topology.py", "dois blocos (comunidades)"],
+  ["backend/src/corpusmith/harness/local_policy.py", "blocos: dict[str, set[str]] = {}"],
+  ["backend/src/corpusmith/usecases/plan_attention.py", "só blocos pequenos"],
+  ["backend/src/corpusmith/api/system.py", "um bloco por banco"],
+  ["backend/src/corpusmith/kernel/blocks.py", "KINDS: tuple[str, ...] = (\"code\""],
+]
+paid = "só o sentido novo: ele nasceu como `project_block` (termo, vocabulário `block_kind` e §4), com o qualificador obrigatório no verbete. Os cinco anteriores seguem convivendo no mesmo nome — o mais carregado é o do corpo (região canônica), e o próximo passo é o qualificador 'região' nos textos de okf/relations.py e okf/absorbed.py"
+
 # Entrada RESOLVIDA: fica registrada para que a separação não regrida. Os
 # quatro tempos já têm nomes distintos, e o lint acusa se algum sumir.
 [drift.time]
@@ -345,3 +390,300 @@ markers = [
   ["backend/src/corpusmith/usecases/mark_stale.py", "meta[\"stale_as_of\"] = head"],
 ]
 paid = "v0.8 §6.3 (bi-temporalidade) e F3-PR2 (resolved_at) — a entrada existe para impedir regressão, não para cobrar dívida"
+
+# =====================================================================
+# 4. BLOCOS DO PROJETO — o que existe no repositório, e a pergunta que
+#    cada parte responde (ADR-60, INV-ONT-002)
+# =====================================================================
+# O índice SEMÂNTICO do repositório. Cada bloco declara só o que nenhuma
+# outra fonte sabe: os caminhos que cobre (`/` final = diretório), a
+# PERGUNTA que responde, o que ele NÃO é e — para código Python — de que
+# blocos depende. Todo o resto é DERIVADO pelo lint e pelo índice
+# (`corpusmith ontology blocks|where`): a camada vem de `architecture.toml
+# [[tier]]`, os termos dos `lives_in` acima, os mecanismos dos
+# `implementation_refs` de `epistemics.toml`, os testes do AST de
+# `backend/tests`. Nada aqui é cópia.
+#
+# As regras que o `ontology lint` impõe, e por quê:
+# - PARTIÇÃO: todo arquivo versionado pertence a exatamente UM bloco — a
+#   mesma propriedade que define um eixo (nenhum termo em dois eixos),
+#   transposta para arquivos. Arquivo novo fora do índice é erro;
+# - UNIDADE: bloco de código Python é exatamente UMA unidade do gradiente
+#   e tem o nome dela, para que `depends_on` leia como os imports;
+# - DEPENDÊNCIA: `depends_on` é allowlist conferida contra os imports
+#   reais (de topo E tardios) nas duas direções — acoplamento novo entre
+#   blocos aparece no diff deste arquivo, nunca só num `import`;
+# - DÍVIDA: a aresta que aponta para FORA do gradiente, ou que `api` faz
+#   além da allowlist de `[dependency_rule]`, só existe em `debts`, com
+#   motivo; dívida paga e não descadastrada vira aviso. O que
+#   `[dependency_rule]` PROÍBE não vira dívida: é erro.
+
+# ------------------------------------------------- núcleo puro (camada 0)
+[blocks.kernel]
+kind = "code"
+paths = ["backend/src/corpusmith/kernel/"]
+question = "que regra do domínio vale sem I/O, rede, disco ou transporte?"
+not_means = "lugar de efeito: quem precisa de efeito recebe o resultado e o aplica na casca (functional core, imperative shell — INV-ARCH-001)"
+depends_on = []
+
+[blocks.normalize]
+kind = "code"
+paths = ["backend/src/corpusmith/normalize/"]
+question = "como texto livre vira menções tipadas e normalizadas (identificadores, datas, quantidades, normas, lugares)?"
+not_means = "validação de fato: reconhecer a forma de um identificador não diz que o que ele afirma é verdadeiro"
+depends_on = []
+
+[blocks.cognitive]
+kind = "code"
+paths = ["backend/src/corpusmith/cognitive/"]
+question = "o que a pessoa quer explorar agora, em que profundidade e com que esforço?"
+not_means = "memória canônica: o plano cognitivo LÊ a memória e nunca altera confiança ou validade nela (INV-ARCH-002, INV-DATA-004)"
+depends_on = []
+
+[blocks.epistemic]
+kind = "code"
+paths = ["backend/src/corpusmith/epistemic/"]
+question = "o que cada mecanismo heurístico pode alegar — sob que vieses, com que garantia relativa e com que efeito colateral?"
+not_means = "certificação: o contrato declara limites, não prova acerto, e nenhum mecanismo se autoavalia (INV-EPI-001)"
+depends_on = []
+
+# --------------------------------------------------- plataforma (camada 1)
+[blocks.paths]
+kind = "code"
+paths = ["backend/src/corpusmith/paths.py"]
+question = "onde um recurso empacotado mora, dentro e fora do binário PyInstaller?"
+not_means = "configuração nem política: só resolve caminho, explícito, em vez de contar `parents[]`"
+depends_on = []
+
+[blocks.settings]
+kind = "code"
+paths = ["backend/src/corpusmith/settings.py"]
+question = "que configuração está vigente, e com que precedência (override, ambiente, default empacotado, código)?"
+not_means = "decisão de domínio — e o default de privacidade `local_only` não muda sem RFC (AGENTS §5)"
+depends_on = ["paths"]
+
+[blocks.runtime]
+kind = "code"
+paths = ["backend/src/corpusmith/runtime/"]
+question = "como o daemon persiste estado operacional, enfileira, agenda e despacha trabalho e publica eventos?"
+not_means = "conhecimento: `runtime.db` é autoridade OPERACIONAL (jobs, telemetria, vereditos), nunca sobre o bundle"
+depends_on = ["jobs", "kernel", "okf", "paths", "settings"]
+
+[blocks.runtime.debts]
+jobs = "runtime/worker.py importa o REGISTRY de jobs dentro de função, para fugir do ciclo de import, e despacha por ele; injetar o registry a partir do daemon e do jobs_proc paga a dívida"
+okf = "runtime/checkpoints.py lê o HEAD do bundle por okf.authorities._kb_head num import tardio; o HEAD devia chegar por parâmetro de quem já conhece o bundle"
+
+# --------------------------------------------- domínio canônico (camada 2)
+[blocks.okf]
+kind = "code"
+paths = ["backend/src/corpusmith/okf/"]
+question = "como o conhecimento canônico é representado, escrito por um caminho único e versionado no bundle (OKF + Git)?"
+not_means = "projeção consultável: o bundle é a régua, e índice e bancos só apontam para ele (axioma A-1)"
+depends_on = ["harness", "normalize", "runtime"]
+
+[blocks.harness]
+kind = "code"
+paths = ["backend/src/corpusmith/harness/"]
+question = "o que pode entrar no canônico, e o que os registros epistêmico e ontológico permitem alegar?"
+not_means = "validador opcional: não há escrita fora do arreio (INV-DATA-001), e conformidade OKF e política local ficam em camadas separadas"
+depends_on = ["epistemic", "kernel", "normalize", "okf", "paths"]
+
+[blocks.retrieval]
+kind = "code"
+paths = ["backend/src/corpusmith/retrieval/"]
+question = "como o índice reconstruível (FTS, denso, grafo, descida) responde consultas e alimenta os indicadores?"
+not_means = "autoridade: apagar `index.db` não perde conhecimento (INV-DATA-003)"
+depends_on = ["harness", "kernel", "normalize", "okf", "runtime", "settings"]
+
+[blocks.compute]
+kind = "code"
+paths = ["backend/src/corpusmith/compute/"]
+question = "por qual backend — Python de referência ou Rust — os sinais e projeções CPU-bound são calculados?"
+not_means = "decisão de domínio: Rust calcula sinais, Python decide o significado (ADR-39)"
+depends_on = ["kernel", "runtime"]
+
+[blocks.native]
+kind = "code"
+paths = ["native/crates/"]
+question = "como os kernels CPU-bound (grafo, sketch, texto, ETL) rodam em Rust, como extensão PyO3 e como worker?"
+not_means = "segunda implementação de regra: a equivalência com o Python é provada por teste diferencial, e o compute plane nunca decide domínio"
+
+# ---------------------------------------------- borda acionada (camada 3)
+[blocks.models]
+kind = "code"
+paths = ["backend/src/corpusmith/models/"]
+question = "qual modelo de linguagem atende uma chamada (escada local → API), sob orçamento e política de privacidade?"
+not_means = "autoridade de escrita, validação ou reconciliação: o LLM é estágio cercado na borda (AGENTS §5)"
+depends_on = ["runtime", "settings"]
+
+[blocks.ingestion]
+kind = "code"
+paths = ["backend/src/corpusmith/ingestion/"]
+question = "como PDF e EPUB viram texto, com os parsers AGPL isolados em subprocesso?"
+not_means = "compilação: extrair texto não decide o que entra no corpus"
+depends_on = []
+
+# ---------------------------------------------------- aplicação (camada 4)
+[blocks.usecases]
+kind = "code"
+paths = ["backend/src/corpusmith/usecases/"]
+question = "qual é a operação do domínio — uma classe, um `execute()`?"
+not_means = "orquestração nem transporte: use case não importa facades, api nem jobs (INV-ARCH-003, INV-ARCH-005)"
+depends_on = ["cognitive", "compute", "epistemic", "harness", "ingestion", "kernel", "models", "normalize", "okf", "retrieval", "runtime", "settings"]
+
+# ------------------------------------------------- orquestração (camada 5)
+[blocks.facades]
+kind = "code"
+paths = ["backend/src/corpusmith/facades/"]
+question = "como as operações se compõem por área de negócio (memória, compilador, curadoria, cognição, sistema)?"
+not_means = "regra de domínio: a facade compõe, não decide"
+depends_on = ["harness", "runtime", "settings", "usecases"]
+
+# --------------------------------------------- borda acionadora (camada 6)
+[blocks.jobs]
+kind = "code"
+paths = ["backend/src/corpusmith/jobs/"]
+question = "que trabalho assíncrono existe, e como cada job adapta uma facade ao contrato `run(settings, payload, emit)`?"
+not_means = "lógica de domínio: o job é adapter, a lógica mora no use case"
+depends_on = ["facades", "models", "okf", "retrieval", "runtime", "settings", "usecases"]
+
+[blocks.jobs_proc]
+kind = "code"
+paths = ["backend/src/corpusmith/jobs_proc.py"]
+question = "como um job pesado roda isolado em processo, sob manifesto de campos fechados?"
+not_means = "fila nem agendamento: executa só o manifesto que recebe"
+depends_on = ["jobs", "runtime", "settings"]
+
+[blocks.api]
+kind = "code"
+paths = ["backend/src/corpusmith/api/"]
+question = "como o mundo HTTP local — cockpit e CLI de controle — fala com o produto, autenticado?"
+not_means = "lugar de regra: a rota não decide domínio e não chama use case nem job direto (INV-ARCH-004)"
+depends_on = ["facades", "harness", "kernel", "okf", "retrieval", "runtime", "settings"]
+
+# `[dependency_rule].api_allowed_internal = ["facades"]` é allowlist e a
+# suíte só proíbe usecases/jobs — o vão que docs/17 mediu. Cada aresta
+# abaixo é onde `api` pula a facade HOJE, com o motivo conferível.
+[blocks.api.debts]
+harness = "api/system.py registra o exception_handler de HarnessRejection (422 com código estável) importando o tipo do Harness, não da facade"
+kernel = "api/curation.py captura UndoNotExpressible (409 nomeado) e api/system.py usa kernel.identity para o id da instância do daemon"
+okf = "api/cockpit.py instancia BundleWriter só pelo `.reader`, para listar e ler páginas do bundle no Dashboard e no Explorer sem passar pela MemoryFacade"
+retrieval = "api/cockpit.py chama retrieval.observatory (grafo, insights, lacunas, dicionário, traces) e related_pages direto — os indicadores leem a projeção sem facade"
+runtime = "api/cockpit.py e api/system.py abrem runtime.db e index.db por connect() com SQL inline (Dashboard, órfãs, saúde) e api/system.py tipa EventBus, Governor e JobQueue montados pelo daemon"
+settings = "toda rota recebe Settings para instanciar as facades — configuração, não domínio, mas a allowlist `api_allowed_internal` não a prevê"
+
+[blocks.cli]
+kind = "code"
+paths = ["backend/src/corpusmith/cli.py"]
+question = "que operações um humano ou agente executa pela linha de comando, offline ou via daemon?"
+not_means = "segunda implementação: CLI, API e painel leem a MESMA fonte"
+depends_on = ["bench", "context_pack", "daemon", "facades", "harness", "jobs", "kernel", "models", "okf", "runtime", "settings", "usecases"]
+
+[blocks.daemon]
+kind = "code"
+paths = ["backend/src/corpusmith/daemon.py"]
+question = "como fila, worker, scheduler e API sobem num processo local com token efêmero?"
+not_means = "lugar de regra: só compõe e sobe os adapters"
+depends_on = ["api", "jobs", "okf", "runtime", "settings"]
+
+[blocks.desktop]
+kind = "code"
+paths = ["desktop/src/", "desktop/electron/", "desktop/index.html"]
+question = "como o humano cura, consulta e lê os indicadores — o cockpit Electron?"
+not_means = "autoridade: o cockpit lê do daemon e pede atos de curadoria; nunca escreve no bundle"
+
+[blocks.bench]
+kind = "code"
+paths = ["backend/src/corpusmith/bench.py"]
+question = "quanto custa cada mecanismo, medido de forma reprodutível sobre bundle sintético?"
+not_means = "alegação: ganho sem medição registrada em benchmarks/baseline.json é proibido (AGENTS §6)"
+depends_on = ["compute", "harness", "okf", "retrieval", "settings", "usecases"]
+
+[blocks.context_pack]
+kind = "code"
+paths = ["backend/src/corpusmith/context_pack.py"]
+question = "qual é o mapa atual do repositório, gerado das fontes que são autoridade?"
+not_means = "fonte: o mapa é derivado e não se edita à mão"
+depends_on = ["harness", "kernel", "runtime"]
+
+# ------------------------------------------------ código fora do gradiente
+[blocks.package_root]
+kind = "code"
+paths = ["backend/src/corpusmith/__init__.py"]
+question = "qual é a versão do produto?"
+not_means = "lugar de lógica: a raiz do pacote carrega só `__version__` — preso pelo lint (`package_root_not_bare`) e por teste"
+
+[blocks.schemas]
+kind = "code"
+paths = ["backend/db/"]
+question = "qual é o schema de cada banco SQLite, e como ele evolui sem perder dado?"
+not_means = "autoridade sobre o conhecimento — nem migração destrutiva: o schema cresce de forma aditiva, com versão em `SCHEMA_VERSIONS` e trilha em `schema_migrations`"
+
+# ------------------------------------------------------- prova e contrato
+[blocks.backend_tests]
+kind = "test"
+paths = ["backend/tests/"]
+question = "o que prova, por execução, que o código e os registros dizem a mesma coisa?"
+not_means = "cobertura por alegação: teste que não reprova sob mutação não conta como prova"
+
+[blocks.registries]
+kind = "registry"
+paths = ["architecture.toml", "epistemics.toml", "ontology.toml", "nfr.toml"]
+question = "o que o software pode depender, o que um mecanismo pode alegar, o que cada palavra e cada bloco significam e que requisito não funcional está preso?"
+not_means = "documentação decorativa: cada registro é cruzado com o código por teste e por lint"
+
+[blocks.benchmarks]
+kind = "registry"
+paths = ["benchmarks/"]
+question = "quanto o produto custa, medido, e contra que baseline uma regressão de razão é julgada?"
+not_means = "promessa: número sem medição registrada não é claim"
+
+# ---------------------------------------------------------------- prosa
+[blocks.docs]
+kind = "doc"
+paths = ["docs/"]
+question = "por que o produto é como é — conceitos, teoria, decisões e a fila viva?"
+not_means = "fonte de fato enumerável: contagem e lista vêm dos registros e de `corpusmith context`"
+
+[blocks.governance]
+kind = "doc"
+paths = ["AGENTS.md", "CLAUDE.md", "README.md", "CONTRIBUTING.md", "SECURITY.md"]
+question = "quais são as regras normativas e a porta de entrada do repositório, para humanos e agentes?"
+not_means = "cópia dos registros: AGENTS e CLAUDE citam os TOMLs, não os substituem"
+
+[blocks.agent_skills]
+kind = "doc"
+paths = [".claude/"]
+question = "como um agente executa os procedimentos do repositório (entregar PR, sincronizar docs, validar o ambiente)?"
+not_means = "segunda fonte do gate: skill cita `just verify` e não copia a lista (test_pr0_gate)"
+
+# ------------------------------------------------- montagem e automação
+[blocks.ci]
+kind = "build"
+paths = [".github/"]
+question = "o que a CI executa, com que permissões, e o que um PR ou issue precisa declarar?"
+not_means = "dono do gate: o que o gate É vem de `architecture.toml [gate]`"
+
+[blocks.backend_build]
+kind = "build"
+paths = ["backend/pyproject.toml", "backend/Dockerfile", "backend/.dockerignore", "backend/build.spec", "backend/packaging_entry.py", "backend/docker-config.yaml", "backend/config/", "backend/scripts/", "backend/launchd/", "backend/systemd/"]
+question = "como o backend é instalado, configurado, empacotado e posto em serviço (pip, PyInstaller, Docker, launchd, systemd)?"
+not_means = "código do produto: monta e configura, não decide nada do domínio"
+
+[blocks.desktop_build]
+kind = "build"
+paths = ["desktop/package.json", "desktop/package-lock.json", "desktop/electron-builder.yml", "desktop/tsconfig.json", "desktop/vite.config.mts", "desktop/vitest.config.mts"]
+question = "com que dependências e configuração o cockpit é tipado, testado e empacotado?"
+not_means = "código do cockpit: manifestos e configuração, sem comportamento"
+
+[blocks.native_build]
+kind = "build"
+paths = ["native/Cargo.toml", "native/Cargo.lock", "native/.gitignore"]
+question = "como o workspace Rust é declarado e travado?"
+not_means = "código dos kernels: só o manifesto, o lockfile e o ignore"
+
+[blocks.workspace]
+kind = "build"
+paths = ["justfile", "docker-compose.yml", "scripts/", ".gitignore"]
+question = "que atalhos montam e verificam o repositório inteiro (just, compose, instalação)?"
+not_means = "segunda fonte do gate: `just verify` executa o que `architecture.toml [gate]` declara"

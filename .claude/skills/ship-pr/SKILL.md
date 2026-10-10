@@ -33,11 +33,17 @@ em doc viva**: `test_pr0_gate` e `test_docs_contract` reprovam; cite
 
 - Funcionalidade core mudou → invoque `/docs-sync` (mapa código→doc; o
   primeiro passo é `just context` e ler o diff do mapa).
-- Item da fila fechado → mova a linha de `docs/18-backlog-consolidado.md`
-  §11 para a seção histórica do mesmo documento, NO MESMO COMMIT, com o
-  teste que prova. `docs/09` é histórico (congelado): não escreva lá.
+- Item da fila fechado → marque ✅ na PRÓPRIA linha de
+  `docs/18-backlog-consolidado.md` §11, NO MESMO COMMIT, com o teste ou ADR
+  que prova — a linha fica: `corpusmith context` conta abertos e fechados
+  lendo a §11. `docs/09` é histórico (congelado): não escreva lá.
+- Arquivo ou pasta nova → bloco que a cobre em `ontology.toml` §4 (o
+  `ontology lint` reprova arquivo versionado sem bloco); unidade Python nova
+  → camada em `architecture.toml [[tier]]` + bloco homônimo; import novo
+  entre blocos → `depends_on` (e `debts`, com motivo, se apontar para fora
+  do gradiente). `corpusmith ontology where <caminho>` diz onde algo mora.
 - Camada/regra/invariante de arquitetura mudou → `architecture.toml`
-  (`[gate]`, `[[invariant]]` — presos a teste).
+  (`[[tier]]`, `[gate]`, `[[invariant]]` — presos a teste).
 - Requisito não funcional mudou de estado → `nfr.toml` (`declared` →
   `pinned` só com o teste em `verified_by`).
 - Mecanismo heurístico novo/alterado → contrato em `epistemics.toml`
@@ -53,20 +59,24 @@ git checkout -b claude/<tema-curto>
 git add <arquivos intencionais>          # nunca `git add .` às cegas
 git commit                               # mensagem: o QUÊ + POR QUÊ + invariantes
 git push -u origin claude/<tema-curto>
-gh pr create --base main ...
+gh pr create --base main --body-file <corpo preenchido>
 ```
 
-Corpo do PR MUST ter: o que muda e por quê · **Invariantes (INV-AI-001)**
-afetados/preservados · **Evidência executável** (saídas reais do gate e
-do teste-que-falhava) · desvios conscientes, se houver.
+O corpo do PR segue as seções de `.github/PULL_REQUEST_TEMPLATE.md`
+(`--body` sem o template pula as duas perguntas que `docs/30` §3 deixa
+como guarda humana). MUST ter: o que muda e por quê · **Invariantes
+(INV-AI-001)** afetados/preservados · autoridade e projeções · NFR (algum
+`status` muda?) · termo novo responde a UMA pergunta? · em que NÍVEL da
+escada o atributo é afirmado · **Evidência executável** (saídas reais do
+gate e do teste-que-falhava) · risco e rollback · desvios conscientes.
 
 ## 5. CI, merge e limpeza
 
 ```bash
 gh pr checks <n> --watch      # todas as pernas do ci.yml verdes
-gh pr merge <n> --squash --delete-branch   # CONTRIBUTING.md: squash merge
+gh pr merge <n> --squash --delete-branch   # CONTRIBUTING.md: squash merge;
+                                            # --delete-branch já apaga o local e o remoto
 git checkout main && git pull --ff-only && git fetch --prune
-git branch -d claude/<tema-curto>
 ```
 
 Merge sem CI verde é proibido. Depois do merge, confirme que `main`

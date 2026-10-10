@@ -47,7 +47,7 @@ quem coleta.
 retomada e política de site — todas preocupações de *transporte*, com ciclo de
 mudança rápido e superfície de risco alta. Absorvê-las traria segredo, rede e
 agendamento para dentro de um produto cujo núcleo é **puro** e cujo trunfo é o
-determinismo. O gradiente de mutabilidade (`architecture.toml [layers]`) existe
+determinismo. O gradiente de mutabilidade (`architecture.toml [[tier]]`) existe
 justamente para que o volátil não encoste no estável.
 
 **Onde a fronteira encosta.** O único contrato necessário é o mais simples

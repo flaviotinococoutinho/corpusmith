@@ -15,7 +15,7 @@ just verify        # a lista é architecture.toml [gate]; test_pr0_gate cruza CI
 ```
 
 Saída esperada: pytest com zero falhas (a contagem cresce a cada versão —
-`corpusmith context` a imprime; nenhuma doc viva a crava), `tsc` sem
+o próprio pytest a imprime; nenhuma doc viva a crava), `tsc` sem
 saída, `npm test` verde, `docker compose config` sem saída,
 `epistemics lint` e `ontology lint` com 0 finding(s).
 

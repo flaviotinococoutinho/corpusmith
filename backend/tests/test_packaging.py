@@ -70,6 +70,7 @@ def test_datas_declarados_existem():
     "config/default.yaml",     # settings.py
     "db",                      # runtime/db.py (schema_*.sql)
     "../epistemics.toml",      # harness/epistemics.py — lido em runtime
+    "../ontology.toml",        # harness/ontology.py — idem (RFC-004)
 ])
 def test_todo_recurso_lido_em_runtime_esta_nos_datas(recurso):
     """Reproduzido no binário: sem o `epistemics.toml` nos `datas`,

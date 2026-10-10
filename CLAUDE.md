@@ -32,16 +32,18 @@ entre máquinas); é guarda de mesma-máquina/nightly.
 ## Ferramentas de operação (não são testes)
 
 ```bash
-cd backend && .venv/bin/python -m corpusmith.cli doctor            # invariantes INV-*
+cd backend && .venv/bin/python -m corpusmith.cli doctor            # invariantes de dados em runtime (INV-001…, numeração do doctor)
 cd backend && .venv/bin/python -m corpusmith.cli epistemics lint   # contratos epistêmicos
 cd backend && .venv/bin/python -m corpusmith.cli backup create     # backup verificável
+cd backend && .venv/bin/python -m corpusmith.cli ontology where <caminho|termo|mecanismo>  # a que bloco do projeto algo pertence
 just context                                                       # o mapa gerado do repositório (leia antes de mudar algo)
 ```
 
 Registros legíveis por máquina, todos presos a teste: `architecture.toml`
-(camadas, gate, invariantes), `epistemics.toml` (mecanismos),
-`ontology.toml` (termos e eixos), `nfr.toml` (requisitos não funcionais com
-`status`). A fila viva é `docs/18` §11; todo `docs/*.md` declara altitude e
+(camadas em `[[tier]]`, gate, invariantes), `epistemics.toml` (mecanismos),
+`ontology.toml` (termos, eixos e — §4 — os blocos do projeto: todo arquivo
+versionado tem UM bloco, e import novo entre blocos é declarado), `nfr.toml`
+(requisitos não funcionais com `status`). A fila viva é `docs/18` §11; todo `docs/*.md` declara altitude e
 status na cabeça e doc vivo não crava contagem (`test_docs_contract.py`).
 
 ## Forma do projeto

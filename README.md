@@ -143,19 +143,24 @@ compilação/consulta e **Cockpit de curadoria** no Electron.
 > referência · operacional · governança). Mantida sincronizada com o código
 > pela skill local `/docs-sync` (`.claude/skills/docs-sync/SKILL.md`).
 
-## Arquitetura v0.9 — imutável no centro, mutável na borda
+## Arquitetura — imutável no centro, mutável na borda
 
 ```
-kernel/      ← IMUTÁVEL: stdlib pura, zero I/O (matemática e invariantes)
-normalize/   ← puro: detectores, gazetteer, máscaras (dado, não infra)
-cognitive/   ← puro (v0.19): Cognitive Experience Domain — gates, score,
-               working set, sessão, prática espaçada (testável sem infra)
-okf/ harness/← domínio canônico: modelo OKF, writer, regras (muda devagar)
-usecases/    ← aplicação: 1 classe = 1 operação = 1 método público execute()
-facades/     ← orquestração: Memory · Compiler · Curation · CurationActs ·
-               Cognition · System
-jobs/ api/ cli · desktop/   ← adapters: a camada MAIS mutável (fila, HTTP, UI)
+0 kernel/ normalize/ cognitive/ epistemic/  ← núcleo PURO: stdlib, zero I/O
+1 paths · settings · runtime/               ← plataforma: configuração, persistência operacional
+2 okf/ harness/ retrieval/ compute/ native/ ← domínio canônico (muda devagar)
+3 models/ ingestion/                        ← borda acionada: LLM e extração, chamados pela aplicação
+4 usecases/                                 ← aplicação: 1 classe = 1 operação = execute()
+5 facades/                                  ← orquestração: Memory · Compiler · Curation ·
+                                              CurationActs · Cognition · System
+6 jobs/ api/ cli · daemon · desktop/        ← borda acionadora: a camada MAIS mutável
 ```
+
+A dependência aponta para dentro. Dono das camadas: `architecture.toml
+[[tier]]`; o índice de cada parte (a pergunta que responde, de que depende,
+termos, mecanismos e testes) é gerado por `corpusmith ontology blocks` — e
+arquivo novo fora de todo bloco, ou import novo entre blocos sem
+declaração, reprova o gate (ADR-60).
 
 **Dois domínios, contratos explícitos (v0.19)**: a memória governa o
 que é conhecido; o *Cognitive Control Plane* governa o que entra em
@@ -462,7 +467,8 @@ docker compose --profile ml up -d   # + Ollama (modelos locais) em rede interna
 
 Dados no volume `corpusmith-data` (bundle Git + 5 bancos SQLite + handshake);
 a porta publica só em 127.0.0.1 — local-first vale também no Docker.
-Backlog fechado e portas abertas: [`docs/09-backlog.md`](docs/09-backlog.md).
+O que ainda falta, com evidência: [`docs/18`](docs/18-backlog-consolidado.md) §11 — a
+única fila viva (`docs/09` é o backlog histórico, congelado).
 
 ## Montagem (detalhe)
 
@@ -483,39 +489,24 @@ bootstrap`): `index.md` raiz com frontmatter contendo **apenas**
 ## Estrutura
 
 ```
-backend/
-  src/corpusmith/
-    okf/        document, links, bundle, index_file, log_file, git_store, writer,
-                bootstrap, authorities (gazetteer do bundle, v0.8)
-    normalize/  model, masking, grammar, gazetteer, engine +
-                detectors/{dates,quantities,identifiers,standards,geo}   (v0.8 §3)
-    harness/    findings, okf_conformance (SPEC), local_policy (política),
-                runner (lint_bundle), eval_memory (5 categorias, v0.8 §10)
-    runtime/    db (+migrate), queue, slots, events, governor, scheduler, worker
-    jobs/       compile (sanduíche §6.1), ask (temporal/abstenção §6.2),
-                reconcile (§5), reflect (§8), review, leiden (§7), embed,
-                rerank, ocr, lora
-    retrieval/  fts (rebuild_index incremental + entidades + níveis),
-                descend, dense, related, streams (fusão RRF+Hedge)
-    models/     router (local Ollama × API Anthropic, privacidade + orçamento)
-    api/        system (auth header OU ?auth=), cockpit (+outcome/eval/
-                authorities/reflect, v0.8 §11), cognitive (/cognitive/* v0.19),
-                curation (atos com preview, F1)
-    daemon.py · cli.py · settings.py (flags + get) · context_pack.py
-                (o mapa gerado: `corpusmith context`)
-  db/           schema_runtime.sql · schema_index.sql · schema_cognitive.sql
-                · schema_cold.sql · schema_reference.sql (5 bancos, v0.8 §2.1)
-  config/       default.yaml (privacy.default: local_only · flags v0.8)
-  build.spec    PyInstaller onedir (AGPL fora do binário)
-desktop/
-  electron/     main, preload, sidecar (handshake via state/daemon.json)
-  src/panels/   as abas do cockpit (a lista viva é `TABS` em src/App.tsx):
-                Dashboard, ChatEvidence, Inbox, Explorer, Quality, Processes,
-                Graph, Insights, Curation, Doctor, Focus, Cognition, Memory,
-                ActsHistory + diálogos (PromoteDialog, CurationDialog)
-  src/lib/      daemonClient (extensões do cockpit + v0.8), client (singleton),
-                live (SSE)
+backend/     src/corpusmith/ (o produto, nas camadas acima) · tests/ · db/ (schemas)
+             · config/ · scripts/ · build.spec (PyInstaller; AGPL fora do binário)
+desktop/     electron/ (main, preload, sidecar) · src/ (o cockpit; as abas são
+             `TABS` em src/App.tsx)
+native/      crates/ — compute plane Rust: grafo, sketch, texto, ETL, extensão
+             PyO3 e worker isolado
+docs/        conceitos, teoria, engenharia, decisões e a fila viva (docs/README.md)
+benchmarks/  o baseline medido — autoridade das alegações de performance
+*.toml       os registros legíveis por máquina (architecture, epistemics,
+             ontology, nfr), cada um cruzado com o código por teste e lint
 ```
+
+A árvore acima é deliberadamente rasa. O mapa completo e vivo é GERADO:
+`corpusmith ontology blocks` lista cada bloco do projeto com a pergunta que
+responde, e `corpusmith ontology where <caminho|termo|mecanismo>` diz a que
+bloco algo pertence. A árvore detalhada que morava aqui apodreceu do jeito
+de sempre — listava `eval_memory` em `harness/` e omitia oito unidades do
+gradiente.
 
 ## Aceite da v0.7 (verificado por teste)
 

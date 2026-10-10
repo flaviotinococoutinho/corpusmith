@@ -187,3 +187,10 @@ class CurationFacade:
         CLI, API e testes (nenhuma releitura paralela do TOML)."""
         from ..harness.ontology import overview
         return overview()
+
+    def ontology_where(self, alvo: str) -> dict:
+        """Busca no índice semântico dos blocos do projeto (ADR-60): a que
+        bloco pertence um caminho, onde mora um termo, onde é implementado
+        um mecanismo. Mesma implementação do lint e dos testes."""
+        from ..harness.ontology import where
+        return where(alvo)

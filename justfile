@@ -53,9 +53,11 @@ lint:
 index:
     backend/scripts/corpusmith okf index
 
-# empacota o sidecar (PyInstaller onedir)
+# empacota o sidecar (PyInstaller onedir). Exige o extra [ml]: sem
+# sqlite-vec o build.spec FALHA ALTO em vez de embarcar um binário sem busca
+# vetorial — e `just bootstrap`/install.sh instalam só [dev]
 sidecar:
-    cd backend && .venv/bin/pip install pyinstaller && \
+    cd backend && .venv/bin/pip install -e ".[ml]" pyinstaller && \
       .venv/bin/pyinstaller build.spec
 
 # app desktop em modo dev

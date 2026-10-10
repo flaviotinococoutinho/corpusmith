@@ -122,6 +122,20 @@ def test_a_extensao_nativa_e_instalada_e_exercitada_pela_ci():
         "deixa de ser acusado por test_ci_executa_todo_o_gate_declarado")
 
 
+def test_o_worker_nativo_e_exercitado_pela_ci():
+    """O par do teste acima para o WORKER nativo: o binário era construído
+    pela perna `native` e o único teste do protocolo pulava em todas as
+    pernas ("worker nativo não compilado") — inclusive a que o construía.
+    Assertado no ci.yml direto, porque o token não guarda a si mesmo."""
+    runs = _ci_runs()
+    assert "cargo build --release" in runs and \
+        "corpusmith-native-worker" in runs
+    assert "test -x native/target/release/corpusmith-native-worker" in runs, (
+        "sem a checagem de existência, o teste volta a PULAR em silêncio")
+    assert "test_worker_isolation.py" in runs
+    assert "test_worker_isolation.py" in _arch()["gate"]["ci_enforced"]
+
+
 def test_skills_nao_copiam_o_gate_nem_cravam_contagem():
     """As skills de trabalho mandavam "atualizar a contagem de testes no
     AGENTS §2" (o que o teste acima proíbe) e listavam TRÊS comandos onde
@@ -287,9 +301,36 @@ def test_baseline_real_declara_versao_e_razoes():
 # ============================== versão: uma fonte para os artefatos
 def test_versao_unica_entre_produto_arquitetura_e_app():
     """`test_architecture_toml` já amarra architecture.toml ↔ __version__;
-    desktop/package.json ficava solto (estava em 0.7.0 com produto 1.8.0)."""
+    desktop/package.json ficava solto (estava em 0.7.0 com produto 1.8.0) —
+    e o `pyproject.toml` também, conferido só pelo release.yml, que nunca
+    rodou (auditoria de integridade de 2026-10-10)."""
     pkg = json.loads((_ROOT / "desktop/package.json").read_text())
-    assert _arch()["product_version"] == __version__ == pkg["version"]
+    pyproject = tomllib.loads((_ROOT / "backend/pyproject.toml").read_text())
+    assert _arch()["product_version"] == __version__ == pkg["version"] \
+        == pyproject["project"]["version"]
+
+
+def _partes(v: str) -> tuple:
+    return tuple(int(x) for x in (v.split(".") + ["0", "0"])[:3])
+
+
+def test_versao_citada_nao_vem_do_futuro():
+    """Q-26: o cabeçalho de `ontology.toml` e o título do ADR-54 diziam
+    "v2.1" com o produto em 2.0.0 — um rótulo de versão que nunca existiu,
+    num LEDGER que passa a correr para trás (o ADR-58, posterior, diz
+    v2.0.0). Título de ADR e cabeçalho de registro carimbam a versão do
+    PRODUTO; carimbo maior que `__version__` é alegação sem release."""
+    rotulo = re.compile(r"\bv(\d+\.\d+(?:\.\d+)?)\b")
+    fontes = {f"docs/08 {m.group(1)}": m.group(2) for m in re.finditer(
+        r"^(#{2,4} ADR-\d+)(.*)$",
+        (_ROOT / "docs/08-decisoes.md").read_text(), re.M)}
+    for nome in ("architecture.toml", "epistemics.toml", "ontology.toml",
+                 "nfr.toml"):
+        fontes[nome] = (_ROOT / nome).read_text().splitlines()[0]
+    futuras = sorted(f"{onde}: v{v}" for onde, texto in fontes.items()
+                     for v in rotulo.findall(texto)
+                     if _partes(v) > _partes(__version__))
+    assert futuras == [], futuras
 
 
 def test_baseline_nao_vem_do_futuro():

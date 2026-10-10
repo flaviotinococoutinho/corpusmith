@@ -63,9 +63,9 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 | Doc | Conteúdo |
 |---|---|
 | [06-referencia.md](06-referencia.md) | Todas as regras do Harness, endpoints, tabelas dos 5 bancos, jobs, flags, tipos OKF, frontmatter |
-| [../architecture.toml](../architecture.toml) | Contrato de arquitetura legível-por-máquina (preso a `test_architecture_toml.py`) |
+| [../architecture.toml](../architecture.toml) | Contrato de arquitetura legível-por-máquina — camadas em `[[tier]]`, gate, invariantes (preso a `test_architecture_toml.py`; camada × árvore pelo `ontology lint`) |
 | [../epistemics.toml](../epistemics.toml) | Contratos epistemológicos legíveis-por-máquina (presos a `test_epistemics_toml.py`; lint em `corpusmith epistemics lint`) |
-| [../ontology.toml](../ontology.toml) | Eixos, léxico com etimologia e registro de deriva semântica (presos a `test_ontology.py`; lint em `corpusmith ontology lint`) |
+| [../ontology.toml](../ontology.toml) | Eixos, léxico com etimologia, registro de deriva semântica e — §4 — os **blocos do projeto**, o índice semântico do repositório (presos a `test_ontology.py` e `test_ontologia_dos_blocos.py`; lint em `corpusmith ontology lint`; consulta em `corpusmith ontology blocks\|where`) |
 
 ### 🔄 Fluxos operacionais — QUANDO / ONDE
 | Doc | Conteúdo |
@@ -78,12 +78,12 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 | Doc | Conteúdo |
 |---|---|
 | [08-decisoes.md](08-decisoes.md) | ADRs: conceitos adotados, adaptados e rejeitados com razão registrada (CLS, ACT-R, AGM, DTT, CRDTs, WFST…) e portas de reentrada |
-| [09-backlog.md](09-backlog.md) | Backlog priorizado (P0–P3) e estado de fechamento por frente |
-| [13-plano-experiencia-memoria.md](13-plano-experiencia-memoria.md) | **Plano avançado** de experiência de memória/curadoria/classificação — auditoria de consistência + receitas mineradas de projetos externos + roadmap em 4 fases |
-| [14-plano-viabilidade.md](14-plano-viabilidade.md) | **Plano de viabilidade** — o que falta para o produto ser usável por quem não é o autor: 14 problemas por complexidade DECRESCENTE (o ato de curadoria e a camada de padrões como objeto) + roadmap em 8 fases + matriz de não-adoção |
+| [09-backlog.md](09-backlog.md) | (histórico) Backlog priorizado (P0–P3) e estado de fechamento por frente — o estado vivo é o `18` |
+| [13-plano-experiencia-memoria.md](13-plano-experiencia-memoria.md) | (histórico) **Plano avançado** de experiência de memória/curadoria/classificação — auditoria de consistência + receitas mineradas de projetos externos + roadmap em 4 fases |
+| [14-plano-viabilidade.md](14-plano-viabilidade.md) | (histórico) **Plano de viabilidade** — o que falta para o produto ser usável por quem não é o autor: 14 problemas por complexidade DECRESCENTE (o ato de curadoria e a camada de padrões como objeto) + roadmap em 8 fases + matriz de não-adoção |
 | [15-plano-execucao.md](15-plano-execucao.md) | **Plano de execução** (histórico, congelado) — pacotes de trabalho PR a PR das duas fases-modelo, ordem revisada, as 10 lacunas de PROCESSO G-1…G-10 (hoje fechadas pelo PR-0), dependências ocultas, colisões de arquivo e o limiar de RFC |
 | [16-rfc-theme-id.md](16-rfc-theme-id.md) | **RFC-001** — identidade de tema por casamento de partições (τ = 1/3 calibrado contra a banda vazia; vocabulário fechado de épocas) |
-| [17-auditoria-integridade.md](17-auditoria-integridade.md) | **Auditoria adversarial de integridade** — achados de um cético independente rodando o código (garantias infladas, buracos de lint/gate), com nível de evidência |
+| [17-auditoria-integridade.md](17-auditoria-integridade.md) | (histórico) **Auditoria adversarial de integridade** — achados de um cético independente rodando o código (garantias infladas, buracos de lint/gate), com nível de evidência |
 | [18-backlog-consolidado.md](18-backlog-consolidado.md) | **Backlog consolidado — a ÚNICA fila viva**: a §11 (`Q-n`) é a fila corrente — superfície de estudo, decisões pendentes, NFRs `declared` → `pinned`, entropia de engenharia, condições e portas, disposições das pontas soltas e a política de entropia documental; §1–§10 são o histórico de fechamento, cada linha com nível de evidência e o teste/ADR que a fechou; `corpusmith context` conta abertos e fechados |
 | [19-rfc-escada-reconciliacao.md](19-rfc-escada-reconciliacao.md) | **RFC-002** — a escada de reconciliação volta a ter três degraus (B1: o degrau de similaridade era código morto; árbitro LLM segue atrás de flag desligada) |
 | [20-rfc-colisao-de-caminho.md](20-rfc-colisao-de-caminho.md) | **RFC-003** — colisão de caminho entre promoção humana e compilação de máquina (P-7) |
@@ -116,9 +116,10 @@ Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
 - É **o que um mecanismo heurístico pode ALEGAR / onde foi avaliado**? → `11` + `epistemics.toml`.
 - É **quanto/quão rápido/quão durável** (CAP, SLO, escala, segurança)? → `10` §5–17.
 - É **uma constante/regra/endpoint** que preciso consultar? → `06`.
-- É **uma decisão tomada ou o que ainda falta**? → `08`, `09`.
-- É **para onde levar a experiência de memória/curadoria/classificação**? → `13`.
-- É **o que falta para ser viável para um terceiro** (e em que ordem)? → `14`.
+- É **uma decisão tomada**? → `08`. **O que ainda falta**? → `18` §11 (`09` é o backlog histórico).
+- É **para onde levar a experiência de memória/curadoria/classificação**? → `29` + `18` §11 (`13` é o registro histórico do raciocínio).
+- É **o que falta para ser viável para um terceiro** (e em que ordem)? → `18` §11 (`14` é histórico).
+- É **a que parte do repositório algo pertence** (bloco, camada, dependência, quem prova)? → `corpusmith ontology where <caminho>` + `23` (blocos do projeto).
 - É **como executar isso** (PR a PR, processo, RFC vs ADR)? → `15` + `AGENTS.md` §8.
 - É **o que AINDA falta, com evidência**? → `18` (fonte viva; `14`/`15` são o registro do raciocínio).
 - É **para onde o produto está mirando** (o instrumento de estudo, as seis

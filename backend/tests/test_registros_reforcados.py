@@ -108,18 +108,26 @@ def test_vocabularios_fechados_sao_registro_separado_dos_EIXOS():
     separação é o ponto, e o `applies_to` de cada um a declara."""
     assert set(onto.AXES) == {"derivation_method", "resolution_status",
                               "governance_status"}
-    assert set(onto.VOCABULARIES) == {"semantic_relation", "side_effect"}
+    # ADR-60: o terceiro objeto é o BLOCO DO PROJETO — parte do repositório,
+    # não do corpus. Acrescentá-lo aqui é a decisão consciente que este
+    # conjunto fechado existe para exigir.
+    assert set(onto.VOCABULARIES) == {"semantic_relation", "side_effect",
+                                      "block_kind"}
     for nome, (valores, objeto, _) in onto.VOCABULARIES.items():
-        assert valores and objeto in ("relation", "mechanism"), nome
+        assert valores and objeto in ("relation", "mechanism",
+                                      "project_block"), nome
 
 
 def test_vocabulario_fechado_espelha_a_constante_real():
     from corpusmith.epistemic import SideEffect
+    from corpusmith.kernel.blocks import KINDS
     from corpusmith.kernel.semantics import RELACOES
     valores_rel, _, _ = onto.VOCABULARIES["semantic_relation"]
     valores_efeito, _, _ = onto.VOCABULARIES["side_effect"]
+    valores_bloco, _, _ = onto.VOCABULARIES["block_kind"]
     assert set(valores_rel) == set(RELACOES)
     assert set(valores_efeito) == {e.value for e in SideEffect}
+    assert valores_bloco == KINDS
 
 
 def test_lint_COBRA_verbete_para_vocabulario_fechado(tmp_path):

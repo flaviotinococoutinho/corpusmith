@@ -15,7 +15,7 @@ pergunte ao usuário antes).
 | Mudou isto no código | Atualize |
 |---|---|
 | Regra nova/alterada em `harness/okf_conformance.py` ou `harness/local_policy.py` | `docs/06-referencia.md` §1 (tabela de regras) + `docs/01-conceitos.md` §2/§7 se mudar a divisão conformidade×política ou máquina×humano |
-| Endpoint em `api/system.py` ou `api/cockpit.py` | `docs/06-referencia.md` §2 + `docs/05-fluxos-operacionais.md` §11 (mapa endpoint→facade→use case) |
+| Endpoint em `api/system.py`, `api/cockpit.py`, `api/cognitive.py` ou `api/curation.py` | `docs/06-referencia.md` §2 + `docs/05-fluxos-operacionais.md` §11 (mapa endpoint→facade→use case) |
 | Tabela/coluna em `db/schema_*.sql` ou `runtime/db.py:_migrate` | `docs/06-referencia.md` §3 + o fluxo que a consome em `docs/05` |
 | Job no `jobs/__init__.py:REGISTRY` ou `runtime/scheduler.py` | `docs/06-referencia.md` §4 + `docs/05` §0 |
 | Use case novo em `usecases/` ou método de facade | `docs/06-referencia.md` §10 + `docs/05` §11 + `docs/02-metodologias.md` §6 |
@@ -32,7 +32,8 @@ pergunte ao usuário antes).
 | Eixo, termo, vocabulário fechado ou deriva em `ontology.toml` / `kernel/ontology.py` | `docs/23-ontologia-e-etimologia.md` (verbete com raiz e o que proíbe) — termo NOVO em eixo exige RFC (AGENTS §8) |
 | `architecture.toml` (`[gate]`, `[[invariant]]`, camadas) | `AGENTS.md` §2/§4 e `docs/10` §1 citam o TOML; não copie a lista |
 | `nfr.toml` (status de requisito não funcional) | `docs/10` §5–§17 é a doutrina; o selo NÃO se escreve em prosa — `declared` → `pinned` só com teste em `verified_by` |
-| Item da fila corrente (`docs/18` §11) fechado | mova a linha para a seção histórica de `docs/18` no MESMO commit, com o teste que prova; `docs/29`/`docs/30` só se a direção ou um termo da re-mira mudar |
+| Item da fila corrente (`docs/18` §11) fechado | marque ✅ na própria linha, no MESMO commit, com o teste ou ADR que prova (a linha fica: `corpusmith context` conta a §11); `docs/29`/`docs/30` só se a direção ou um termo da re-mira mudar |
+| Pacote/módulo novo em `src/corpusmith`, pasta nova na raiz, import novo entre blocos | bloco em `ontology.toml` §4 (+ camada em `architecture.toml [[tier]]` se for unidade Python); `docs/23` só se o SENTIDO de um bloco mudar — o índice é gerado (`corpusmith ontology blocks`) |
 | Documento novo em `docs/` | linha em `docs/README.md` + cabeçalho `> **Altitude:** … · **Status:** …` (test_docs_contract) |
 
 ## Procedimento de auditoria
@@ -50,7 +51,7 @@ Execute a partir de `backend/` e compare cada saída com a seção citada:
 grep -rhoE '"(okf|policy)\.[a-z_]+"' src/corpusmith/harness/ src/corpusmith/normalize/engine.py | sort -u
 
 # 2. Endpoints (compare com 06-referencia §2)
-grep -rhoE '@app\.(get|post)\("[^"]+"' src/corpusmith/api/ | sort -u
+grep -rhoE '@app\.(get|post|put|patch|delete)\("[^"]+"' src/corpusmith/api/ | sort -u
 
 # 3. Tabelas (compare com 06-referencia §3)
 grep -hoE 'CREATE (VIRTUAL )?TABLE IF NOT EXISTS \S+' db/*.sql | sort -u

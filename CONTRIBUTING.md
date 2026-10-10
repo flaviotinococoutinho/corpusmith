@@ -50,7 +50,8 @@ just verify
 ```
 
 Esse comando cobre a suíte do backend, typecheck e smoke do frontend, Docker
-Compose e os contratos epistêmicos. A CI completa o gate com a perna ML,
+Compose, os contratos epistêmicos e o registro ontológico (que inclui os
+blocos do projeto: arquivo novo precisa de bloco em `ontology.toml` §4). A CI completa o gate com a perna ML,
 invariantes operacionais, build do frontend, kernels Rust e execução do binário
 empacotado. Se uma perna não puder ser reproduzida localmente, explique isso no
 pull request e confirme as demais.
