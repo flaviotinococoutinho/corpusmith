@@ -104,7 +104,7 @@ declaração, reprova o lint — a decisão aparece no diff do registro.
 | INV-ARCH-004 | `api/` nunca chama use case nem job direto — orquestra por facades; o que ela lê FORA da facade é dívida declarada, aresta por aresta, em `ontology.toml` §4 | `::test_api_speaks_only_to_facades` |
 | INV-ARCH-005 | todo `UseCase` expõe só `execute()` | `::test_every_usecase_has_single_public_method` |
 | INV-ARCH-006 | subclasses de `MachinePageUseCase` não sobrescrevem `execute()` | `::test_machine_page_template_is_closed_for_modification` |
-| INV-DATA-001 | escrita canônica passa pelo Harness + `BundleWriter` | `test_writer.py` |
+| INV-DATA-001 | escrita canônica passa pelo Harness + `BundleWriter` — página por `write`, artefato (o golden eval) por `write_artifact`; nenhuma porta lateral fora de `okf/` | `test_writer.py`, `test_q28_golden_pelo_escritor.py` |
 | INV-DATA-002 | página supersedida fica auditável e FORA do retrieval padrão | `test_v22.py::test_inv003_*` |
 | INV-DATA-003 | `index.db` é reconstruível do bundle | `test_v22.py`, `test_doctor.py` |
 | INV-DATA-004 | falha cognitiva NÃO altera confiança/validade canônicas | `test_cognitive_journey.py` |

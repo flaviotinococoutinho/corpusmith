@@ -19,6 +19,7 @@ from .base import UseCase
 from .. import __version__
 from ..epistemic import envelope_status
 from ..epistemic.model import EvaluationEnvelope
+from ..harness.artifacts import GOLDEN_EVAL
 from ..runtime.db import connect
 from ..settings import Settings
 
@@ -29,8 +30,7 @@ class EvaluateMemory(UseCase):
         self._notify = notify or (lambda *a, **k: None)
 
     def execute(self) -> dict:
-        gold = self._settings.path("knowledge") / "bundle" / "harness" \
-            / "golden_eval.jsonl"
+        gold = self._settings.path("knowledge") / "bundle" / GOLDEN_EVAL
         if not gold.exists():
             return {"skipped": "golden_eval.jsonl ausente"}
         gold_text = gold.read_text()
