@@ -448,10 +448,55 @@ def cmd_epistemics(s: Settings, args) -> int:
     return 2
 
 
+def _cartao_de_bloco(b: dict, via: str = "") -> list[str]:
+    linhas = [f"[{b['block']}] {b['kind']}"
+              + (f" · camada {b['tier']}" if b["tier"] else "")
+              + (f" · via {via}" if via else "")
+              + f" · {b['files']} arquivo(s)",
+              f"    pergunta: {b['question']}",
+              f"    não é: {b['not_means']}",
+              f"    caminhos: {', '.join(b['paths'])}"]
+    if b["depends_on"]:
+        linhas.append(f"    depende de: {', '.join(b['depends_on'])}")
+    if b["used_by"]:
+        linhas.append(f"    usado por: {', '.join(b['used_by'])}")
+    linhas += [f"    DÍVIDA → {alvo}: {motivo}"
+               for alvo, motivo in b["debts"].items()]
+    if b["terms"]:
+        linhas.append(f"    termos: {', '.join(b['terms'])}")
+    if b["mechanisms"]:
+        linhas.append(f"    mecanismos: {', '.join(b['mechanisms'])}")
+    if b["tests"]:
+        linhas.append(f"    testes: {len(b['tests'])} arquivo(s)")
+    return linhas
+
+
 def cmd_ontology(s: Settings, args) -> int:
-    """ontology lint|axes|terms|drift — o registro ontológico (RFC-004),
-    a MESMA implementação do painel e dos testes (harness.ontology)."""
+    """ontology lint|axes|terms|drift|blocks|where <alvo> — o registro
+    ontológico (RFC-004) e o índice semântico dos blocos do projeto
+    (ADR-60), a MESMA implementação do painel e dos testes
+    (harness.ontology)."""
+    if args.op == "where":
+        alvo = getattr(args, "alvo", None)
+        if not alvo:
+            print("uso: corpusmith ontology where <caminho|bloco|termo|"
+                  "mecanismo>", file=sys.stderr)
+            return 2
+        achados = CurationFacade(s).ontology_where(alvo)["matches"]
+        for m in achados:
+            print("\n".join(_cartao_de_bloco(m, m["via"])))
+        if not achados:
+            print(f"`{alvo}` não é caminho versionado, bloco, termo, eixo, "
+                  "vocabulário nem mecanismo conhecido", file=sys.stderr)
+        return 0 if achados else 1
     data = CurationFacade(s).ontology_overview()
+    if args.op == "blocks":
+        for b in data["blocks"]:
+            print("\n".join(_cartao_de_bloco(b)))
+        print(f"\n{len(data['blocks'])} bloco(s) em "
+              f"{len(data['tiers'])} camada(s) — "
+              f"{len(data['findings'])} finding(s)")
+        return 0 if data["ok"] else 1
     if args.op == "axes":
         for a in data["axes"]:
             print(f"{a['axis']:20s} [{a['applies_to']:10s}] "
@@ -565,8 +610,13 @@ def main(argv: list[str] | None = None) -> int:
     epistemics.add_argument("mechanism", nargs="?", default=None)
     epistemics.set_defaults(fn=cmd_epistemics)
     ontology = sub.add_parser(
-        "ontology", help="eixos, termos e deriva semântica (ontology.toml)")
-    ontology.add_argument("op", choices=["lint", "axes", "terms", "drift"])
+        "ontology", help="eixos, termos, deriva semântica e o índice dos "
+                         "blocos do projeto (ontology.toml)")
+    ontology.add_argument("op", choices=["lint", "axes", "terms", "drift",
+                                         "blocks", "where"])
+    ontology.add_argument("alvo", nargs="?", default=None,
+                          help="para `where`: caminho, bloco, termo, eixo, "
+                               "vocabulário ou mecanismo")
     ontology.set_defaults(fn=cmd_ontology)
     context = sub.add_parser(
         "context", help="mapa determinístico do repositório para agentes "

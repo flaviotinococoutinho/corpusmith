@@ -66,20 +66,30 @@ trocar de máquina), então ele é guarda de mesma-máquina/nightly, com
 ## 3. Mapa de camadas (gradiente de mutabilidade)
 
 ```
-kernel/ normalize/ cognitive/ epistemic/  ← núcleo PURO: stdlib, zero I/O (asserção de teste)
-okf/ harness/ retrieval/        ← domínio canônico
-compute/                        ← porta ComputeKernel (python ref + rust via PyO3; ADR-39)
-native/ (Cargo)                 ← compute plane Rust: sinais/projeções — NUNCA decide domínio
-usecases/                       ← aplicação: 1 classe = 1 operação = execute()
-facades/                        ← orquestração (Memory·Compiler·Curation·Cognition)
-jobs/ api/ cli/ daemon/ models/ desktop/   ← adapters (a única camada que fala com o mundo)
+0 kernel/ normalize/ cognitive/ epistemic/   ← núcleo PURO: stdlib, zero I/O (asserção de teste)
+1 paths settings runtime/                    ← plataforma: configuração, recursos, persistência operacional
+2 okf/ harness/ retrieval/ compute/ native/  ← domínio canônico (compute = porta ComputeKernel; native =
+                                               compute plane Rust: sinais/projeções — NUNCA decide domínio)
+3 models/ ingestion/                         ← borda ACIONADA: adapters que a aplicação chama (LLM, extração)
+4 usecases/                                  ← aplicação: 1 classe = 1 operação = execute()
+5 facades/                                   ← orquestração (Memory·Compiler·Curation·Cognition·System)
+6 jobs/ jobs_proc api/ cli daemon desktop/   ← borda ACIONADORA: adapters que chamam o produto
+  bench context_pack                           (e as ferramentas que o medem e o descrevem)
 ```
 
 Quanto mais interna: mais pura, menos volátil, menos consciente de
-transporte/persistência/UI. Regra completa (e dono desta lista):
-`architecture.toml`; `corpusmith context` (`just context`) imprime o mapa
-gerado — camadas, gate, invariantes, NFRs, registros, rotas, jobs, ADRs,
-docs e a fila corrente — leia-o antes de mudar algo.
+transporte/persistência/UI; a dependência aponta para DENTRO. Regra
+completa (e dono desta lista): `architecture.toml [[tier]]` — o `ontology
+lint` cruza camada × árvore nas duas direções, e a aresta que aponta para
+fora só existe como dívida registrada, com motivo, em `ontology.toml` §4.
+Antes de mudar algo, leia o mapa: `corpusmith context` (`just context`)
+imprime o gerado — camadas, blocos, gate, invariantes, NFRs, registros,
+rotas, jobs, ADRs, docs e a fila corrente; `corpusmith ontology blocks`
+imprime o índice semântico dos blocos do projeto (pergunta, fronteira,
+camada, dependências, dívidas, termos, mecanismos, testes) e `corpusmith
+ontology where <caminho|bloco|termo|mecanismo>` responde a que bloco algo
+pertence. Arquivo novo fora de todo bloco, ou import novo entre blocos sem
+declaração, reprova o lint — a decisão aparece no diff do registro.
 
 ## 4. Invariantes que você NÃO pode quebrar
 
@@ -100,6 +110,7 @@ docs e a fila corrente — leia-o antes de mudar algo.
 | INV-OPS-002 | todo job termina em estado terminal ou permanece recuperável | `test_jobs_reliability.py` |
 | INV-EPI-001 | mecanismo heurístico tem contrato em `epistemics.toml`: sem garantia universal, com vieses/failure modes/fallback declarados e sem autocertificação | `test_epistemics.py`, `test_epistemics_toml.py`, `corpusmith epistemics lint` |
 | INV-ONT-001 | todo valor de eixo epistêmico responde a UMA pergunta: vocabulário fechado em `kernel/ontology.py`, declarado em `ontology.toml`, e nenhum termo em dois eixos | `test_ontology.py`, `corpusmith ontology lint` |
+| INV-ONT-002 | todo arquivo versionado pertence a UM bloco do projeto (`ontology.toml` §4), que responde a UMA pergunta; dependência entre blocos de código é declarada, e a que contraria o gradiente (`architecture.toml [[tier]]`) só existe como dívida registrada | `test_ontologia_dos_blocos.py`, `corpusmith ontology lint` |
 
 O dono desta tabela é `architecture.toml [[invariant]]`: os ids daqui são
 os de lá e cada `verified_by` resolve para um teste que existe
@@ -133,6 +144,7 @@ pela suíte — um NFR só é ✅ quando cita teste, nunca arquivo.
 | referência do mundo | `reference.db` | gazetteer (cache) |
 | contratos epistêmicos | `epistemics.toml` (raiz) | CLI/API/painel (mesma fonte); envelopes em `runtime.db` |
 | significado dos termos | `ontology.toml` (raiz) + `kernel/ontology.py` | CLI (`corpusmith ontology`); o TOML descreve o kernel e o lint prova |
+| blocos do projeto (pergunta, fronteira, dependência, dívida) | `ontology.toml` §4 + `architecture.toml [[tier]]` | `corpusmith ontology blocks\|where`, `corpusmith context`; termos, mecanismos e testes de cada bloco são DERIVADOS, nunca copiados |
 | invariantes e gate | `architecture.toml` (raiz) | AGENTS §2/§4 e docs/10 citam DAQUI |
 | requisitos não funcionais | `nfr.toml` (raiz) | docs/10 §5–§17 é a doutrina; o status (`pinned`/`declared`) vem daqui |
 | mapa do repositório para agentes | `corpusmith context` (gerado; `just context`) | docs vivos citam o comando em vez de cravar contagens |

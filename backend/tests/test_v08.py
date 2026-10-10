@@ -209,7 +209,7 @@ def test_eval_memory_five_categories(settings, kb):
     ]
     (gold / "golden_eval.jsonl").write_text(
         "\n".join(json.dumps(c) for c in cases))
-    from corpusmith.harness import eval_memory
+    from corpusmith.jobs import eval_memory
     out = eval_memory.run(settings, {}, lambda *a, **k: None)
     assert out["stats"]["extract"] == [1, 1]
     assert out["stats"]["abstain"] == [1, 1]

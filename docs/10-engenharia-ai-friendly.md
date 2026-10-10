@@ -109,21 +109,34 @@ Decisões atuais que se tornam **requisitos permanentes**.
 ### 1.1 Gradiente de mutabilidade ✅
 
 ```text
-kernel / normalize / cognitive / epistemic   ← núcleo PURO (stdlib, zero I/O)
-        ↓
-okf / harness / retrieval / compute          ← domínio canônico (+ porta de cômputo, ADR-39)
-        ↓
-usecases                                     ← aplicação (1 método público: execute)
-        ↓
-facades                                      ← orquestração
-        ↓
-jobs / api / cli / daemon / models / desktop ← adapters (falam com o mundo)
+kernel / normalize / cognitive / epistemic   ← 0 núcleo PURO (stdlib, zero I/O)
+        ↑
+paths / settings / runtime                   ← 1 plataforma (configuração, recursos, persistência operacional)
+        ↑
+okf / harness / retrieval / compute / native ← 2 domínio canônico (+ porta e plano de cômputo, ADR-39)
+        ↑
+models / ingestion                           ← 3 borda ACIONADA (a aplicação chama: LLM, extração)
+        ↑
+usecases                                     ← 4 aplicação (1 método público: execute)
+        ↑
+facades                                      ← 5 orquestração
+        ↑
+jobs / jobs_proc / api / cli / daemon /      ← 6 borda ACIONADORA (chama o produto)
+desktop / bench / context_pack
 ```
+
+A seta é a direção da DEPENDÊNCIA (de fora para dentro). A posição de
+`models`/`ingestion` abaixo da aplicação e a de `runtime` abaixo do domínio
+não são escolha estética: são a ordem dos imports MEDIDOS (Ports & Adapters,
+Cockburn — adapter acionado × acionador). As arestas que ainda apontam para
+fora são dívida registrada em `ontology.toml` §4, com motivo (ADR-60).
 
 Quanto mais interna a camada: menor volatilidade, maior pureza, menos
 consciência de transporte/persistência/UI. **Dono único da lista:**
-`architecture.toml` (`[project].layers`, `[pure]`, `[domain]`), verificado
-por `test_architecture.py` e renderizado por `corpusmith context` — este
+`architecture.toml` (`[[tier]]`, `[pure]`, `[domain]`), verificado por
+`test_architecture.py` e pelo `ontology lint` (toda unidade da árvore tem
+camada, e a aresta que aponta para fora só existe como dívida registrada em
+`ontology.toml` §4 — ADR-60), e renderizado por `corpusmith context` — este
 desenho é ilustração; se divergir do TOML, o TOML vence.
 
 ### 1.2 Invariantes obrigatórios

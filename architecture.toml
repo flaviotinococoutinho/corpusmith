@@ -16,14 +16,56 @@ source_of_truth = ["knowledge/bundle (Markdown OKF)", "git"]
 derived_stores = ["index.db"]           # reconstruível de rebuild_index
 transport_allowed_only_in = ["api", "cli", "daemon", "models"]
 
-# Gradiente de mutabilidade (interno = estável/puro → externo = volátil).
-layers = [
-  "kernel", "normalize", "cognitive", "epistemic",  # núcleo PURO (zero I/O)
-  "okf", "harness", "retrieval",        # domínio canônico
-  "usecases",                            # aplicação (1 método público)
-  "facades",                             # orquestração
-  "jobs", "api", "cli", "daemon", "models", "desktop",  # adapters
-]
+# --- GRADIENTE DE MUTABILIDADE, em camadas (interno = estável/puro →
+#     externo = volátil). Dono ÚNICO da posição de cada unidade de código:
+#     um pacote ou módulo de topo de backend/src/corpusmith, mais `desktop`
+#     (cockpit) e `native` (compute plane Rust). AGENTS §3 cita daqui.
+#
+# Substitui a lista plana `[project].layers`, que omitia OITO unidades
+# reais (`bench`, `compute`, `context_pack`, `ingestion`, `jobs_proc`,
+# `paths`, `runtime`, `settings` — `compute` estava no mapa do AGENTS §3 e
+# não aqui) e que nenhum teste cruzava com a árvore. Agora o `ontology lint`
+# cruza nas duas direções: unidade sem camada e camada sem unidade são erro.
+#
+# A ordem é a dos IMPORTS medidos, não a de um desenho idealizado: a
+# dependência aponta para dentro (de uma camada para ela mesma ou para uma
+# mais interna). As poucas arestas que apontam para fora existem como
+# DÍVIDA registrada, com motivo, em `ontology.toml` §4 (`debts`) — e a não
+# registrada reprova o lint. Duas leituras de Ports & Adapters (Cockburn)
+# que a medição impôs: `models`/`ingestion` são a borda ACIONADA (a
+# aplicação os chama: LLM e extratores em subprocesso), por isso ficam
+# abaixo de `usecases`; `jobs`/`api`/`cli`/`daemon` são a borda
+# ACIONADORA (chamam o produto), por isso ficam por fora de tudo. E
+# `runtime` é plataforma: o domínio abre conexão por `runtime.db`.
+[[tier]]
+name = "núcleo puro"
+rule = "stdlib, zero I/O — [pure] e INV-ARCH-001"
+units = ["kernel", "normalize", "cognitive", "epistemic"]
+[[tier]]
+name = "plataforma"
+rule = "configuração, recursos e persistência operacional; sem domínio"
+units = ["paths", "settings", "runtime"]
+[[tier]]
+name = "domínio canônico"
+rule = "bundle, Harness, índice e compute plane; sem transporte ([domain])"
+units = ["okf", "harness", "retrieval", "compute", "native"]
+[[tier]]
+name = "borda acionada"
+rule = "adapters que a aplicação CHAMA: modelo de linguagem e extração"
+units = ["models", "ingestion"]
+[[tier]]
+name = "aplicação"
+rule = "um use case = uma operação = execute() (INV-ARCH-003/005)"
+units = ["usecases"]
+[[tier]]
+name = "orquestração"
+rule = "facades compõem use cases por área de negócio"
+units = ["facades"]
+[[tier]]
+name = "borda acionadora"
+rule = "adapters que CHAMAM o produto: jobs, HTTP, CLI, daemon, cockpit, ferramentas"
+units = ["jobs", "jobs_proc", "api", "cli", "daemon", "desktop",
+         "bench", "context_pack"]
 
 # --- núcleo PURO: nenhum destes imports pode aparecer (test_architecture:
 #     FORBIDDEN_IN_PURE). epistemic/ (v1.6): contratos epistemológicos —
@@ -197,6 +239,12 @@ id = "INV-ONT-001"
 rule = "todo valor de eixo epistêmico responde a UMA pergunta: vocabulário fechado no kernel, declarado em ontology.toml, nenhum termo em dois eixos"
 verified_by = ["test_ontology.py::test_toml_declara_o_vocabulario_real_do_kernel",
                "test_ontology.py::test_nenhum_valor_responde_a_duas_perguntas"]
+[[invariant]]
+id = "INV-ONT-002"
+rule = "todo arquivo versionado pertence a UM bloco do projeto, que responde a UMA pergunta; dependência entre blocos de código é declarada, e a que contraria o gradiente só existe como dívida registrada"
+verified_by = ["test_ontologia_dos_blocos.py::test_todo_arquivo_versionado_pertence_a_exatamente_um_bloco",
+               "test_ontologia_dos_blocos.py::test_dependencias_declaradas_sao_exatamente_os_imports_reais",
+               "test_ontologia_dos_blocos.py::test_aresta_contra_o_gradiente_so_existe_como_divida_com_motivo"]
 
 # --- comandos de verificação (o gate único da spec §14.4). ---
 [commands]

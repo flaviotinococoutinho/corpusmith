@@ -139,3 +139,24 @@ def test_justfile_tem_a_receita_context():
     mesmo comando que o teste acima exercita."""
     just = (_ROOT / "justfile").read_text()
     assert re.search(r"^context:\n\s+.*corpusmith\.cli context", just, re.M)
+
+
+def test_camadas_e_blocos_vem_do_tier_e_do_indice(pack):
+    """ADR-60: as camadas do mapa são `architecture.toml [[tier]]` (a lista
+    plana saiu) e a seção de blocos é o índice de `ontology.toml` §4 —
+    nenhuma das duas é cópia."""
+    import tomllib
+    from corpusmith.harness.ontology import overview
+    arch = tomllib.loads((_ROOT / "architecture.toml").read_text())
+    assert pack["layers"]["tiers"] == [
+        {"name": t["name"], "units": list(t["units"])} for t in arch["tier"]]
+    assert pack["layers"]["order"] == [u for t in arch["tier"]
+                                       for u in t["units"]]
+    o = overview()
+    assert pack["blocks"]["count"] == len(o["blocks"])
+    assert sum(pack["blocks"]["by_kind"].values()) == len(o["blocks"])
+    assert [(d["from"], d["to"]) for d in pack["blocks"]["debts"]] == [
+        (b["block"], alvo) for b in o["blocks"] for alvo in b["debts"]]
+    md = render(pack)
+    assert "## Blocos do projeto" in md
+    assert "dívidas estruturais declaradas" in md

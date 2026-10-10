@@ -2087,3 +2087,73 @@ segue compatível; nenhuma mudança de comportamento, de schema ou de
 autoridade. **Limite declarado**: nem o token nem a asserção provam que o
 wheel instalado é o do commit — a CI o constrói e instala no mesmo job, e
 essa cadeia é premissa, não garantia.
+
+### ADR-60 — Os blocos do projeto: o repositório indexado por pergunta, com fronteira e dependência declaradas (v2.0.0)
+**Registro: `ontology.toml` §4 (registro 1.2.0) + `architecture.toml
+[[tier]]`; invariante: INV-ONT-002; fila: Q-19 e Q-26 (partes). O número
+imediatamente anterior a este fica reservado ao PR #59, congelado em
+2026-10-10 (`docs/18` §11.8).**
+
+**Contexto medido.** (1) A lista plana `[project].layers` omitia OITO
+unidades reais de código — `bench`, `compute`, `context_pack`, `ingestion`,
+`jobs_proc`, `paths`, `runtime`, `settings` — e nenhum teste a cruzava com a
+árvore (`docs/17` já tinha medido quatro delas; `compute` estava no mapa do
+AGENTS §3 e não no TOML). (2) As regras estruturais valiam só para os
+pacotes citados pelo nome: um pacote novo nascia fora de toda regra, em
+silêncio. (3) Os registros apontavam para arquivos (`lives_in`,
+`implementation_refs`, `verified_by`), mas nada respondia "o que esta parte
+do repositório É, de quem depende e o que a prova" — a pergunta que um
+agente faz antes de mudar qualquer coisa. (4) O grafo de imports MEDIDO
+(AST, imports de topo e tardios) tinha três arestas apontando para fora do
+gradiente — `harness → facades`, `runtime → jobs`, `runtime → okf` — e seis
+em que `api` pula a facade, contra `[dependency_rule].api_allowed_internal`;
+nenhuma registrada. (5) A palavra do pedido, "bloco", já respondia a cinco
+perguntas no código.
+
+**Adotado.** (1) `architecture.toml [[tier]]` substitui `[project].layers`:
+sete camadas na ordem dos imports medidos, não de um desenho idealizado —
+`models`/`ingestion` são a borda ACIONADA (a aplicação os chama) e ficam
+abaixo de `usecases`; `runtime` é plataforma (o domínio abre conexão por
+`runtime.db`) e fica abaixo do domínio (Ports & Adapters, Cockburn).
+(2) `ontology.toml` §4: um `[blocks.<id>]` por parte do repositório, com
+caminhos, PERGUNTA, fronteira (`not_means`) e — para código Python —
+`depends_on` (allowlist) e `debts` (aresta permitida só com motivo);
+vocabulário fechado `block_kind` (`code`/`test`/`registry`/`doc`/`build`)
+espelhado em `kernel/ontology.py:VOCABULARIES`; termo `project_block`;
+deriva `[drift.block]` com os seis sentidos e marcadores vivos. (3) Regras
+puras em `kernel/blocks.py`, casca em `harness/ontology.py` (`git ls-files`
+e AST), dentro do `ontology lint` que já está no gate — nenhum token novo
+em `[gate]`. (4) INV-ONT-002. (5) Índice semântico DERIVADO — camada,
+termos, mecanismos e testes de cada bloco saem das fontes —, servido por
+`corpusmith ontology blocks|where` e por uma seção do `corpusmith context`.
+(6) O controle aplicado já neste PR: `harness/eval_memory.py`, que a
+própria docstring chamava de "adapter do job", foi para `jobs/` e pagou a
+aresta `harness → facades`; os dois blocos que o primeiro lint achou sem
+teste direto (`daemon`, `ingestion`) ganharam teste de CONTRATO
+(`test_blocos_com_prova.py`).
+
+**Rejeitado.** (a) Começar por `[[module_contract]]` com docstring em
+seções fixas (o desenho de Q-19): exigiria reescrever dezenas de docstrings
+— refactor incidental — e prenderia TEXTO, não fronteira; segue na fila como
+complemento. (b) Um sexto TOML `blocks.toml`: "o que existe e o que
+significa" é a pergunta do registro ontológico (`terms.ontology`), e um
+arquivo novo duplicaria loader, lint e token de gate. (c) Gradiente por
+contagem com teto (o padrão `MAX_…`): contagem se troca — tira-se uma
+aresta e põe-se outra —, a allowlist por aresta não. (d) Pagar as dívidas
+restantes aqui: `runtime/worker → jobs` pede injeção do registry pelo
+daemon e `api → domínio` pede leituras na facade — são mudanças de
+comportamento com teste próprio (Q-28). (e) "Bloco" sem qualificador:
+seria o sexto sentido de uma palavra que já tinha cinco.
+
+**Consequências.** Arquivo versionado sem bloco, unidade sem camada, import
+novo entre blocos sem declaração e aresta para fora sem dívida reprovam o
+gate; um PR que cria pasta nova na raiz precisa declarar o bloco (o caso
+do `_estudo_dev/` do PR #55, congelado). O lint passa a parsear o AST do
+backend a cada execução (centenas de milissegundos). **Limites
+declarados**: (1) a dependência é conferida só para Python — TypeScript e
+Rust têm partição e identidade, não allowlist; (2) `depends_on` vê a
+UNIDADE importada, não o símbolo: importar um tipo de erro pesa como
+importar um caso de uso; (3) a partição lê o índice do Git — arquivo ainda
+não adicionado só é visto depois do `git add`; (4) a ordem das camadas é a
+do código de hoje, e as dívidas registradas são exatamente os pontos onde
+o desenho e o código ainda divergem.

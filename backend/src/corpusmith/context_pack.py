@@ -156,14 +156,29 @@ def build(root: Path | str = REPO_ROOT) -> dict:
     por_status: dict[str, int] = {}
     for n in nfr["nfr"]:
         por_status[n["status"]] = por_status.get(n["status"], 0) + 1
+    tiers = [{"name": t["name"], "units": list(t["units"])}
+             for t in arch["tier"]]
+    blocos = ont["blocks"]
+    por_tipo: dict[str, int] = {}
+    for b in blocos:
+        por_tipo[b["kind"]] = por_tipo.get(b["kind"], 0) + 1
     return {
         "product": {"name": arch["project"]["name"],
                     "version": __version__, "head": _head(root)},
-        # `layers` está declarado sob [project] no TOML (a chave vem
-        # depois do cabeçalho da tabela) — lê-se de onde ele mora
-        "layers": {"order": list(arch["project"]["layers"]),
+        # o gradiente mora em `[[tier]]` (a lista plana `[project].layers`
+        # omitia oito unidades e saiu): `order` é a leitura achatada dele
+        "layers": {"order": [u for t in tiers for u in t["units"]],
+                   "tiers": tiers,
                    "pure": sorted(arch["pure"]["packages"]),
                    "domain": sorted(arch["domain"]["packages"])},
+        "blocks": {"count": len(blocos),
+                   "by_kind": dict(sorted(por_tipo.items())),
+                   "index": [{"block": b["block"], "kind": b["kind"],
+                              "tier": b["tier"], "question": b["question"]}
+                             for b in blocos],
+                   "debts": [{"from": b["block"], "to": alvo, "why": motivo}
+                             for b in blocos
+                             for alvo, motivo in b["debts"].items()]},
         "gate": {"ci_enforced": list(arch["gate"]["ci_enforced"]),
                  "verify_enforced": list(arch["gate"]["verify_enforced"]),
                  "commands": dict(sorted(arch["commands"].items()))},
@@ -210,9 +225,23 @@ def render(pack: dict) -> str:
         "o fonte (rotas/jobs/use cases por AST) e a cabeça de cada doc. "
         "Não edite: regenere.",
         "",
-        "## Camadas (gradiente de mutabilidade)",
-        "  " + " → ".join(p["layers"]["order"]),
+        "## Camadas (gradiente de mutabilidade, architecture.toml [[tier]])",
+    ]
+    linhas += [f"  {i}. {t['name']}: {', '.join(t['units'])}"
+               for i, t in enumerate(p["layers"]["tiers"])]
+    bl = p["blocks"]
+    linhas += [
         f"  puras: {', '.join(p['layers']['pure'])}",
+        "",
+        f"## Blocos do projeto (ontology.toml §4) — {bl['count']} blocos, "
+        + ", ".join(f"{k}={v}" for k, v in bl["by_kind"].items()),
+        "  `corpusmith ontology blocks` imprime o índice; "
+        "`corpusmith ontology where <caminho|termo|mecanismo>` o consulta.",
+    ]
+    linhas += [f"  [{b['block']}] {b['question']}" for b in bl["index"]]
+    linhas += ["  dívidas estruturais declaradas:"]
+    linhas += [f"    {d['from']} → {d['to']}: {d['why']}" for d in bl["debts"]]
+    linhas += [
         "",
         "## Gate (architecture.toml [gate])",
         f"  CI: {', '.join(p['gate']['ci_enforced'])}",

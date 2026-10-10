@@ -80,6 +80,11 @@ QUESTIONS: dict[str, str] = {
 #: ao que `EXPECTED_MECHANISMS` fechou no registro epistêmico (G-10).
 #:
 #: Formato: nome → (valores, objeto, onde a constante REAL mora).
+#:
+#: `block_kind` é o terceiro objeto: o BLOCO DO PROJETO (`ontology.toml`
+#: §4, `kernel/blocks.py`) — uma parte do repositório, não do corpus. Fica
+#: aqui pelo mesmo motivo dos outros dois: vocabulário fechado sem verbete
+#: é a deriva que o lint existe para acusar.
 VOCABULARIES: dict[str, tuple[tuple[str, ...], str, str]] = {
     "semantic_relation": (
         ("applies_to", "exemplifies", "refines"), "relation",
@@ -87,6 +92,9 @@ VOCABULARIES: dict[str, tuple[tuple[str, ...], str, str]] = {
     "side_effect": (
         ("none", "canonical_write", "projection_write", "state_write"),
         "mechanism", "backend/src/corpusmith/epistemic/model.py"),
+    "block_kind": (
+        ("code", "test", "registry", "doc", "build"), "project_block",
+        "backend/src/corpusmith/kernel/blocks.py"),
 }
 
 #: Vocabulário LEGADO do campo `confidence` — os quatro valores que o

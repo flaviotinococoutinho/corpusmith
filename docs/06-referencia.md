@@ -404,11 +404,12 @@ PII sensível: cpf, cnpj, iban (com DV válido).
 
 ## 9. Camadas e regras de import (test_architecture.py)
 
-Dono desta lista: `architecture.toml` (`[project].layers`, `[pure]`,
-`[domain]`, `[[invariant]]`), cruzado com o código por
-`test_architecture_toml.py` e renderizado por `corpusmith context`. O
-desenho abaixo é ilustração; `compute/` (porta de cômputo, ADR-39) está no
-domínio livre de transporte.
+Dono desta lista: `architecture.toml` (`[[tier]]`, `[pure]`, `[domain]`,
+`[[invariant]]`), cruzado com o código por `test_architecture_toml.py` e
+pelo `ontology lint` (camada × árvore nas duas direções, e a dependência
+entre blocos do projeto declarada em `ontology.toml` §4 — ADR-60) e
+renderizado por `corpusmith context`. O desenho abaixo é ilustração;
+`compute/` (porta de cômputo, ADR-39) está no domínio livre de transporte.
 
 ```
 kernel/, normalize/,    PURO: proibido sqlite3, httpx, subprocess, fastapi,
@@ -421,6 +422,9 @@ okf/ harness/ usecases/ facades/ retrieval/ runtime/ cognitive/ epistemic/
                         sse_starlette, socket, httpx, requests, urllib
 UseCase                 métodos públicos ⊆ {execute}
 MachinePageUseCase      subclasses não sobrescrevem execute
+bloco de código Python  imports entre blocos ⊆ `depends_on` (ontology.toml §4,
+                        allowlist nas duas direções); para fora do gradiente
+                        ou além de `api_allowed_internal` só como `debts`
 ```
 
 ## 10. Use cases e facades

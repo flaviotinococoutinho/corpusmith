@@ -251,6 +251,21 @@ Fica registrada justamente por estar resolvida. O lint confere que os quatro
 nomes continuam distintos no código: se um sumir, `ontology.drift_regressed` é
 **erro**, não aviso. Uma separação conquistada e não guardada volta.
 
+### 4.5 "bloco" — seis sentidos, um qualificado · **aberta**
+
+Medida ao criar a §4 do registro (ADR-60): antes de a palavra nomear as
+partes do repositório, ela já respondia a cinco perguntas no código — o
+**bloco sentinelado do corpo** (a região canônica de relações ou de
+absorção, `okf/relations.py`, `okf/absorbed.py`), o **bloco do grafo**
+(comunidade ligada por arestas, `kernel/topology.py`), o **bloco de
+sucessão** (páginas ligadas por supersede, `harness/local_policy.py`), o
+**bloco de estudo** (o que cabe na carga cognitiva, `usecases/
+plan_attention.py`) e o **bloco de resposta** (seção de um payload,
+`api/system.py`). O sexto sentido nasceu **qualificado** — `project_block`,
+"bloco do projeto" — exatamente para não engrossar a deriva que a entrada
+registra; os outros cinco seguem sem qualificador, e o próximo a pagar é o
+do corpo, que é o que entra no canônico.
+
 ## 5. Falsos amigos
 
 Palavras que o mercado usa com outro sentido, e que aqui significam coisa
@@ -308,3 +323,51 @@ valores reais e `ontology lint` emite `vocabulary_undeclared` (constante
 sem verbete, ou verbete sem constante) e `vocabulary_mismatch` (valores
 ou objeto divergentes). É o simétrico exato do `EXPECTED_MECHANISMS` que
 o achado G-10 criou do lado epistêmico.
+
+## Blocos do projeto — o léxico aplicado às partes do repositório (v1.2 do registro, ADR-60)
+
+O registro respondia o que cada palavra do produto significa; nada respondia
+o que cada **parte do repositório** é. A §4 de [`ontology.toml`](../ontology.toml)
+estende a mesma disciplina a elas: um **bloco do projeto** é um conjunto de
+caminhos que responde a **uma pergunta**, com o que ele **não** é declarado ao
+lado — a forma de um eixo, aplicada a arquivos em vez de valores.
+
+**A raiz.** *Bloco* vem do francês *bloc*, do neerlandês médio *blok*,
+"tronco cortado, peça maciça": o que tem **fronteira** e se move inteiro. É
+essa raiz que o registro cobra, em quatro regras que o `ontology lint`
+executa (INV-ONT-002):
+
+1. **partição** — todo arquivo versionado pertence a exatamente um bloco. É a
+   propriedade que define um eixo (nenhum termo em dois eixos) transposta
+   para arquivos; arquivo novo fora de todo bloco reprova o gate;
+2. **unidade** — bloco de código Python é exatamente uma unidade do gradiente
+   (`architecture.toml [[tier]]`) e tem o nome dela, para que a lista de
+   dependências leia como os imports;
+3. **dependência** — `depends_on` é *allowlist* conferida contra os imports
+   reais, de topo e tardios, nas duas direções: acoplamento novo entre
+   blocos aparece no diff do registro, nunca só num `import`; declaração sem
+   import vira aviso, para que o registro não cobre acoplamento extinto;
+4. **dívida** — a aresta que aponta para fora do gradiente, ou que a borda
+   HTTP faz além de `[dependency_rule].api_allowed_internal`, só existe em
+   `debts`, com motivo conferível; dívida paga e não descadastrada vira aviso.
+   O que `[dependency_rule]` **proíbe** não vira dívida: é erro.
+
+**O que é derivado, e por isso não se escreve à mão.** A camada vem de
+`[[tier]]`; os termos, dos `lives_in` deste registro; os mecanismos, dos
+`implementation_refs` de [`epistemics.toml`](../epistemics.toml); os testes,
+do AST de `backend/tests`. O bloco declara só o que nenhuma outra fonte sabe
+— os caminhos, a pergunta, a fronteira e as dependências permitidas.
+
+**O que não é.** Não é ontologia formal (ADR-53 §3 a proíbe, e nada aqui tem
+semântica lógica); não é o contrato por módulo da fila Q-19 (docstring em
+seções fixas, que segue aberto); e não é organização de pastas — um bloco
+pode cobrir arquivos espalhados (`governance` cobre a porta de entrada e as
+regras normativas da raiz) e uma pasta pode conter dois blocos (`desktop` e
+`desktop_build`).
+
+```bash
+cd backend && .venv/bin/python -m corpusmith.cli ontology blocks        # o índice inteiro
+cd backend && .venv/bin/python -m corpusmith.cli ontology where okf/writer.py
+cd backend && .venv/bin/python -m corpusmith.cli ontology where canon   # onde mora um termo
+cd backend && .venv/bin/python -m corpusmith.cli ontology where retrieval_rrf_hedge
+```
