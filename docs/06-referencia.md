@@ -44,6 +44,16 @@ Ausência de `# Citations` e de reservados **nunca** gera finding
 | `policy.alias_conflict` | warn (só lint, corpus) | **RFC-006 V2**: um alias reivindicado por 2+ identidades da MESMA camada de precedência (seeds < reference.db < authority_record). O uso vira `confidence=ambiguous` — não é reescrito, não entra em `page_entities` e não lista no frontmatter; como aresta nasce de LINK, o termo deixa de ligar páginas. Alvo: o `authority_record` editável; a mensagem nomeia a edição que resolve (tirar o alias nu × declarar o sentido no canônico) e as páginas de uso. Ausência de finding **não** é vocabulário desambiguado — só vê o que alguém curou |
 | `policy.factual_conflict` | warn (só lint, corpus) | **refinamento** do anterior (RFC-005): dentro de um grupo que já rendeu `contradiction_candidate`, divergência numérica acima da tolerância declarada (1%, **NÃO calibrada**) na mesma dimensão SI. `temp`, `ratio`, `date`, unidade composta e faixa ficam de fora por decisão declarada; o alvo é a mais entrincheirada **entre as divergentes**. Não marca nada no canônico — o eixo `resolution_status` segue sem escritor persistente |
 
+### Artefatos do bundle (`harness/artifacts.py` + `BundleWriter.write_artifact`, ADR-61)
+| Regra | Sev | Gatilho |
+|---|---|---|
+| `policy.artifact_unknown` | error | caminho fora da allowlist FECHADA de artefatos (hoje só `harness/golden_eval.jsonl`) — página entra por `write`, com o Harness inteiro; artefato novo é decisão (ADR), não caminho livre |
+| `policy.artifact_invalid` | error | golden eval fora do formato que o eval lê: linha que não é objeto JSON, `q`/`category` ausente ou vazio, `expect_pages`/`expect_abstain`/`as_of`/`expect_regex` com tipo errado, regex que não compila, ou arquivo sem caso nenhum |
+
+O commit de `write_artifact` leva SÓ o artefato e o `log.md`
+(`GitStore.commit(paths=…)`, `--only`); o de `write`/`remove` ainda varre o
+kb inteiro (`git add -A`) — a decisão de escopá-lo é a Q-13 (`docs/18`).
+
 ## 2. Endpoints (API local, auth header `x-corpusmith-auth` OU `?auth=`)
 
 ```

@@ -205,7 +205,8 @@ verified_by = ["test_architecture.py::test_machine_page_template_is_closed_for_m
 id = "INV-DATA-001"
 rule = "escrita canônica passa pelo Harness + BundleWriter (página + log + commit)"
 verified_by = ["test_writer.py::test_write_creates_page_log_and_commit",
-               "test_local_policy.py::test_privacy_is_required_for_every_written_page"]
+               "test_local_policy.py::test_privacy_is_required_for_every_written_page",
+               "test_q28_golden_pelo_escritor.py::test_nada_fora_do_okf_escreve_no_bundle_nem_commita_o_kb"]
 [[invariant]]
 id = "INV-DATA-002"
 rule = "página supersedida fica auditável e FORA do retrieval padrão"

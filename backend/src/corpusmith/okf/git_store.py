@@ -5,7 +5,7 @@ Interfaces consumidas pelo restante do sistema (preservadas na v0.7):
 """
 from __future__ import annotations
 from pathlib import Path
-from git import Repo
+from git import Actor, Repo
 from git.exc import BadName, InvalidGitRepositoryError, NoSuchPathError
 
 
@@ -21,12 +21,43 @@ class GitStore:
                 cw.set_value("user", "name", "corpusmith")
                 cw.set_value("user", "email", "corpusmith@localhost")
 
-    def commit(self, message: str) -> str | None:
-        """Stage tudo sob a raiz e commita; retorna o sha (ou None se limpo)."""
-        self.repo.git.add(A=True)
-        if not self.repo.is_dirty(untracked_files=True) and self._has_head():
+    def commit(self, message: str,
+               paths: list[str] | None = None) -> str | None:
+        """Commita e retorna o sha (ou None se não houver o que commitar).
+
+        Sem `paths`: stage de TUDO sob a raiz (`add -A`) — o comportamento
+        histórico de todo ato, que varre também o que o ato NÃO escreveu
+        (capturas de `raw/`, edição manual) para dentro do commit dele;
+        decidir o fim dessa varredura é a Q-13 (`docs/18` §11.3).
+
+        Com `paths` (relativos à raiz do kb): só aqueles caminhos entram no
+        commit, e `--only` ignora até o que alguém tenha deixado no índice —
+        o modo do ato que SABE o que escreveu (Q-28, ADR-61). Os dois modos
+        se comportam igual no que não é escopo:
+        - hooks: o `index.commit` do GitPython roda pre-commit, commit-msg e
+          post-commit, e o `git commit` daqui também (sem `--no-verify`, de
+          propósito) — hook do usuário vale para todo ato ou para nenhum;
+        - autoria: o `git commit` recebe a identidade que o GitPython
+          resolveria (ambiente → config → login@máquina); sem isso, num kb
+          sem `user.*` ele abortaria ou assinaria com outro nome."""
+        if paths is None:
+            self.repo.git.add(A=True)
+            if not self.repo.is_dirty(untracked_files=True) \
+                    and self._has_head():
+                return None
+            return self.repo.index.commit(message).hexsha
+        rel = [str(p) for p in paths]
+        self.repo.git.add("--", *rel)
+        if not self.repo.git.diff("--cached", "--name-only", "--",
+                                  *rel).strip():
             return None
-        return self.repo.index.commit(message).hexsha
+        cr = self.repo.config_reader()
+        autor, quem = Actor.author(cr), Actor.committer(cr)
+        self.repo.git.commit("--only", "-m", message, "--", *rel, env={
+            "GIT_AUTHOR_NAME": autor.name, "GIT_AUTHOR_EMAIL": autor.email,
+            "GIT_COMMITTER_NAME": quem.name,
+            "GIT_COMMITTER_EMAIL": quem.email})
+        return self.repo.head.commit.hexsha
 
     def has_commit(self, sha: str) -> bool:
         try:

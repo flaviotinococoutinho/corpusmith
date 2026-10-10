@@ -2157,3 +2157,69 @@ importar um caso de uso; (3) a partição lê o índice do Git — arquivo ainda
 não adicionado só é visto depois do `git add`; (4) a ordem das camadas é a
 do código de hoje, e as dívidas registradas são exatamente os pontos onde
 o desenho e o código ainda divergem.
+
+### ADR-61 — O golden eval entra pelo escritor: o instrumento de medida ganha o rito do canônico (v2.0.0)
+**Fila: Q-28 (P0, auditoria de integridade de 2026-10-10); invariante:
+INV-DATA-001 (prova estendida à classe do defeito); relacionado: Q-13 (o
+`git add -A` de todo ato). O número imediatamente anterior ao ADR-60
+segue reservado ao trabalho da Q-1, preservado no branch da PR #59.**
+
+**Contexto medido.** A varredura AST de todo o código fora de `okf/` — o
+guarda que este ADR cria — achou UMA escrita no bundle fora do escritor:
+`usecases/seed_eval.py` gravava `bundle/harness/golden_eval.jsonl` com
+`write_text` e commitava por `GitStore(kb).commit`. (1) Sem lock: corria
+contra um escritor concorrente (daemon × CLI). (2) Sem `log.md`: o diário do
+bundle não registrava que o instrumento mudou. (3) Sem validação: golden
+malformado só quebrava no eval (`KeyError` em `case["q"]`), depois de já
+estar no histórico. (4) `git add -A`: o commit "seed: golden_eval.jsonl"
+levava junto qualquer sujeira do kb — uma captura não confiável de `raw/`,
+uma edição manual. O golden não é página: é o **instrumento** contra o qual
+os mecanismos são medidos (`evaluate_memory`), e os envelopes de avaliação
+carimbam o `dataset_sha256` dele. Um instrumento que muda sem ato
+registrado deixa a série de medições irreprodutível no tempo: sabia-se o
+hash, não QUANDO nem por QUAL ato ele passou a valer — e nenhuma métrica
+no domínio do tempo se sustenta sobre uma régua sem história.
+
+**Adotado.** (1) `BundleWriter.write_artifact`: o rito das páginas para o
+arquivo que não é página — gate próprio, lock, escrita atômica
+(`os.replace`), entrada no `log.md` e commit escopado. (2)
+`harness/artifacts.py`: allowlist FECHADA de artefatos (hoje só o golden) e
+validação do formato que o eval de fato lê — `policy.artifact_unknown` /
+`policy.artifact_invalid`, pelo mesmo `HarnessRejection` das páginas. (3)
+`GitStore.commit(paths=…)`: o ato que sabe o que escreveu commita só
+aquilo (`--only` ignora até o que outra pessoa deixou no índice) — com
+PARIDADE com o caminho histórico (`index.commit` do GitPython) no que não
+é escopo: SEM `--no-verify`, porque o histórico roda os hooks do repo do
+kb (pre-commit, commit-msg, post-commit, respeitando `core.hooksPath`) e
+pulá-los faria um hook do usuário (um detector de segredo) valer para todo
+ato menos o do golden; e com a identidade que o GitPython resolveria
+(ambiente → config → login@máquina), porque num kb sem `user.*` o
+`git commit` puro aborta (medido: "unable to auto-detect email address")
+ou assina com outro nome. (4)
+`create_only`: "nunca sobrescrever golden curado" é decidido dentro do
+lock, sem janela de corrida. (5) O seed e o eval leem o caminho de uma
+constante só (`GOLDEN_EVAL`). (6) A classe do defeito ganhou guarda:
+`test_nada_fora_do_okf_escreve_no_bundle_nem_commita_o_kb`, um rastreio de
+CAMINHO por função — e o instrumento é testado nos dois sentidos: acusa o
+código antigo do seed e NÃO acusa valor lido do bundle (a primeira versão
+do guarda acusou `ts.replace(tzinfo=…)` em `weekly_review.py`, falso
+positivo medido e corrigido antes do commit).
+
+**Rejeitado.** (a) Tirar o golden do bundle (para `state/`): os casos
+citam páginas do bundle (`expect_pages`) e o eval carimba `bundle_head` —
+instrumento e conhecimento medido precisam do MESMO histórico; e mudar a
+autoridade de um dado é RFC, não ADR. (b) `write_artifact` aceitando
+qualquer caminho: seria a porta lateral que ele existe para fechar. (c)
+Escopar TODO commit do escritor agora: o `add -A` de `write`/`remove` é
+hoje o único caminho pelo qual `raw/` entra no histórico — escopá-lo é
+decidir se fonte bruta é versionada (com commit de captura nomeado) ou
+ignorada, e essa é a decisão da Q-13; a evidência medida foi anotada lá.
+
+**Consequências.** Nenhuma escrita no bundle fora de `okf/` passa no gate.
+O golden curado pelo usuário continua intocado pelo seed; um golden
+malformado é recusado ANTES de entrar no histórico, com bundle, log e HEAD
+intactos. **Limites declarados**: (1) o guarda rastreia caminho dentro de
+UMA função — caminho que atravessa funções ou vem de configuração escapa;
+a prova dinâmica é o lock e o commit escopado; (2) o commit de página
+ainda varre o kb (Q-13); (3) a validação é de FORMATO, não de verdade dos
+casos — que o golden reflita o bundle continua sendo curadoria humana.
