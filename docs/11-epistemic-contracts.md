@@ -130,7 +130,7 @@ teste cruza esta tabela com o registro).
 | `retrieval_rrf_hedge` | ordenar evidências | pesos multiplicativos SEM bound formal no regime bandit (perda só nos streams contribuintes, sem correção de amostragem); clamp [0.5, 2.0] garante exploração e satura em 3 desfechos | degrade |
 | `retrieval_uncertainty` | quantificar dispersão | heurística — dispersão, NÃO verdade | no_decision |
 | `abstention` | responder ou confessar | limiar sobre top_score; graded no golden | abstain + base fria |
-| `reconciliation` | ADD/UPDATE/SUPERSEDE/NOOP/RECYCLE | escada determinística → cortes HI/LO | duplicar na dúvida (reversível > destrutivo) |
+| `reconciliation` | ADD/UPDATE/SUPERSEDE/NOOP/RECYCLE | escada determinística → cortes HI/LO NÃO calibrados | duplicar na dúvida (reversível > destrutivo) |
 | `cognitive_priority` | ordenar atenção | monotonicidade testada; NÃO otimalidade | revisão humana |
 | `adaptive_strategy_selection` | como explicar | pesos multiplicativos SEM bound formal no regime bandit | estratégia declarada |
 | `metacog_observation_mining` | propor hipóteses | cortes declarados + gate humano obrigatório | revisão humana / silêncio |
