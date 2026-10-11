@@ -380,10 +380,13 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
   (é o IDF na formulação original).
 - **Hedge — Freund & Schapire (JCSS, 1997)**: cada stream de retrieval
   (fts, dense, entity, graph, descend, global) é um *expert*; os desfechos
-  `useful/dead_end` do usuário são as perdas; `stream_weights` converge por
-  *multiplicative weights* (com clamp [0.5, 2.0] para nunca silenciar um
+  `useful/dead_end` do usuário são as perdas; `stream_weights` é atualizado
+  por *multiplicative weights* (com clamp [0.5, 2.0] para nunca silenciar um
   stream) e realimenta a fusão RRF — a proveniência página→stream fica em
-  `ask_provenance`.
+  `ask_provenance`. O bound do paper não se transfere: só os streams que
+  trouxeram páginas julgadas recebem perda (feedback bandit, sem correção
+  de amostragem) e o clamp satura em 3 desfechos — o contrato é
+  `heuristic` ([`docs/11`](docs/11-epistemic-contracts.md) §7).
 - **Persistência 0-dimensional — Edelsbrunner, Letscher & Zomorodian
   (Discrete & Comput. Geometry, 2002)**: filtração descendente de pesos
   sobre o grafo de conhecimento; arestas que unem blocos GRANDES a pesos

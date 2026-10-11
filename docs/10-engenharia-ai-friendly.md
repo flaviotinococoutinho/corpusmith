@@ -50,7 +50,7 @@ desatualizado — corrija-o. Um selo ✅ sem teste é um bug de documentação.
 | Arquitetura | invariantes com DONO ÚNICO (`[[invariant]]`, cada um com teste que existe) | ✅ | `architecture.toml` + `test_architecture_toml.py::test_todo_invariante_e_verificado_por_teste_que_existe` |
 | NFR | registro legível-por-máquina com `status = pinned/declared` cruzado pela suíte | ✅ | [`nfr.toml`](../nfr.toml) + `test_nfr_toml.py` |
 | Documentação | context pack determinístico (`corpusmith context` / `just context`) | ✅ | `context_pack.py` + `test_context_pack.py` |
-| Documentação | contrato de docs: altitude/status por doc, índice completo, links, contagens não cravadas | ✅ | `test_docs_contract.py` |
+| Documentação | contrato de docs: altitude/status por doc, índice completo, links, contagens não cravadas, `docs/11` × `epistemics.toml` | ✅ | `test_docs_contract.py` |
 | Tipos | máquina de estados de jobs | ✅ | `runtime/queue.py`, `test_jobs_reliability.py` |
 | Tipos | Value Objects (`PagePath`, `TraceId`…) | 🎯 | §4.2 |
 | Tipos | `ReconcileDecision` como ADT (união discriminada) | ⚠️ | lógica em `reconcile_candidate.py`; tipo em §4.3 |
@@ -785,7 +785,13 @@ viva; (2) `docs/README.md` lista todo arquivo; (3) todo link relativo
 resolve (fora de crase e de bloco de código); (4) doc vivo não crava
 contagem de mecanismos/termos/testes/contratos — ledgers (ADRs, RFCs, o
 histórico de fechamento de `docs/18`) podem, porque registram o que era
-verdade no commit. `AGENTS.md` não pode citar doc histórico como destino.
+verdade no commit; (5) o que o `docs/11` projeta à mão do `epistemics.toml`
+segue o registro: cada linha da tabela de mecanismos abre a garantia com o
+`guarantee_kind` do contrato, e a tabela de tipos lista exatamente o
+vocabulário fechado, com "reservado" só para tipo sem contrato e exemplo só
+para tipo em uso — a C13 rebaixou um contrato só no registro e o doc seguiu
+alegando o regret retirado. `AGENTS.md` não pode citar doc histórico como
+destino.
 
 ---
 

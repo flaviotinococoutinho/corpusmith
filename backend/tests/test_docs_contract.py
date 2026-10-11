@@ -9,7 +9,7 @@ congelados (09, 13, 14, 15, 17) não diziam a um leitor — humano ou agente —
 que são fotografias, e um agente que os lesse como vivos proporia construir
 o que já existe.
 
-Quatro guardas, todas baratas e todas derivadas de um defeito real:
+Cinco guardas, todas baratas e todas derivadas de um defeito real:
 
 1. **todo doc declara altitude e status** na cabeça (uma linha, parseável):
    `histórico` aponta para a fonte viva, `vivo` é mantido no PR que muda o
@@ -21,7 +21,12 @@ Quatro guardas, todas baratas e todas derivadas de um defeito real:
 4. **doc VIVO não crava contagem de registro nem de suíte** — o número
    deriva no primeiro PR que adiciona um mecanismo, termo ou teste. A fonte
    é o registro (`epistemics.toml`, `ontology.toml`) e o coletor; a doc
-   linka ou cita o comando que conta (`corpusmith context`).
+   linka ou cita o comando que conta (`corpusmith context`);
+5. **a projeção à mão do registro epistêmico acompanha o registro** — a
+   C13 rebaixou `retrieval_rrf_hedge` só no `epistemics.toml`, e o
+   `docs/11` seguiu alegando o regret retirado na tabela da §7 e no exemplo
+   da §4. O tipo de garantia de cada linha da §7 e o vocabulário da §4
+   (reservado, exemplo) são cruzados com o registro.
 """
 from __future__ import annotations
 
@@ -177,3 +182,68 @@ def test_doc_vivo_nao_crava_contagem_de_registro_nem_de_suite(doc: Path):
     assert achados == [], (
         f"{doc.name} crava contagem que deriva: {achados} — cite a fonte "
         "(`corpusmith context`, o registro) em vez do número")
+
+
+# ------------------------------------------------ 5. docs/11 × registro
+_DOC11 = _DOCS / "11-epistemic-contracts.md"
+
+
+def _secao_do_doc11(n: str) -> str:
+    m = re.search(rf"^## {n}\. .*?(?=^## )", _DOC11.read_text(), re.M | re.S)
+    assert m, f"docs/11 perdeu a §{n}"
+    return m.group(0)
+
+
+def test_docs11_garantia_de_cada_mecanismo_abre_com_o_tipo_do_registro():
+    """A tabela da §7 é projeção À MÃO do `epistemics.toml`: a C13 rebaixou
+    `retrieval_rrf_hedge` a `heuristic` só no registro, e a linha seguiu
+    alegando "regret relativo ao melhor stream fixo observado" — nada
+    cruzava as duas. Cada célula de garantia abre com o literal do
+    `guarantee_kind` do contrato; mudar o tipo no registro sem tocar a linha
+    quebra a suíte no mesmo commit. Prende o TIPO; a prosa ao lado continua
+    sob revisão."""
+    from corpusmith.harness.epistemics import load_registry
+    registry, _ = load_registry()
+    linhas = re.findall(r"^\| `([a-z_]+)` \| [^|]+ \| ([^|]+) \|",
+                        _secao_do_doc11("7"), re.M)
+    assert linhas, "a tabela de mecanismos da §7 sumiu ou mudou de forma"
+    divergentes = []
+    for mecanismo, garantia in linhas:
+        contrato = registry.get(mecanismo)
+        if contrato is None:
+            divergentes.append(f"{mecanismo}: fora do registro")
+        elif not garantia.strip().startswith(
+                f"`{contrato.guarantee.kind.value}` — "):
+            divergentes.append(
+                f"{mecanismo}: a garantia deve abrir com "
+                f"`{contrato.guarantee.kind.value}` — (o tipo do contrato)")
+    assert divergentes == [], "\n".join(divergentes)
+
+
+def test_docs11_vocabulario_de_garantia_segue_o_uso_no_registro():
+    """A §4 é o vocabulário FECHADO de `guarantee_kind`: lista exatamente os
+    valores de `GuaranteeKind`, chama de reservado só tipo sem contrato e dá
+    exemplo só a tipo em uso. Dois desses derivaram: depois da C13 o exemplo
+    de `online_regret_relative` seguiu "Hedge sobre streams" sem contrato do
+    tipo, e `none` seguiu "reservado" com dois contratos nativos usando-o."""
+    from corpusmith.epistemic.model import GuaranteeKind
+    from corpusmith.harness.epistemics import load_registry
+    registry, _ = load_registry()
+    em_uso = {c.guarantee.kind.value for c in registry.contracts}
+    listados, erros = set(), []
+    for celula, significa, exemplo in re.findall(
+            r"^\| ((?:`[a-z_]+`(?: / )?)+) \| ([^|]+) \| ([^|]+) \|",
+            _secao_do_doc11("4"), re.M):
+        tipos = re.findall(r"`([a-z_]+)`", celula)
+        if tipos == ["guarantee_kind"]:          # cabeçalho da tabela
+            continue
+        listados |= set(tipos)
+        usados = sorted(set(tipos) & em_uso)
+        if significa.strip().startswith("reservad") and usados:
+            erros.append(f"{tipos}: 'reservados', mas o registro usa {usados}")
+        if not usados and not exemplo.strip().startswith("—"):
+            erros.append(f"{tipos}: nenhum contrato usa, e o exemplo é "
+                         f"{exemplo.strip()!r}")
+    divergencia = {k.value for k in GuaranteeKind} ^ listados
+    assert divergencia == set(), f"§4 × GuaranteeKind divergem: {divergencia}"
+    assert erros == [], "\n".join(erros)

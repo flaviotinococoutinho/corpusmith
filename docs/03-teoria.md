@@ -68,6 +68,16 @@ Cadeia completa: `ask_provenance` registra página→stream na consulta;
 `RecordOutcome._update_stream_credit` aplica o Hedge; `stream_weights`
 multiplica a contribuição RRF na próxima fusão.
 
+**O que a transposição perde** (§4, item 6): o arrependimento sublinear
+vale com informação COMPLETA — a perda de todos os experts a cada rodada.
+Aqui só os streams que trouxeram páginas julgadas recebem perda; os demais
+ficam com 0 por imputação, sem a correção de amostragem (ℓ/p) com que o
+EXP3 — **Auer, Cesa-Bianchi, Freund & Schapire, "The Nonstochastic
+Multiarmed Bandit Problem", SIAM J. Computing 2002** — recupera um bound
+no regime bandit; e o clamp satura em 3 desfechos (e^0.25 por passo). Por
+isso o contrato é `heuristic`, não `online_regret_relative` (C13;
+[`11`](11-epistemic-contracts.md) §7).
+
 ## 2. Topologia (`kernel/topology.py`)
 
 > **A leitura epistêmica** de cada mecanismo abaixo — que pergunta de
@@ -268,6 +278,13 @@ Como um paper vira mecanismo aqui (o critério que filtrou o que entrou):
 5. **Fechar o laço**: teoria sem feedback é decoração — Hedge, heat e
    overlay existem porque conectam o julgamento humano de volta ao
    ranking.
+6. **Dizer o que a transposição perde**: a garantia de um paper vale no
+   regime do paper, e fechar o laço (item 5) costuma mudar o regime — o
+   humano julga só o que viu, então o Hedge sobre streams recebe perda só
+   dos contribuintes (feedback bandit, sem correção de amostragem) e o
+   arrependimento sublinear não se transfere (§1.4). O que um mecanismo
+   pode alegar é o `guarantee_kind` do seu contrato em
+   [`../epistemics.toml`](../epistemics.toml), nunca o teorema citado aqui.
 
 ## 6. Camada cognitiva (v0.18) — o convívio formalizado
 
@@ -292,7 +309,10 @@ primeiro, exemplo-primeiro, teoria-primeiro, decomposição) são experts;
 o desfecho treina `strategy_weights` (terceiro laço do mesmo kernel);
 a seleção é roleta ∝ peso — estratégia boa aparece mais, nenhuma é
 silenciada. `profile.preferred_strategy` ≠ "auto" desliga a roleta:
-declarado vence observado (FR-14.3).
+declarado vence observado (FR-14.3). Da EXP3 vem só a amostragem ∝ peso
+(o piso do clamp no lugar da mistura uniforme): a atualização usa a perda
+crua da estratégia usada, sem o estimador ℓ/p que dá à EXP3 o seu bound —
+o contrato é `heuristic` (§1.4, §4 item 6).
 
 **Dificuldade desejável — Bjork (1994); Roediger & Karpicke, "The power
 of testing memory" (2006)**: revisar rende mais no esforço-com-sucesso.
