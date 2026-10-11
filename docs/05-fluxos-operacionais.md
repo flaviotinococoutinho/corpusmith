@@ -117,7 +117,9 @@ MemoryFacade.ask → AskMemory.execute()
  2. streams (EvidenceStreams, crédito Hedge de [stream_weights]):
     global   se panorâmica sem entidade → community_summaries (GraphRAG)
     fts      FTS5 sobre chunks (stopwords filtradas)
-    dense    se deep e embeddings existem
+    dense    se deep e há vetores do modelo de embedding VIGENTE — um espaço
+             vetorial por vez; par de dimensão divergente sai e conta em
+             ask.dense_dim_mismatch
     entity   páginas por entidade, ponderadas por surprisal (−log p)
     descend  L0→L1 com trajectory (flag retrieval.descend)
  3. fuse: RRF·crédito → overlay (preferred ×1.15 / contested ×0.8)

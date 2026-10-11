@@ -17,6 +17,7 @@ para Rust/subprocesso e detectar regressão — não SLA.
 | ask.normalize_ms | analyze() da pergunta | custo do gazetteer/detecção |
 | ask.fts_ms | stream FTS5 | custo de busca lexical |
 | ask.dense_ms | stream denso (só --deep) | custo de embeddings |
+| ask.dense_dim_mismatch | pares (pergunta, vetor) do modelo vigente descartados por dimensão divergente (só --deep, quando há vetor do modelo vigente) | espaço vetorial misturado sob o MESMO nome de modelo: 0 esperado; > 0 pede rebuild COMPLETO (apagar `index.db` e reindexar) — o incremental e o job `embed` não refazem vetor com o rótulo vigente |
 | ask.entity_lookup_ms | pesos por entidade + first_chunks | custo do stream de entidades |
 | ask.graph_load_ms | obter snapshot do grafo (cache!) | eficácia do graph_cache |
 | ask.ppr_ms | Personalized PageRank | ganho do backend nativo |
