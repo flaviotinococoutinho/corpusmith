@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.18.0"  # dívidas PROMISED pagas: temporal_partition e inferred_cooccurrence_edges
+version = "1.18.1"  # resíduo da C13: rrf_hedge e reconciliation param de alegar o que o próprio contrato nega
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -71,7 +71,7 @@ side_effects = ["state_write"]
 evidence = ["golden_set", "human_feedback"]
 evaluated_by = ["eval_memory"]
 misinterpretations = [
-  "Hedge compete com o melhor stream fixo observado; não garante ótimo universal nem relevância objetiva",
+  "o peso de stream NÃO garante competir com o melhor stream fixo (regime bandit sem correção de amostragem; o clamp o reduz a um contador de 3 passos), nem ótimo universal, nem relevância objetiva",
   "peso alto de um stream não significa que a resposta é verdadeira — significa histórico de desfechos úteis",
 ]
 high_impact = false
@@ -342,7 +342,7 @@ known_failure_modes = [
   "sem entidade curada no bundle o termo Jaccard vale 0 e o teto do escore é ~0.7 (< HI): corpo idêntico NÃO vira UPDATE, cai na zona cinzenta (medido, RFC-002 §4.3)",
 ]
 guarantee_kind = "heuristic"
-guarantee_relative_to = "escada determinística (identificadores) primeiro; heurística composta calibrada nos cortes HI/LO depois; trilha completa em reconcile_log"
+guarantee_relative_to = "escada determinística (identificadores) primeiro; heurística composta com cortes HI/LO declarados, NÃO calibrados, depois; trilha completa em reconcile_log"
 universal_guarantee = false
 fallback = ["duplicate_in_doubt", "request_human_review"]
 adaptive = false
