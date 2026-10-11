@@ -7,6 +7,7 @@ quebra — o registro epistêmico fica preso à realidade.
 """
 from __future__ import annotations
 import inspect
+import re
 from corpusmith.harness.epistemics import load_registry
 
 
@@ -29,6 +30,56 @@ def test_rrf_hedge_nao_alega_regret_no_regime_bandit():
     contract = registry.get("retrieval_rrf_hedge")
     assert contract.guarantee.kind.value == "heuristic"
     assert any("satura" in m.text for m in contract.known_failure_modes)
+
+
+# A propriedade que DEFINE um tipo de garantia (docs/11 §4), como aparece
+# afirmada em prosa. O lint valida o tipo DECLARADO; a prosa dos campos de
+# alegação é um canal lateral que alega o tipo sem passar pelo lint.
+_PROPRIEDADE_DO_TIPO = {
+    "online_regret_relative": re.compile(
+        r"(compete|competitiv[oa]) com o melhor"
+        r"|melhor (expert|stream|estratégia) fixo|\bregret\b|arrependimento",
+        re.I),
+    "calibrated_empirical": re.compile(r"\bcalibrad[oa]s?\b", re.I),
+}
+_NEGACAO = re.compile(r"\b(não|nunca|sem)\b", re.I)
+
+
+def _negada(texto: str, inicio: int) -> bool:
+    """A menção está negada se a oração que a contém (entre ; , — ( ))
+    traz não/nunca/sem ANTES dela — "limiares NÃO foram calibrados", "NÃO
+    que o número tenha sido calibrado", "SEM bound formal de
+    arrependimento"."""
+    oracao = max(texto.rfind(s, 0, inicio) for s in ";,—()") + 1
+    return bool(_NEGACAO.search(texto[oracao:inicio]))
+
+
+def test_nenhum_contrato_afirma_a_propriedade_de_um_tipo_que_nao_declara():
+    """Resíduo da C13 no próprio registro: o rebaixamento mudou o
+    `guarantee_kind` de `retrieval_rrf_hedge` e deixou em `misinterpretations`
+    "Hedge compete com o melhor stream fixo observado" — o regret retirado,
+    exibido por `epistemics show` e pelo painel Qualidade. Mesma forma em
+    `reconciliation`: a garantia dizia "heurística composta calibrada nos
+    cortes HI/LO" e os `assumptions` do contrato dizem "NÃO calibrados"
+    desde o F3-PR0. Campos de ALEGAÇÃO são a garantia e as leituras
+    corretas; pressupostos e failure modes podem nomear a propriedade para
+    negá-la ou condicioná-la, e ficam fora."""
+    registry, _ = load_registry()
+    afirmadas = []
+    for c in registry.contracts:
+        alegacoes = [("guarantee_relative_to", c.guarantee.relative_to)] + [
+            (f"misinterpretations[{i}]", m)
+            for i, m in enumerate(c.misinterpretations)]
+        for tipo, propriedade in _PROPRIEDADE_DO_TIPO.items():
+            if c.guarantee.kind.value == tipo:
+                continue
+            afirmadas += [
+                f"{c.mechanism_id}.{campo} ({c.guarantee.kind.value}) "
+                f"afirma {tipo}: {m.group(0)!r}"
+                for campo, texto in alegacoes
+                for m in propriedade.finditer(texto)
+                if not _negada(texto, m.start())]
+    assert afirmadas == [], "\n".join(afirmadas)
 
 
 def test_rrf_hedge_parameters_match_code():

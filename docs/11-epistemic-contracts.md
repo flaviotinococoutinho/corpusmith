@@ -49,7 +49,7 @@ com lint, CLI, API e painel usando **uma única implementação**.
   declarar classe de hipóteses, amostra, perda e regime. Nenhum contrato
   alega bound da SLT sem esses elementos — na prática, os mecanismos
   daqui alegam menos: garantia `heuristic`, `property_tested` ou
-  `online_regret_relative` com o referencial explícito.
+  `deterministic`, com o referencial explícito.
 - **Independência de validação**: um sistema não se valida apenas por
   métricas que ele próprio produz. Isso MOTIVA a regra
   `epistemic.self_certification_only` (evidência composta só de
@@ -66,9 +66,10 @@ com lint, CLI, API e painel usando **uma única implementação**.
 | `deterministic` | mesma entrada ⇒ mesma saída, por construção | degrau de identificador forte |
 | `property_tested` | propriedade formal verificada por teste | monotonicidade do score cognitivo |
 | `empirical` / `calibrated_empirical` | medido em avaliação (exige envelope) | — (exigem `evaluated_by`) |
-| `online_regret_relative` | competitivo com o melhor expert fixo OBSERVADO | Hedge sobre streams |
+| `online_regret_relative` | competitivo com o melhor expert fixo OBSERVADO | — (o Hedge sobre streams NÃO: bandit sem correção de amostragem, §7) |
 | `heuristic` | regra plausível com referencial declarado, sem bound | reconciliação, abstenção |
-| `probabilistic` / `formal` / `none` | reservados | — |
+| `probabilistic` / `formal` | reservados | — |
+| `none` | nada a garantir: o mecanismo registrado ainda não decide | kernels nativos de texto e de índice |
 
 Heurística ≠ propriedade testada ≠ garantia formal: a primeira pode
 falhar silenciosamente dentro do escopo; a segunda garante UMA
@@ -115,17 +116,26 @@ referencial), `failure_modes_missing` (heurísticos),
 (compostos), `implementation_ref_missing`, `invalid_vocabulary`,
 `unknown_field`, `self_certification_only`, `forbidden_justification`.
 
-## 7. Mecanismos registrados (v1.6)
+## 7. Mecanismos fundadores (ADR-38)
+
+O conjunto vivo é o do registro: `corpusmith epistemics list` (tipo de
+garantia e fallback de cada mecanismo), `corpusmith epistemics show <id>`
+(o contrato inteiro), `corpusmith context` (versão e contagem). A tabela é
+o recorte com que o registro nasceu — a composição é fotografia, cada linha
+é estado: mantida no PR que muda o contrato, sem alegar mais do que o
+`guarantee_kind`/`guarantee_relative_to` vigente. O literal do tipo que abre
+cada garantia é cruzado com o registro por `test_docs_contract.py`; a prosa
+ao lado depende de revisão.
 
 | id | decide | garantia (relativa a) | fallback |
 |---|---|---|---|
-| `retrieval_rrf_hedge` | ordenar evidências | regret relativo ao melhor stream fixo observado (clamp troca bound por exploração) | degrade |
-| `retrieval_uncertainty` | quantificar dispersão | heurística — dispersão, NÃO verdade | no_decision |
-| `abstention` | responder ou confessar | limiar sobre top_score; graded no golden | abstain + base fria |
-| `reconciliation` | ADD/UPDATE/SUPERSEDE/NOOP/RECYCLE | escada determinística → cortes HI/LO | duplicar na dúvida (reversível > destrutivo) |
-| `cognitive_priority` | ordenar atenção | monotonicidade testada; NÃO otimalidade | revisão humana |
-| `adaptive_strategy_selection` | como explicar | pesos multiplicativos SEM bound formal no regime bandit | estratégia declarada |
-| `metacog_observation_mining` | propor hipóteses | cortes declarados + gate humano obrigatório | revisão humana / silêncio |
+| `retrieval_rrf_hedge` | ordenar evidências | `heuristic` — pesos multiplicativos SEM bound formal no regime bandit (perda só nos streams contribuintes, sem correção de amostragem); clamp [0.5, 2.0] garante exploração e satura em 3 desfechos | degrade |
+| `retrieval_uncertainty` | quantificar dispersão | `heuristic` — dispersão, NÃO verdade | no_decision |
+| `abstention` | responder ou confessar | `heuristic` — limiar sobre top_score; graded no golden | abstain + base fria |
+| `reconciliation` | ADD/UPDATE/SUPERSEDE/NOOP/RECYCLE | `heuristic` — escada determinística → cortes HI/LO NÃO calibrados | duplicar na dúvida (reversível > destrutivo) |
+| `cognitive_priority` | ordenar atenção | `property_tested` — monotonicidade testada; NÃO otimalidade | revisão humana |
+| `adaptive_strategy_selection` | como explicar | `heuristic` — pesos multiplicativos SEM bound formal no regime bandit | estratégia declarada |
+| `metacog_observation_mining` | propor hipóteses | `heuristic` — cortes declarados + gate humano obrigatório | revisão humana / silêncio |
 
 Dívida registrada: `expected_information_gain` no score cognitivo é
 **proxy heurístico** (lacuna × conectividade), não ganho de informação

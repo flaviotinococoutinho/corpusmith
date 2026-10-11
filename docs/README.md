@@ -152,6 +152,9 @@ A documentação é **contrato com guarda** (`backend/tests/test_docs_contract.p
   o mapa gerado do código (versão, HEAD, camadas, gate, invariantes, NFRs,
   registros, rotas, jobs, ADRs, fila). ADRs, RFCs e o histórico de
   fechamento de `18` podem, porque registram o que era verdade no commit;
+- o que o [`11`](11-epistemic-contracts.md) projeta à mão do
+  [`../epistemics.toml`](../epistemics.toml) — o tipo de garantia de cada
+  mecanismo, o vocabulário de tipos — é cruzado com o registro;
 - os requisitos não funcionais têm estado em [`../nfr.toml`](../nfr.toml)
   (`pinned` só com teste), não em selo de prosa.
 
