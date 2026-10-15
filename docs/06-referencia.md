@@ -2,9 +2,9 @@
 
 > **Altitude:** referência · **Status:** vivo
 
-> A tabela da verdade que a skill `docs-sync` audita contra o código.
-> Se algo aqui divergir do código, o CÓDIGO vence e este arquivo deve
-> ser corrigido (nunca o contrário sem commit no código).
+> Referência de regras, rotas, tabelas e constantes da implementação.
+> Se uma descrição divergir do código vigente, corrija a documentação.
+> Mudanças de comportamento exigem alteração e verificação do código.
 
 ## 1. Regras do Harness
 

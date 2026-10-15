@@ -7,8 +7,8 @@
 
 ## 1. O sanduíche determinístico
 
-A maior fonte de degradação da memória semântica não é retrieval — é a
-**entropia de superfície** que o LLM injeta na compilação (`Postgres` /
+A compilação precisa tratar variantes de grafia e identificadores inválidos
+que podem aparecer na saída do LLM (`Postgres` /
 `postgres` / `PostgreSQL`; datas em três formatos; ISBN alucinado). O LLM
 é cercado por duas passadas determinísticas:
 
@@ -71,9 +71,10 @@ exigem âncora de contexto (`", SP"`), viram `inferred`, ou estão em
 
 ## 4. Checksums como detector de alucinação
 
-Identificador fabricado por LLM quase nunca satisfaz o dígito
-verificador: CPF/CNPJ (mod 11; CNPJ alfanumérico 2026 incluído),
-ISBN-10/13, ISSN, ORCID (ISNI mod 11-2), IBAN (mod 97), EAN-13. Regra de
+Checksums detectam dígitos verificadores inválidos em CPF/CNPJ (mod 11;
+CNPJ alfanumérico 2026 incluído), ISBN-10/13, ISSN, ORCID (ISNI mod 11-2),
+IBAN (mod 97) e EAN-13. Um checksum válido não prova que o identificador
+existe ou pertence ao objeto citado. Regra de
 política: DV inválido em página de máquina = `policy.identifier_invalid`
 (error). É a versão aritmética do `policy.bad_commit_ref` ("o commit
 citado precisa existir") — a mesma família anti-alucinação.
@@ -93,9 +94,8 @@ write → after_write. Subclasses (`CompileSource`, `PublishWeeklyReview`,
 | `_extra_result() -> dict` | não | campos extras no retorno |
 
 O teste `test_machine_page_template_is_closed_for_modification` assevera
-que nenhuma subclasse redefine `execute` — o invariante epistêmico
-(nenhuma página de máquina entra sem sanduíche + reconciliação + gate) é
-**estruturalmente impossível de pular** (OCP: aberto para extensão por
+que nenhuma subclasse redefine `execute`. Esse teste protege a sequência
+de normalização, reconciliação e validação dos produtores que usam o template (OCP: aberto para extensão por
 hooks; fechado para modificação do esqueleto; LSP: toda subclasse é
 substituível no registry de jobs).
 
@@ -121,7 +121,7 @@ substituível no registry de jobs).
 
 ## 7. Object Calisthenics (adaptado a Python)
 
-Aplicado onde paga, não como dogma:
+O projeto aplica estas regras:
 - **Coleções de primeira classe**: `Findings` (harness) responde
   `has_errors()/count()/rules()/to_dicts()`; `EvidenceStreams`
   (retrieval) encapsula fusão+overlay+temporal+entropia+proveniência.
@@ -157,8 +157,9 @@ cockpit consome direto) × `PublishWeeklyReview` (materializa página);
 `usage_candidates()` (puro) × `ReflectOnUsage` (recalcula heat/overlay);
 `ReconcileCandidate.execute()` (devolve a decisão como dict) × aplicação
 da operação pelo hook `_reconcile` no template.
-Consultas puras podem ser chamadas por endpoint GET sem medo; teste
-`test_review_compute_is_side_effect_free` garante.
+Endpoints GET usam consultas sem efeitos de escrita. O teste
+`test_review_compute_is_side_effect_free` verifica essa propriedade para a
+revisão semanal.
 
 ## 10. Golden tests e vetores publicados
 

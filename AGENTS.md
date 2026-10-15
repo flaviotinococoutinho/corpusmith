@@ -31,12 +31,12 @@ unificados em Corpusmith no ADR-53; o histórico Git preserva os originais.
 Toda mudança MUST passar por (rode na raiz do repo; atalho: `just verify`):
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # suíte completa
-cd desktop && npx tsc --noEmit                        # typecheck do cockpit
-cd desktop && npm test                                # smoke de comportamento da UI
+(cd backend && .venv/bin/python -m pytest tests -q)  # suíte completa
+(cd desktop && npx tsc --noEmit)  # typecheck do cockpit
+(cd desktop && npm test)  # smoke de comportamento da UI
 docker compose config -q                              # compose válido
-cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # contratos epistêmicos
-cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # eixos, termos e deriva
+(cd backend && .venv/bin/python -m corpusmith.cli epistemics lint)  # contratos epistêmicos
+(cd backend && .venv/bin/python -m corpusmith.cli ontology lint)  # eixos, termos e deriva
 ```
 
 A CI impõe, além destes: `cargo test --workspace --manifest-path
@@ -50,11 +50,11 @@ Integridade em runtime (ferramentas de operação — as duas de lint acima
 também são gate; `doctor` e `backup` são impostos na CI):
 
 ```bash
-cd backend && .venv/bin/python -m corpusmith.cli doctor          # invariantes de dados em runtime (INV-001…, numeração do doctor)
-cd backend && .venv/bin/python -m corpusmith.cli backup create   # backup verificável
-cd backend && .venv/bin/python -m corpusmith.cli epistemics lint # contratos epistêmicos
-cd backend && .venv/bin/python -m corpusmith.cli ontology lint   # eixos, termos e deriva
-cd backend && .venv/bin/python -m corpusmith.cli bench compare   # speedups python×rust MEDIDOS
+(cd backend && .venv/bin/python -m corpusmith.cli doctor)  # invariantes de dados em runtime (INV-001…, numeração do doctor)
+(cd backend && .venv/bin/python -m corpusmith.cli backup create)  # backup verificável
+(cd backend && .venv/bin/python -m corpusmith.cli epistemics lint)  # contratos epistêmicos
+(cd backend && .venv/bin/python -m corpusmith.cli ontology lint)  # eixos, termos e deriva
+(cd backend && .venv/bin/python -m corpusmith.cli bench compare)  # speedups python×rust MEDIDOS
 ```
 
 **O gate é IMPOSTO, não só declarado** (PR-0): `architecture.toml [gate]` é

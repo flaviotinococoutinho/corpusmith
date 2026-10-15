@@ -2,311 +2,370 @@
 
 > **Altitude:** fluxo · **Status:** vivo
 
-> Guia **validado em máquina real** (macOS arm64, 2026-07; revalidado em
-> Linux x86_64, 2026-08 — bootstrap, seed, lint, doctor, epistemics, daemon
-> e `/ask`): cada comando daqui foi executado e o resultado esperado
-> registrado. O instalador automatizado é
-> [`scripts/install.sh`](../scripts/install.sh); este documento é a versão
-> explicada + solução de problemas.
+Este guia prepara o backend Python, o cockpit Electron e o armazenamento
+local. O instalador é [`scripts/install.sh`](../scripts/install.sh).
+
+Os registros anteriores deste guia incluem execução em macOS arm64
+(2026-07) e Linux x86_64 (2026-08). As versões e medições citadas pertencem
+a essas verificações. Os comandos abaixo refletem os scripts versionados;
+a instalação deve ser verificada novamente no seu ambiente.
 
 ## 0. O que é instalado
 
-| Componente | Onde | O quê |
+| Componente | Local | Conteúdo |
 |---|---|---|
-| backend (`corpusmith`) | `backend/.venv` | daemon FastAPI + CLI (`corpusmith`, `corpusmithctl`) |
-| desktop (cockpit) | `desktop/node_modules` | Electron + Vite + React |
-| dados do usuário | `~/corpusmith` (ou `$CORPUSMITH_HOME`) | bundle Git + 5 bancos SQLite + handshake |
-| Docker (opcional) | imagem `corpusmith-corpusmith` | daemon containerizado, dados no volume |
+| Backend | `backend/.venv` | daemon FastAPI e CLI `corpusmith` |
+| Cockpit | `desktop/node_modules` | dependências de Electron, Vite e React |
+| Dados | `~/corpusmith` ou `$CORPUSMITH_HOME` | bundle Git, bancos SQLite e handshake |
+| Docker opcional | imagem construída do backend | daemon e dados em volume |
+
+Os comandos deste guia partem da raiz do repositório. Para obter o código:
+
+```bash
+git clone https://github.com/flaviotinococoutinho/corpusmith.git
+cd corpusmith
+```
 
 ## 1. Requisitos (versões validadas)
 
-| Ferramenta | Mínimo | Validado com | Nota |
-|---|---|---|---|
-| Python | 3.11 | **3.12.12** | 3.14.6 do Homebrew falhou (§7.1) |
-| Node.js | 20 | 26.3.1 | só para o desktop |
-| git | qualquer recente | 2.54 | precisa de `user.email`/`user.name` (o bundle commita) |
-| RAM | 8 GB | **8 GB** (Mac14,3) | define QUAL modelo local roda (§6); 16 GB+ para o preferido |
-| Docker + Compose | Compose v2 | 29.2 / Compose 5.1.4 | opcional (§4) |
-| Ollama | — | 0.32.1 | **opcional**: sem modelo utilizável tudo degrada para extrativo/abstenção (verificado) |
-| Rust (cargo) | — | 1.9x | opcional: compute plane nativo (ADR-39); sem ele roda o fallback Python |
-| `just` | — | não usado | opcional: o `justfile` é só açúcar sobre os comandos abaixo |
+| Ferramenta | Requisito | Observação |
+|---|---|---|
+| Python | 3.11 ou posterior, com `venv` e `pip` funcionais | Python 3.12.12 foi usado na validação registrada; veja §7.1 |
+| Node.js | 20 ou posterior | exigido para instalar e executar o cockpit |
+| Git | instalado e com identidade configurada | o bootstrap do bundle cria um commit |
+| Docker e Compose | opcionais para o daemon em container | `just verify` também usa `docker compose config -q` |
+| Ollama | opcional | necessário para os modelos locais; veja §6 |
+| Rust e Cargo | opcionais para o backend Python | necessários para construir e testar os componentes nativos |
+| `just` | opcional | oferece os atalhos do `justfile` |
+
+Para conferir a identidade Git, execute `git config user.name` e
+`git config user.email`. Se estiverem ausentes, configure os valores usados
+nos seus commits antes do bootstrap.
+
+A memória necessária depende do modelo escolhido. As medições em máquina
+com 8 GB estão em §6. Elas não constituem um requisito mínimo de memória
+para toda carga de trabalho.
 
 ## 2. Caminho rápido
 
+Instale os componentes e execute os testes do backend e o smoke de runtime:
+
 ```bash
-scripts/install.sh --with-tests --with-smoke   # instala backend+desktop e prova que funcionou
+scripts/install.sh --with-tests --with-smoke
 ```
 
-Flags: `--backend-only` (sem Electron) · `--docker` (valida compose + build)
-· `PYTHON=python3.12` (força interpretador). O script **sonda** o Python
-criando um venv real antes de escolher — imune ao problema do §7.1.
+O script também instala as dependências do desktop e executa o typecheck.
+O smoke usa um diretório temporário próprio. Para executar todas as
+verificações locais do projeto, siga §5.
+
+| Opção | Efeito |
+|---|---|
+| `--backend-only` | pula a instalação do desktop |
+| `--with-tests` | executa a suíte do backend |
+| `--with-smoke` | executa bootstrap, seed, lint, doctor e lint epistêmico em dados temporários |
+| `--docker` | valida o Compose e constrói a imagem |
+| `PYTHON=python3.12` | variável de ambiente que seleciona o interpretador |
+
+Sem `PYTHON`, o script testa candidatos criando um ambiente virtual
+com `pip`. Isso permite rejeitar interpretadores cuja criação de `venv`
+falha, como no caso de §7.1.
 
 ## 3. Caminho manual (o que o script faz)
 
+Crie o ambiente virtual e instale o backend. O subshell mantém o terminal
+na raiz do repositório:
+
 ```bash
-# backend
-cd backend
-python3.12 -m venv .venv                # ver §7.1 antes de usar python3
-.venv/bin/pip install -U pip
-.venv/bin/pip install -e ".[dev]"
-chmod +x scripts/corpusmith scripts/corpusmithctl scripts/pull_models.sh scripts/install_daemon.sh
-
-# primeira execução (cria ~/corpusmith; use CORPUSMITH_HOME para outro lugar)
-scripts/corpusmith okf bootstrap           # → "bundle criado"
-scripts/corpusmith seed                    # → seed ok: {'terms': 7, 'quotations': 3, 'facts': 11}
-                                        #   (+pipelines; golden eval: {'pages': 7, 'cases': 12})
-
-# daemon
-.venv/bin/python -m corpusmith.daemon &    # → "corpusmith daemon em http://127.0.0.1:8377"
-scripts/corpusmithctl status               # → pending_jobs, budget, instance
-
-# desktop (outro terminal)
-cd desktop && npm ci && npm run dev     # cockpit conecta via handshake
+(
+  cd backend
+  python3.12 -m venv .venv
+  .venv/bin/pip install -U pip
+  .venv/bin/pip install -e ".[dev]"
+  chmod +x scripts/corpusmith scripts/corpusmithctl scripts/pull_models.sh scripts/install_daemon.sh
+)
 ```
 
-Extras opcionais do backend: `pip install -e ".[parsers]"` (PDF/EPUB,
-AGPL — fica fora do binário) e `".[ml]"` (sqlite-vec, igraph/leiden).
+Crie o bundle e carregue os dados iniciais:
+
+```bash
+backend/scripts/corpusmith okf bootstrap
+backend/scripts/corpusmith seed
+```
+
+O bootstrap cria o armazenamento em `~/corpusmith`. Para escolher outro
+local, defina `CORPUSMITH_HOME` antes desses comandos e use o mesmo valor
+em todos os processos que acessam os dados.
+
+Execute o daemon em um terminal:
+
+```bash
+backend/.venv/bin/python -m corpusmith.daemon
+```
+
+Em outro terminal, na raiz do repositório, confira o status e abra o cockpit:
+
+```bash
+backend/scripts/corpusmithctl status
+(cd desktop && npm ci && npm run dev)
+```
+
+O daemon usa `127.0.0.1:8377` por padrão. O cockpit lê o endereço e o token
+no handshake em `state/daemon.json`.
+
+Para instalar os extras opcionais no mesmo ambiente:
+
+```bash
+(cd backend && .venv/bin/pip install -e ".[parsers]")
+(cd backend && .venv/bin/pip install -e ".[ml]")
+```
+
+`parsers` acrescenta os leitores de PDF e EPUB, executados em subprocesso
+fora do binário empacotado. `ml` acrescenta sqlite-vec, igraph e leidenalg.
 
 ## 4. Caminho Docker
 
+Valide a configuração e inicie o daemon:
+
 ```bash
-docker compose config -q     # valida o arquivo
-docker compose up -d         # build + daemon; bootstrap+seed automáticos no boot
-docker compose exec corpusmith cat /data/state/daemon.json   # host/porta/token
-docker compose --profile ml up -d   # + Ollama em rede interna
+docker compose config -q
+docker compose up -d
+docker compose exec corpusmith cat /data/state/daemon.json
 ```
 
-A porta publica **só em 127.0.0.1** — local-first vale também no Docker.
-Se `docker compose` (plugin) não existir mas `docker-compose` sim, ver §7.2.
+O serviço usa o volume `corpusmith-data` e publica a porta 8377 apenas em
+`127.0.0.1`. O arquivo de handshake contém o token de acesso à API.
+
+Para iniciar também o serviço Ollama:
+
+```bash
+docker compose --profile ml up -d
+```
+
+Iniciar o Ollama não baixa os modelos. Se o plugin `docker compose` estiver
+ausente, consulte §7.2.
 
 ## 5. Verificação — prove que a instalação funcionou
 
-Gate completo (o mesmo do CI e do `AGENTS.md` §2; a lista é presa por
-`architecture.toml [gate]` + `test_pr0_gate.py` — atalho: `just verify`):
+Na raiz do repositório, execute o conjunto local:
 
 ```bash
-cd backend && .venv/bin/python -m pytest tests -q   # → zero falhas (a contagem cresce a cada versão)
-cd desktop && npx tsc --noEmit                      # → sem erros
-cd desktop && npm test                              # → smoke da UI verde
-docker compose config -q                            # → sem saída = ok
-cd backend && .venv/bin/python -m corpusmith.cli epistemics lint  # → N mecanismo(s), 0 finding(s)
-cd backend && .venv/bin/python -m corpusmith.cli ontology lint    # → N eixo(s), N termo(s), N deriva(s), 0 finding(s)
+just verify
 ```
 
-A CI roda ainda `cargo test --workspace --manifest-path native/Cargo.toml`
-(kernels nativos) e constrói+executa o binário PyInstaller.
-A contagem da suíte cresce a cada versão; o que importa é **zero falhas**.
-
-A suíte é **hermética**: não conversa com o Ollama da máquina
-(`tests/conftest.py` aponta o roteador para uma porta morta). Isso é
-proposital — antes o resultado dependia de quais modelos o dev tinha
-instalado, e dezenas de casos ficavam vermelhos numa máquina com Ollama de
-pé e o modelo da config ausente. Os exemplos acima mostram a FORMA da
-saída, não números: mecanismos, eixos, termos e blocos são contados por
-`corpusmith context`, e a suíte, pelo próprio pytest.
-
-Smoke de runtime (não destrutivo — use um HOME descartável):
+Sem `just`, execute os comandos equivalentes. Cada subshell retorna à raiz:
 
 ```bash
-export CORPUSMITH_HOME=/tmp/corpusmith-smoke
-backend/scripts/corpusmith okf bootstrap    # bundle criado
-backend/scripts/corpusmith seed             # seed ok (idempotente)
-backend/scripts/corpusmith okf lint         # 0 finding(s), 0 erro(s)
-backend/scripts/corpusmith doctor           # {"ok": true, ...}
-backend/scripts/corpusmith epistemics lint  # N mecanismo(s), 0 finding(s) — os avisos
-    # `mechanism_promised` (dívida de contrato prometido em doc e não
-    # escrito) foram todos PAGOS: hoje o lint sai limpo
+(cd backend && .venv/bin/python -m pytest tests -q)
+(cd desktop && npx tsc --noEmit)
+(cd desktop && npm test)
+docker compose config -q
+(cd backend && .venv/bin/python -m corpusmith.cli epistemics lint)
+(cd backend && .venv/bin/python -m corpusmith.cli ontology lint)
 ```
 
-Smoke da API (daemon rodando):
+Espere zero falhas nos testes, nenhum erro no typecheck ou na configuração
+Compose e nenhum finding de erro nos linters. A lista de verificações está
+em `architecture.toml [gate]`; `test_pr0_gate.py` compara esse contrato com
+a CI e o `justfile`. A CI também executa verificações em ambientes próprios,
+incluindo os componentes Rust e a construção e execução do binário PyInstaller.
+
+A suíte isola chamadas ao Ollama por configuração em `tests/conftest.py`.
+Use a saída do pytest para conferir resultados e skips. Para consultar a
+versão e as contagens atuais dos registros, execute `just context`.
+
+### Smoke de runtime
+
+O instalador executa este smoke com `--with-smoke`. Para inspecionar as
+operações manualmente, use dados temporários:
 
 ```bash
-TOKEN=$(python3 -c "import json,os;print(json.load(open(os.path.expandvars('$CORPUSMITH_HOME/state/daemon.json')))['token'])")
-curl -s -H "x-corpusmith-auth: $TOKEN" http://127.0.0.1:8377/health/full | head
-# → {"ok": true, "instance": {...}, "stacks": {"runtime.db": {"integrity": "ok", ...}}}
+(
+  export CORPUSMITH_HOME="$(mktemp -d)/corpusmith-smoke"
+  backend/scripts/corpusmith okf bootstrap
+  backend/scripts/corpusmith seed
+  backend/scripts/corpusmith okf lint
+  backend/scripts/corpusmith doctor
+  backend/scripts/corpusmith epistemics lint
+)
+```
+
+O bootstrap deve criar o bundle. O lint deve concluir sem erros e o doctor
+deve retornar `"ok": true`. O subshell não altera o `CORPUSMITH_HOME` do
+terminal principal; os dados temporários ficam disponíveis para inspeção.
+
+### Smoke da API
+
+Com o daemon de §3 em execução, leia o token do mesmo diretório de dados:
+
+```bash
+TOKEN="$(backend/.venv/bin/python -c 'import json, os; from pathlib import Path; home = Path(os.environ.get("CORPUSMITH_HOME", "~/corpusmith")).expanduser(); print(json.loads((home / "state/daemon.json").read_text())["token"])')"
+curl -s -H "x-corpusmith-auth: $TOKEN" http://127.0.0.1:8377/health/full
 
 curl -s -X POST -H "x-corpusmith-auth: $TOKEN" -H "Content-Type: application/json" \
-     -d '{"query":"qual o preço do xilofone de titânio em Vega"}' http://127.0.0.1:8377/ask
-# → {"answer": null, "abstained": true, "gaps": [...], "via": "none"}
-#   ← abstenção honesta: NADA na base cobre a pergunta
+  -d '{"query":"qual o preço do xilofone de titânio em Vega"}' \
+  http://127.0.0.1:8377/ask
 ```
 
-Atenção ao escolher a pergunta de teste: desde a v1.6.3 o `seed` traz 7
-páginas avaliáveis (golden eval), então perguntas que TOCAM esse conteúdo
-respondem extrativo (`"via": "local:extractive"`) — inclusive "pergunta sem
-cobertura", que casa com a página *Abstenção epistêmica* que descreve o
-próprio mecanismo. Os dois desfechos são instalação sadia; fabricação é que
-nunca acontece.
+O health deve retornar `"ok": true`. Numa base que não cobre a pergunta,
+o resultado esperado do `/ask` é `"answer": null` e `"abstained": true`.
+Se o corpus recuperar conteúdo relacionado, inspecione as evidências em vez
+de presumir esse resultado. Perguntas cobertas pelos dados iniciais podem
+produzir uma resposta extrativa com `"via": "local:extractive"`.
+
+A abstenção depende de uma heurística. Uma resposta aceita não constitui
+prova de correção factual; veja [Contratos epistêmicos](11-epistemic-contracts.md).
 
 ## 6. Daemon como serviço (macOS e Linux) e modelos locais
 
+Instale o serviço ou baixe os modelos de forma explícita:
+
 ```bash
-backend/scripts/install_daemon.sh    # macOS: launchd agent (com.corpusmith.daemon)
-                                     # Linux: unidade systemd DE USUÁRIO
-                                     #   (systemctl --user status corpusmith-daemon;
-                                     #    logs: journalctl --user -u corpusmith-daemon)
-backend/scripts/pull_models.sh       # baixa o modelo adequado A ESTA máquina
+backend/scripts/install_daemon.sh
+backend/scripts/pull_models.sh
 ```
 
-Em Linux sem sessão systemd de usuário (container, SSH sem *lingering*) o
-script escreve a unidade e **falha alto** dizendo o que resta — o caminho
-manual (`python -m corpusmith.daemon`) e o Docker (§4) continuam valendo.
+No macOS, o instalador cria o LaunchAgent `com.corpusmith.daemon`.
+No Linux, cria a unidade systemd de usuário `corpusmith-daemon`. Consulte-a
+com `systemctl --user status corpusmith-daemon` e os logs com
+`journalctl --user -u corpusmith-daemon`.
+
+Se não houver sessão systemd de usuário, o script informa a falha de ativação.
+Use o daemon em primeiro plano, conforme §3, ou Docker, conforme §4.
 
 ### 6.1 O modelo de chat é uma ESCADA, não um nome fixo (ADR-42)
 
-`models.local.chat` declara uma **ordem de preferência**. Em tempo de
-execução o roteador escolhe a primeira entrada que esteja **instalada** e
-cujos pesos **caibam** em `memory_fraction` (default `0.6`) da RAM total:
+`models.local.chat` define uma ordem de preferência. O roteador escolhe a
+primeira entrada instalada cujos pesos caibam na fração de memória
+`memory_fraction`, cujo padrão é `0.6`. Consulte os candidatos em
+[`backend/config/default.yaml`](../backend/config/default.yaml).
 
-| Candidato | Pesos | Pede |
-|---|---|---|
-| `qwen3-vl:8b-instruct` | 6,14 GB | ~16 GB de RAM |
-| `qwen3-vl:4b-instruct` | 3,30 GB | ~8 GB |
-| `qwen3-vl:4b` | 3,30 GB | ~8 GB (variante *thinking*, ver §6.2) |
-| `qwen3-vl:2b-instruct` | 1,89 GB | máquinas menores |
-| `qwen2.5:7b-instruct` | 4,70 GB | compat com instalações < v1.9 |
-
-Duas regras deliberadas:
-
-- **o roteador nunca baixa modelo sozinho** — uma consulta não pode
-  disparar download de gigabytes; aquisição é ato explícito
-  (`pull_models.sh`);
-- **pedir modelo maior que a RAM não é otimismo, é paginação** — por isso
-  o orçamento veta em vez de tentar.
-
-Inspecione a decisão (e por que cada candidato foi recusado):
+Inspecione a escolha e os motivos de recusa:
 
 ```bash
 backend/scripts/corpusmith models
-# → {"resolved_chat": "qwen3-vl:4b", "ram_total_gb": 8.59,
-#    "memory_budget_gb": 5.15,
-#    "ladder": [{"candidate": "qwen3-vl:8b-instruct", "status": "ausente"}, ...]}
 ```
 
-Numa máquina de 8 GB o `8b-instruct` é recusado mesmo se estiver baixado
-(`status: "nao_cabe"`) — 6,14 GB de pesos não entram em 5,15 GB de
-orçamento. Exit code 1 significa "nenhum modelo utilizável".
+`ausente` indica modelo não instalado. `nao_cabe` indica pesos acima do
+orçamento. O comando retorna código 1 se não houver modelo utilizável.
+O roteador não baixa modelos durante uma consulta.
+
+Na medição registrada em máquina com 8 GB, os pesos do
+`qwen3-vl:8b-instruct` excederam o orçamento. A variante
+`qwen3-vl:2b-instruct` foi a alternativa de menor consumo indicada pelo guia.
+Tamanho dos pesos não inclui todos os custos da execução; confirme o consumo
+e a latência na sua carga.
 
 ### 6.2 Variantes *thinking* precisam de orçamento de tokens
 
-Medido no `qwen3-vl:4b`: com `num_predict` curto o modelo gasta todo o
-orçamento no campo `thinking` e devolve `response` **vazio** com
-`done_reason: "length"`. Como `reconcile_candidate` pede 32 tokens e
-`detect_communities` 160, isso é alcançável de verdade. O roteador trata
-resposta vazia como `ModelUnavailable` — degrada para o extrativo em vez
-de propagar vazio como se fosse síntese. Prefira as variantes
-`-instruct`, que não gastam orçamento raciocinando.
+Na medição com `qwen3-vl:4b`, um `num_predict` curto consumiu o orçamento no
+campo `thinking` e devolveu `response` vazio com `done_reason: "length"`.
+O roteador trata a resposta vazia como `ModelUnavailable`.
 
-**Caber em disco não é caber em uso.** Medido na máquina de 8 GB com o
-modelo residente e memória livre em 13%: `num_predict=64` levou **41 s**
-(~1,5 tok/s). Com o orçamento real do `/ask` (1024–1536 tokens) isso
-estoura o timeout de 300 s do roteador, que vira `ModelUnavailable` e
-degrada para o extrativo. Ou seja: o veto por tamanho (§6.1) é condição
-necessária, não suficiente — numa máquina de 8 GB o caminho realista para
-ter síntese local é o `qwen3-vl:2b-instruct` (1,89 GB, sem *thinking*).
-Sintoma correlato: uma chamada dessas **bloqueia o daemon** por dezenas
-de segundos (o `/health` fica sem responder até ela terminar).
+Outra medição em máquina com 8 GB e 13% de memória livre registrou 41 s
+para `num_predict=64`. Ela mostra que caber no orçamento de pesos não basta
+para assegurar a latência do `/ask`. As variantes `-instruct` evitam o custo
+do campo `thinking`, mas ainda exigem verificação de recursos e tempo.
 
-Sem modelo utilizável o `/ask` **não quebra**: responde extrativo ou se
-abstém (`abstained: true`) — verificado tanto sem Ollama quanto com
-Ollama de pé e modelo ausente.
+Sem modelo utilizável, o caminho do `/ask` usa o extrativo ou a abstenção.
+Durante chamadas demoradas, foi observada indisponibilidade temporária do
+`/health`; use os logs para distinguir demora de modelo de falha do daemon.
 
 ## 7. Solução de problemas (encontrados de verdade)
 
 ### 7.1 `python3 -m venv` falha no ensurepip (Homebrew Python 3.14)
 
-Sintoma: `CalledProcessError` dentro de `ensurepip` ao criar o venv — o
-venv nasce sem `pip`. Observado com Python 3.14.6 do Homebrew (macOS).
-**Correção**: use `python3.12` (ou 3.13/3.11): `brew install python@3.12`
-e `PYTHON=python3.12 scripts/install.sh`. O instalador já sonda e pula
-interpretadores quebrados sozinho.
+O sintoma registrado é `CalledProcessError` em `ensurepip`, com ambiente
+virtual sem `pip`. Foi observado com Python 3.14.6 do Homebrew no macOS.
+
+Use um interpretador que crie o ambiente completo:
+
+```bash
+brew install python@3.12
+PYTHON=python3.12 scripts/install.sh
+```
 
 ### 7.2 `docker: unknown command: docker compose`
 
-O CLI do Docker está sem o plugin Compose v2, mas o binário standalone
-existe (Homebrew instala `docker-compose`). **Correção**:
+O CLI pode estar sem o plugin Compose, mesmo com `docker-compose` instalado.
+O instalador aceita o binário standalone. Para usá-lo diretamente:
 
 ```bash
-mkdir -p ~/.docker/cli-plugins
-ln -sf "$(command -v docker-compose)" ~/.docker/cli-plugins/docker-compose
-docker compose version    # → Docker Compose version 5.x
+docker-compose config -q
+docker-compose up -d
 ```
 
 ### 7.3 API responde `401 {"detail": "token inválido"}`
 
-O header de auth é **`x-corpusmith-auth: <token>`** (ou `?auth=<token>` —
-existe porque EventSource não envia headers), **não** `Authorization:
-Bearer`. O token efêmero vive em `$CORPUSMITH_HOME/state/daemon.json` e muda
-a cada boot do daemon.
+Use `x-corpusmith-auth: <token>`. EventSource usa `?auth=<token>` porque
+não envia headers customizados. A API não usa `Authorization: Bearer`
+para esse token. Leia novamente `state/daemon.json` após reiniciar o daemon,
+pois o token muda a cada inicialização.
 
 ### 7.4 `POST /ask` responde `422`
 
-Contrato do corpo: `{"query": str, "deep"?: bool, "local_only"?: bool,
-"as_of"?: str}` — o campo é `query` (não `question`). O 422 aponta o
-campo faltante; corpo malformado nunca vira 500 (coberto por
-`tests/test_api_validation.py`).
+O campo obrigatório do JSON é `query`. Os campos opcionais são `deep`,
+`local_only` e `as_of`. Enviar `question` no lugar de `query` não atende ao
+contrato. A resposta de validação indica o campo inválido ou ausente.
 
 ### 7.5 Bootstrap falha ao commitar
 
-O bundle é um repo Git e o bootstrap faz o commit inicial — configure
-`git config --global user.email … && git config --global user.name …`
-(no Docker a imagem já configura).
+Confira `git config user.name` e `git config user.email`. O bundle é um
+repositório Git próprio e o bootstrap precisa de identidade para criar o
+commit inicial. A imagem Docker já configura uma identidade.
 
 ### 7.6 Porta 8377 ocupada
 
-Só existe UMA instância por HOME (`state/daemon.json` é o handshake).
-Pare a antiga (`launchctl unload ~/Library/LaunchAgents/com.corpusmith.daemon.plist`
-ou mate o processo) ou mude `server.port` via override de config.
+Confira qual processo usa a porta antes de iniciar outro daemon. O handshake
+identifica uma instância por diretório de dados. Pare o serviço anterior ou
+altere `server.port` por configuração. No macOS, o serviço usa
+`~/Library/LaunchAgents/com.corpusmith.daemon.plist`.
 
 ### 7.7 `/ask` se abstém em base recém-instalada
 
-Não é erro: `abstained: true` com `gaps` é o contrato de abstenção
-(LongMemEval) — nunca resposta fabricada. A base seedada cobre só as 7
-páginas do golden eval (v1.6.3); qualquer pergunta fora delas se abstém.
-Compile conteúdo (inbox → `compile`) e pergunte de novo.
+`abstained: true` com `gaps` informa que a evidência recuperada não passou
+no critério de resposta. Confira os dados carregados pelo `seed`, compile
+conteúdo pela Inbox e consulte de novo. O conjunto inicial não cobre
+perguntas arbitrárias.
 
 ### 7.8 Ollama de pé, mas o modelo da config não existe
 
-Sintoma (encontrado nesta máquina): jobs `embed` falhando em série e
-`HTTPStatusError: 404 ... /api/embeddings` ou `/api/generate` no log.
-`ollama serve` responde no socket, então a instalação *parecia* sadia —
-mas o modelo pedido nunca foi baixado. Diagnostique com:
+Se aparecer `HTTPStatusError: 404` em chamadas ao Ollama, confira os modelos
+instalados e a resolução do roteador:
 
 ```bash
-backend/scripts/corpusmith models            # resolved_chat: null ⇒ nada utilizável
-curl -s http://127.0.0.1:11434/api/tags   # o que existe de fato
+backend/scripts/corpusmith models
+curl -s http://127.0.0.1:11434/api/tags
 ```
 
-**Correção**: `backend/scripts/pull_models.sh` (escolhe pela RAM, §6.1).
-A partir do ADR-42 esse estado degrada em vez de estourar: o roteador só
-considera modelo instalado e converte falha de modelo em
-`ModelUnavailable`. Antes, o `HTTPStatusError` vazava e derrubava o
-`/ask` com 500.
+Para baixar o modelo selecionado pelo script, execute
+`backend/scripts/pull_models.sh`. O processo `ollama serve` pode estar ativo
+sem que o modelo configurado esteja instalado.
 
 ### 7.9 Índice de geração antiga depois de atualizar
 
-Sintoma: `doctor` com `ok: false` e `INV-002 … índice de geração antiga
-(g2:… ≠ g4:…) — rebuild`. Uma versão nova mudou a chave de geração do
-índice. `index.db` é **projeção** reconstruível do bundle (INV-DATA-003),
-então o reparo é seguro:
+Se o doctor apontar `INV-002` e indicar reconstrução de índice, execute:
 
 ```bash
-backend/scripts/corpusmith backup create    # opcional, mas barato
-backend/scripts/corpusmith doctor --repair  # → ok: true
+backend/scripts/corpusmith backup create
+backend/scripts/corpusmith doctor --repair
 ```
 
-Depois de atualizar, **reinicie o daemon** — o processo antigo continua
-com o código velho em memória e pode responder 500 ao ler dados já
-migrados: `launchctl kickstart -k gui/$(id -u)/com.corpusmith.daemon`
-(macOS) ou `systemctl --user restart corpusmith-daemon` (Linux).
-Confirme com `curl -s .../health` que `version` é a esperada.
+`index.db` é uma projeção reconstruível; o doctor só repara os itens que a
+implementação declara reparáveis. Após atualizar o código, reinicie o daemon
+para carregar a nova versão:
+
+```bash
+# macOS
+launchctl kickstart -k gui/$(id -u)/com.corpusmith.daemon
+
+# Linux
+systemctl --user restart corpusmith-daemon
+```
+
+Confira a versão em `GET /health`.
 
 ### 7.10 `corpusmithctl`: "daemon não responde … handshake órfão"
 
-Sintoma (encontrado exercitando este guia): o daemon caiu sem passar pelo
-shutdown limpo (SIGKILL, crash, queda da máquina) e `state/daemon.json`
-ficou para trás apontando uma porta morta. O CLI diagnostica em vez de
-estourar traceback — e a mensagem já diz o reparo: suba o daemon de novo
-(`just daemon`, ou o serviço do §6). O shutdown limpo remove o próprio
-handshake (e SÓ o próprio: um daemon novo que tenha reescrito o arquivo
-nunca perde o dele para o antigo que está saindo).
+Uma interrupção abrupta pode deixar `state/daemon.json` apontando para um
+processo encerrado. Inicie o daemon de novo, em primeiro plano ou pelo
+serviço. No encerramento normal, o processo remove o próprio handshake.

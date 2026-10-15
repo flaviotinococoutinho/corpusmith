@@ -65,9 +65,9 @@ leiden, ocr, pipeline) = 1; `light` = 2.
 
 ### Extras opcionais (nunca requisitos)
 - `corpusmith[parsers]` — pymupdf4llm, ebooklib (**AGPL**): executados em
-  SUBPROCESSO por `ingestion/extract.py`; **jamais no binário
+  subprocesso por `ingestion/extract.py`; **fora do binário
   PyInstaller** (excludes explícitos no build.spec).
-- `corpusmith[ml]` — sqlite-vec, igraph, leidenalg: Leiden de verdade e
+- `corpusmith[ml]` — sqlite-vec, igraph, leidenalg: particionamento Leiden e
   vetores; fallbacks stdlib cobrem a ausência.
 
 ## 3. Modelos (models/router.py)
@@ -117,7 +117,7 @@ de API grava tokens/USD no `ledger`.
 - **justfile**: bootstrap, models, daemon, test, lint, index, sidecar,
   app — o operador não decora comandos.
 
-## 6. Regras de ouro da infraestrutura
+## 6. Regras da infraestrutura
 
 1. Nenhuma dependência nova sem justificar contra o fallback stdlib.
 2. Nada de rede em caminho crítico local (Ollama é localhost; API é

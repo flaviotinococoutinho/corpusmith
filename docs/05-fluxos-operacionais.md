@@ -20,7 +20,8 @@ daemon.main()
  └─ uvicorn 127.0.0.1:8377
 ```
 
-Jobs registrados (14 em `jobs/__init__.py:REGISTRY`): `compile_source ·
+Consulte a lista atual em `jobs/__init__.py:REGISTRY` ou em
+`corpusmith context`. Entre os jobs registrados estão: `compile_source ·
 consolidate_inbox · ask · embed · rerank · leiden · ocr · lora_train ·
 review_weekly · reflect · eval_memory · index_rebuild · pipeline ·
 metacog`. Scheduler: segunda ⇒ reflect + review_weekly + metacog; diário
@@ -64,8 +65,8 @@ CompilerFacade.compile → CompileSource.execute()  [Template Method]
     {compile.done}
 ```
 
-Idempotência ponta a ponta: recompilar a mesma fonte produz o mesmo corpo
-(rewrite idempotente) e cache por sha marca o status no Inbox.
+A reescrita de grafia é idempotente. Isso não torna a geração por modelo
+determinística. O cache por SHA registra o processamento da fonte no Inbox.
 
 ## 1b. Consolidar por recorrência (CLS, v0.10)
 
@@ -120,10 +121,10 @@ MemoryFacade.ask → AskMemory.execute()
     dense    se deep e embeddings existem
     entity   páginas por entidade, ponderadas por surprisal (−log p)
     descend  L0→L1 com trajectory (flag retrieval.descend)
- 3. fuse: RRF·crédito → overlay (preferred ×1.15 / contested ×0.8)
+ 3. fuse: RRF·crédito → overlay (preferred ×1.15 / low_yield ×0.8)
     → partição temporal por as_of → top-8 · uncertainty (entropia)
  4. abstenção: sem hits ou top < ask.abstain_threshold
-    ⇒ {answer:null, abstained:true, gaps} — nunca fabrica
+    ⇒ {answer:null, abstained:true, gaps} — sem resposta gerada nesse caso
  5. efeitos: [page_heat.reads++] · [ask_provenance página→stream]
  6. compor: router (citações obrigatórias se api:*; sem seção ⇒ blocked)
     ou fallback extrativo local com # Citations
@@ -144,7 +145,7 @@ ChatEvidencePanel: ✅ útil | 🚫 beco | ✏️ corrigi(nota)
 ```
 
 Semanalmente (`reflect`): `[ask_outcomes]` agregados por página →
-`[page_overlay]` preferred/tentative/contested (3+ desfechos decidem) e
+`[page_overlay]` preferred/tentative/low_yield (3+ desfechos decidem) e
 `[page_heat.score]` recalculado com decaimento — o overlay muda o ranking
 do ask; os candidatos aparecem no Dashboard e na revisão.
 

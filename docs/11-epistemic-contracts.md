@@ -10,7 +10,7 @@
 
 Fonte normativa: [`../epistemics.toml`](../epistemics.toml) · domínio puro:
 `backend/src/corpusmith/epistemic/` · loader único: `harness/epistemics.py` ·
-presa à realidade por `test_epistemics.py` + `test_epistemics_toml.py`.
+verificada por `test_epistemics.py` e `test_epistemics_toml.py`.
 
 ## 1. Problema
 
@@ -25,14 +25,10 @@ retrieval como probabilidade de verdade.
 
 ## 2. Objetivo
 
-Registrar formalmente, POR MECANISMO, de forma legível por máquina,
-validável e auditável:
-
-1. a decisão tomada; 2. os vieses indutivos que a tornam possível;
-3. os pressupostos que precisam valer; 4. o regime em que foi avaliado;
-5. a garantia RELATIVA alegável; 6. os failure modes conhecidos;
-7. quando abster/degradar/pedir revisão humana; 8. as evidências
-empíricas; 9. os contextos ainda NÃO avaliados.
+Registrar, por mecanismo, a decisão, os vieses indutivos, os pressupostos e
+o regime avaliado. O contrato também declara a garantia relativa, os modos
+de falha, o fallback, a necessidade de revisão humana, as evidências e os
+contextos ainda não avaliados.
 
 Não é uma ontologia filosófica: é infraestrutura operacional pequena,
 com lint, CLI, API e painel usando **uma única implementação**.
@@ -72,8 +68,8 @@ com lint, CLI, API e painel usando **uma única implementação**.
 | `none` | nada a garantir: o mecanismo registrado ainda não decide | kernels nativos de texto e de índice |
 
 Heurística ≠ propriedade testada ≠ garantia formal: a primeira pode
-falhar silenciosamente dentro do escopo; a segunda garante UMA
-propriedade (não otimalidade); a terceira não existe em nenhum mecanismo
+falhar silenciosamente dentro do escopo; a segunda tem uma propriedade
+verificada nos casos de teste, sem prova de otimalidade; a terceira não existe em nenhum mecanismo
 atual — e o registro torna isso visível em vez de deixar subentendido.
 
 ## 5. Incerteza de retrieval ≠ confiança factual

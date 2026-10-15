@@ -32,10 +32,10 @@ entre máquinas); é guarda de mesma-máquina/nightly.
 ## Ferramentas de operação (não são testes)
 
 ```bash
-cd backend && .venv/bin/python -m corpusmith.cli doctor            # invariantes de dados em runtime (INV-001…, numeração do doctor)
-cd backend && .venv/bin/python -m corpusmith.cli epistemics lint   # contratos epistêmicos
-cd backend && .venv/bin/python -m corpusmith.cli backup create     # backup verificável
-cd backend && .venv/bin/python -m corpusmith.cli ontology where <caminho|termo|mecanismo>  # a que bloco do projeto algo pertence
+(cd backend && .venv/bin/python -m corpusmith.cli doctor)  # invariantes de dados em runtime (INV-001…, numeração do doctor)
+(cd backend && .venv/bin/python -m corpusmith.cli epistemics lint)  # contratos epistêmicos
+(cd backend && .venv/bin/python -m corpusmith.cli backup create)  # backup verificável
+(cd backend && .venv/bin/python -m corpusmith.cli ontology where okf/writer.py)  # a que bloco do projeto algo pertence
 just context                                                       # o mapa gerado do repositório (leia antes de mudar algo)
 ```
 

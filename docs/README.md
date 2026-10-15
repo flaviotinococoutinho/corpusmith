@@ -2,168 +2,142 @@
 
 > **Altitude:** índice · **Status:** vivo
 
-Índice **roteado por especialidade**. Cada documento cobre UMA disciplina,
-para que revisor humano e agente de IA saibam exatamente onde uma decisão
-mora e não misturem as camadas de raciocínio. A regra de ouro é única:
-**o código é a fonte da verdade — a doc nunca descreve o que o teste não
-confirma.**
+Use este índice para localizar explicações, procedimentos, referências e
+decisões. Os documentos marcados como históricos preservam o raciocínio da
+época. A fila atual está em [Backlog consolidado](18-backlog-consolidado.md), §11.
 
 ## Onde começar
 
-| Se você é… | Comece por |
+| Objetivo | Documento |
 |---|---|
-| **agente de IA / mantenedor fazendo mudança** | [`../AGENTS.md`](../AGENTS.md) → [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md) |
-| **revisor de arquitetura** | [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md) + [`../architecture.toml`](../architecture.toml) |
-| **entendendo o produto pela primeira vez** | [`00-o-que-e-corpusmith.md`](00-o-que-e-corpusmith.md) — a explicação inteira, do zero |
-| **procurando o vocabulário exato** | [`01-conceitos.md`](01-conceitos.md) — e [`23`](23-ontologia-e-etimologia.md) para a raiz e a fronteira de cada termo |
-| **procurando uma regra/endpoint/tabela** | [`06-referencia.md`](06-referencia.md) |
+| Entender o produto | [O que é o Corpusmith](00-o-que-e-corpusmith.md) |
+| Instalar e verificar o ambiente | [Instalação](12-instalacao.md) |
+| Contribuir ou alterar código | [AGENTS.md](../AGENTS.md) e [Contribuição](../CONTRIBUTING.md) |
+| Revisar arquitetura | [Especificação de engenharia](10-engenharia-ai-friendly.md) e [`architecture.toml`](../architecture.toml) |
+| Consultar termos | [Conceitos](01-conceitos.md) e [Léxico](23-ontologia-e-etimologia.md) |
+| Consultar regras, rotas ou tabelas | [Referência](06-referencia.md) |
 
 ## Mapa por especialidade
 
-### 🧭 Produto — o QUE é e para QUEM
-Conceitos do sistema como produto, sem detalhe de implementação.
+### Produto — o que é e para quem
 
-| Doc | Conteúdo |
+Estes documentos explicam o produto e seus limites:
+
+| Documento | Conteúdo |
 |---|---|
-| [00-o-que-e-corpusmith.md](00-o-que-e-corpusmith.md) | **A explicação completa, do zero**: o problema, a categoria (governar ≠ recordar), a tese de compilação, **um fato seguido do PDF à resposta**, o modelo de autoridade, o que torna as alegações verificáveis e o que o produto NÃO alega |
-| [01-conceitos.md](01-conceitos.md) | OKF, camadas de memória, bi-temporalidade, escala de confiança, controle de autoridade, epistemologia (abstenção, desfecho, eval) |
-| [23-ontologia-e-etimologia.md](23-ontologia-e-etimologia.md) | **O léxico**: os eixos de uma afirmação, os verbetes com raiz etimológica e o que a raiz PROÍBE (a contagem viva está em `ontology.toml` — `corpusmith context`), a deriva semântica ainda aberta e os falsos amigos do mercado |
-| [28-escada-de-abstracao-e-topologia.md](28-escada-de-abstracao-e-topologia.md) | **A escada de abstração** (offset → menção → região → afirmação → página → tema → grafo, com o nível 3 vazio), **erro de nível como classe de defeito** (os três defeitos mais caros do repositório são o mesmo erro) e a **topologia como instrumento epistêmico**: a pergunta de qualidade que cada mecanismo responde, e o que ele NÃO diz |
-| [24-axiomas-e-oticas.md](24-axiomas-e-oticas.md) | **Os oito axiomas** (cada um com a asserção executável que o paga) e as **oito óticas** sobre o mesmo corpus, com unidade e frescor de cada uma |
-| [25-fronteira-e-diferencial.md](25-fronteira-e-diferencial.md) | **As três fronteiras que o produto não cruza** (coletor, publicador, agente), o lugar dele na cadeia adquirir→compilar→publicar e a evidência de que o método generaliza |
+| [00-o-que-e-corpusmith.md](00-o-que-e-corpusmith.md) | Fluxo de uma fonte até a resposta, autoridade de escrita e limites das alegações |
+| [01-conceitos.md](01-conceitos.md) | OKF, memória, validade temporal, confiança, autoridade, proveniência e avaliação |
+| [23-ontologia-e-etimologia.md](23-ontologia-e-etimologia.md) | Eixos epistêmicos, significado dos termos e deriva semântica registrada |
+| [24-axiomas-e-oticas.md](24-axiomas-e-oticas.md) | Axiomas do produto, verificações associadas e óticas de leitura do corpus |
+| [25-fronteira-e-diferencial.md](25-fronteira-e-diferencial.md) | Limites de escopo entre aquisição, compilação, publicação e ação de agentes |
+| [28-escada-de-abstracao-e-topologia.md](28-escada-de-abstracao-e-topologia.md) | Unidades de análise, erros de nível e limites dos sinais topológicos |
 
-### 🔬 Ciência & teoria — POR QUE funciona
-Fundamentos teóricos e científicos, com papers. Não descreve código.
+### Ciência e teoria
 
-| Doc | Conteúdo |
+Consulte os fundamentos e as fontes de pesquisa:
+
+| Documento | Conteúdo |
 |---|---|
-| [03-teoria.md](03-teoria.md) | Teoria da informação (NCD, entropia, surprisal, Hedge), topologia (persistência 0-dim, centralidade de Brandes), heurísticas de coordenação (RRF, heat, escada de reconciliação), fundamentos cognitivos (CLS, BLA) |
-| [26-pesquisa-da-camada-epistemica.md](26-pesquisa-da-camada-epistemica.md) | **A pesquisa da camada epistêmica**: `capta` vs `data`, discordância como traço estrutural, as anomalias de escrita que a literatura tipifica (e que encontramos por mutação), como os vizinhos resolvem contradição, e **onde o Corpusmith não é novo** — nanopublications, micropublications, CRMinf, PROV-O |
+| [03-teoria.md](03-teoria.md) | Fundamentos dos mecanismos e limites de sua transposição para o produto |
+| [26-pesquisa-da-camada-epistemica.md](26-pesquisa-da-camada-epistemica.md) | Literatura sobre asserção, proveniência, discordância e contradição |
 
-### ⚙️ Engenharia, algoritmos & paradigmas — COMO se constrói
-Disciplina de software, técnicas de algoritmo, padrões e paradigmas.
+### Engenharia e contratos
 
-| Doc | Conteúdo |
+Estes documentos descrevem a organização do software e seus contratos:
+
+| Documento | Conteúdo |
 |---|---|
-| [10-engenharia-ai-friendly.md](10-engenharia-ai-friendly.md) | **Spec de arquitetura-alvo (BC-ENG-001)**: Functional Core/Imperative Shell, tipos/ADTs, transações, fila, estruturas de dados, padrões, Object Calisthenics — **com selo ✅ implementado / ⚠️ parcial / 🎯 proposto** |
-| [11-epistemic-contracts.md](11-epistemic-contracts.md) | **Contratos epistêmicos (ADR-38)**: o que cada mecanismo heurístico pode legitimamente alegar — vieses, pressupostos, garantias RELATIVAS, failure modes, Generalization Envelopes (`epistemics.toml`) |
-| [02-metodologias.md](02-metodologias.md) | Método de construção: sanduíche determinístico, precisão>recall, use cases + facades, Template Method, arquitetura-como-teste, golden tests |
-| [04-tecnologias.md](04-tecnologias.md) | Stack e contratos de infra: SQLite/FTS5/WAL, Git, FastAPI/SSE, Electron/Vite, roteador de modelos |
+| [02-metodologias.md](02-metodologias.md) | Normalização, reconciliação, use cases, facades e testes de arquitetura |
+| [04-tecnologias.md](04-tecnologias.md) | Contratos de SQLite, Git, backend, modelos e desktop |
+| [10-engenharia-ai-friendly.md](10-engenharia-ai-friendly.md) | Arquitetura-alvo BC-ENG-001, com estado de implementação por mecanismo |
+| [11-epistemic-contracts.md](11-epistemic-contracts.md) | Pressupostos, garantias relativas, modos de falha e envelopes de avaliação |
+| [../architecture.toml](../architecture.toml) | Camadas, invariantes e verificações obrigatórias |
+| [../epistemics.toml](../epistemics.toml) | Registro dos contratos epistêmicos |
+| [../ontology.toml](../ontology.toml) | Termos, eixos, blocos do projeto, dependências e dívidas |
+| [../nfr.toml](../nfr.toml) | Requisitos não funcionais e estado de verificação |
 
-### 📐 Requisitos não funcionais (NFR)
-Consistência, durabilidade, escala, segurança — tratados como contrato.
+Para consistência, durabilidade, escala, segurança e privacidade, consulte
+as seções 5–17 da especificação de engenharia e o estado em `nfr.toml`.
 
-| Doc | Conteúdo |
+### Referência e operação
+
+Use a referência para consulta e os guias para executar tarefas:
+
+| Documento | Conteúdo |
 |---|---|
-| [10-engenharia-ai-friendly.md](10-engenharia-ai-friendly.md) §5–17 | CAP por operação, `StoragePolicy`, SLI/SLO/RPO/RTO, estágios de escala S0–S3, threat model, segurança de token/privacidade |
+| [06-referencia.md](06-referencia.md) | Regras do Harness, rotas, tabelas, jobs, configuração e constantes |
+| [05-fluxos-operacionais.md](05-fluxos-operacionais.md) | Compilação, consulta, curadoria, revisão, avaliação e implantação |
+| [07-sinergias.md](07-sinergias.md) | Interações entre mecanismos, procedimentos de ajuste e pontos de extensão |
+| [12-instalacao.md](12-instalacao.md) | Instalação local, Docker, serviço do daemon, modelos e diagnóstico |
+| [../benchmarks/README.md](../benchmarks/README.md) | Execução dos benchmarks e resultados de referência |
 
-### 📖 Referência dura — a tabela da verdade
-Constantes, regras, endpoints, tabelas — o que a skill `docs-sync` audita.
+### Governança e planejamento
 
-| Doc | Conteúdo |
+ADRs e RFCs registram decisões e propostas. O estado de uma proposta deve
+ser lido no próprio documento; a ordem de trabalho atual está no §11 do backlog.
+
+| Documento | Conteúdo |
 |---|---|
-| [06-referencia.md](06-referencia.md) | Todas as regras do Harness, endpoints, tabelas dos 5 bancos, jobs, flags, tipos OKF, frontmatter |
-| [../architecture.toml](../architecture.toml) | Contrato de arquitetura legível-por-máquina — camadas em `[[tier]]`, gate, invariantes (preso a `test_architecture_toml.py`; camada × árvore pelo `ontology lint`) |
-| [../epistemics.toml](../epistemics.toml) | Contratos epistemológicos legíveis-por-máquina (presos a `test_epistemics_toml.py`; lint em `corpusmith epistemics lint`) |
-| [../ontology.toml](../ontology.toml) | Eixos, léxico com etimologia, registro de deriva semântica e — §4 — os **blocos do projeto**, o índice semântico do repositório (presos a `test_ontology.py` e `test_ontologia_dos_blocos.py`; lint em `corpusmith ontology lint`; consulta em `corpusmith ontology blocks\|where`) |
+| [08-decisoes.md](08-decisoes.md) | Registro de decisões arquiteturais e condições de reconsideração |
+| [18-backlog-consolidado.md](18-backlog-consolidado.md) | §11: fila atual. §1–§10: histórico de fechamento e evidências |
+| [16-rfc-theme-id.md](16-rfc-theme-id.md) | RFC-001: identidade de tema entre recomputações |
+| [19-rfc-escada-reconciliacao.md](19-rfc-escada-reconciliacao.md) | RFC-002: decisões e atualização das projeções usadas na reconciliação |
+| [20-rfc-colisao-de-caminho.md](20-rfc-colisao-de-caminho.md) | RFC-003: colisão entre promoção humana e compilação de máquina |
+| [21-adr-categoria-corpusmith.md](21-adr-categoria-corpusmith.md) | ADR-53: nome, categoria e limites das alegações públicas |
+| [22-rfc-ontologia-da-assercao.md](22-rfc-ontologia-da-assercao.md) | RFC-004: eixos da asserção e proposta de unidade epistêmica própria |
+| [27-rfc-conflito-factual.md](27-rfc-conflito-factual.md) | RFC-005: divergência numérica dentro de grupos de identificador forte |
+| [29-rfc-006-re-mira.md](29-rfc-006-re-mira.md) | RFC-006: direção para o instrumento de estudo, capacidades e estados de entrega |
+| [30-dicionario-da-re-mira.md](30-dicionario-da-re-mira.md) | Vocabulário da direção de produto, níveis de acesso e verificações de engenharia |
 
-### 🔄 Fluxos operacionais — QUANDO / ONDE
-| Doc | Conteúdo |
-|---|---|
-| [05-fluxos-operacionais.md](05-fluxos-operacionais.md) | Fluxos fim-a-fim: compilar, perguntar, promover, desfecho→reflect, revisão, comunidades, eval, implantação |
-| [07-sinergias.md](07-sinergias.md) | Matriz de interação entre conceitos + receitas de composição e extensão |
-| [12-instalacao.md](12-instalacao.md) | Instalação validada (local, Docker, launchd), smoke tests da API e solução de problemas reais (`scripts/install.sh`) |
+Os documentos abaixo são históricos. Para planejar trabalho, consulte o
+backlog atual e o protocolo do `AGENTS.md`:
 
-### 🏛️ Governança — DECIDIR e o que falta
-| Doc | Conteúdo |
+| Documento | Registro preservado |
 |---|---|
-| [08-decisoes.md](08-decisoes.md) | ADRs: conceitos adotados, adaptados e rejeitados com razão registrada (CLS, ACT-R, AGM, DTT, CRDTs, WFST…) e portas de reentrada |
-| [09-backlog.md](09-backlog.md) | (histórico) Backlog priorizado (P0–P3) e estado de fechamento por frente — o estado vivo é o `18` |
-| [13-plano-experiencia-memoria.md](13-plano-experiencia-memoria.md) | (histórico) **Plano avançado** de experiência de memória/curadoria/classificação — auditoria de consistência + receitas mineradas de projetos externos + roadmap em 4 fases |
-| [14-plano-viabilidade.md](14-plano-viabilidade.md) | (histórico) **Plano de viabilidade** — o que falta para o produto ser usável por quem não é o autor: 14 problemas por complexidade DECRESCENTE (o ato de curadoria e a camada de padrões como objeto) + roadmap em 8 fases + matriz de não-adoção |
-| [15-plano-execucao.md](15-plano-execucao.md) | **Plano de execução** (histórico, congelado) — pacotes de trabalho PR a PR das duas fases-modelo, ordem revisada, as 10 lacunas de PROCESSO G-1…G-10 (hoje fechadas pelo PR-0), dependências ocultas, colisões de arquivo e o limiar de RFC |
-| [16-rfc-theme-id.md](16-rfc-theme-id.md) | **RFC-001** — identidade de tema por casamento de partições (τ = 1/3 calibrado contra a banda vazia; vocabulário fechado de épocas) |
-| [17-auditoria-integridade.md](17-auditoria-integridade.md) | (histórico) **Auditoria adversarial de integridade** — achados de um cético independente rodando o código (garantias infladas, buracos de lint/gate), com nível de evidência |
-| [18-backlog-consolidado.md](18-backlog-consolidado.md) | **Backlog consolidado — a ÚNICA fila viva**: a §11 (`Q-n`) é a fila corrente — superfície de estudo, decisões pendentes, NFRs `declared` → `pinned`, entropia de engenharia, condições e portas, disposições das pontas soltas e a política de entropia documental; §1–§10 são o histórico de fechamento, cada linha com nível de evidência e o teste/ADR que a fechou; `corpusmith context` conta abertos e fechados |
-| [19-rfc-escada-reconciliacao.md](19-rfc-escada-reconciliacao.md) | **RFC-002** — a escada de reconciliação volta a ter três degraus (B1: o degrau de similaridade era código morto; árbitro LLM segue atrás de flag desligada) |
-| [20-rfc-colisao-de-caminho.md](20-rfc-colisao-de-caminho.md) | **RFC-003** — colisão de caminho entre promoção humana e compilação de máquina (P-7) |
-| [21-adr-categoria-corpusmith.md](21-adr-categoria-corpusmith.md) | **ADR-53** — Corpusmith: o nome, a categoria (*governed knowledge compiler*) e a **fronteira de honestidade** — o que o produto pode e não pode alegar hoje |
-| [27-rfc-conflito-factual.md](27-rfc-conflito-factual.md) | **RFC-005** — conflito factual como REFINAMENTO da contradição candidata (o `canonical` de uma quantidade é o próprio valor, então o sujeito tem de vir do grupo de identificador); a primeira tolerância numérica do Harness, declarada NÃO calibrada; e o primeiro **leitor** de `contested` (a correção "escritor→leitor" foi medida — §5.3) |
-| [29-rfc-006-re-mira.md](29-rfc-006-re-mira.md) | **RFC-006** — **a re-mira: do compilador de corpus ao instrumento de estudo** — o pitch (conceitos comparáveis, rastreáveis, explicáveis e acionáveis: sob qual lente, o que permanece, onde diverge, como se aplica, quanto custa adotar), as seis capacidades V1–V6 verificadas contra o código (todas **entregues** no núcleo, facade, CLI e contrato — a superfície no cockpit é o primeiro bloco de `docs/18` §11), a ficha do conceito como norte da UI, a LLM-wiki/memória de IA como nome de uso, e a fila reordenada (`docs/18` §10, concluída) |
-| [30-dicionario-da-re-mira.md](30-dicionario-da-re-mira.md) | **Dicionário da re-mira** — os termos que poderiam significar duas coisas, fixados com dono e TESTE que prende (estabilidade em 4 sentidos, lente≠tema≠goal≠eixo, os dois conjuntos de "sujeito forte", conflito≠coexistência≠low_yield); a memória por NÍVEL DE ACESSO (quem escreve, por qual porta, o que sobrevive a quê); e os 11 conceitos de engenharia que pagam manutenção/expansão, cada um com sua asserção executável |
-| [22-rfc-ontologia-da-assercao.md](22-rfc-ontologia-da-assercao.md) | **RFC-004** — a ontologia da asserção: os eixos que `confidence` fundia (com a assimetria medida na fusão), o registro de deriva, e `Assertion`/`EvidenceLink`/`AuthorityGrant` como proposta com condições de reentrada |
+| [09-backlog.md](09-backlog.md) | Backlog anterior |
+| [13-plano-experiencia-memoria.md](13-plano-experiencia-memoria.md) | Plano de experiência de memória, curadoria e classificação |
+| [14-plano-viabilidade.md](14-plano-viabilidade.md) | Plano de viabilidade para novos usuários |
+| [15-plano-execucao.md](15-plano-execucao.md) | Sequência anterior de pacotes de execução |
+| [17-auditoria-integridade.md](17-auditoria-integridade.md) | Auditoria de integridade e evidências dos achados |
 
 ## Guia rápido de roteamento (para não misturar especialidades)
 
-- **Nunca vi este projeto antes** → `00` (leia inteiro; os outros são de consulta).
-- É **o que o usuário vê / por que o produto existe**? → `00`, depois `01`.
-- É **o que o produto pode ou NÃO pode alegar** (categoria, fronteira de
-  honestidade, nomes históricos)? → `21`.
-- É **o que uma palavra significa** (e o que ela não pode passar a
-  significar)? → `23` + `ontology.toml`.
-- É **uma suposição de base** que o produto assume? → `24` (axiomas), e se
-  precisar violá-la, é RFC, não PR.
-- É **por qual ângulo estou olhando** (editorial, epistêmico, temporal,
-  topológico…)? → `24` §2.
-- É **em que NÍVEL isto é verdade** (menção? região? página? corpus?), ou o
-  que a topologia pode e não pode dizer sobre qualidade? → `28`.
-- É **se o produto deveria fazer isto** (fronteira, escopo, concorrência)?
-  → `25`.
-- É **por que uma técnica funciona** (prova, paper, matemática)? → `03`.
-- É **o que a literatura já resolveu sobre asserção, proveniência e
-  contradição** (e o que aqui é adoção, não invenção)? → `26`.
-- É **como o software é organizado** (camada, tipo, padrão, algoritmo)? → `10`, `02`, `04`.
-- É **o que um mecanismo heurístico pode ALEGAR / onde foi avaliado**? → `11` + `epistemics.toml`.
-- É **quanto/quão rápido/quão durável** (CAP, SLO, escala, segurança)? → `10` §5–17.
-- É **uma constante/regra/endpoint** que preciso consultar? → `06`.
-- É **uma decisão tomada**? → `08`. **O que ainda falta**? → `18` §11 (`09` é o backlog histórico).
-- É **para onde levar a experiência de memória/curadoria/classificação**? → `29` + `18` §11 (`13` é o registro histórico do raciocínio).
-- É **o que falta para ser viável para um terceiro** (e em que ordem)? → `18` §11 (`14` é histórico).
-- É **a que parte do repositório algo pertence** (bloco, camada, dependência, quem prova)? → `corpusmith ontology where <caminho>` + `23` (blocos do projeto).
-- É **como executar isso** (PR a PR, processo, RFC vs ADR)? → `15` + `AGENTS.md` §8.
-- É **o que AINDA falta, com evidência**? → `18` (fonte viva; `14`/`15` são o registro do raciocínio).
-- É **para onde o produto está mirando** (o instrumento de estudo, as seis
-  capacidades, a ordem)? → `29` + `18` §10.
-- É **um termo da re-mira com risco de ambiguidade** (estabilidade, lente,
-  sujeito forte), a **memória por nível de acesso**, ou **qual disciplina
-  de engenharia prende o quê**? → `30`.
-- É **uma heurística no caminho de escrita**? → as RFCs `16`, `19`, `20` são os precedentes instanciados.
-- É **como instalar/verificar o ambiente**? → `12` + `scripts/install.sh`.
+| Pergunta | Referência |
+|---|---|
+| O que um termo significa? | `23`, `30` e `ontology.toml` |
+| Em qual unidade um sinal é válido? | `28` |
+| O que uma heurística pode alegar? | `11` e `epistemics.toml` |
+| Por que uma técnica foi adotada? | `03`, `08` e a RFC correspondente |
+| Qual decisão de arquitetura rege uma mudança? | `10` e `AGENTS.md` §8 |
+| A que bloco um arquivo pertence? | `corpusmith ontology where <caminho>` |
+| O que falta fazer e em que ordem? | `18` §11 |
+| Quais contagens e registros estão vigentes? | `corpusmith context` ou `just context` |
 
 ## Como manter esta documentação
 
-A skill local **`docs-sync`** (`.claude/skills/docs-sync/SKILL.md`) contém o
-procedimento: o mapa código→documento, os comandos que extraem a verdade do
-código (regras, endpoints, tabelas, jobs) e o checklist de auditoria.
-Invoque-a (`/docs-sync`) sempre que uma mudança tocar funcionalidade core.
-Ao mudar arquitetura, atualize também [`10-engenharia-ai-friendly.md`](10-engenharia-ai-friendly.md)
-e [`../architecture.toml`](../architecture.toml) — este último **quebra o CI**
-se divergir do código.
+A skill local `docs-sync`, em `.claude/skills/docs-sync/SKILL.md`, descreve
+os vínculos entre código e documentos e os comandos de auditoria. Use o
+procedimento quando uma alteração mudar os fatos documentados.
 
-A documentação é **contrato com guarda** (`backend/tests/test_docs_contract.py`):
+Ao alterar arquitetura, atualize a especificação e `architecture.toml`
+quando aplicável. Os testes comparam o contrato com a implementação.
+O contrato documental está em `backend/tests/test_docs_contract.py`:
 
-- todo `docs/*.md` abre com `> **Altitude:** … · **Status:** vivo|histórico`
-  (vocabulário de altitude: produto · ciência · engenharia · referência ·
-  contrato · fluxo · governança · índice); `histórico` aponta para
-  [`18`](18-backlog-consolidado.md) e não é editado — o estado vivo mora lá;
-- este índice lista todo arquivo da pasta; todo link relativo resolve;
-- **doc vivo não crava contagem** de mecanismos, termos, testes ou
-  contratos — a fonte é o registro e `corpusmith context` (`just context`),
-  o mapa gerado do código (versão, HEAD, camadas, gate, invariantes, NFRs,
-  registros, rotas, jobs, ADRs, fila). ADRs, RFCs e o histórico de
-  fechamento de `18` podem, porque registram o que era verdade no commit;
-- o que o [`11`](11-epistemic-contracts.md) projeta à mão do
-  [`../epistemics.toml`](../epistemics.toml) — o tipo de garantia de cada
-  mecanismo, o vocabulário de tipos — é cruzado com o registro;
-- os requisitos não funcionais têm estado em [`../nfr.toml`](../nfr.toml)
-  (`pinned` só com teste), não em selo de prosa.
+- Todo `docs/*.md` declara altitude e status nas primeiras linhas.
+- Um documento histórico aponta para a fonte atual em `18`.
+- O índice lista todos os documentos e os links relativos resolvem.
+- Documentos vivos usam registros e comandos para contagens de mecanismos,
+  termos, testes e contratos. ADRs, RFCs e registros de fechamento podem
+  preservar números do commit ao qual se referem.
+- As tabelas de tipos de garantia em `11` são comparadas a `epistemics.toml`.
+- O estado dos requisitos não funcionais vem de `nfr.toml`.
 
 ## Convenções de leitura
 
-- Trechos `caminho/arquivo.py:Símbolo` apontam para a implementação.
-- Selos de status em `10`: ✅ implementado (com teste) · ⚠️ parcial · 🎯 proposto.
-- "Página de máquina" = `generated_via: api:*|local:*`; "página humana" =
-  `generated_via: human:*`. A distinção governa quase todas as regras.
-- Termos da escala única de confiança aparecem em inglês
-  (`extracted`/`inferred`/`ambiguous`): são valores literais no banco e no
-  frontmatter.
+`caminho/arquivo.py:Símbolo` identifica uma implementação. O documento `10`
+distingue implementado, parcial e proposto. `pinned`, `measured` e `declared`
+são estados de verificação; uma proposta não deve ser descrita como entregue.
+
+Páginas de máquina usam `generated_via: api:*` ou `local:*`. Páginas humanas
+usam `human:*`. Valores como `extracted`, `inferred`, `ambiguous` e
+`local_only` permanecem em inglês porque fazem parte dos dados e contratos.

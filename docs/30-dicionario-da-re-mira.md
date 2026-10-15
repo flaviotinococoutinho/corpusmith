@@ -2,12 +2,10 @@
 
 > **Altitude:** governança · **Status:** vivo
 
-> **Para que serve.** A RFC-006 nomeou as duas patologias mais caras deste
-> repositório: *um nome carregando várias perguntas* e *atributo afirmado
-> no nível errado*. Este documento é a vacina de vocabulário: onde uma
-> palavra da re-mira poderia significar duas coisas, aqui está fixado qual
-> ela significa, qual ela NÃO significa, quem é o dono e **qual teste
-> prende** — porque definição sem guarda é opinião.
+> Este documento define os termos da RFC-006, seus limites de significado,
+> as fontes responsáveis e as verificações associadas. Ele trata dois riscos
+> recorrentes: usar um nome para perguntas diferentes e atribuir a um objeto
+> inteiro uma propriedade que só vale para parte dele.
 >
 > Complementa, não substitui: o léxico geral é [`23`](23-ontologia-e-etimologia.md)
 > + [`ontology.toml`](../ontology.toml); os contratos de mecanismo,
@@ -142,7 +140,8 @@ gradiente vai do mais governado ao mais descartável:
 | `index.db` | **derivada** — projeção consultável | só o produto (rebuild/projeções) | `rebuild_index` + use cases de projeção | nada — apague e reconstrua | INV-DATA-003 |
 | `runtime.db` | **operacional** — jobs, trilhas, checkpoints | só o produto | módulos de runtime | rebuild do índice (por isso os checkpoints moram AQUI) | INV-OPS-002 |
 | `cognitive.db` | **experiência** — desfechos, prática, calibração | só o produto, a partir de gesto humano | domínio cognitivo | falha cognitiva NÃO altera o canônico | INV-DATA-004 |
-| `reference.db` | **cache do mundo** — gazetteer, normas, citações | só o produto | manage_reference | é re-obtenível; nunca vira autoridade | AGENTS §6 |
+| `reference.db` | **referência curada** — gazetteer, normas, citações | só o produto | manage_reference | não é reconstruível apenas do bundle; preserve os dados importados | AGENTS §6 |
+| `cold.db` | **base fria** — digest e corpo compactado | só o produto | FreezeMemory / RecycleMemory | rebuild do índice; contém estado não derivável | docs/04 §1 |
 
 Três consequências práticas desse ordenamento:
 
@@ -168,10 +167,10 @@ estilo, e estilo não sobrevive a refactor.
 | 2 | **Gradiente de mutabilidade** — quanto mais interna a camada, menos volátil | mudança cara fica rara; mudança barata fica barata | `architecture.toml` + INV-ARCH-001..006 |
 | 3 | **Um nome, uma pergunta** — vocabulário fechado; deriva REGISTRADA quando existe | a conversa não degrada; `grep` volta a ser confiável | INV-ONT-001, `ontology lint`, varredura por SENTIDO no fonte |
 | 4 | **Nível certo da escada** — atributo afirmado onde é verdade para o objeto inteiro | evita a classe de defeito mais cara (docs/28 §2) | ⚠️ **guarda humana**: revisão obrigatória da RFC-006 §8 + a pergunta de nível no template de PR; a guarda executável (campo `level` nos contratos que escrevem atributo) é `docs/18` §11 Q-26 |
-| 5 | **Autoridade única + projeções recomputáveis** — Git é o juiz; o resto deriva | experimento seguro: o pior caso é reindexar | INV-DATA-003, `DERIVATIONS` |
-| 6 | **Um caminho de escrita** — todo byte canônico passa pelo gate | política impossível de pular por construção | INV-DATA-001, Template Method fechado (INV-ARCH-006) |
+| 5 | **Autoridade única do conhecimento + projeções recomputáveis** — bundle e Git preservam o canônico | experimentar no índice sem mudar as páginas canônicas | INV-DATA-003, `DERIVATIONS` |
+| 6 | **Um caminho de escrita** — todo byte canônico passa pelo gate | escrita sujeita à validação do Harness | INV-DATA-001, Template Method fechado (INV-ARCH-006) |
 | 7 | **1 use case = 1 `execute()`; facades onde 2+ domínios se encontram** — API só fala com facades | a intenção cabe no nome; orquestração tem endereço | INV-ARCH-004/005 |
-| 8 | **Contratos executáveis** — architecture/epistemics/ontology/nfr.toml presos a testes; a documentação também (altitude/status, índice, links, contagens, o `docs/11` × `epistemics.toml`) e o mapa gerado (`corpusmith context`) | doc que mente QUEBRA a suíte, em vez de envelhecer | `test_pr0_gate`, `test_epistemics_toml`, `test_ontology`, `test_nfr_toml`, `test_docs_contract`, `test_context_pack` |
+| 8 | **Contratos executáveis** — architecture/epistemics/ontology/nfr.toml presos a testes; a documentação também (altitude/status, índice, links, contagens, o `docs/11` × `epistemics.toml`) e o mapa gerado (`corpusmith context`) | testes detectam as divergências cobertas pelas asserções | `test_pr0_gate`, `test_epistemics_toml`, `test_ontology`, `test_nfr_toml`, `test_docs_contract`, `test_context_pack` |
 | 9 | **Falsificabilidade por mutação (A-6)** — teste que passa com e sem a mudança é teatro | a suíte prova que vigia, não só que passa | ⚠️ **guarda humana**: mutações executadas e registradas por PR (a contagem declarada tem de ser a medida); registro lido por teste é `docs/18` §11 Q-26 |
 | 10 | **Complexidade isolada atrás de porta** — otimização (Rust, caches) NUNCA decide domínio; fallback declarado | o difícil fica documentado num lugar só e removível | ADR-39, `compute/` como porta, `bench compare` fora do gate |
 | 11 | **Resiliência declarada** — erro com código estável; retry só idempotente; job termina ou é recuperável; preview antes do efeito; lote com teto | falha vira estado nomeado, não surpresa | INV-OPS-001/002, `LOTE_MAXIMO` guardado, 409 nomeado |

@@ -7,9 +7,9 @@
 > Falta a camada entre as duas: **em que NÍVEL cada coisa é verdade**, e o que a
 > forma do corpus diz sobre a **qualidade** do que há nele.
 >
-> Esta página existe porque o defeito mais caro que o produto já teve — e o que
-> [RFC-005](27-rfc-conflito-factual.md) acabou de encontrar — é o mesmo:
-> **afirmar num nível o que só vale em outro**.
+> A página reúne exemplos de um erro recorrente nos registros do projeto:
+> afirmar sobre um objeto inteiro o que só vale para uma de suas partes.
+> Veja também os casos em [RFC-005](27-rfc-conflito-factual.md).
 
 ---
 
@@ -36,7 +36,7 @@ aquela evidência, vale neste período"*.
 
 ## 2. Erro de nível é a classe de defeito
 
-Os três defeitos mais caros que este repositório mediu são o **mesmo** erro:
+Os casos abaixo exemplificam erros de nível registrados no repositório:
 
 | Defeito | Erro de nível | Onde está documentado |
 |---|---|---|
@@ -63,7 +63,7 @@ de **qualidade**, e cada mecanismo responde a uma pergunta epistêmica diferente
 | Mecanismo | Pergunta estrutural | Pergunta **epistêmica** que ele responde |
 |---|---|---|
 | **persistência H₀** (Edelsbrunner et al. 2002) — `fragile_bridges` | que aresta une dois componentes grandes com peso baixo? | *onde o corpus está fingindo ser um só?* Dois blocos que só se falam por um fio fraco são, na prática, dois corpora — e uma resposta que atravessa esse fio é mais frágil do que o número de páginas sugere |
-| **intermediação de Brandes** (2001) — `betweenness_centrality` | por onde passam os caminhos mais curtos? | *que página o corpus não pode perder?* Alta intermediação = revogar aquela página desconecta o discurso. É o inverso do calor: popular ≠ estrutural |
+| **intermediação de Brandes** (2001) — `betweenness_centrality` | por onde passam os caminhos mais curtos? | *que páginas concentram caminhos curtos?* Alta intermediação indica posição estrutural; não garante que remover a página desconecte o grafo nem mede importância factual |
 | **lacuna estrutural** (déficit sob o modelo de configuração de Newman) — `structural_gaps` | que par de blocos compartilha muito MENOS arestas do que o acaso preveria? | *que pergunta ninguém fez ainda?* A ponte frágil aponta o fio que existe; a lacuna aponta o **ausente** |
 | **Leiden** — `communities` | como o grafo particiona? | *o corpus tem os blocos que eu acho que tem?* Uma comunidade que não corresponde a nenhum tema declarado é sinal de que o mapa mental e o corpus divergiram |
 | **identidade de tema** (τ = 1/3, [RFC-001](16-rfc-theme-id.md)) | esta partição é a mesma de antes? | *o que mudou desde a última vez?* Sem identidade estável, `nasceu/cresceu/fundiu/morreu` viraria ruído a cada recomputação |

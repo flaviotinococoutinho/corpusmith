@@ -50,34 +50,36 @@ sanduíche → página nova).
 | **Topologia (pontes)** | — | — | — | diagnóstico de curadoria | candidatos a linkar | — |
 | **Autoridade (bundle)** | gazetteer estendido | entidades melhores ⇒ Jaccard melhor | entidades melhores ⇒ stream melhor | fusão de nós por QID (futuro) | — | — |
 
-Leitura da matriz: investir numa célula da PRIMEIRA coluna paga em toda a
-linha. A normalização é o multiplicador de força do sistema — é por isso
-que ela é a camada mais testada (golden + idempotência).
+A matriz mostra dependências entre os mecanismos. Por exemplo, uma grafia
+canônica pode melhorar a correspondência de entidades usada na reconciliação
+e na recuperação. O efeito deve ser avaliado no corpus usado.
 
 ## 3. Receitas de composição
 
 ### R1 — "Minha base está fragmentada em duplicatas"
-1. Curar `authority_records` para os termos que aparecem com variantes
+1. Cure `authority_records` para os termos que aparecem com variantes
    (o Explorer com filtro de autoridade + `/cockpit/authorities` mostra
    os usos).
-2. `okf index` (re-anota com o gazetteer novo) → recompilar fontes stale.
-3. O reconciliador passa a enxergar as duplicatas (Jaccard e NCD sobem);
-   compilações seguintes viram UPDATE. Verificar em `reconcile_log`.
+2. Execute `corpusmith okf index` para reanotar com o novo gazetteer.
+3. Recompile as fontes que precisam de revisão e confira `reconcile_log`.
+   A mudança pode alterar a similaridade, mas não garante uma decisão `UPDATE`.
 
 ### R2 — "As respostas estão confiantes demais"
-1. Subir `ask.abstain_threshold` (score RRF mínimo) gradualmente.
-2. Adicionar casos `expect_abstain` ao golden set com perguntas que a
-   base NÃO cobre; rodar `eval_memory` — a categoria abstain vira o
-   guard-rail da calibração.
-3. Exibir/observar `uncertainty`: se alto com resposta certa, o problema
-   é dispersão de evidência (duplicatas? ver R1), não o threshold.
+1. Adicione casos `expect_abstain` ao golden set com perguntas sem cobertura.
+2. Avalie a configuração atual com `eval_memory`.
+3. Ajuste `ask.abstain_threshold` gradualmente e compare os resultados.
+   O score RRF não é probabilidade de verdade.
+4. Inspecione as evidências e `uncertainty`, que mede dispersão do ranking.
+   Entropia baixa também pode acompanhar uma resposta incorreta.
 
 ### R3 — "Quero que o retrieval aprenda meu jeito de perguntar"
-Usar os botões de desfecho com disciplina por 2–3 semanas. O Hedge
-converge os `stream_weights` (ex.: quem pergunta por identificadores
-verá `entity` subir; quem pergunta prosa vaga verá `fts`/`descend`).
-Inspecionar: `SELECT * FROM stream_weights`. Reset = DELETE na tabela
-(volta a 1.0 — o clamp garante que nada morreu).
+Registre os desfechos das consultas. O mecanismo atualiza `stream_weights`
+a partir dos streams que contribuíram para as páginas julgadas. Não há
+prazo de convergência ou garantia de melhoria; o contrato é `heuristic`.
+
+Inspecione os pesos com `SELECT * FROM stream_weights`. Para reiniciá-los,
+use `POST /cockpit/behavior/reset-streams` em vez de editar o banco. A API
+usa a autenticação descrita na [referência](06-referencia.md).
 
 ### R4 — "Dois temas da minha base não conversam"
 Painel Qualidade → 🌉 pontes frágeis. Cada ponte lista o par de blocos e
@@ -94,8 +96,8 @@ velho; sem data, responde o novo. Adicionar caso `temporal` no golden.
 
 ### R6 — "Quero um novo tipo de página gerada por máquina"
 Herdar de `MachinePageUseCase`, implementar `_produce()` (e opcionalmente
-`_reconcile`/`_after_write`). O esqueleto garante sanduíche + gate + Git
-de graça; o teste de arquitetura garante que você não quebrou o template.
+`_reconcile`/`_after_write`). O esqueleto executa a normalização, a validação e a escrita versionada.
+O teste de arquitetura verifica que a subclasse não redefine `execute()`.
 Registrar o job no REGISTRY e expor via facade.
 
 ### R7 — "Quero um novo sinal de retrieval"
@@ -121,11 +123,12 @@ marque-os também ou atualize os links para a sucessora. O
 versões da mesma verdade convivendo sem sucessão declarada.
 
 ### R8 — "Quero medir se uma mudança melhorou a memória"
-1. Congelar um golden set representativo (≥3 casos por categoria).
-2. Rodar `eval_memory` antes e depois; comparar `eval_runs` por ts.
-3. Para mudanças de retrieval, olhar também a distribuição de
-   `uncertainty` das respostas corretas (deve cair) e o tempo até o
-   primeiro `useful` nos desfechos.
+1. Fixe um golden set com cobertura das categorias relevantes e registre
+   seu tamanho e suas limitações.
+2. Execute `eval_memory` antes e depois. Compare `eval_runs` e os envelopes.
+3. Para mudanças de recuperação, compare recall, MRR, abstenção e latência.
+   Observe também `uncertainty`, sem tratar sua redução como melhoria
+   automática de correção factual.
 
 ## 4. Tensões conhecidas (trade-offs deliberados)
 
