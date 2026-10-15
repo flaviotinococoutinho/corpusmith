@@ -2,10 +2,9 @@
 
 > **Altitude:** produto · **Status:** vivo
 
-> **A explicação inteira, do zero, em uma sentada.** Os outros documentos
-> deste diretório são roteados por especialidade — ótimos quando você já sabe
-> o que procura. Este é o único que assume que você não sabe nada, e conta a
-> história completa seguindo **um fato** da fonte bruta até a resposta.
+> Esta introdução acompanha uma informação desde a fonte até a resposta.
+> Explica a compilação, as regras de escrita, a curadoria e os limites do
+> produto. Os demais documentos detalham cada especialidade.
 >
 > Vocabulário: [`01`](01-conceitos.md) · Por que funciona:
 > [`03`](03-teoria.md) · Como é construído: [`10`](10-engenharia-ai-friendly.md)
@@ -27,8 +26,8 @@ Seis meses depois aparecem as perguntas caras:
 - *Duas páginas dizem coisas diferentes sobre o mesmo artigo. Qual manda?*
 - *Preciso revogar esta informação. Onde ela está sendo usada?*
 
-Nenhuma dessas perguntas é sobre *recuperar melhor*. Todas são sobre
-**governar** — e é aí que o Corpusmith mora.
+Essas perguntas exigem proveniência, validade temporal e regras para alterar
+o registro. O Corpusmith organiza essas informações junto ao conteúdo.
 
 ## 2. A categoria: governar, não recordar
 
@@ -43,9 +42,9 @@ Nenhuma dessas perguntas é sobre *recuperar melhor*. Todas são sobre
 | Gestão de documentos | "Onde estão os documentos?" |
 | **Corpusmith** | **"O que foi aceito como conhecimento, com base em quê, por quem, em qual período e sob quais limites?"** |
 
-Repare que a pergunta do Corpusmith **contém** as outras: para respondê-la é
-preciso recuperar, representar e guardar — mas nenhuma das outras responde a
-dele. É por isso que a categoria é diferente, e não uma variação.
+A tabela apresenta o foco de cada categoria. No Corpusmith, recuperação,
+representação e armazenamento apoiam o registro de proveniência e das
+decisões de curadoria.
 
 O nome traduz o ofício: **corpus** é o material trabalhado, **smith** é quem
 o trabalha. Fontes brutas → curadoria → corpus durável.
@@ -73,13 +72,14 @@ Três consequências normativas saem daí, e elas governam o produto inteiro:
 
 **O índice nunca é a verdade.** `index.db` pode ser deletado a qualquer
 momento (`corpusmith okf index` reconstrói). Nada de conhecimento se perde.
-Corolário prático: qualquer experimento de retrieval é seguro — o pior caso
-é reindexar. Corolário epistêmico: uma projeção **nunca** pode decidir sobre
-o canônico (e quando ela decidia, foi tratado como defeito — ver
+Essa reconstrução permite experimentar índices sem mudar as páginas
+canônicas. Uma projeção desatualizada não deve determinar uma escrita no
+bundle (e quando ela decidia, foi tratado como defeito — ver
 [RFC-002](19-rfc-escada-reconciliacao.md)).
 
-**Git é o juiz.** Arquivar ≠ apagar; depreciar ≠ deletar; errar ≠ perder.
-Toda escrita passa por um gate único e vira commit com trilha em `log.md`.
+**Git registra as alterações.** Aposentadoria e reversão preservam o
+histórico. A escrita passa pelo Harness e gera um commit com registro em
+`log.md`.
 
 **Determinismo antes de modelo.** O que regex, checksum ou grafo resolvem
 não passa por LLM. O modelo é um estágio cercado por passadas
@@ -124,8 +124,7 @@ devolve `COLLISION` e a decisão volta para você, com três saídas legítimas
 
 ### Passo 4 — o gate (`write`)
 
-Um único caminho de escrita, inescapável. O Harness roda **duas camadas
-separadas**:
+O caminho de escrita usa o Harness, que executa duas validações:
 
 - **conformidade OKF** — só o que o SPEC exige (nunca inventa exigência);
 - **política local** — as nossas regras: `privacy` obrigatório, checksum de
@@ -138,14 +137,16 @@ Erro bloqueia a escrita. Passou, vira commit.
 ### Passo 5 — projetar (`done`)
 
 O índice é reconstruído de forma incremental: chunks, FTS, entidades com
-**offsets de span**, arestas do grafo. Nada aqui é verdade nova — é a mesma
-verdade em formato consultável.
+**offsets de span**, arestas do grafo. Essas projeções tornam o conteúdo consultável sem acrescentar uma nova
+asserção ao registro canônico.
 
 ### Passo 6 — perguntar (`/ask`)
 
 A consulta funde streams (FTS, vetorial, grafo, hierárquico) por RRF, e a
 resposta vem com **evidência**: qual página, qual trecho, quais spans
-justificam. Se o suporte for fraco, o produto **abstém** em vez de inventar.
+justificam. Quando a evidência recuperada não satisfaz o critério de abstenção, a
+resposta retorna `abstained: true`. Esse critério é heurístico e não garante
+a correção de respostas aceitas.
 Cada resposta carrega um `ask_id` que é a trilha decodificável do que foi
 feito.
 
@@ -153,7 +154,7 @@ feito.
 
 Você diz se a resposta foi útil. Isso alimenta os pesos de stream, o calor
 das páginas, a fila de revisão espaçada — e, quando algo está errado,
-**você tem o gesto para consertar**: nove atos de curadoria (`edit`,
+você pode usar os atos de curadoria (`edit`,
 `supersede`, `invalidate`, `merge`, `link`, `unlink`, `close_question`,
 `clear_legacy_valid_at`, `undo`), todos com **preview antes do efeito** e
 todos reversíveis — inclusive o único que opera em LOTE, e que por isso
@@ -161,8 +162,8 @@ declara um teto: preview que ninguém consegue ler não é preview.
 
 ## 5. Quem pode mudar o quê — o modelo de autoridade
 
-Esta é a seção que separa o Corpusmith de uma memória comum, e é onde a
-honestidade importa mais.
+Cada conjunto de dados tem uma autoridade definida. As projeções podem ser
+reconstruídas a partir dela.
 
 | Fonte de verdade | Autoridade | Projeções |
 |---|---|---|
@@ -186,7 +187,7 @@ remembers.* — é a direção declarada em [ADR-53](21-adr-categoria-corpusmith
 
 ## 6. O que torna isto verificável (e não slogan)
 
-Cada elo da combinação é **asserção executável**, não promessa de README:
+O repositório verifica regras específicas com testes e diagnósticos:
 
 - **arquitetura como teste** — um `import sqlite3` dentro do núcleo puro
   quebra a suíte; `usecases` que importe `api` quebra a suíte; um `UseCase`
@@ -207,17 +208,16 @@ Cada elo da combinação é **asserção executável**, não promessa de README:
 
 ## 7. O que o Corpusmith NÃO alega
 
-Um produto que vende governança não pode começar exagerando a própria.
-Estas alegações são **proibidas** no estado atual ([ADR-53](21-adr-categoria-corpusmith.md) §3):
+O estado atual não sustenta as seguintes alegações ([ADR-53](21-adr-categoria-corpusmith.md) §3):
 
-- ❌ **"fonte da verdade"** — canônico ≠ verdadeiro. O registro diz o que foi
+- **"fonte da verdade"** — canônico ≠ verdadeiro. O registro diz o que foi
   *aceito*, e por quem. Aceitação não é veracidade;
-- ❌ **"zero alucinação"** — o produto abstém quando o suporte é fraco e cita
+- **"zero alucinação"** — o produto abstém quando o suporte é fraco e cita
   a evidência quando responde; isso reduz e torna auditável, não elimina;
-- ❌ **"ontologia formal"** — o vocabulário é curado no bundle, não é uma
+- **"ontologia formal"** — o vocabulário é curado no bundle, não é uma
   ontologia com semântica formal;
-- ❌ **"somente humanos escrevem"** — falso hoje, ver §5;
-- ❌ **prontidão para decisões clínicas ou reguladas** — a arquitetura tem
+- **"somente humanos escrevem"** — falso hoje, ver §5;
+- **prontidão para decisões clínicas ou reguladas** — a arquitetura tem
   potencial para governança de evidência, e isso não é o mesmo que estar
   pronto para decidir sobre alguém.
 

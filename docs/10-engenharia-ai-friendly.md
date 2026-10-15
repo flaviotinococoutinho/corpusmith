@@ -502,7 +502,7 @@ reconectar com backoff, usar `Last-Event-ID`, detectar lacunas, expor
 `connected/reconnecting/stale/failed` (uma assinatura já compartilhada em
 `live.ts`). A UI MUST diferenciar "comando aceito" de "trabalho
 concluído", não mostrar sucesso antes do commit, e agrupar terminologia em
-níveis **essencial/análise/avançado** (UX; ver `09-backlog.md`).
+níveis **essencial/análise/avançado** (UX; veja a fila atual em `18-backlog-consolidado.md` §11).
 
 ### 10.5 Segurança do token ✅ IMPLEMENTADO
 
@@ -949,9 +949,9 @@ ADRs e testes do próprio repositório são a fonte primária de comportamento.*
 
 ## 26. Veredito arquitetural
 
-O Corpusmith já está acima da média em disciplina arquitetural. O risco
-principal não é falta de padrões; é **adicionar padrões demais e perder a
-clareza local-first**. A direção correta:
+As prioridades de engenharia abaixo vêm dos riscos e propostas descritos
+nesta especificação. Mudanças devem preservar a operação local e justificar
+novos padrões pelo problema que resolvem:
 
 1. endurecer atomicidade e contratos (§7);
 2. diferenciar durabilidade por classe de dado (§5.2);
@@ -962,7 +962,5 @@ clareza local-first**. A direção correta:
 7. manter Git, Harness e abstenção como pilares;
 8. **não confundir disponibilidade de projeção com consistência canônica**.
 
-> A melhor arquitetura para este projeto não é a mais distribuída. É a que
-> deixa explícito **onde a simplicidade é uma garantia e onde ainda é uma
-> premissa** — e este documento existe para tornar essa distinção legível
-> por humanos e por IA.
+> Ao avaliar uma mudança, distinga o comportamento verificado das premissas
+> e propostas. Use os testes e registros citados para conferir o estado atual.

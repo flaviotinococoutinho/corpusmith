@@ -2,10 +2,9 @@
 
 > **Altitude:** produto · **Status:** vivo
 
-> **Axioma**, aqui, não é frase de efeito: é uma proposição que o produto assume
-> **e paga** — cada uma tem uma asserção executável que quebra a suíte se a
-> proposição for violada. Uma proposição sem asserção não é axioma; é slogan, e
-> não entra nesta lista.
+> Este documento relaciona os axiomas do produto às verificações que os
+> sustentam. Cada entrada identifica a regra e os testes ou diagnósticos
+> associados. O alcance da verificação depende do que cada teste cobre.
 >
 > A **ótica** é o outro lado: o mesmo corpus visto por ângulos diferentes, cada
 > um com sua unidade, seu artefato e seu frescor próprio. Confundir óticas é o
@@ -23,7 +22,7 @@
 O bundle (Markdown OKF + Git) é a autoridade. `index.db`, grafo, comunidades,
 temas e centralidade são **projeções**: apagáveis, reconstruíveis, sem voto.
 
-**Como é pago.** `architecture.toml` declara `source_of_truth` e
+**Verificação.** `architecture.toml` declara `source_of_truth` e
 `derived_stores`, e `test_architecture_toml.py` cruza a declaração com o código.
 `kernel/checkpoints.py:DERIVATIONS` declara a cadeia inteira —
 `bundle → index → graph_map → themes`, `index → centrality` — com `None`
@@ -39,17 +38,17 @@ a **carregar a staleness residual na decisão** em vez de escondê-la.
 
 ### A-2 · Aposentar não é apagar; toda escrita é para a frente
 
-Suceder, invalidar, depreciar e desfazer **escrevem**. Nada é removido.
+Suceder, invalidar, depreciar e desfazer registram novas alterações sem
+reescrever o histórico Git.
 
-**Como é pago.** `undo` desfaz escrevendo um ato inverso, nunca apagando
+**Verificação.** `undo` desfaz escrevendo um ato inverso, nunca apagando
 (`usecases/curate/undo.py`); `kernel/curation.py:NOT_MERGEABLE` protege as
 chaves de ciclo de vida numa fusão; `kernel/vitality.py:APOSENTAM` define
 "aposentada" como *deixa de ser endereço de trabalho novo*, com a página seguindo
 no bundle, no Git e no índice.
 
-**Consequência que a maioria dos produtos não paga.** Errar não perde. É o que
-permite que o gesto destrutivo tenha preview e volta — e é por isso que
-"cuidado" (*cura*) e "controle" são coisas diferentes aqui.
+**Consequência.** O histórico e o ato inverso permitem revisar e desfazer
+alterações. O preview mostra os efeitos antes da confirmação.
 
 ### A-3 · Determinismo antes de modelo
 
@@ -57,17 +56,18 @@ O que regex, checksum, grafo ou aritmética resolvem não passa por LLM. O model
 é um **estágio cercado** por passadas determinísticas — o sanduíche — nunca a
 autoridade final.
 
-**Como é pago.** O árbitro LLM da escada de reconciliação existe, está
+**Verificação.** O árbitro LLM da escada de reconciliação existe, está
 implementado, e vive atrás de `reconcile.llm_arbiter`, cujo default é `False`
 em `settings.py` e nos dois presets de `configure_system.py`. Um caminho
 opcional cujo default é ligado não é opcional.
 
 ### A-4 · Há UM caminho de escrita, e ele é inescapável
 
-Todo ato que muda o canônico atravessa o mesmo esqueleto —
-`produce → normalize → reconcile → write → done` — e o mesmo gate.
+A escrita canônica usa o Harness e o `BundleWriter`. Os produtores de páginas
+de máquina usam o template `produce → normalize → reconcile → write → done`;
+os atos humanos usam as operações próprias de curadoria.
 
-**Como é pago.** `MachinePageUseCase.execute()` é Template Method **fechado**:
+**Verificação.** `MachinePageUseCase.execute()` é Template Method **fechado**:
 `architecture.toml` declara `machine_page_template_closed = true` e o teste
 proíbe subclasse que sobrescreva `execute`. `single_public_method = "execute"`
 impede que um use case ganhe uma segunda porta. O Harness roda duas camadas
@@ -79,18 +79,18 @@ invente exigência do SPEC.
 Todo mecanismo heurístico declara **a que** sua garantia é relativa, com vieses,
 pressupostos, modos de falha e fallback.
 
-**Como é pago.** `epistemics.toml` + `corpusmith epistemics lint`:
+**Verificação.** `epistemics.toml` + `corpusmith epistemics lint`:
 `universal_guarantee = true` é proibido, evidência composta só por
 `self_reported` é proibida (não-autocertificação), e
 `test_epistemics_toml.py` cruza os parâmetros declarados com as constantes
 reais — contrato que mente sobre o código quebra a suíte.
 
-### A-6 · Um teste que passa com e sem a correção é teatro
+### A-6 · O teste precisa detectar a regressão
 
 Toda correção precisa de uma asserção que **saiba reprovar** quando a correção
 é revertida.
 
-**Como é pago.** Por disciplina de mutação registrada no próprio código: os
+**Verificação.** Por disciplina de mutação registrada no próprio código: os
 docstrings dos testes trazem o valor medido *antes*, e a reversão é executada
 antes do commit. Quatro testes deste repositório passaram na primeira redação
 com a correção revertida e tiveram de ser reescritos — o registro disso fica
@@ -104,7 +104,7 @@ defeito intacto no chamador.
 
 Valor fora do vocabulário é **erro**, não "extensão privada".
 
-**Como é pago.** `kernel/ontology.py` + `corpusmith ontology lint`
+**Verificação.** `kernel/ontology.py` + `corpusmith ontology lint`
 ([RFC-004](22-rfc-ontologia-da-assercao.md)). Este é o axioma mais novo, e
 entrou pagando uma dívida: `confidence` era o único campo epistêmico do
 frontmatter **sem nenhuma validação no Harness** — `grep -rn "confidence"
@@ -115,7 +115,7 @@ harness/` não devolvia nenhuma linha.
 Nenhum valor responde a duas perguntas. Conflação é classe de defeito, não
 questão de estilo.
 
-**Como é pago.** `test_nenhum_valor_responde_a_duas_perguntas` e o finding
+**Verificação.** `test_nenhum_valor_responde_a_duas_perguntas` e o finding
 `ontology.term_off_axis`. O registro de deriva
 ([`23`](23-ontologia-e-etimologia.md) §4) mantém as conflações remanescentes
 visíveis, com marcadores que o lint confere nos dois sentidos — para que nem

@@ -2,10 +2,10 @@
 
 > **Altitude:** produto · **Status:** vivo
 
-> O QUE o sistema acredita. Cada conceito aqui tem um mecanismo concreto
-> (documento 05) e um fundamento teórico (documento 03). Este documento é
-> o vocabulário compartilhado — quando dois módulos discordarem sobre um
-> termo, este texto arbitra.
+> Vocabulário compartilhado do produto. Consulte os mecanismos em
+> [Fluxos operacionais](05-fluxos-operacionais.md) e os fundamentos em
+> [Teoria](03-teoria.md). Os eixos e termos normativos estão em
+> [`ontology.toml`](../ontology.toml).
 
 ## 0. A pergunta que o produto responde
 
@@ -37,10 +37,9 @@ sempre reconstruível. As consequências dessa metáfora são normativas:
   não passa por LLM. O LLM é um estágio da pipeline cercado por passadas
   determinísticas (o "sanduíche", doc 02 §1) — nunca a autoridade final.
 - **O índice nunca é a verdade**: `index.db` pode ser apagado e
-  reconstruído (`corpusmith okf index`) sem perda. A verdade está no bundle
-  + Git. Corolário: qualquer melhoria de retrieval é segura para
-  experimentar — o pior caso é reindexar.
-- **Git é o juiz**: toda escrita no bundle é um commit com trilha em
+  reconstruído (`corpusmith okf index`) a partir do bundle e do Git.
+  Experimentos no índice não devem alterar o registro canônico.
+- **Git registra o histórico**: toda escrita no bundle gera um commit com trilha em
   `log.md`. Arquivar ≠ apagar; depreciar ≠ deletar; errar ≠ perder
   (reverter é `git revert`).
 
@@ -178,13 +177,14 @@ Três mecanismos transformam "qualidade da memória" de impressão em
 métrica:
 
 1. **Abstenção** (LongMemEval, arXiv:2410.10813): sem evidência
-   suficiente o `/ask` devolve `abstained: true` + `gaps` — nunca
-   resposta fabricada. Toda resposta carrega `uncertainty` ∈ [0,1]
+   suficiente segundo o critério heurístico, o `/ask` devolve
+   `abstained: true` + `gaps`. Isso não garante a correção de respostas
+   aceitas. Toda resposta carrega `uncertainty` ∈ [0,1]
    (entropia normalizada da fusão): o sistema pode responder E confessar
    dúvida.
 2. **Desfecho** (`useful` / `dead_end` / `corrected`): o julgamento do
    usuário é dado de primeira classe (`ask_outcomes`) e realimenta DOIS
-   laços — o overlay de páginas (`preferred`/`tentative`/`contested`) e
+   laços — o overlay de páginas (`preferred`/`tentative`/`low_yield`) e
    o crédito de streams (Hedge). Correção com nota vira memória nova no
    inbox: o erro é matéria-prima.
 3. **Eval de 5 categorias** contra golden set versionado no bundle
@@ -193,20 +193,23 @@ métrica:
    não o modelo. A categoria abstain só passa com abstenção real —
    responder "não sei" quando não sabe é comportamento correto testável.
 
-## 9. Privacidade topológica (LGPD estrutural)
+## 9. Política de privacidade
 
 `privacy: local_only | api_allowed` é obrigatório em toda página escrita.
-O default do sistema é `local_only` — nada sai da máquina sem regra
-explícita liberando. A cadeia é **detectada → marcada → podada**:
+O padrão de configuração é `local_only`. A detecção de identificadores
+pessoais e a política de escrita seguem esta sequência:
 
-1. o detector de identificadores acha CPF/CNPJ/IBAN **com dígito
-   verificador válido** (falso positivo não dispara);
+1. o detector reconhece CPF, CNPJ e IBAN com dígito verificador válido;
+   isso não verifica a identidade do titular nem cobre todos os dados pessoais;
 2. a página é marcada `sensitive_data: true` e forçada `local_only`;
    se alguém tentar `api_allowed`, `policy.pii_requires_local` (error);
-3. o roteador de modelos **nunca** envia conteúdo `local_only` para API.
+3. o roteador usa o parâmetro `privacy` para decidir se pode chamar a API.
 
-A LGPD deixa de depender de tag manual: é aritmética (checksum) +
-política (Harness) + roteamento (router).
+A verificação de escrita e exportação está registrada em `NFR-PRIV-001`.
+A garantia de que conteúdo `local_only` não alcança o provedor de modelos
+permanece `declared` em [`nfr.toml`](../nfr.toml), `NFR-PRIV-002`, com teste
+de egresso ainda pendente. A detecção por checksum não constitui uma
+garantia completa de privacidade.
 
 ## 10. Heat, uso e esquecimento reversível
 

@@ -1,86 +1,44 @@
 # Corpusmith
 
-> **The local-first governed knowledge compiler** ·
-> *o compilador local e governado de conhecimento*
+Corpusmith compila PDFs, notas e outras fontes em um corpus local de páginas
+Markdown OKF, versionado em Git. Um daemon oferece compilação e consulta; o
+cockpit Electron permite revisar e corrigir o conteúdo.
 
-**Compile knowledge. Keep the evidence.**
-
-Corpusmith transforma fontes dispersas num **corpus local, versionado e
-governado**, reutilizável por qualquer IA. A pergunta que ele responde não é
-"o que este agente deve recordar?" — é:
-
-> **O que foi aceito como conhecimento, com base em quê, por quem, em qual
-> período e sob quais limites?**
+O registro mostra o que foi aceito como conhecimento, de onde veio, quem o
+alterou, quando vale e quais limites se aplicam. Aceitação no corpus não é
+prova de veracidade.
 
 ## A categoria
 
-Outras memórias ajudam agentes a recordar. **Corpusmith governa o que humanos
-e agentes podem tratar como conhecimento.**
+O projeto se define como um compilador local e governado de conhecimento
+(*local-first governed knowledge compiler*). Sua arquitetura combina:
 
-| Categoria | Pergunta principal |
-|---|---|
-| Memória de agente | "O que este agente deve recordar?" |
-| RAG | "Que trechos devo recuperar para responder?" |
-| Knowledge graph | "Que entidades e relações consigo representar?" |
-| Gestão de documentos | "Onde estão os documentos?" |
-| **Corpusmith** | **"O que foi aceito como conhecimento, com base em quê, por quem, quando e sob quais limites?"** |
+- páginas OKF legíveis sem o aplicativo;
+- escrita canônica no bundle com histórico Git;
+- índices e grafos reconstruíveis a partir do bundle;
+- validade temporal por `valid_at` e `invalid_at`;
+- atos de curadoria com preview e reversão por novos commits;
+- contratos em [`epistemics.toml`](epistemics.toml), com pressupostos,
+  garantias relativas, modos de falha e fallback;
+- vocabulário em [`ontology.toml`](ontology.toml), com termos, eixos e
+  limites de significado.
 
-O espaço que Corpusmith ocupa não é nenhum desses elementos isolado — é a
-**combinação**, e ela é verificada por teste, não declarada:
+Máquinas podem criar, atualizar e suceder páginas após a validação das
+políticas. Humanos revisam e podem reverter essas alterações. A ratificação
+humana de toda escrita é uma direção de produto, descrita no
+[ADR de categoria](docs/21-adr-categoria-corpusmith.md).
 
-- **corpus aberto** — Markdown/OKF legível por qualquer ferramenta, hoje e
-  em dez anos;
-- **registro canônico em Git** — todo ato de escrita é um commit; a
-  autoridade é o bundle + histórico, nunca um banco proprietário;
-- **projeções descartáveis** — índices, embeddings, grafos e temas são
-  reconstruíveis do canônico (apague `index.db`: nada de conhecimento se
-  perde, e o `doctor` sabe dizer o que está atrasado);
-- **validade temporal** — `valid_at`/`invalid_at` distinguem o tempo do
-  mundo do tempo do registro; perguntas podem ser ancoradas no passado;
-- **curadoria reversível** — todo ato humano tem preview antes do efeito e
-  `undo` por escrita-para-frente; invalidar nunca é apagar;
-- **contratos epistêmicos executáveis** — [`epistemics.toml`](epistemics.toml)
-  declara pressupostos, garantias *relativas*, modos de falha e fallback de
-  cada mecanismo heurístico, e a suíte **quebra** quando um contrato mente
-  sobre o código;
-- **léxico com fronteira** — [`ontology.toml`](ontology.toml) declara os eixos
-  independentes de uma afirmação (*como derivou · foi assentada? · quem
-  autorizou*) e, para cada termo, a raiz etimológica e o que a palavra **não**
-  pode passar a significar. Um valor que responda a duas perguntas quebra a
-  suíte ([`docs/23`](docs/23-ontologia-e-etimologia.md)).
+### Entenda o produto
 
-**A alegação honesta de governança, hoje**: máquinas escrevem sob políticas
-(gate único de escrita, colisão vira decisão humana, heurística cercada por
-contrato); **humanos governam, revisam e podem reverter** — com preview,
-histórico de atos e desfazer. A visão-alvo — *"Agents propose. Policies
-constrain. Humans ratify. Git remembers."* — é a direção do produto
-([`docs/21`](docs/21-adr-categoria-corpusmith.md)), não uma descrição
-completa do comportamento atual.
-
-O que Corpusmith **não** alega: ser "fonte da verdade" (canônico ≠
-verdadeiro — o registro diz o que foi *aceito*, e por quem), "zero
-alucinação", ontologia formal, nem prontidão para decisões clínicas ou
-reguladas.
-
-*Not another agent-memory database.*
-
-### 📖 Entenda em 15 minutos
-
-**[`docs/00-o-que-e-corpusmith.md`](docs/00-o-que-e-corpusmith.md)** conta a
-história inteira do zero: o problema, a categoria, a tese de compilação, **um
-fato seguido do PDF até a resposta**, quem pode mudar o quê, e o que o
-produto **não** alega. Se você só vai ler um documento, leia esse.
-
-Depois dele, três páginas curtas explicam por que o produto é assim:
-[`23`](docs/23-ontologia-e-etimologia.md) (o léxico e o que cada raiz proíbe),
-[`24`](docs/24-axiomas-e-oticas.md) (os oito axiomas, cada um com a asserção
-executável que o paga, e as oito óticas sobre o mesmo corpus) e
-[`25`](docs/25-fronteira-e-diferencial.md) (as três fronteiras que o produto
-recusa cruzar).
+Leia [O que é o Corpusmith](docs/00-o-que-e-corpusmith.md) para acompanhar uma
+informação desde a fonte até a resposta. Consulte também o
+[léxico](docs/23-ontologia-e-etimologia.md), os
+[axiomas e óticas](docs/24-axiomas-e-oticas.md) e a
+[fronteira do produto](docs/25-fronteira-e-diferencial.md).
 
 ## A re-mira (RFC-006): de compilador de corpus a instrumento de estudo
 
-Para quem estuda de verdade — acumula PDFs, normas, artigos e notas — o
+Para quem estuda com PDFs, normas, artigos e notas, o
 produto compila conteúdo disperso em **conceitos comparáveis, rastreáveis,
 explicáveis e acionáveis**: não só o que uma ideia significa, mas **sob
 qual lente**, o que permanece, onde diverge, como se aplica e quanto custa
@@ -170,7 +128,7 @@ importa `cognitive/` — asserção de arquitetura) e a jornada inteira
 (objetivo → projeção → sessão → tentativa → cápsula → revisão) deixa o
 canônico **byte-idêntico** (invariante testado).
 
-As regras não são convenção — são **asserções** (`tests/test_architecture.py`):
+Os testes em `backend/tests/test_architecture.py` verificam estas regras:
 
 - *functional core, imperative shell*: qualquer `import sqlite3/httpx/
   subprocess/fastapi/git` em `kernel/` ou `normalize/` quebra a suíte;
@@ -449,15 +407,18 @@ As regras não são convenção — são **asserções** (`tests/test_architectu
 > problemas): [`docs/12-instalacao.md`](docs/12-instalacao.md). Instalador
 > automatizado: `scripts/install.sh --with-tests --with-smoke`.
 
+Execute os comandos abaixo na raiz do repositório. O instalador prepara o
+backend e o desktop e executa os testes e o smoke solicitados.
+
 **Local (desenvolvimento e uso diário):**
 
 ```bash
-just bootstrap                      # venv + pip install -e backend[dev]
+scripts/install.sh --with-tests --with-smoke
 backend/scripts/corpusmith okf bootstrap
 backend/scripts/corpusmith seed        # dados pré-definidos (idempotente):
                                     # referência do mundo + pipelines builtin
-just daemon &                       # API em 127.0.0.1:8377 (token efêmero)
-cd desktop && npm ci && npm run dev # cockpit Electron
+backend/.venv/bin/python -m corpusmith.daemon &  # API em 127.0.0.1:8377
+(cd desktop && npm run dev)                     # cockpit Electron
 ```
 
 **Docker (daemon empacotado; desktop conecta de fora):**
@@ -504,12 +465,9 @@ benchmarks/  o baseline medido — autoridade das alegações de performance
              ontology, nfr), cada um cruzado com o código por teste e lint
 ```
 
-A árvore acima é deliberadamente rasa. O mapa completo e vivo é GERADO:
-`corpusmith ontology blocks` lista cada bloco do projeto com a pergunta que
-responde, e `corpusmith ontology where <caminho|termo|mecanismo>` diz a que
-bloco algo pertence. A árvore detalhada que morava aqui apodreceu do jeito
-de sempre — listava `eval_memory` em `harness/` e omitia oito unidades do
-gradiente.
+A árvore resume os diretórios principais. Para consultar o mapa atual, use
+`corpusmith ontology blocks`. Para localizar um caminho, termo ou mecanismo,
+use `corpusmith ontology where <caminho|termo|mecanismo>`.
 
 ## Aceite da v0.7 (verificado por teste)
 

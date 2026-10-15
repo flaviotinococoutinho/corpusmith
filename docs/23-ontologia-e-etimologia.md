@@ -3,7 +3,7 @@
 > **Altitude:** contrato · **Status:** vivo
 
 > **O que este documento é.** A leitura humana de [`ontology.toml`](../ontology.toml),
-> que é a fonte executável. O TOML declara; `corpusmith ontology lint` prova;
+> que é a fonte executável. O TOML declara; `corpusmith ontology lint` valida;
 > aqui está o **argumento**: por que cada palavra foi escolhida, o que a raiz
 > dela proíbe, e quais palavras ainda respondem a mais de uma pergunta.
 >
@@ -101,9 +101,9 @@ forma, não criar matéria. Não é gerar conteúdo. O produto compila fontes, e
 quando não há fonte suficiente **abstém**.
 
 **compile** · lat. *compilare*, "juntar em monte" — montar um artefato a partir
-de fontes, sob regras, de forma repetível. Não é resumir nem reescrever. A mesma
-fonte sob as mesmas regras produz o mesmo artefato: determinismo antes de
-modelo, com o LLM como estágio cercado.
+de fontes, sob regras registradas. A normalização e a validação são
+determinísticas; a geração por LLM pode variar entre execuções. O uso da
+metáfora de compilação não garante artefatos idênticos quando há modelo.
 
 **capta** · lat. *capta*, particípio de *capere*, "tomar" — em oposição a
 **data**, particípio de *dare*, "dar". A oposição carrega o argumento inteiro:
@@ -298,10 +298,10 @@ justfile por `test_pr0_gate.py`) pelo mesmo motivo que `epistemics lint` está:
 registro normativo que ninguém executa não é normativo.
 
 ```bash
-cd backend && .venv/bin/python -m corpusmith.cli ontology axes
-cd backend && .venv/bin/python -m corpusmith.cli ontology terms
-cd backend && .venv/bin/python -m corpusmith.cli ontology drift
-cd backend && .venv/bin/python -m corpusmith.cli ontology lint
+(cd backend && .venv/bin/python -m corpusmith.cli ontology axes)
+(cd backend && .venv/bin/python -m corpusmith.cli ontology terms)
+(cd backend && .venv/bin/python -m corpusmith.cli ontology drift)
+(cd backend && .venv/bin/python -m corpusmith.cli ontology lint)
 ```
 
 ## Vocabulários fechados de outros objetos (v1.1 do registro)
@@ -366,8 +366,8 @@ regras normativas da raiz) e uma pasta pode conter dois blocos (`desktop` e
 `desktop_build`).
 
 ```bash
-cd backend && .venv/bin/python -m corpusmith.cli ontology blocks        # o índice inteiro
-cd backend && .venv/bin/python -m corpusmith.cli ontology where okf/writer.py
-cd backend && .venv/bin/python -m corpusmith.cli ontology where canon   # onde mora um termo
-cd backend && .venv/bin/python -m corpusmith.cli ontology where retrieval_rrf_hedge
+(cd backend && .venv/bin/python -m corpusmith.cli ontology blocks)  # o índice inteiro
+(cd backend && .venv/bin/python -m corpusmith.cli ontology where okf/writer.py)
+(cd backend && .venv/bin/python -m corpusmith.cli ontology where canon)  # onde mora um termo
+(cd backend && .venv/bin/python -m corpusmith.cli ontology where retrieval_rrf_hedge)
 ```

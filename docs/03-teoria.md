@@ -31,9 +31,9 @@ reconciliação (`ReconcileCandidate._compression_affinity`):
 score = 0.4·rank(FTS título) + 0.3·Jaccard(entidades) + 0.3·(1 − NCD)
 ```
 
-Por que importa: é determinístico, custa um `zlib.compress`, não depende
-de modelo nem embedding, e é imune a paráfrase superficial (que derruba
-Jaccard de termos mas não a compressibilidade mútua).
+O sinal é determinístico e usa compressão com zlib, sem modelo ou embedding.
+A distância depende dos textos e do compressor; não garante equivalência
+semântica nem resistência a paráfrases.
 
 ### 1.2 Entropia de Shannon como incerteza de retrieval
 **Shannon, "A Mathematical Theory of Communication", 1948**; parentesco
@@ -41,10 +41,10 @@ moderno: **Kuhn, Gal & Farquhar, "Semantic Uncertainty" (ICLR 2023)** —
 entropia sobre distribuições de saída como sinal de confiabilidade.
 **Uso**: entropia normalizada [0,1] da distribuição de scores RRF
 fundidos (`EvidenceStreams.fuse` → campo `uncertainty` em toda resposta
-do `/ask`). Interpretação: massa concentrada num item = o sistema sabe
-onde está a resposta; massa espalhada = está chutando. O Cockpit exibe o
-chip "~ incerta" acima de 0.85. Complementa (não substitui) a abstenção:
-o sistema pode responder E confessar dúvida.
+do `/ask`). Massa concentrada indica concentração do ranking; massa
+espalhada indica dispersão. Nenhuma das duas demonstra correção factual.
+O cockpit exibe o chip "~ incerta" acima de 0.85. A medida complementa o
+critério de abstenção; veja o [contrato de incerteza](11-epistemic-contracts.md).
 
 ### 1.3 Surprisal (conteúdo de informação)
 **−log₂ p(e)** — a formulação original do que o IR conhece como IDF.
@@ -119,7 +119,7 @@ Condorcet and individual rank learning methods", SIGIR 2009.**
 usa POSIÇÕES (escalas de score incomensuráveis entre FTS bm25, cosseno
 denso e contagem de entidades não precisam ser calibradas). Estendida
 aqui com o peso de crédito `w_s` do Hedge (§1.4) e o boost de overlay
-(preferred ×1.15, contested ×0.8).
+(preferred ×1.15, low_yield ×0.8).
 
 ### 3.2 Escada de reconciliação (mem0, formalizada)
 Decisões na ordem do custo epistêmico: (1) identificador forte
@@ -270,8 +270,9 @@ Como um paper vira mecanismo aqui (o critério que filtrou o que entrou):
    simpliciais.
 2. **Preferir o determinístico**: NCD antes de embedding; regex+checksum
    antes de NER neural; componentes ponderados como fallback do Leiden.
-3. **Custo proporcional ao valor**: tudo roda em milissegundos numa
-   máquina pessoal; nenhuma dependência nova (kernel é stdlib).
+3. **Custo proporcional ao valor**: medir latência por operação e tamanho
+   do corpus. O kernel usa stdlib; os resultados registrados estão em
+   [`benchmarks/`](../benchmarks/README.md).
 4. **Falha graciosa**: sem Ollama → extrativo; sem leidenalg →
    componentes; sem embeddings → FTS só. Cada camada teórica é um BOOST,
    nunca um requisito.

@@ -1,8 +1,8 @@
 # Benchmarks — harness reprodutível do compute plane (ADR-39)
 
-Regra de ouro: **nenhum ganho é alegado sem medição registrada aqui.**
-Números absolutos variam por máquina; as RAZÕES (speedups Python×Rust,
-frio×quente, full×incremental) são o que os ADRs alegam.
+Alegações de desempenho devem apontar para uma medição registrada neste
+diretório. Tempos absolutos e razões de ganho dependem da máquina e da
+carga. Compare resultados do mesmo ambiente e informe o workload.
 
 ## Comandos
 
@@ -23,8 +23,8 @@ por semente (`fixtures/<nome>/spec.json`); o bundle materializado
 
 ## Baseline vigente
 
-`baseline.json` — capturada nesta máquina em v1.7.0 (dev). Destaques
-MEDIDOS (não estimados):
+[`baseline.json`](baseline.json) registra a medição de referência da
+v1.7.0 (dev). Os valores abaixo pertencem àquela execução:
 
 | Workload | Python | Rust | Speedup |
 |---|---:|---:|---:|
