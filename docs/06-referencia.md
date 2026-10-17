@@ -269,7 +269,10 @@ frozen_at, frozen_commit, activation, recall_p, recycles)` · `cold_fts`
 **index.db** (derivado): `chunks(+valid_at,invalid_at)` · `chunks_fts` ·
 `graph_edges(+confidence,+rel)` — `kind` é SINTAXE
 (markdown/wikilink) e `rel` é a relação SEMÂNTICA declarada por humano
-(V5: `applies_to|exemplifies|refines`, NULL na maioria) · `communities` · `embeddings` · `entities` ·
+(V5: `applies_to|exemplifies|refines`, NULL na maioria) · `communities` ·
+`embeddings(chunk_id, model, vec)` — `model` identifica o espaço vetorial:
+a busca densa lê só o de `models.local.embed` e o job `embed` refaz o
+vetor de outro modelo · `entities` ·
 `page_entities(confidence,data)` · `page_levels(level∈0,1)` ·
 `fts_levels` · `page_overlay(status∈preferred|tentative|low_yield)` ·
 `graph_bridges(src,dst,weight,small_side,large_side)` ·

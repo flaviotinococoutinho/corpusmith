@@ -21,7 +21,7 @@
 schema_version = 1
 
 [registry]
-version = "1.18.1"  # resíduo da C13: rrf_hedge e reconciliation param de alegar o que o próprio contrato nega
+version = "1.18.2"  # Q-33: retrieval_rrf_hedge declara um espaço vetorial por vez (premissa + resíduos)
 
 # ============================================================ retrieval
 [mechanisms.retrieval_rrf_hedge]
@@ -32,6 +32,7 @@ implementation_refs = [
   "backend/src/corpusmith/usecases/ask_memory.py",
   "backend/src/corpusmith/kernel/information.py",
   "backend/src/corpusmith/usecases/record_outcome.py",
+  "backend/src/corpusmith/retrieval/dense.py",
 ]
 inductive_biases = [
   "evidência relevante tende a aparecer bem posicionada em pelo menos um stream (fts, dense, entity, graph, descend, global)",
@@ -43,6 +44,7 @@ assumptions = [
   "o regime de consultas não muda abruptamente (os pesos aprendidos continuam informativos)",
   "os desfechos registrados pelo usuário representam utilidade real, não humor do momento",
   "os streams têm diversidade suficiente de erros (falha correlacionada anula o ganho da fusão)",
+  "UM espaço vetorial por vez (Q-33): a posição que o RRF lê no stream `dense` só significa algo se pergunta e vetores vierem do MESMO modelo de embedding — `dense.search` lê só os vetores do modelo configurado (`models.local.embed`, o mesmo que embute a pergunta), recusa par de dimensões diferentes em vez de truncá-lo, e o job `embed` refaz o vetor de outro modelo",
 ]
 validity_scope = [
   "consultas sobre o bundle local (não sobre o mundo aberto)",
@@ -55,6 +57,9 @@ known_failure_modes = [
   "falha correlacionada de todos os streams (pergunta fora da cobertura do corpus)",
   "loss atribuído por página, não por stream individual: streams que co-trouxeram a página dividem o mesmo julgamento",
   "o clamp satura em 3 desfechos consecutivos (medido: 1.0→1.284→1.649→2.0 no teto; 1.0→0.779→0.607→0.5 no piso) — a partir daí evidência adicional na mesma direção tem efeito ZERO: o peso é um contador de 3 passos, não uma distribuição minimizadora de arrependimento",
+  "o espaço vetorial é identificado pelo NOME do modelo: re-pull do mesmo nome com outros pesos e a mesma dimensão passa pelos dois guardas (nome e dimensão) e mistura espaços sem sinal; com outra dimensão o par sai da busca e conta em `ask.dense_dim_mismatch`, mas o job não o refaz (o rótulo já é o vigente) — só o rebuild completo converge, e nenhum comando o expõe: `okf index` é incremental por default e o `doctor --repair` só o dispara com finding reparável; o caminho é apagar `index.db` e reindexar (INV-DATA-003)",
+  "trocar o modelo de embedding deixa o stream `dense` com cobertura PARCIAL até o job refazer tudo — 256 chunks por execução, uma execução por dia pelo Scheduler: recall menor durante ⌈chunks/256⌉ dias, nunca mistura",
+  "o nome é comparado como texto: `nomic-embed-text` e `nomic-embed-text:latest` (o mesmo modelo no Ollama) contam como espaços diferentes e tudo é re-embutido — custo, não erro",
 ]
 # C13 (docs/17): rebaixado de online_regret_relative — o bound do Hedge
 # (Freund & Schapire) exige perda de TODOS os experts por rodada, e

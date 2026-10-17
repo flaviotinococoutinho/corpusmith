@@ -177,7 +177,8 @@ class AskMemory(UseCase):
             if self._deep:
                 with profile.stage("dense"):
                     streams.add("dense", dense.search(
-                        self._settings, self._query, router=self._router))
+                        self._settings, self._query, router=self._router,
+                        profile=profile))
             if question_entities:
                 with profile.stage("entity_lookup"):
                     seed_weights = self._entity_page_weights(
